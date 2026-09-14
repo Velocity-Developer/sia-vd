@@ -1,13 +1,26 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import AlertModal from '@/components/AlertModal.vue';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { computed, ref } from 'vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
-const page = usePage<{ flash: { success?: string; error?: string; jadwal_success?: string; jadwal_error?: string; materi_success?: string; materi_error?: string; tugas_success?: string; tugas_error?: string; quiz_success?: string; quiz_error?: string } }>();
+const page = usePage<{
+    flash: {
+        success?: string;
+        error?: string;
+        jadwal_success?: string;
+        jadwal_error?: string;
+        materi_success?: string;
+        materi_error?: string;
+        tugas_success?: string;
+        tugas_error?: string;
+        quiz_success?: string;
+        quiz_error?: string;
+    };
+}>();
 
 type JadwalShow = {
     id: number;
@@ -60,8 +73,24 @@ type KelasKuliahShowProps = {
     tahunAkademik?: { tahun: string; semester: string } | null;
     kapasitas: number;
     dosen?: { id: number; nidn: string; jabatan_fungsional?: string; user?: { name: string } | null } | null;
-    mata_kuliah?: { id: number; kode_matkul: string; nama_matkul: string; sks: number; semester: number; jenis: string; prodi?: { nama_prodi: string; jenjang: string; fakultas?: { nama_fakultas: string } | null } | null } | null;
-    mataKuliah?: { id: number; kode_matkul: string; nama_matkul: string; sks: number; semester: number; jenis: string; prodi?: { nama_prodi: string; jenjang: string; fakultas?: { nama_fakultas: string } | null } | null } | null;
+    mata_kuliah?: {
+        id: number;
+        kode_matkul: string;
+        nama_matkul: string;
+        sks: number;
+        semester: number;
+        jenis: string;
+        prodi?: { nama_prodi: string; jenjang: string; fakultas?: { nama_fakultas: string } | null } | null;
+    } | null;
+    mataKuliah?: {
+        id: number;
+        kode_matkul: string;
+        nama_matkul: string;
+        sks: number;
+        semester: number;
+        jenis: string;
+        prodi?: { nama_prodi: string; jenjang: string; fakultas?: { nama_fakultas: string } | null } | null;
+    } | null;
     jadwals?: JadwalShow[];
     materis?: MateriShow[];
     tugas?: TugasShow[];
@@ -105,15 +134,16 @@ const editGrade = (krs: KrsShow) => {
     editingKrs.value = krs.id;
     grade.value = krs.nilai ?? '';
 };
-const saveGrade = (krs: KrsShow) => router.put(
-    route('admin.kelas-kuliah.krs.nilai', [props.kelasKuliah.id, krs.id]),
-    { nilai: grade.value },
-    {
-        onSuccess: () => {
-            editingKrs.value = null;
+const saveGrade = (krs: KrsShow) =>
+    router.put(
+        route('admin.kelas-kuliah.krs.nilai', [props.kelasKuliah.id, krs.id]),
+        { nilai: grade.value },
+        {
+            onSuccess: () => {
+                editingKrs.value = null;
+            },
         },
-    },
-);
+    );
 
 const removeJadwal = (jadwal: JadwalShow) => {
     pendingJadwal.value = jadwal;
@@ -217,10 +247,7 @@ const formatTenggat = (value: string | null | undefined): string => {
     const [year, month, day] = date.split('-');
     const [hour = '00', minute = '00'] = (time ?? '').split(':');
 
-    const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
-    ];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
     return `${day} ${months[Number(month) - 1]} ${year}, ${hour}:${minute}`;
 };
@@ -237,12 +264,18 @@ const formatTenggat = (value: string | null | undefined): string => {
                         <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan kode kelas, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route('admin.kelas-kuliah.index')"><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link>
-                        <Link :href="route('admin.kelas-kuliah.edit', props.kelasKuliah.id)"><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link>
+                        <Link :href="route('admin.kelas-kuliah.index')"
+                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
+                        >
+                        <Link :href="route('admin.kelas-kuliah.edit', props.kelasKuliah.id)"
+                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
+                        >
                     </div>
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Kelas</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
@@ -251,7 +284,13 @@ const formatTenggat = (value: string | null | undefined): string => {
                         </div>
                         <div class="space-y-1">
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Tahun Ajaran</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ props.kelasKuliah.tahunAkademik ? `${props.kelasKuliah.tahunAkademik.tahun} ${props.kelasKuliah.tahunAkademik.semester}` : '-' }}</dd>
+                            <dd class="break-words text-[15px] font-medium leading-5 text-black">
+                                {{
+                                    props.kelasKuliah.tahunAkademik
+                                        ? `${props.kelasKuliah.tahunAkademik.tahun} ${props.kelasKuliah.tahunAkademik.semester}`
+                                        : '-'
+                                }}
+                            </dd>
                         </div>
                         <div class="space-y-1">
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kapasitas</dt>
@@ -260,7 +299,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </dl>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Dosen Pengampu</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
@@ -278,7 +319,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </dl>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
@@ -307,12 +350,16 @@ const formatTenggat = (value: string | null | undefined): string => {
                         </div>
                         <div class="space-y-1">
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Fakultas</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(matkul()?.prodi?.fakultas?.nama_fakultas) }}</dd>
+                            <dd class="break-words text-[15px] font-medium leading-5 text-black">
+                                {{ v(matkul()?.prodi?.fakultas?.nama_fakultas) }}
+                            </dd>
                         </div>
                     </dl>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal</h2>
@@ -330,7 +377,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     >
                         {{ page.props.flash.jadwal_success }}
                     </div>
-                    <div v-if="page.props.flash?.jadwal_error" class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                    <div
+                        v-if="page.props.flash?.jadwal_error"
+                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                        role="alert"
+                    >
                         {{ page.props.flash.jadwal_error }}
                     </div>
 
@@ -346,21 +397,39 @@ const formatTenggat = (value: string | null | undefined): string => {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="jadwal in props.kelasKuliah.jadwals ?? []" :key="jadwal.id" class="transition-colors hover:bg-[#f6f5f4]/60">
+                                    <tr
+                                        v-for="jadwal in props.kelasKuliah.jadwals ?? []"
+                                        :key="jadwal.id"
+                                        class="transition-colors hover:bg-[#f6f5f4]/60"
+                                    >
                                         <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ v(jadwal.hari) }}</td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ jam(jadwal.jam_mulai) }}–{{ jam(jadwal.jam_akhir) }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                            {{ jam(jadwal.jam_mulai) }}–{{ jam(jadwal.jam_akhir) }}
+                                        </td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block">{{ v(jadwal.ruang?.kode_ruang) }} — {{ v(jadwal.ruang?.nama_ruang) }}</span>
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
-                                                <Link :href="route('admin.kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])" title="Edit" aria-label="Edit">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Link
+                                                    :href="route('admin.kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
+                                                    title="Edit"
+                                                    aria-label="Edit"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Pencil class="size-4"
                                                     /></Button>
                                                 </Link>
                                                 <button type="button" title="Hapus" aria-label="Hapus" @click="removeJadwal(jadwal)">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Trash2 class="size-4"
                                                     /></Button>
                                                 </button>
@@ -381,7 +450,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Materi</h2>
@@ -399,7 +470,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     >
                         {{ page.props.flash.materi_success }}
                     </div>
-                    <div v-if="page.props.flash?.materi_error" class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                    <div
+                        v-if="page.props.flash?.materi_error"
+                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                        role="alert"
+                    >
                         {{ page.props.flash.materi_error }}
                     </div>
 
@@ -416,11 +491,20 @@ const formatTenggat = (value: string | null | undefined): string => {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="materi in props.kelasKuliah.materis ?? []" :key="materi.id" class="transition-colors hover:bg-[#f6f5f4]/60">
+                                    <tr
+                                        v-for="materi in props.kelasKuliah.materis ?? []"
+                                        :key="materi.id"
+                                        class="transition-colors hover:bg-[#f6f5f4]/60"
+                                    >
                                         <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">Pertemuan {{ v(materi.pertemuan_ke) }}</td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block font-medium text-black">{{ v(materi.judul_materi) }}</span>
-                                            <span v-if="materi.catatan" class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]" :title="String(materi.catatan)">{{ materi.catatan }}</span>
+                                            <span
+                                                v-if="materi.catatan"
+                                                class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]"
+                                                :title="String(materi.catatan)"
+                                                >{{ materi.catatan }}</span
+                                            >
                                         </td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <ul v-if="materiFiles(materi).length" class="space-y-1">
@@ -440,13 +524,25 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ v(materi.uploader?.name) }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
-                                                <Link :href="route('admin.kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])" title="Edit" aria-label="Edit">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Link
+                                                    :href="route('admin.kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
+                                                    title="Edit"
+                                                    aria-label="Edit"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Pencil class="size-4"
                                                     /></Button>
                                                 </Link>
                                                 <button type="button" title="Hapus" aria-label="Hapus" @click="removeMateri(materi)">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Trash2 class="size-4"
                                                     /></Button>
                                                 </button>
@@ -457,7 +553,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td colspan="5" class="px-4 py-10 text-center">
                                             <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-6">
                                                 <p class="text-sm font-medium text-black">Belum ada materi</p>
-                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">Tambahkan judul, pertemuan, berkas, dan catatan untuk kelas ini.</p>
+                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">
+                                                    Tambahkan judul, pertemuan, berkas, dan catatan untuk kelas ini.
+                                                </p>
                                             </div>
                                         </td>
                                     </tr>
@@ -467,7 +565,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tugas</h2>
@@ -485,7 +585,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     >
                         {{ page.props.flash.tugas_success }}
                     </div>
-                    <div v-if="page.props.flash?.tugas_error" class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                    <div
+                        v-if="page.props.flash?.tugas_error"
+                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                        role="alert"
+                    >
                         {{ page.props.flash.tugas_error }}
                     </div>
 
@@ -502,10 +606,19 @@ const formatTenggat = (value: string | null | undefined): string => {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="tugas in props.kelasKuliah.tugas ?? []" :key="tugas.id" class="transition-colors hover:bg-[#f6f5f4]/60">
+                                    <tr
+                                        v-for="tugas in props.kelasKuliah.tugas ?? []"
+                                        :key="tugas.id"
+                                        class="transition-colors hover:bg-[#f6f5f4]/60"
+                                    >
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block font-medium text-black">{{ v(tugas.judul_tugas) }}</span>
-                                            <span v-if="tugas.catatan" class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]" :title="String(tugas.catatan)">{{ tugas.catatan }}</span>
+                                            <span
+                                                v-if="tugas.catatan"
+                                                class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]"
+                                                :title="String(tugas.catatan)"
+                                                >{{ tugas.catatan }}</span
+                                            >
                                         </td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ formatTenggat(tugas.tenggat_waktu) }}</td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
@@ -526,13 +639,25 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ v(tugas.uploader?.name) }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
-                                                <Link :href="route('admin.kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])" title="Edit" aria-label="Edit">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Link
+                                                    :href="route('admin.kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
+                                                    title="Edit"
+                                                    aria-label="Edit"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Pencil class="size-4"
                                                     /></Button>
                                                 </Link>
                                                 <button type="button" title="Hapus" aria-label="Hapus" @click="removeTugas(tugas)">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Trash2 class="size-4"
                                                     /></Button>
                                                 </button>
@@ -543,7 +668,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td colspan="5" class="px-4 py-10 text-center">
                                             <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-6">
                                                 <p class="text-sm font-medium text-black">Belum ada tugas</p>
-                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">Tambahkan judul, tenggat waktu, berkas, dan catatan untuk kelas ini.</p>
+                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">
+                                                    Tambahkan judul, tenggat waktu, berkas, dan catatan untuk kelas ini.
+                                                </p>
                                             </div>
                                         </td>
                                     </tr>
@@ -553,7 +680,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Quiz</h2>
@@ -571,7 +700,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     >
                         {{ page.props.flash.quiz_success }}
                     </div>
-                    <div v-if="page.props.flash?.quiz_error" class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                    <div
+                        v-if="page.props.flash?.quiz_error"
+                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                        role="alert"
+                    >
                         {{ page.props.flash.quiz_error }}
                     </div>
 
@@ -588,28 +721,59 @@ const formatTenggat = (value: string | null | undefined): string => {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="quiz in props.kelasKuliah.quizzes ?? []" :key="quiz.id" class="transition-colors hover:bg-[#f6f5f4]/60">
+                                    <tr
+                                        v-for="quiz in props.kelasKuliah.quizzes ?? []"
+                                        :key="quiz.id"
+                                        class="transition-colors hover:bg-[#f6f5f4]/60"
+                                    >
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block font-medium text-black">{{ v(quiz.nama_quiz) }}</span>
-                                            <span v-if="quiz.catatan" class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]" :title="String(quiz.catatan)">{{ quiz.catatan }}</span>
+                                            <span
+                                                v-if="quiz.catatan"
+                                                class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]"
+                                                :title="String(quiz.catatan)"
+                                                >{{ quiz.catatan }}</span
+                                            >
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ quiz.waktu_pengerjaan ? `${quiz.waktu_pengerjaan} menit` : '-' }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                            {{ quiz.waktu_pengerjaan ? `${quiz.waktu_pengerjaan} menit` : '-' }}
+                                        </td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ formatTenggat(quiz.tenggat_waktu) }}</td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ v(quiz.uploader?.name) }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
-                                                <Link :href="route('admin.kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])" title="Detail" aria-label="Detail">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Link
+                                                    :href="route('admin.kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
+                                                    title="Detail"
+                                                    aria-label="Detail"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Eye class="size-4"
                                                     /></Button>
                                                 </Link>
-                                                <Link :href="route('admin.kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])" title="Edit" aria-label="Edit">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Link
+                                                    :href="route('admin.kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
+                                                    title="Edit"
+                                                    aria-label="Edit"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Pencil class="size-4"
                                                     /></Button>
                                                 </Link>
                                                 <button type="button" title="Hapus" aria-label="Hapus" @click="removeQuiz(quiz)">
-                                                    <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
                                                         ><Trash2 class="size-4"
                                                     /></Button>
                                                 </button>
@@ -620,7 +784,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td colspan="5" class="px-4 py-10 text-center">
                                             <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-6">
                                                 <p class="text-sm font-medium text-black">Belum ada quiz</p>
-                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">Tambahkan nama, durasi, tenggat waktu, dan catatan untuk kelas ini.</p>
+                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">
+                                                    Tambahkan nama, durasi, tenggat waktu, dan catatan untuk kelas ini.
+                                                </p>
                                             </div>
                                         </td>
                                     </tr>
@@ -630,7 +796,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nilai Mahasiswa</h2>
                     <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div class="relative w-full sm:max-w-sm">
@@ -646,11 +814,23 @@ const formatTenggat = (value: string | null | undefined): string => {
                             mahasiswa
                         </p>
                     </div>
-                    <div v-if="page.props.flash?.success" class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]" role="alert">{{ page.props.flash.success }}</div>
-                    <div v-if="page.props.flash?.error" class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">{{ page.props.flash.error }}</div>
+                    <div
+                        v-if="page.props.flash?.success"
+                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
+                        role="alert"
+                    >
+                        {{ page.props.flash.success }}
+                    </div>
+                    <div
+                        v-if="page.props.flash?.error"
+                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                        role="alert"
+                    >
+                        {{ page.props.flash.error }}
+                    </div>
                     <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
                         <div class="overflow-x-auto">
-                            <table class="min-w-[720px] w-full text-left">
+                            <table class="w-full min-w-[720px] text-left">
                                 <thead>
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">No.</th>
@@ -669,17 +849,32 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         </td>
                                         <td class="px-4 py-3 text-sm text-[#31302e]">{{ krs.mahasiswa?.prodi?.nama_prodi ?? '-' }}</td>
                                         <td class="px-4 py-3 text-sm">
-                                            <select v-if="editingKrs === krs.id" v-model="grade" class="h-9 rounded-lg border border-[#e6e6e6] bg-white px-3 text-sm">
-                                                <option v-for="option in ['A', 'B', 'C', 'D', 'E']" :key="option" :value="option">{{ option }}</option>
+                                            <select
+                                                v-if="editingKrs === krs.id"
+                                                v-model="grade"
+                                                class="h-9 rounded-lg border border-[#e6e6e6] bg-white px-3 text-sm"
+                                            >
+                                                <option v-for="option in ['A', 'B', 'C', 'D', 'E']" :key="option" :value="option">
+                                                    {{ option }}
+                                                </option>
                                             </select>
                                             <span v-else class="font-semibold">{{ krs.nilai ?? '-' }}</span>
                                         </td>
                                         <td class="px-4 py-3 text-right">
                                             <template v-if="editingKrs === krs.id">
-                                                <Button size="sm" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" @click="saveGrade(krs)">Simpan</Button>
-                                                <Button size="sm" variant="outline" class="ml-2 rounded-full" @click="editingKrs = null">Batal</Button>
+                                                <Button
+                                                    size="sm"
+                                                    class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
+                                                    @click="saveGrade(krs)"
+                                                    >Simpan</Button
+                                                >
+                                                <Button size="sm" variant="outline" class="ml-2 rounded-full" @click="editingKrs = null"
+                                                    >Batal</Button
+                                                >
                                             </template>
-                                            <Button v-else size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)">Ubah Nilai</Button>
+                                            <Button v-else size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)"
+                                                >Ubah Nilai</Button
+                                            >
                                         </td>
                                     </tr>
                                 </tbody>

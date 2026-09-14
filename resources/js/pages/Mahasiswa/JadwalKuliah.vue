@@ -66,25 +66,22 @@ const hariIni = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new
                             <Link
                                 v-for="(entry, index) in group.entries"
                                 :href="route('mahasiswa.jadwal-kuliah.show', entry.kelas.id)"
-                                class="block rounded-lg border border-[#e6e6e6] p-4 transition hover:border-[#0075de] hover:shadow-sm"
+                                class="block rounded-lg border border-[#e6e6e6] bg-white p-4 transition hover:border-[#0075de] hover:bg-[#f8fbff] hover:shadow-sm"
                             >
-                            <article
-                                :key="`${entry.kelas.id}-${entry.item.jam_mulai}-${index}`"
-                                class="rounded-lg"
-                            >
-                                <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                                    <div class="space-y-1">
-                                        <h3 class="font-semibold text-black">{{ matkul(entry.kelas)?.nama_matkul ?? '-' }}</h3>
-                                        <p class="text-sm text-[#615d59]">
-                                            Kelas {{ entry.kelas.kode_kelas }} · {{ matkul(entry.kelas)?.sks ?? '-' }} SKS
-                                        </p>
+                                <article :key="`${entry.kelas.id}-${entry.item.jam_mulai}-${index}`" class="rounded-lg">
+                                    <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                                        <div class="space-y-1">
+                                            <h3 class="font-semibold text-black">{{ matkul(entry.kelas)?.nama_matkul ?? '-' }}</h3>
+                                            <p class="text-sm text-[#615d59]">
+                                                Kelas {{ entry.kelas.kode_kelas }} · {{ matkul(entry.kelas)?.sks ?? '-' }} SKS
+                                            </p>
+                                        </div>
+                                        <div class="space-y-1 text-sm text-[#615d59] sm:text-right">
+                                            <p class="font-medium text-black">{{ jam(entry.item.jam_mulai) }} - {{ jam(entry.item.jam_akhir) }}</p>
+                                            <p>Ruang {{ entry.item.ruang?.kode_ruang ?? '-' }}</p>
+                                        </div>
                                     </div>
-                                    <div class="space-y-1 text-sm text-[#615d59] sm:text-right">
-                                        <p class="font-medium text-black">{{ jam(entry.item.jam_mulai) }} - {{ jam(entry.item.jam_akhir) }}</p>
-                                        <p>Ruang {{ entry.item.ruang?.kode_ruang ?? '-' }}</p>
-                                    </div>
-                                </div>
-                            </article>
+                                </article>
                             </Link>
                         </div>
                     </section>

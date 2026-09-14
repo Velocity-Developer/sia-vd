@@ -7,7 +7,7 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\Materi;
 use App\Models\Quiz;
-use App\Models\Tugas;
+use App\Models\QuizAttempt;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -62,23 +62,26 @@ class ContentController extends Controller
         return Inertia::render('Mahasiswa/MateriShow', ['materi' => $materi]);
     }
 
-    public function index(Request $request, string $type): Response
+    public function quizShow(Request $request, Quiz $quiz): Response
     {
-        abort_unless(in_array($type, ['tugas', 'materi', 'quiz'], true), 404);
-
         $mahasiswa = $request->user()->mahasiswaProfile;
         abort_if($mahasiswa === null, 403);
 
-        $model = ['tugas' => Tugas::class, 'materi' => Materi::class, 'quiz' => Quiz::class][$type];
-        $items = $model::with('kelasKuliah.mataKuliah')
-            ->whereHas('kelasKuliah.krs', fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id))
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+        abort_unless($quiz->kelasKuliah()->whereHas('krs', fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id))->exists(), 403);
 
-        return Inertia::render('Mahasiswa/ContentIndex', [
-            'type' => $type,
-            'items' => $items,
-        ]);
+        $quiz->load(['kelasKuliah.mataKuliah', 'uploader:id,name', 'questions']);
+        $attempt = QuizAttempt::query()
+            ->where('quiz_id', $quiz->id)
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->with('answers')
+            ->first();
+
+        $quiz->questions->each(function ($question): void {
+            $question->question_option = collect($question->question_option ?? [])
+                ->map(fn (array $option): array => ['text' => $option['text'] ?? ''])
+                ->all();
+        });
+
+        return Inertia::render('Mahasiswa/QuizShow', compact('quiz', 'attempt'));
     }
 }

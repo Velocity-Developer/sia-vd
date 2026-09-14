@@ -30,3 +30,27 @@ it('stores multiple answer files and replaces previous submission', function () 
     expect($tugas->pengumpulanTugas()->first()->file_jawaban)->toHaveCount(2);
     expect($tugas->pengumpulanTugas()->count())->toBe(1);
 });
+
+it('rejects answer submission after the deadline', function () {
+    Storage::fake('public');
+    $kelas = createMateriKelasKuliah();
+    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
+    $tugas = Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $kelas->dosen->user_id, 'judul_tugas' => 'Tugas Lewat', 'tenggat_waktu' => now()->subDay()]);
+
+    $response = $this->actingAs($mahasiswa)->post(route('mahasiswa.tugas.pengumpulan.store', $tugas), ['file_jawaban' => [UploadedFile::fake()->create('Jawaban.pdf')]]);
+    $response->assertRedirect(route('mahasiswa.tugas.show', $tugas));
+    $response->assertSessionHas('error');
+    expect($tugas->pengumpulanTugas()->count())->toBe(0);
+});
+
+it('accepts answer submission before the deadline', function () {
+    Storage::fake('public');
+    $kelas = createMateriKelasKuliah();
+    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
+    $tugas = Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $kelas->dosen->user_id, 'judul_tugas' => 'Tugas Aktif', 'tenggat_waktu' => now()->addDay()]);
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tugas.pengumpulan.store', $tugas), ['file_jawaban' => [UploadedFile::fake()->create('Jawaban.pdf')]])->assertRedirect();
+    expect($tugas->pengumpulanTugas()->count())->toBe(1);
+});

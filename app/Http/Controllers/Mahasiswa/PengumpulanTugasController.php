@@ -31,6 +31,11 @@ class PengumpulanTugasController extends Controller
         $mahasiswa = $request->user()->mahasiswaProfile;
         abort_if($mahasiswa === null, 403);
         $this->ensureAccess($tugas, $mahasiswa->id);
+
+        if ($tugas->tenggat_waktu !== null && $tugas->tenggat_waktu->isPast()) {
+            return to_route('mahasiswa.tugas.show', $tugas)->with('error', 'Tenggat waktu telah berakhir. Jawaban tidak dapat diunggah lagi.');
+        }
+
         $request->validate([
             'file_jawaban' => ['required', 'array', 'min:1', 'max:5'],
             'file_jawaban.*' => ['required', 'file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,jpg,jpeg,png'],

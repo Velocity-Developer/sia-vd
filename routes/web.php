@@ -19,8 +19,10 @@ use App\Http\Controllers\Dosen\TugasController as DosenTugasController;
 use App\Http\Controllers\Mahasiswa\ContentController as MahasiswaContentController;
 use App\Http\Controllers\Mahasiswa\KrsController;
 use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
+use App\Http\Controllers\Mahasiswa\QuizAttemptController;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
+use App\Models\Quiz;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -135,12 +137,12 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->
     Route::get('/', fn () => Inertia::render('Dashboard'))->name('mahasiswa.dashboard');
     Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
     Route::post('krs/{kelasKuliah}', [KrsController::class, 'store'])->name('mahasiswa.krs.store');
-    Route::get('tugas', fn (Request $request) => app(MahasiswaContentController::class)->index($request, 'tugas'))->name('mahasiswa.tugas');
     Route::get('tugas/{tugas}', [PengumpulanTugasController::class, 'show'])->name('mahasiswa.tugas.show');
     Route::post('tugas/{tugas}/pengumpulan', [PengumpulanTugasController::class, 'store'])->name('mahasiswa.tugas.pengumpulan.store');
-    Route::get('materi', fn (Request $request) => app(MahasiswaContentController::class)->index($request, 'materi'))->name('mahasiswa.materi');
     Route::get('materi/{materi}', fn (Request $request, Materi $materi) => app(MahasiswaContentController::class)->materiShow($request, $materi))->name('mahasiswa.materi.show');
-    Route::get('quiz', fn (Request $request) => app(MahasiswaContentController::class)->index($request, 'quiz'))->name('mahasiswa.quiz');
+    Route::get('quiz/{quiz}', fn (Request $request, Quiz $quiz) => app(MahasiswaContentController::class)->quizShow($request, $quiz))->name('mahasiswa.quiz.show');
+    Route::post('quiz/{quiz}/start', [QuizAttemptController::class, 'start'])->name('mahasiswa.quiz.start');
+    Route::post('quiz/{quiz}/submit', [QuizAttemptController::class, 'submit'])->name('mahasiswa.quiz.submit');
 
     Route::get('jadwal', fn (Request $request) => app(MahasiswaContentController::class)->jadwalKuliah($request))
         ->name('mahasiswa.jadwal-kuliah');
