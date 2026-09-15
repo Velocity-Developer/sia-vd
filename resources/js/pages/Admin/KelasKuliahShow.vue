@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
+import { Copy, Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const page = usePage<{
@@ -71,6 +71,7 @@ type KelasKuliahShowProps = {
     id: number;
     kode_kelas: string;
     tahunAkademik?: { tahun: string; semester: string } | null;
+    tahun_akademik?: { tahun: string; semester: string } | null;
     kapasitas: number;
     dosen?: { id: number; nidn: string; jabatan_fungsional?: string; user?: { name: string } | null } | null;
     mata_kuliah?: {
@@ -98,15 +99,22 @@ type KelasKuliahShowProps = {
     krs?: KrsShow[];
 };
 
-const props = defineProps<{ kelasKuliah: KelasKuliahShowProps }>();
+type OtherClass = {
+    id: number;
+    kode_kelas: string;
+    mataKuliah?: { nama_matkul: string } | null;
+};
+
+const props = defineProps<{ kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[] }>();
 
 const v = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '-';
     return String(val);
 };
 
-const dosen = () => (props.kelasKuliah as any).dosen ?? null;
-const matkul = () => (props.kelasKuliah as any).mataKuliah ?? (props.kelasKuliah as any).mata_kuliah ?? null;
+const dosen = () => props.kelasKuliah.dosen ?? null;
+const matkul = () => props.kelasKuliah.mataKuliah ?? props.kelasKuliah.mata_kuliah ?? null;
+const tahunAkademik = () => props.kelasKuliah.tahunAkademik ?? props.kelasKuliah.tahun_akademik ?? null;
 const jam = (time: string) => (time ?? '').slice(0, 5);
 
 const confirmOpen = ref(false);
@@ -117,6 +125,10 @@ const confirmTugasOpen = ref(false);
 const pendingTugas = ref<TugasShow | null>(null);
 const confirmQuizOpen = ref(false);
 const pendingQuiz = ref<QuizShow | null>(null);
+const duplicateOpen = ref(false);
+const duplicateType = ref<'materi' | 'tugas' | 'quiz'>('materi');
+const duplicateItem = ref<MateriShow | TugasShow | QuizShow | null>(null);
+const duplicateTargets = ref<number[]>([]);
 const editingKrs = ref<number | null>(null);
 const grade = ref('');
 const gradeSearch = ref('');
@@ -144,6 +156,29 @@ const saveGrade = (krs: KrsShow) =>
             },
         },
     );
+
+const openDuplicate = (type: 'materi' | 'tugas' | 'quiz', item: MateriShow | TugasShow | QuizShow) => {
+    duplicateType.value = type;
+    duplicateItem.value = item;
+    duplicateTargets.value = [];
+    duplicateOpen.value = true;
+};
+
+const duplicate = () => {
+    if (!duplicateItem.value || !duplicateTargets.value.length) return;
+
+    router.post(
+        route(`admin.kelas-kuliah.${duplicateType.value}.duplicate`, [props.kelasKuliah.id, duplicateItem.value.id]),
+        { target_ids: duplicateTargets.value },
+        {
+            onFinish: () => {
+                duplicateOpen.value = false;
+                duplicateItem.value = null;
+                duplicateTargets.value = [];
+            },
+        },
+    );
+};
 
 const removeJadwal = (jadwal: JadwalShow) => {
     pendingJadwal.value = jadwal;
@@ -286,8 +321,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Tahun Ajaran</dt>
                             <dd class="break-words text-[15px] font-medium leading-5 text-black">
                                 {{
-                                    props.kelasKuliah.tahunAkademik
-                                        ? `${props.kelasKuliah.tahunAkademik.tahun} ${props.kelasKuliah.tahunAkademik.semester}`
+                                    tahunAkademik()
+                                        ? `${tahunAkademik()?.tahun} ${tahunAkademik()?.semester}`
                                         : '-'
                                 }}
                             </dd>
@@ -524,6 +559,20 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ v(materi.uploader?.name) }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    title="Duplikasi"
+                                                    aria-label="Duplikasi"
+                                                    @click="openDuplicate('materi', materi)"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
+                                                        ><Copy class="size-4"
+                                                    /></Button>
+                                                </button>
                                                 <Link
                                                     :href="route('admin.kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
                                                     title="Edit"
@@ -640,6 +689,28 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <Link
+                                                    :href="route('admin.kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
+                                                    title="Lihat detail"
+                                                    aria-label="Lihat detail"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
+                                                        ><Eye class="size-4"
+                                                    /></Button>
+                                                </Link>
+                                                <button type="button" title="Duplikasi" aria-label="Duplikasi" @click="openDuplicate('tugas', tugas)">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
+                                                        ><Copy class="size-4"
+                                                    /></Button>
+                                                </button>
+                                                <Link
                                                     :href="route('admin.kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
                                                     title="Edit"
                                                     aria-label="Edit"
@@ -755,6 +826,15 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                         ><Eye class="size-4"
                                                     /></Button>
                                                 </Link>
+                                                <button type="button" title="Duplikasi" aria-label="Duplikasi" @click="openDuplicate('quiz', quiz)">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
+                                                        ><Copy class="size-4"
+                                                    /></Button>
+                                                </button>
                                                 <Link
                                                     :href="route('admin.kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
                                                     title="Edit"
@@ -883,6 +963,26 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
+                <div
+                    v-if="duplicateOpen"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+                    @click.self="duplicateOpen = false"
+                >
+                    <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col rounded-xl bg-white p-6">
+                        <h2 class="text-lg font-semibold">Duplikasi {{ duplicateType }}</h2>
+                        <p class="mt-1 text-sm text-[#615d59]">Pilih kelas tujuan.</p>
+                        <div class="mt-4 flex max-h-80 flex-col gap-3 overflow-y-auto pr-2">
+                            <label v-for="kelas in props.otherClasses" :key="kelas.id" class="flex gap-2 text-sm">
+                                <input v-model="duplicateTargets" type="checkbox" :value="kelas.id" />
+                                {{ kelas.kode_kelas }} — {{ kelas.mataKuliah?.nama_matkul ?? '-' }}
+                            </label>
+                        </div>
+                        <div class="mt-5 flex justify-end gap-2">
+                            <Button variant="outline" @click="duplicateOpen = false">Batal</Button>
+                            <Button :disabled="!duplicateTargets.length" @click="duplicate">Duplikasi</Button>
+                        </div>
+                    </div>
+                </div>
                 <AlertModal
                     :open="confirmOpen"
                     description="Anda yakin ingin menghapus data ini?"

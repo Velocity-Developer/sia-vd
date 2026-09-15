@@ -72,6 +72,24 @@ class MateriController extends Controller
         return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('materi_success', 'Materi berhasil diperbarui.');
     }
 
+    public function duplicate(Request $request, KelasKuliah $kelasKuliah, Materi $materi): RedirectResponse
+    {
+        $this->ensureScoped($kelasKuliah, $materi);
+        $validated = $request->validate(['target_ids' => ['required', 'array', 'min:1'], 'target_ids.*' => ['integer']]);
+        $ids = $validated['target_ids'];
+        $targets = KelasKuliah::whereIn('id', $ids)->whereKeyNot($kelasKuliah->id)->get();
+        abort_if($targets->count() !== count(array_unique($ids)), 404);
+
+        foreach ($targets as $target) {
+            $copy = $materi->replicate();
+            $copy->kelas_id = $target->id;
+            $copy->uploaded_by = $request->user()->id;
+            $copy->save();
+        }
+
+        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('materi_success', 'Materi berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.');
+    }
+
     public function destroy(KelasKuliah $kelasKuliah, Materi $materi): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $materi);

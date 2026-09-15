@@ -915,13 +915,15 @@ const formatTenggat = (value: string | null | undefined): string => {
                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
                     @click.self="duplicateOpen = false"
                 >
-                    <div class="w-full max-w-md rounded-xl bg-white p-6">
+                    <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col rounded-xl bg-white p-6">
                         <h2 class="text-lg font-semibold">Duplikasi {{ duplicateType }}</h2>
                         <p class="mt-1 text-sm text-[#615d59]">Pilih kelas tujuan.</p>
-                        <label v-for="kelas in props.otherClasses" :key="kelas.id" class="mt-3 flex gap-2 text-sm">
-                            <input v-model="duplicateTargets" type="checkbox" :value="kelas.id" />
-                            {{ kelas.kode_kelas }} — {{ kelas.mataKuliah?.nama_matkul ?? '-' }}
-                        </label>
+                        <div class="mt-4 flex max-h-80 flex-col gap-3 overflow-y-auto pr-2">
+                            <label v-for="kelas in props.otherClasses" :key="kelas.id" class="flex gap-2 text-sm">
+                                <input v-model="duplicateTargets" type="checkbox" :value="kelas.id" />
+                                {{ kelas.kode_kelas }} — {{ kelas.mataKuliah?.nama_matkul ?? '-' }}
+                            </label>
+                        </div>
                         <div class="mt-5 flex justify-end gap-2">
                             <Button variant="outline" @click="duplicateOpen = false">Batal</Button>
                             <Button :disabled="!duplicateTargets.length" @click="duplicate">Duplikasi</Button>

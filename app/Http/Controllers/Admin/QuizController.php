@@ -39,7 +39,7 @@ class QuizController extends Controller
     {
         $this->ensureScoped($kelasKuliah, $quiz);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
-        $quiz->load(['uploader:id,name', 'questions']);
+        $quiz->load(['uploader:id,name', 'questions', 'attempts.mahasiswa.user']);
 
         return Inertia::render('Admin/QuizShow', [
             'kelasKuliah' => $kelasKuliah,
@@ -193,6 +193,29 @@ class QuizController extends Controller
         $question->delete();
 
         return to_route('admin.kelas-kuliah.quiz.show', [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil dihapus.');
+    }
+
+    public function duplicate(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
+    {
+        $this->ensureScoped($kelasKuliah, $quiz);
+        $validated = $request->validate(['target_ids' => ['required', 'array', 'min:1'], 'target_ids.*' => ['integer']]);
+        $ids = $validated['target_ids'];
+        $targets = KelasKuliah::whereIn('id', $ids)->whereKeyNot($kelasKuliah->id)->get();
+        abort_if($targets->count() !== count(array_unique($ids)), 404);
+        $quiz->load('questions');
+
+        foreach ($targets as $target) {
+            $copy = $quiz->replicate();
+            $copy->kelas_id = $target->id;
+            $copy->uploaded_by = $request->user()->id;
+            $copy->save();
+
+            foreach ($quiz->questions as $question) {
+                $copy->questions()->create($question->only(['question_text', 'question_type', 'question_option', 'points']));
+            }
+        }
+
+        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('quiz_success', 'Quiz berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.');
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse

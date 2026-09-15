@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
+use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,6 +39,27 @@ class TugasController extends Controller
         return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', 'Tugas berhasil ditambahkan.');
     }
 
+    public function show(KelasKuliah $kelasKuliah, Tugas $tugas): Response
+    {
+        $this->ensureScoped($kelasKuliah, $tugas);
+        $kelasKuliah->load('mataKuliah');
+        $tugas->load(['uploader:id,name', 'pengumpulanTugas.mahasiswa.user', 'pengumpulanTugas.mahasiswa.prodi']);
+
+        return Inertia::render('Admin/TugasShow', [
+            'kelasKuliah' => $kelasKuliah,
+            'tugas' => $tugas,
+        ]);
+    }
+
+    public function updateSubmissionGrade(Request $request, KelasKuliah $kelasKuliah, Tugas $tugas, PengumpulanTugas $pengumpulanTugas): RedirectResponse
+    {
+        $this->ensureScoped($kelasKuliah, $tugas);
+        abort_unless($pengumpulanTugas->tugas_id === $tugas->id, 404);
+        $pengumpulanTugas->update($request->validate(['nilai' => ['nullable', 'numeric', 'min:0', 'max:100']]));
+
+        return back()->with('success', 'Nilai berhasil diperbarui.');
+    }
+
     public function edit(KelasKuliah $kelasKuliah, Tugas $tugas): Response
     {
         $this->ensureScoped($kelasKuliah, $tugas);
@@ -70,6 +92,24 @@ class TugasController extends Controller
         $tugas->update($data);
 
         return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', 'Tugas berhasil diperbarui.');
+    }
+
+    public function duplicate(Request $request, KelasKuliah $kelasKuliah, Tugas $tugas): RedirectResponse
+    {
+        $this->ensureScoped($kelasKuliah, $tugas);
+        $validated = $request->validate(['target_ids' => ['required', 'array', 'min:1'], 'target_ids.*' => ['integer']]);
+        $ids = $validated['target_ids'];
+        $targets = KelasKuliah::whereIn('id', $ids)->whereKeyNot($kelasKuliah->id)->get();
+        abort_if($targets->count() !== count(array_unique($ids)), 404);
+
+        foreach ($targets as $target) {
+            $copy = $tugas->replicate();
+            $copy->kelas_id = $target->id;
+            $copy->uploaded_by = $request->user()->id;
+            $copy->save();
+        }
+
+        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', 'Tugas berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.');
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Tugas $tugas): RedirectResponse

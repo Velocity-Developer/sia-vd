@@ -43,7 +43,10 @@ class KelasKuliahController extends Controller
     {
         $kelasKuliah->load(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi.fakultas', 'jadwals.ruang', 'materis.uploader:id,name', 'tugas.uploader:id,name', 'quizzes.uploader:id,name', 'krs.mahasiswa.user', 'krs.mahasiswa.prodi']);
 
-        return Inertia::render('Admin/KelasKuliahShow', ['kelasKuliah' => $kelasKuliah]);
+        return Inertia::render('Admin/KelasKuliahShow', [
+            'kelasKuliah' => $kelasKuliah,
+            'otherClasses' => KelasKuliah::with('mataKuliah')->whereKeyNot($kelasKuliah->id)->orderBy('kode_kelas')->get(),
+        ]);
     }
 
     public function updateGrade(Request $request, KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse

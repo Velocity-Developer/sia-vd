@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Quiz;
+use App\Models\QuizAttempt;
 use App\Models\User;
 use App\Role;
 
@@ -43,6 +44,31 @@ it('shows quiz detail scoped to its class', function () {
             ->where('quiz.id', $quiz->id)
             ->where('quiz.nama_quiz', 'Quiz Detail')
             ->where('kelasKuliah.id', $kelas->id));
+});
+
+it('shows quiz attempts and scores to admin', function () {
+    $admin = User::factory()->create(['role' => Role::Admin]);
+    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $kelas = createMateriKelasKuliah();
+    $quiz = $kelas->quizzes()->create([
+        'nama_quiz' => 'Quiz Attempt',
+        'uploaded_by' => $admin->id,
+    ]);
+    $attempt = QuizAttempt::create([
+        'quiz_id' => $quiz->id,
+        'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id,
+        'started_at' => now()->subMinutes(10),
+        'submitted_at' => now(),
+        'score' => 90,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.kelas-kuliah.quiz.show', [$kelas, $quiz]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('quiz.attempts.0.id', $attempt->id)
+            ->where('quiz.attempts.0.score', '90.00')
+            ->where('quiz.attempts.0.mahasiswa.user.name', $mahasiswa->name));
 });
 
 it('rejects quiz detail from another class', function () {
