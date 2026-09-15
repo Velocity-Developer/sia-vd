@@ -100,7 +100,6 @@ Route::prefix('admin')->middleware(['auth', 'verified', 'role:admin'])->group(fu
 Route::prefix('dosen')->middleware(['auth', 'verified', 'role:dosen'])->group(function () {
     Route::get('/', fn () => Inertia::render('Dashboard'))->name('dosen.dashboard');
     Route::get('profile', fn () => Inertia::render('DosenPlaceholder', ['title' => 'Profile']))->name('dosen.profile');
-    Route::get('khs', fn () => Inertia::render('DosenKhs'))->name('dosen.khs');
     Route::get('kelas-kuliah', [DosenKelasKuliahController::class, 'index'])->name('dosen.kelas-kuliah.index');
     Route::get('mahasiswa-kelas', [MahasiswaKelasController::class, 'index'])->name('dosen.mahasiswa-kelas');
     Route::get('kelas-kuliah/{kelasKuliah}', [DosenKelasKuliahController::class, 'show'])->name('dosen.kelas-kuliah.show');
@@ -113,6 +112,8 @@ Route::prefix('dosen')->middleware(['auth', 'verified', 'role:dosen'])->group(fu
     Route::post('kelas-kuliah/{kelasKuliah}/materi/{materi}/duplicate', [DosenMateriController::class, 'duplicate'])->name('dosen.kelas-kuliah.materi.duplicate');
     Route::get('kelas-kuliah/{kelasKuliah}/tugas/create', [DosenTugasController::class, 'create'])->name('dosen.kelas-kuliah.tugas.create');
     Route::post('kelas-kuliah/{kelasKuliah}/tugas', [DosenTugasController::class, 'store'])->name('dosen.kelas-kuliah.tugas.store');
+    Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [DosenTugasController::class, 'show'])->name('dosen.kelas-kuliah.tugas.show');
+    Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/pengumpulan/{pengumpulanTugas}/nilai', [DosenTugasController::class, 'updateSubmissionGrade'])->name('dosen.kelas-kuliah.tugas.pengumpulan.nilai');
     Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/edit', [DosenTugasController::class, 'edit'])->name('dosen.kelas-kuliah.tugas.edit');
     Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [DosenTugasController::class, 'update'])->name('dosen.kelas-kuliah.tugas.update');
     Route::delete('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [DosenTugasController::class, 'destroy'])->name('dosen.kelas-kuliah.tugas.destroy');
@@ -128,9 +129,6 @@ Route::prefix('dosen')->middleware(['auth', 'verified', 'role:dosen'])->group(fu
     Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [DosenQuizController::class, 'destroy'])->name('dosen.kelas-kuliah.quiz.destroy');
     Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/duplicate', [DosenQuizController::class, 'duplicate'])->name('dosen.kelas-kuliah.quiz.duplicate');
     Route::redirect('jadwal-kuliah', '/dosen/kelas-kuliah', 301)->name('dosen.jadwal-kuliah');
-    Route::get('tugas', [DosenTugasController::class, 'index'])->name('dosen.tugas');
-    Route::get('materi', [DosenMateriController::class, 'index'])->name('dosen.materi');
-    Route::get('quiz', [DosenQuizController::class, 'index'])->name('dosen.quiz');
 });
 
 Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->group(function () {

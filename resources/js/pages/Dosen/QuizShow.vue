@@ -19,6 +19,14 @@ type QuestionDetail = {
     points?: number | null;
 };
 
+type QuizAttempt = {
+    id: number;
+    started_at?: string | null;
+    submitted_at?: string | null;
+    score?: string | number | null;
+    mahasiswa?: { nim?: string | null; user?: { name: string } | null } | null;
+};
+
 type QuizDetail = {
     id: number;
     nama_quiz: string;
@@ -29,6 +37,20 @@ type QuizDetail = {
     updated_at?: string | null;
     uploader?: { name: string } | null;
     questions?: QuestionDetail[];
+    attempts?: QuizAttempt[];
+};
+
+const formatDateTime = (value: string | null | undefined): string => {
+    if (!value) return '-';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return value;
+
+    return new Intl.DateTimeFormat('id-ID', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(date);
 };
 
 type KelasKuliahDetail = {
@@ -538,6 +560,41 @@ const sel =
                         </div>
                         <InputError :message="form.errors.questions" />
                     </form>
+                </section>
+
+                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <div class="space-y-1">
+                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa yang Mengerjakan Quiz</h2>
+                        <p class="text-sm leading-5 text-[#615d59]">Daftar mahasiswa yang sudah memulai atau menyelesaikan quiz.</p>
+                    </div>
+                    <div class="mt-4 overflow-x-auto rounded-xl border border-[#e6e6e6]">
+                        <table class="w-full min-w-[700px] text-left">
+                            <thead>
+                                <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">No.</th>
+                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Mahasiswa</th>
+                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Mulai</th>
+                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Selesai</th>
+                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-[#e6e6e6]">
+                                <tr v-for="(attempt, index) in props.quiz.attempts ?? []" :key="attempt.id" class="hover:bg-[#f6f5f4]/60">
+                                    <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
+                                    <td class="px-4 py-3 text-sm">
+                                        <span class="font-medium text-black">{{ attempt.mahasiswa?.user?.name ?? '-' }}</span>
+                                        <span v-if="attempt.mahasiswa?.nim" class="block text-[#615d59]">{{ attempt.mahasiswa.nim }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.started_at) }}</td>
+                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.submitted_at) }}</td>
+                                    <td class="px-4 py-3 text-sm font-semibold text-black">{{ attempt.score ?? '-' }}</td>
+                                </tr>
+                                <tr v-if="!(props.quiz.attempts ?? []).length">
+                                    <td colspan="5" class="px-4 py-10 text-center text-sm text-[#615d59]">Belum ada mahasiswa yang mengerjakan quiz.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </section>
 
             </div>

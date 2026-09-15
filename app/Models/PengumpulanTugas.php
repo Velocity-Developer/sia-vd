@@ -9,11 +9,15 @@ class PengumpulanTugas extends Model
 {
     protected $table = 'pengumpulan_tugas';
 
-    protected $fillable = ['tugas_id', 'mahasiswa_id', 'file_jawaban', 'nilai'];
+    protected $fillable = ['tugas_id', 'mahasiswa_id', 'file_jawaban', 'nilai', 'submitted_at'];
 
     protected function casts(): array
     {
-        return ['file_jawaban' => 'array', 'nilai' => 'decimal:2'];
+        return [
+            'file_jawaban' => 'array',
+            'nilai' => 'decimal:2',
+            'submitted_at' => 'datetime',
+        ];
     }
 
     public function tugas(): BelongsTo

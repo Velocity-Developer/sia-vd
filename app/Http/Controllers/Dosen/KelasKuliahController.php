@@ -50,6 +50,7 @@ class KelasKuliahController extends Controller
 
         $kelasKuliah->load([
             'mataKuliah.prodi.fakultas',
+            'tahunAkademik',
             'jadwals.ruang',
             'materis.uploader:id,name',
             'tugas.uploader:id,name',

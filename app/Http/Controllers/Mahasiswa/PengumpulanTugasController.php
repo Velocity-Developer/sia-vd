@@ -47,7 +47,10 @@ class PengumpulanTugasController extends Controller
         if ($old) {
             Storage::disk('public')->delete($old->file_jawaban ?? []);
         }
-        PengumpulanTugas::updateOrCreate(['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswa->id], ['file_jawaban' => $paths]);
+        PengumpulanTugas::updateOrCreate(
+            ['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswa->id],
+            ['file_jawaban' => $paths, 'submitted_at' => now()],
+        );
 
         return to_route('mahasiswa.tugas.show', $tugas)->with('success', 'Jawaban berhasil dikumpulkan.');
     }

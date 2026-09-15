@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dosen;
 
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
+use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,27 @@ class TugasController extends Controller
         Tugas::create($data);
 
         return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', 'Tugas berhasil ditambahkan.');
+    }
+
+    public function show(KelasKuliah $kelasKuliah, Tugas $tugas): Response
+    {
+        $this->ensureScoped($kelasKuliah, $tugas);
+        $kelasKuliah->load('mataKuliah');
+        $tugas->load(['uploader:id,name', 'pengumpulanTugas.mahasiswa.user', 'pengumpulanTugas.mahasiswa.prodi']);
+
+        return Inertia::render('Dosen/TugasShow', [
+            'kelasKuliah' => $kelasKuliah,
+            'tugas' => $tugas,
+        ]);
+    }
+
+    public function updateSubmissionGrade(Request $request, KelasKuliah $kelasKuliah, Tugas $tugas, PengumpulanTugas $pengumpulanTugas): RedirectResponse
+    {
+        $this->ensureScoped($kelasKuliah, $tugas);
+        abort_unless($pengumpulanTugas->tugas_id === $tugas->id, 404);
+        $pengumpulanTugas->update($request->validate(['nilai' => ['nullable', 'numeric', 'min:0', 'max:100']]));
+
+        return back()->with('success', 'Nilai berhasil diperbarui.');
     }
 
     public function edit(KelasKuliah $kelasKuliah, Tugas $tugas): Response

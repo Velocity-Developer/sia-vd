@@ -72,6 +72,7 @@ type KelasKuliahShowProps = {
     kode_kelas: string;
     tahun_ajaran?: string;
     tahunAkademik?: { tahun: string; semester: string } | null;
+    tahun_akademik?: { tahun: string; semester: string } | null;
     kapasitas: number;
     dosen?: { id: number; nidn: string; jabatan_fungsional?: string; user?: { name: string } | null } | null;
     mata_kuliah?: {
@@ -317,8 +318,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Tahun Ajaran</dt>
                             <dd class="break-words text-[15px] font-medium leading-5 text-black">
                                 {{
-                                    props.kelasKuliah.tahunAkademik
-                                        ? `${props.kelasKuliah.tahunAkademik.tahun} ${props.kelasKuliah.tahunAkademik.semester}`
+                                    (props.kelasKuliah.tahunAkademik ?? props.kelasKuliah.tahun_akademik)
+                                        ? `${(props.kelasKuliah.tahunAkademik ?? props.kelasKuliah.tahun_akademik)?.tahun} ${(props.kelasKuliah.tahunAkademik ?? props.kelasKuliah.tahun_akademik)?.semester}`
                                         : v(props.kelasKuliah.tahun_ajaran)
                                 }}
                             </dd>
@@ -634,6 +635,19 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ v(tugas.uploader?.name) }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
+                                                <Link
+                                                    :href="route('dosen.kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
+                                                    title="Lihat detail"
+                                                    aria-label="Lihat detail"
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
+                                                        aria-hidden="true"
+                                                        ><Eye class="size-4"
+                                                    /></Button>
+                                                </Link>
                                                 <button type="button" title="Duplikasi" aria-label="Duplikasi" @click="openDuplicate('tugas', tugas)">
                                                     <Button
                                                         variant="outline"

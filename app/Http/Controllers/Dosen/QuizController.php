@@ -56,7 +56,7 @@ class QuizController extends Controller
     {
         $this->ensureScoped($kelasKuliah, $quiz);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
-        $quiz->load(['uploader:id,name', 'questions']);
+        $quiz->load(['uploader:id,name', 'questions', 'attempts.mahasiswa.user']);
 
         return Inertia::render('Dosen/QuizShow', [
             'kelasKuliah' => $kelasKuliah,
