@@ -20,6 +20,8 @@ type KelasKuliah = {
     kapasitas: number;
     mata_kuliah?: { kode_matkul?: string; nama_matkul?: string; prodi?: { nama_prodi?: string } | null } | null;
     mataKuliah?: { kode_matkul?: string; nama_matkul?: string; prodi?: { nama_prodi?: string } | null } | null;
+    tahun_akademik?: { tahun?: string; semester?: string } | null;
+    tahunAkademik?: { tahun?: string; semester?: string } | null;
     jadwals?: Jadwal[];
 };
 type Pagination = { data: KelasKuliah[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
@@ -29,7 +31,8 @@ const props = defineProps<{ kelasKuliahs: Pagination; search?: string }>();
 const search = ref(props.search ?? '');
 watch(search, (value) => router.get(route('dosen.kelas-kuliah.index'), { search: value }, { preserveState: true, preserveScroll: true, replace: true }));
 
-const matkul = (item: KelasKuliah) => (item as any).mataKuliah ?? (item as any).mata_kuliah ?? null;
+const matkul = (item: KelasKuliah) => item.mataKuliah ?? item.mata_kuliah ?? null;
+const tahunAkademik = (item: KelasKuliah) => item.tahunAkademik ?? item.tahun_akademik ?? null;
 const jam = (time: string) => (time ?? '').slice(0, 5);
 const jadwalText = (item: KelasKuliah) => {
     if (!item.jadwals?.length) return '-';
@@ -87,7 +90,7 @@ const ruangText = (item: KelasKuliah) => {
                                         <span class="block">{{ matkul(item)?.kode_matkul ?? '-' }} — {{ matkul(item)?.nama_matkul ?? '' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ matkul(item)?.prodi?.nama_prodi ?? '' }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.tahun_ajaran }}</td>
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ tahunAkademik(item) ? `${tahunAkademik(item)?.tahun} ${tahunAkademik(item)?.semester}` : '-' }}</td>
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ jadwalText(item) }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ ruangText(item) }}</span>

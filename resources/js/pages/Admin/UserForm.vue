@@ -236,7 +236,7 @@ const sel = 'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2"><Label for="sekolah_asal" class="text-sm font-medium text-black">{{ labels.sekolah_asal }}</Label><Input id="sekolah_asal" v-model="form.sekolah_asal" :class="inp" required /><InputError :message="form.errors.sekolah_asal" /></div>
-                            <div class="grid gap-2"><Label for="nisn" class="text-sm font-medium text-black">{{ labels.nisn }}</Label><Input id="nisn" type="number" v-model="form.nisn" :class="inp" required /><InputError :message="form.errors.nisn" /></div>
+                            <div class="grid gap-2"><Label for="nisn" class="text-sm font-medium text-black">{{ labels.nisn }}</Label><Input id="nisn" type="text" inputmode="numeric" v-model="form.nisn" :class="inp" required /><InputError :message="form.errors.nisn" /></div>
                         </div>
                         <div class="mt-4 grid gap-2"><Label for="email_alternatif" class="text-sm font-medium text-black">{{ labels.email_alternatif }}</Label><Input id="email_alternatif" type="email" v-model="form.email_alternatif" :class="inp" required /><InputError :message="form.errors.email_alternatif" /></div>
                     </section>

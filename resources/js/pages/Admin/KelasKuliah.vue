@@ -19,13 +19,13 @@ type Jadwal = {
 type KelasKuliah = {
     id: number;
     kode_kelas: string;
-    tahun_ajaran: string;
     kapasitas: number;
     dosen?: { nidn?: string; user?: { name?: string } | null } | null;
     mata_kuliah?: { kode_matkul?: string; nama_matkul?: string; prodi?: { nama_prodi?: string } | null } | null;
     mataKuliah?: { kode_matkul?: string; nama_matkul?: string; prodi?: { nama_prodi?: string } | null } | null;
     jadwals?: Jadwal[];
     tahun_akademik?: { tahun?: string; semester?: string } | null;
+    tahunAkademik?: { tahun?: string; semester?: string } | null;
 };
 type Pagination = { data: KelasKuliah[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
 
@@ -55,6 +55,9 @@ const confirmDelete = () => {
 const dosenName = (item: KelasKuliah) => item.dosen?.user?.name ?? '-';
 const dosenNidn = (item: KelasKuliah) => item.dosen?.nidn ?? '';
 const matkul = (item: KelasKuliah) => (item as any).mataKuliah ?? (item as any).mata_kuliah ?? null;
+
+const tahunAkademik = (item: KelasKuliah) => item.tahunAkademik ?? item.tahun_akademik ?? null;
+
 const jam = (time: string) => time.slice(0, 5);
 const jadwalText = (item: KelasKuliah) => {
     if (!item.jadwals?.length) return '-';
@@ -126,7 +129,7 @@ const ruangText = (item: KelasKuliah) => {
                                 <tr v-for="(item, index) in props.kelasKuliahs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">{{ (props.kelasKuliahs.from ?? 0) + index }}</td>
                                     <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_kelas }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.tahun_akademik ? `${item.tahun_akademik.tahun} ${item.tahun_akademik.semester}` : '-' }}</td>
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ tahunAkademik(item) ? `${tahunAkademik(item)?.tahun} ${tahunAkademik(item)?.semester}` : '-' }}</td>
                                     <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.kapasitas }}</td>
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ dosenName(item) }}</span>

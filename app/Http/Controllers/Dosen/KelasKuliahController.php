@@ -21,9 +21,9 @@ class KelasKuliahController extends Controller
 
         $search = $request->string('search')->trim()->toString();
 
-        $kelasKuliahs = KelasKuliah::with(['mataKuliah.prodi', 'jadwals.ruang'])
+        $kelasKuliahs = KelasKuliah::with(['mataKuliah.prodi', 'tahunAkademik', 'jadwals.ruang'])
             ->where('dosen_id', $dosenProfileId)
-            ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q->where('kode_kelas', 'like', "%{$search}%")->orWhere('tahun_ajaran', 'like', "%{$search}%")->orWhereHas('mataKuliah', fn ($q) => $q->where('kode_matkul', 'like', "%{$search}%")->orWhere('nama_matkul', 'like', "%{$search}%"))))
+            ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q->where('kode_kelas', 'like', "%{$search}%")->orWhereHas('tahunAkademik', fn ($q) => $q->where('tahun', 'like', "%{$search}%")->orWhere('semester', 'like', "%{$search}%"))->orWhereHas('mataKuliah', fn ($q) => $q->where('kode_matkul', 'like', "%{$search}%")->orWhere('nama_matkul', 'like', "%{$search}%"))))
             ->orderBy('kode_kelas')
             ->paginate(10)
             ->withQueryString();
