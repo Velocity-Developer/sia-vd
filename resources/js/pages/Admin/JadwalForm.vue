@@ -3,8 +3,8 @@ import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import InputError from '@/components/InputError.vue';
 import SearchSelect from '@/components/SearchSelect.vue';
+import TimePicker from '@/components/TimePicker.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
@@ -80,12 +80,12 @@ const sel =
                             </div>
                             <div class="grid gap-2">
                                 <Label for="jam_mulai" class="text-sm font-medium text-black">Jam Mulai</Label>
-                                <Input id="jam_mulai" v-model="form.jam_mulai" type="time" :class="inp" required />
+                                <TimePicker id="jam_mulai" v-model="form.jam_mulai" :class="inp" required />
                                 <InputError :message="form.errors.jam_mulai" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="jam_akhir" class="text-sm font-medium text-black">Jam Akhir</Label>
-                                <Input id="jam_akhir" v-model="form.jam_akhir" type="time" :class="inp" required />
+                                <TimePicker id="jam_akhir" v-model="form.jam_akhir" :class="inp" required />
                                 <InputError :message="form.errors.jam_akhir" />
                             </div>
                         </div>

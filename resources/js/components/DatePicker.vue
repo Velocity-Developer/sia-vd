@@ -42,6 +42,9 @@ const minimumDate = computed(() => (props.minValue ? parseDate(props.minValue) :
         </PopoverTrigger>
         <PopoverContent class="w-auto p-0" align="start">
             <Calendar :model-value="selected" :default-placeholder="defaultPlaceholder" :min-value="minimumDate" locale="id-ID" initial-focus @update:model-value="handleSelect" />
+            <div v-if="selected" class="border-t p-2">
+                <Button type="button" variant="ghost" class="w-full" @click="emit('update:modelValue', ''); open = false">Hapus tanggal</Button>
+            </div>
         </PopoverContent>
     </Popover>
 </template>
