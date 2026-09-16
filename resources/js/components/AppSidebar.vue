@@ -14,6 +14,7 @@ const page = usePage<SharedData>();
 const navigationByRole: Record<string, NavItem[]> = {
     admin: [
         { title: 'Dashboard Admin', href: '/admin', icon: LayoutGrid },
+        { title: 'Info Kuliah', href: route('admin.info-kuliah.index'), icon: FileText },
         { title: 'Tahun Akademik', href: route('admin.tahun-akademik.index'), icon: CalendarRange },
         { title: 'Fakultas', href: route('admin.fakultas.index'), icon: GraduationCap },
         { title: 'Program Studi', href: route('admin.program-studi.index'), icon: BookOpen },
@@ -38,6 +39,7 @@ const navigationByRole: Record<string, NavItem[]> = {
     ],
     mahasiswa: [
         { title: 'Beranda', href: '/mahasiswa', icon: LayoutGrid },
+        { title: 'Info Kuliah', href: route('mahasiswa.info-kuliah'), icon: FileText },
         { title: 'Rencana dan Hasil Studi', href: '/mahasiswa/krs', icon: GraduationCap, items: [{ title: 'Rencana Studi (KRS)', href: '/mahasiswa/krs' }, { title: 'Kartu Hasil Studi', href: '/mahasiswa/khs' }, { title: 'Transkrip Nilai', href: '/mahasiswa/transkrip' }] },
         { title: 'Jadwal Kuliah', href: '/mahasiswa/jadwal', icon: CalendarDays },
         { title: 'Perpustakaan', href: '/mahasiswa/perpustakaan', icon: Library },

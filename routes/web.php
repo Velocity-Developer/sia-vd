@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\FakultasController;
+use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JadwalController;
 use App\Http\Controllers\Admin\KelasKuliahController;
 use App\Http\Controllers\Admin\MataKuliahController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Dosen\MateriController as DosenMateriController;
 use App\Http\Controllers\Dosen\QuizController as DosenQuizController;
 use App\Http\Controllers\Dosen\TugasController as DosenTugasController;
 use App\Http\Controllers\Mahasiswa\ContentController as MahasiswaContentController;
+use App\Http\Controllers\Mahasiswa\InfoKuliahController as MahasiswaInfoKuliahController;
 use App\Http\Controllers\Mahasiswa\KrsController;
 use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
 use App\Http\Controllers\Mahasiswa\QuizAttemptController;
@@ -64,6 +66,7 @@ Route::prefix('admin/users')->middleware(['auth', 'verified', 'role:admin'])->gr
 });
 
 Route::prefix('admin')->middleware(['auth', 'verified', 'role:admin'])->group(function (): void {
+    Route::resource('info-kuliah', InfoKuliahController::class)->parameters(['info-kuliah' => 'infoKuliah'])->names('admin.info-kuliah');
     Route::resource('fakultas', FakultasController::class)->parameters(['fakultas' => 'fakulta'])->names('admin.fakultas');
     Route::resource('program-studi', ProgramStudiController::class)->names('admin.program-studi');
     Route::resource('mata-kuliah', MataKuliahController::class)->parameters(['mata_kuliah' => 'mataKuliah'])->names('admin.mata-kuliah');
@@ -139,6 +142,7 @@ Route::prefix('dosen')->middleware(['auth', 'verified', 'role:dosen'])->group(fu
 Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->group(function () {
     Route::get('/', fn () => Inertia::render('Dashboard'))->name('mahasiswa.dashboard');
     Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
+    Route::get('info-kuliah', [MahasiswaInfoKuliahController::class, 'index'])->name('mahasiswa.info-kuliah');
     Route::post('krs/{kelasKuliah}', [KrsController::class, 'store'])->name('mahasiswa.krs.store');
     Route::get('tugas/{tugas}', [PengumpulanTugasController::class, 'show'])->name('mahasiswa.tugas.show');
     Route::post('tugas/{tugas}/pengumpulan', [PengumpulanTugasController::class, 'store'])->name('mahasiswa.tugas.pengumpulan.store');
