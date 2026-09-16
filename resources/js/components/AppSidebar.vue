@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, BookMarked, CalendarDays, ClipboardList, DoorOpen, FileText, Folder, GraduationCap, LayoutGrid, Library, ListChecks, UserRound, Users, CalendarRange } from 'lucide-vue-next';
+import { ArrowLeftRight, BookOpen, BookMarked, CalendarDays, ClipboardList, DoorOpen, FileText, Folder, GraduationCap, LayoutGrid, Library, ListChecks, UserRound, Users, CalendarRange } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
@@ -21,6 +21,7 @@ const navigationByRole: Record<string, NavItem[]> = {
         { title: 'Mata Kuliah', href: route('admin.mata-kuliah.index'), icon: Library },
         { title: 'Ruang', href: route('admin.ruang.index'), icon: DoorOpen },
         { title: 'Kelas Kuliah', href: route('admin.kelas-kuliah.index'), icon: ClipboardList },
+        { title: 'Pindah Kelas', href: route('admin.pindah-kelas.index'), icon: ArrowLeftRight },
         {
             title: 'Manage User',
             href: '/admin/users/dosen',
@@ -40,6 +41,7 @@ const navigationByRole: Record<string, NavItem[]> = {
     mahasiswa: [
         { title: 'Beranda', href: '/mahasiswa', icon: LayoutGrid },
         { title: 'Info Kuliah', href: route('mahasiswa.info-kuliah'), icon: FileText },
+        { title: 'Pindah Kelas', href: route('mahasiswa.pindah-kelas'), icon: ArrowLeftRight },
         { title: 'Rencana dan Hasil Studi', href: '/mahasiswa/krs', icon: GraduationCap, items: [{ title: 'Rencana Studi (KRS)', href: '/mahasiswa/krs' }, { title: 'Kartu Hasil Studi', href: '/mahasiswa/khs' }, { title: 'Transkrip Nilai', href: '/mahasiswa/transkrip' }] },
         { title: 'Jadwal Kuliah', href: '/mahasiswa/jadwal', icon: CalendarDays },
         { title: 'Perpustakaan', href: '/mahasiswa/perpustakaan', icon: Library },
