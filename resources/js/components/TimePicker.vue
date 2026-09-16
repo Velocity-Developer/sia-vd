@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Clock3 } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
 
 const props = withDefaults(defineProps<{ modelValue?: string; id?: string; class?: string; required?: boolean }>(), { modelValue: '', id: undefined, class: '', required: false });
@@ -7,12 +8,8 @@ const update = (value: string | number) => emit('update:modelValue', String(valu
 </script>
 
 <template>
-    <Input
-        :id="props.id"
-        :model-value="props.modelValue"
-        type="time"
-        :class="`rounded-[4px] border-[#dddddd] bg-white px-3 text-[15px] font-medium tabular-nums text-black shadow-sm transition-[border-color,box-shadow] hover:border-[#b8b4af] focus-visible:border-[#0075de] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0 ${props.class}`"
-        :required="props.required"
-        @update:model-value="update"
-    />
+    <div class="relative">
+        <Clock3 class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#615d59]" />
+        <Input :id="id" :model-value="modelValue" type="time" :class="`pl-10 ${props.class}`" :required="props.required" @update:model-value="update" />
+    </div>
 </template>

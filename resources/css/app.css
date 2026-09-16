@@ -89,4 +89,128 @@ html {
     body {
         @apply bg-background text-foreground;
     }
+
+    .dark .bg-white {
+        background-color: hsl(var(--card));
+    }
+
+    .dark .bg-gray-50,
+    .dark .bg-gray-100,
+    .dark .bg-slate-50,
+    .dark .bg-slate-100 {
+        background-color: hsl(var(--muted));
+    }
+
+    .dark .text-black,
+    .dark .text-gray-900,
+    .dark .text-slate-900,
+    .dark .text-neutral-900 {
+        color: hsl(var(--foreground));
+    }
+
+    .dark .text-gray-700,
+    .dark .text-gray-600,
+    .dark .text-slate-700,
+    .dark .text-slate-600,
+    .dark .text-neutral-700,
+    .dark .text-neutral-600 {
+        color: hsl(var(--muted-foreground));
+    }
+
+    .dark .border-gray-200,
+    .dark .border-gray-300,
+    .dark .border-slate-200,
+    .dark .border-slate-300,
+    .dark .border-neutral-200,
+    .dark .border-neutral-300 {
+        border-color: hsl(var(--border));
+    }
+
+    .dark .hover\\:bg-gray-50:hover,
+    .dark .hover\\:bg-gray-100:hover,
+    .dark .hover\\:bg-slate-50:hover,
+    .dark .hover\\:bg-neutral-50:hover {
+        background-color: hsl(var(--accent));
+    }
+
+    .dark [class*="bg-white"],
+    .dark [class*="bg-[#f6f5f4]"],
+    .dark [class*="bg-[#fafafa]"],
+    .dark [class*="bg-[#FDFDFC]"] {
+        background-color: hsl(var(--card));
+    }
+
+    .dark [class*="text-black"],
+    .dark [class*="text-[#1b1b18]"],
+    .dark [class*="text-[#31302e]"] {
+        color: hsl(var(--foreground));
+    }
+
+    .dark [class*="text-[#615d59]"],
+    .dark [class*="text-[#a39e98]"] {
+        color: hsl(var(--muted-foreground));
+    }
+
+    .dark [class*="border-[#e6e6e6]"],
+    .dark [class*="border-[#dddddd]"] {
+        border-color: hsl(var(--border));
+    }
+
+    .dark [class*="hover:bg-[#f6f5f4]"]:hover,
+    .dark [class*="hover:bg-[#f8fbff]"]:hover {
+        background-color: hsl(var(--accent));
+    }
+
+    .dark,
+    .dark html,
+    .dark body {
+        color-scheme: dark;
+        scrollbar-color: hsl(var(--border)) hsl(var(--background));
+        background-color: hsl(var(--background));
+    }
+
+    .dark ::-webkit-scrollbar,
+    .dark::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .dark ::-webkit-scrollbar-track,
+    .dark::-webkit-scrollbar-track {
+        background: hsl(var(--background));
+    }
+
+    .dark ::-webkit-scrollbar-thumb,
+    .dark::-webkit-scrollbar-thumb {
+        background-color: hsl(var(--border));
+        border: 2px solid hsl(var(--background));
+        border-radius: 9999px;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover,
+    .dark::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(var(--muted-foreground));
+    }
+
+    .dark .overflow-y-auto {
+        scrollbar-color: hsl(var(--border)) hsl(var(--background));
+        scrollbar-width: thin;
+    }
+
+    .dark .overflow-y-auto::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .dark .overflow-y-auto::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .dark .overflow-y-auto::-webkit-scrollbar-thumb {
+        background-color: hsl(var(--border));
+        border-radius: 9999px;
+    }
+
+    .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background-color: hsl(var(--muted-foreground));
+    }
 }
