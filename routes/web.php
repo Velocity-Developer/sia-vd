@@ -19,6 +19,7 @@ use App\Http\Controllers\Dosen\MateriController as DosenMateriController;
 use App\Http\Controllers\Dosen\QuizController as DosenQuizController;
 use App\Http\Controllers\Dosen\TugasController as DosenTugasController;
 use App\Http\Controllers\Mahasiswa\ContentController as MahasiswaContentController;
+use App\Http\Controllers\Mahasiswa\HasilStudiController;
 use App\Http\Controllers\Mahasiswa\InfoKuliahController as MahasiswaInfoKuliahController;
 use App\Http\Controllers\Mahasiswa\KrsController;
 use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
@@ -149,6 +150,8 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->
     Route::get('/', fn () => Inertia::render('Dashboard'))->name('mahasiswa.dashboard');
     Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
     Route::get('info-kuliah', [MahasiswaInfoKuliahController::class, 'index'])->name('mahasiswa.info-kuliah');
+    Route::get('hasil-studi', [HasilStudiController::class, 'index'])->name('mahasiswa.hasil-studi');
+    Route::get('khs', [HasilStudiController::class, 'index'])->name('mahasiswa.khs');
     Route::get('pindah-kelas', [MahasiswaPindahKelasController::class, 'index'])->name('mahasiswa.pindah-kelas');
     Route::post('pindah-kelas', [MahasiswaPindahKelasController::class, 'store'])->name('mahasiswa.pindah-kelas.store');
     Route::post('krs/{kelasKuliah}', [KrsController::class, 'store'])->name('mahasiswa.krs.store');
@@ -166,7 +169,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->
 
     foreach ([
         'profile' => 'Profile', 'info-perkuliahan' => 'Info Perkuliahan',
-        'khs' => 'KHS', 'pendaftaran-wisuda' => 'Pendaftaran Wisuda', 'perpustakaan' => 'Perpustakaan',
+        'pendaftaran-wisuda' => 'Pendaftaran Wisuda', 'perpustakaan' => 'Perpustakaan',
         'info-biaya-kuliah' => 'Info Biaya Kuliah', 'khs/transkrip-nilai' => 'Transkrip Nilai',
         'perpustakaan/pinjaman-aktif' => 'Pinjaman Aktif', 'perpustakaan/riwayat-pinjaman' => 'Riwayat Pinjaman',
     ] as $path => $title) {
