@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Dosen;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
+use App\Models\MataKuliah;
+use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,9 +22,13 @@ class KelasKuliahController extends Controller
         abort_if($dosenProfileId === null, 403);
 
         $search = $request->string('search')->trim()->toString();
+        $tahunAkademikId = $this->filterTahunAkademikId($request);
+        $mataKuliahId = $request->integer('mata_kuliah_id') ?: null;
 
         $kelasKuliahs = KelasKuliah::with(['mataKuliah.prodi', 'tahunAkademik', 'jadwals.ruang'])
             ->where('dosen_id', $dosenProfileId)
+            ->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId))
+            ->when($mataKuliahId !== null, fn ($query) => $query->where('matkul_id', $mataKuliahId))
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q->where('kode_kelas', 'like', "%{$search}%")->orWhereHas('tahunAkademik', fn ($q) => $q->where('tahun', 'like', "%{$search}%")->orWhere('semester', 'like', "%{$search}%"))->orWhereHas('mataKuliah', fn ($q) => $q->where('kode_matkul', 'like', "%{$search}%")->orWhere('nama_matkul', 'like', "%{$search}%"))))
             ->orderBy('kode_kelas')
             ->paginate(10)
@@ -31,7 +37,51 @@ class KelasKuliahController extends Controller
         return Inertia::render('Dosen/KelasKuliah', [
             'kelasKuliahs' => $kelasKuliahs,
             'search' => $search,
+            'tahunAkademiks' => $this->tahunAkademiks(),
+            'tahunAkademikId' => $tahunAkademikId,
+            'mataKuliahId' => $mataKuliahId,
+            'mataKuliahOptions' => $this->mataKuliahOptions($dosenProfileId, $tahunAkademikId),
         ]);
+    }
+
+    /**
+     * Filter tahun akademik default ke tahun akademik yang sedang aktif.
+     */
+    private function filterTahunAkademikId(Request $request): ?int
+    {
+        if ($request->has('tahun_akademik_id')) {
+            return $request->integer('tahun_akademik_id') ?: null;
+        }
+
+        return TahunAkademik::where('status', true)->value('id');
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function tahunAkademiks(): array
+    {
+        return TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get()
+            ->map(fn (TahunAkademik $tahunAkademik): array => [
+                'id' => $tahunAkademik->id,
+                'name' => $tahunAkademik->tahun.' '.$tahunAkademik->semester,
+            ])->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function mataKuliahOptions(int $dosenProfileId, ?int $tahunAkademikId): array
+    {
+        return MataKuliah::whereHas('kelasKuliah', fn ($query) => $query
+            ->where('dosen_id', $dosenProfileId)
+            ->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)))
+            ->orderBy('kode_matkul')
+            ->get(['id', 'kode_matkul', 'nama_matkul'])
+            ->map(fn (MataKuliah $mataKuliah): array => [
+                'id' => $mataKuliah->id,
+                'name' => $mataKuliah->kode_matkul.' — '.$mataKuliah->nama_matkul,
+            ])->all();
     }
 
     public function updateGrade(Request $request, KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse

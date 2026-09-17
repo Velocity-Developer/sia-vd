@@ -23,10 +23,12 @@ type ProgramStudi = {
 const kaprodiName = (item: ProgramStudi): string => item.ketuaProgramStudi?.user?.name ?? (item as any).ketua_program_studi?.user?.name ?? '-';
 type Pagination = { data: ProgramStudi[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
 
-const props = defineProps<{ programStudis: Pagination; search?: string }>();
+const props = defineProps<{ programStudis: Pagination; search?: string; fakultas: { id: number; nama_fakultas: string }[]; fakultasId: number | null }>();
 
 const search = ref(props.search ?? '');
-watch(search, (value) => router.get(route('admin.program-studi.index'), { search: value }, { preserveState: true, preserveScroll: true, replace: true }));
+const fakultasId = ref<number | string>(props.fakultasId ?? 'all');
+const applyFilters = () => router.get(route('admin.program-studi.index'), { search: search.value, fakultas_id: fakultasId.value }, { preserveState: true, preserveScroll: true, replace: true });
+watch(search, applyFilters);
 
 const confirmOpen = ref(false);
 const pendingItem = ref<ProgramStudi | null>(null);
@@ -63,13 +65,19 @@ const confirmDelete = () => {
                 </div>
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="relative w-full sm:max-w-sm">
-                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                        <Input
-                            v-model="search"
-                            placeholder="Cari kode atau nama program studi"
-                            class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
-                        />
+                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                        <div class="relative w-full sm:max-w-sm">
+                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                            <Input
+                                v-model="search"
+                                placeholder="Cari kode atau nama program studi"
+                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm transition-colors outline-none placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
+                            />
+                        </div>
+                        <select v-model="fakultasId" class="h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm transition-colors outline-none hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:min-w-[180px] sm:w-auto" aria-label="Filter fakultas" @change="applyFilters">
+                            <option value="all">Semua Fakultas</option>
+                            <option v-for="item in props.fakultas" :key="item.id" :value="item.id">{{ item.nama_fakultas }}</option>
+                        </select>
                     </div>
                     <p class="text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.programStudis.total }}</span> data<span v-if="props.search"> · hasil untuk "{{ props.search }}"</span>

@@ -4,8 +4,9 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { AlertTriangle, Check, X } from 'lucide-vue-next';
+import { AlertTriangle, Check, Search, X } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
 
 type Pengajuan = {
     id: number;
@@ -33,7 +34,11 @@ type Pagination = {
     from: number | null;
 };
 
-const props = defineProps<{ isActive: boolean; pengajuans: Pagination }>();
+const props = defineProps<{ isActive: boolean; pengajuans: Pagination; search?: string; tahunAkademiks: { id: number; tahun: string; semester: string }[]; tahunAkademikId: number | null }>();
+const search = ref(props.search ?? '');
+const tahunAkademikId = ref<number | string>(props.tahunAkademikId ?? 'all');
+const applyFilters = () => router.get(route('admin.pindah-kelas.index'), { search: search.value, tahun_akademik_id: tahunAkademikId.value }, { preserveState: true, preserveScroll: true, replace: true });
+watch(search, applyFilters);
 
 const page = usePage<{ flash?: { success?: string; error?: string; pindah_kelas_warning?: string } }>();
 
@@ -192,8 +197,18 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                 </section>
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="border-b border-[#e6e6e6] px-6 py-4 dark:border-gray-800">
+                    <div class="flex flex-col gap-3 border-b border-[#e6e6e6] px-6 py-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Daftar Pengajuan</h2>
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <div class="relative w-full sm:max-w-sm">
+                                <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                                <Input v-model="search" placeholder="Cari nama atau NIM mahasiswa" class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]" />
+                            </div>
+                            <select v-model="tahunAkademikId" class="h-9 rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm" aria-label="Filter tahun akademik" @change="applyFilters">
+                                <option value="all">Semua Tahun Akademik</option>
+                                <option v-for="tahun in props.tahunAkademiks" :key="tahun.id" :value="tahun.id">{{ tahun.tahun }} {{ tahun.semester }}</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[900px] text-left">

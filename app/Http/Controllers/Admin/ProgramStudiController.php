@@ -18,9 +18,10 @@ class ProgramStudiController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
-        $programStudis = ProgramStudi::with(['fakultas', 'ketuaProgramStudi.user:id,name'])->when($search !== '', fn ($query) => $query->where(fn ($query) => $query->where('kode_prodi', 'like', "%{$search}%")->orWhere('nama_prodi', 'like', "%{$search}%")))->orderBy('nama_prodi')->paginate(10)->withQueryString();
+        $fakultasId = $request->integer('fakultas_id') ?: null;
+        $programStudis = ProgramStudi::with(['fakultas', 'ketuaProgramStudi.user:id,name'])->when($fakultasId !== null, fn ($query) => $query->where('fakultas_id', $fakultasId))->when($search !== '', fn ($query) => $query->where(fn ($query) => $query->where('kode_prodi', 'like', "%{$search}%")->orWhere('nama_prodi', 'like', "%{$search}%")))->orderBy('nama_prodi')->paginate(10)->withQueryString();
 
-        return Inertia::render('Admin/ProgramStudi', ['programStudis' => $programStudis, 'search' => $search]);
+        return Inertia::render('Admin/ProgramStudi', ['programStudis' => $programStudis, 'search' => $search, 'fakultas' => Fakultas::orderBy('nama_fakultas')->get(['id', 'nama_fakultas']), 'fakultasId' => $fakultasId]);
     }
 
     public function create(): Response

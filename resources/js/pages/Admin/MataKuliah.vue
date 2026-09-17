@@ -20,10 +20,17 @@ type MataKuliah = {
 };
 type Pagination = { data: MataKuliah[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
 
-const props = defineProps<{ mataKuliahs: Pagination; search?: string }>();
+const props = defineProps<{
+    mataKuliahs: Pagination;
+    search?: string;
+    programStudis: { id: number; nama_prodi: string; jenjang: string }[];
+    programStudiId: number | null;
+}>();
 
 const search = ref(props.search ?? '');
-watch(search, (value) => router.get(route('admin.mata-kuliah.index'), { search: value }, { preserveState: true, preserveScroll: true, replace: true }));
+const programStudiId = ref<number | string>(props.programStudiId ?? 'all');
+const applyFilters = () => router.get(route('admin.mata-kuliah.index'), { search: search.value, program_studi_id: programStudiId.value }, { preserveState: true, preserveScroll: true, replace: true });
+watch(search, applyFilters);
 
 const confirmOpen = ref(false);
 const pendingItem = ref<MataKuliah | null>(null);
@@ -62,6 +69,7 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                 </div>
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
                     <div class="relative w-full sm:max-w-sm">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                         <Input
@@ -69,6 +77,11 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                             placeholder="Cari kode atau nama mata kuliah"
                             class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
                         />
+                    </div>
+                    <select v-model="programStudiId" class="h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm outline-none hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:min-w-[220px] sm:w-auto" aria-label="Filter program studi" @change="applyFilters">
+                        <option value="all">Semua Program Studi</option>
+                        <option v-for="prodi in props.programStudis" :key="prodi.id" :value="prodi.id">{{ prodi.nama_prodi }} ({{ prodi.jenjang }})</option>
+                    </select>
                     </div>
                     <p class="text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.mataKuliahs.total }}</span> data<span v-if="props.search"> · hasil untuk "{{ props.search }}"</span>

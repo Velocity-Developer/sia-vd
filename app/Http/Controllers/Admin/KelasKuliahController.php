@@ -20,13 +20,29 @@ class KelasKuliahController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
+        $tahunAkademikId = $this->filterTahunAkademikId($request);
+        $mataKuliahId = $request->integer('mata_kuliah_id') ?: null;
+        $dosenId = $request->integer('dosen_id') ?: null;
+
         $kelasKuliahs = KelasKuliah::with(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi', 'jadwals.ruang'])
+            ->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId))
+            ->when($mataKuliahId !== null, fn ($query) => $query->where('matkul_id', $mataKuliahId))
+            ->when($dosenId !== null, fn ($query) => $query->where('dosen_id', $dosenId))
             ->when($search !== '', fn ($query) => $query->where(fn ($q) => $q->where('kode_kelas', 'like', "%{$search}%")->orWhereHas('tahunAkademik', fn ($q) => $q->where('tahun', 'like', "%{$search}%")->orWhere('semester', 'like', "%{$search}%"))->orWhereHas('mataKuliah', fn ($q) => $q->where('kode_matkul', 'like', "%{$search}%")->orWhere('nama_matkul', 'like', "%{$search}%"))))
             ->orderBy('kode_kelas')
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Admin/KelasKuliah', ['kelasKuliahs' => $kelasKuliahs, 'search' => $search]);
+        return Inertia::render('Admin/KelasKuliah', [
+            'kelasKuliahs' => $kelasKuliahs,
+            'search' => $search,
+            'tahunAkademiks' => $this->tahunAkademiks(),
+            'tahunAkademikId' => $tahunAkademikId,
+            'mataKuliahId' => $mataKuliahId,
+            'mataKuliahOptions' => $this->mataKuliahOptions($tahunAkademikId),
+            'dosenId' => $dosenId,
+            'dosenOptions' => $this->dosenOptions($tahunAkademikId),
+        ]);
     }
 
     public function create(): Response
@@ -93,8 +109,58 @@ class KelasKuliahController extends Controller
     }
 
     /**
+     * Filter tahun akademik default ke tahun akademik yang sedang aktif.
+     */
+    private function filterTahunAkademikId(Request $request): ?int
+    {
+        if ($request->has('tahun_akademik_id')) {
+            return $request->integer('tahun_akademik_id') ?: null;
+        }
+
+        return TahunAkademik::where('status', true)->value('id');
+    }
+
+    /**
      * @return array<int, array{id: int, name: string}>
      */
+    private function tahunAkademiks(): array
+    {
+        return TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get()
+            ->map(fn (TahunAkademik $tahunAkademik): array => [
+                'id' => $tahunAkademik->id,
+                'name' => $tahunAkademik->tahun.' '.$tahunAkademik->semester,
+            ])->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function mataKuliahOptions(?int $tahunAkademikId): array
+    {
+        return MataKuliah::whereHas('kelasKuliah', fn ($query) => $query->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)))
+            ->orderBy('kode_matkul')
+            ->get(['id', 'kode_matkul', 'nama_matkul'])
+            ->map(fn (MataKuliah $mataKuliah): array => [
+                'id' => $mataKuliah->id,
+                'name' => $mataKuliah->kode_matkul.' — '.$mataKuliah->nama_matkul,
+            ])->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function dosenOptions(?int $tahunAkademikId): array
+    {
+        return DosenProfile::with('user:id,name')
+            ->whereHas('kelasKuliah', fn ($query) => $query->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)))
+            ->orderBy('nidn')
+            ->get()
+            ->map(fn (DosenProfile $dosen): array => [
+                'id' => $dosen->id,
+                'name' => ($dosen->user?->name ?? 'Tanpa nama').' — '.$dosen->nidn,
+            ])->all();
+    }
+
     private function dosens(): array
     {
         return DosenProfile::with('user:id,name')->orderBy('nidn')->get()->map(fn (DosenProfile $d): array => [

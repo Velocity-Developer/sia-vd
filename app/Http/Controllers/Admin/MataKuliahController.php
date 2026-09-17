@@ -17,13 +17,15 @@ class MataKuliahController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
+        $programStudiId = $request->integer('program_studi_id') ?: null;
         $mataKuliahs = MataKuliah::with(['prodi.fakultas'])
+            ->when($programStudiId !== null, fn ($query) => $query->where('prodi_id', $programStudiId))
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query->where('kode_matkul', 'like', "%{$search}%")->orWhere('nama_matkul', 'like', "%{$search}%")))
             ->orderBy('kode_matkul')
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Admin/MataKuliah', ['mataKuliahs' => $mataKuliahs, 'search' => $search]);
+        return Inertia::render('Admin/MataKuliah', ['mataKuliahs' => $mataKuliahs, 'search' => $search, 'programStudis' => $this->programStudis(), 'programStudiId' => $programStudiId]);
     }
 
     public function create(): Response

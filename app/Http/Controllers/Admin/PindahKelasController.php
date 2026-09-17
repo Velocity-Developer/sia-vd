@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Krs;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanPindahKelas;
+use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +15,12 @@ use Inertia\Response;
 
 class PindahKelasController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $search = $request->string('search')->trim()->toString();
+        $tahunAkademikId = $request->has('tahun_akademik_id')
+            ? ($request->integer('tahun_akademik_id') ?: null)
+            : TahunAkademik::where('status', true)->value('id');
         $pengajuans = PengajuanPindahKelas::query()
             ->with([
                 'mahasiswa.user:id,name',
@@ -25,6 +30,8 @@ class PindahKelasController extends Controller
                 'kelasTujuan.mataKuliah:id,kode_matkul,nama_matkul',
                 'pemroses:id,name',
             ])
+            ->when($tahunAkademikId !== null, fn ($query) => $query->whereHas('kelasAsal', fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)))
+            ->when($search !== '', fn ($query) => $query->whereHas('mahasiswa', fn ($query) => $query->where('nim', 'like', "%{$search}%")->orWhereHas('user', fn ($query) => $query->where('name', 'like', "%{$search}%"))))
             ->latest()
             ->paginate(10)
             ->through(function (PengajuanPindahKelas $pengajuan): array {
@@ -54,6 +61,9 @@ class PindahKelasController extends Controller
         return Inertia::render('Admin/PindahKelas', [
             'isActive' => PengaturanPindahKelas::current()->is_active,
             'pengajuans' => $pengajuans,
+            'search' => $search,
+            'tahunAkademikId' => $tahunAkademikId,
+            'tahunAkademiks' => TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get(['id', 'tahun', 'semester']),
         ]);
     }
 

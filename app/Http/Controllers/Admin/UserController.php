@@ -27,7 +27,9 @@ class UserController extends Controller
     {
         $role = $this->role($type);
         $search = $request->string('search')->trim();
+        $angkatan = $request->integer('angkatan') ?: null;
         $users = User::query()->where('role', $role)
+            ->when($role === Role::Mahasiswa && $angkatan !== null, fn ($query) => $query->whereHas('mahasiswaProfile', fn ($query) => $query->where('angkatan', $angkatan)))
             ->with($this->profileRelation($role))
             ->when($search->isNotEmpty(), fn ($query) => $query->where(function ($query) use ($search, $role): void {
                 $query->where('name', 'like', "%{$search}%");
@@ -46,7 +48,11 @@ class UserController extends Controller
             ->select(['id', 'name', 'username', 'email', 'role'])->orderBy('name')->paginate(10)->withQueryString()
             ->through(fn (User $user): array => $user->only(['id', 'name', 'username', 'email']) + ['profile' => $user->profile?->toArray()]);
 
-        return Inertia::render('Admin/Users', ['title' => 'Manage User - '.ucfirst($type), 'type' => $type, 'users' => $users, 'search' => $search->toString()]);
+        $angkatans = $role === Role::Mahasiswa
+            ? User::query()->where('role', Role::Mahasiswa)->whereHas('mahasiswaProfile')->with('mahasiswaProfile')->get()->pluck('mahasiswaProfile.angkatan')->filter()->unique()->sortDesc()->values()->all()
+            : [];
+
+        return Inertia::render('Admin/Users', ['title' => 'Manage User - '.ucfirst($type), 'type' => $type, 'users' => $users, 'search' => $search->toString(), 'angkatan' => $angkatan, 'angkatans' => $angkatans]);
     }
 
     public function create(string $type): Response

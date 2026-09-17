@@ -29,10 +29,39 @@ type KelasKuliah = {
 };
 type Pagination = { data: KelasKuliah[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
 
-const props = defineProps<{ kelasKuliahs: Pagination; search?: string }>();
+const props = defineProps<{
+    kelasKuliahs: Pagination;
+    search?: string;
+    tahunAkademiks: { id: number; name: string }[];
+    tahunAkademikId: number | null;
+    mataKuliahId: number | null;
+    mataKuliahOptions: { id: number; name: string }[];
+    dosenId: number | null;
+    dosenOptions: { id: number; name: string }[];
+}>();
 
 const search = ref(props.search ?? '');
-watch(search, (value) => router.get(route('admin.kelas-kuliah.index'), { search: value }, { preserveState: true, preserveScroll: true, replace: true }));
+const tahunAkademikId = ref<number | string>(props.tahunAkademikId ?? 'all');
+const mataKuliahId = ref<number | string>(props.mataKuliahId ?? 'all');
+const dosenId = ref<number | string>(props.dosenId ?? 'all');
+
+const sel =
+    'h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm transition-colors outline-none hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:min-w-[180px] sm:w-auto';
+
+const applyFilters = () =>
+    router.get(
+        route('admin.kelas-kuliah.index'),
+        { search: search.value, tahun_akademik_id: tahunAkademikId.value, mata_kuliah_id: mataKuliahId.value, dosen_id: dosenId.value },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
+
+watch(search, applyFilters);
+
+const onTahunAkademikChange = () => {
+    mataKuliahId.value = 'all';
+    dosenId.value = 'all';
+    applyFilters();
+};
 
 const confirmOpen = ref(false);
 const pendingItem = ref<KelasKuliah | null>(null);
@@ -85,14 +114,28 @@ const ruangText = (item: KelasKuliah) => {
                     </Link>
                 </div>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="relative w-full sm:max-w-sm">
-                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                        <Input
-                            v-model="search"
-                            placeholder="Cari kode kelas, tahun ajaran, atau mata kuliah"
-                            class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
-                        />
+                <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                    <div class="grid gap-3 sm:grid-cols-2 xl:flex xl:items-center">
+                        <div class="relative w-full sm:max-w-sm">
+                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                            <Input
+                                v-model="search"
+                                placeholder="Cari kode kelas, tahun ajaran, atau mata kuliah"
+                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
+                            />
+                        </div>
+                        <select v-model="tahunAkademikId" :class="sel" aria-label="Filter tahun akademik" @change="onTahunAkademikChange">
+                            <option value="all">Semua Tahun Akademik</option>
+                            <option v-for="ta in props.tahunAkademiks" :key="ta.id" :value="ta.id">{{ ta.name }}</option>
+                        </select>
+                        <select v-model="mataKuliahId" :class="sel" aria-label="Filter mata kuliah" @change="applyFilters">
+                            <option value="all">Semua Mata Kuliah</option>
+                            <option v-for="mataKuliah in props.mataKuliahOptions" :key="mataKuliah.id" :value="mataKuliah.id">{{ mataKuliah.name }}</option>
+                        </select>
+                        <select v-model="dosenId" :class="sel" aria-label="Filter dosen" @change="applyFilters">
+                            <option value="all">Semua Dosen</option>
+                            <option v-for="dosen in props.dosenOptions" :key="dosen.id" :value="dosen.id">{{ dosen.name }}</option>
+                        </select>
                     </div>
                     <p class="text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.kelasKuliahs.total }}</span> data<span v-if="props.search"> · hasil untuk "{{ props.search }}"</span>
