@@ -3,6 +3,7 @@
 use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\Ruang;
+use App\Models\TahunAkademik;
 use App\Models\User;
 use App\Role;
 
@@ -24,6 +25,24 @@ it('shows schedules only from mahasiswa KRS', function () {
             ->has('kelasKuliahs', 1)
             ->where('kelasKuliahs.0.id', $takenClass->id)
             ->where('kelasKuliahs.0.jadwals.0.hari', 'Senin'));
+});
+
+it('hides schedules from inactive academic years', function () {
+    $activeClass = createMateriKelasKuliah();
+    $pastTahunAkademik = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
+    $pastClass = createMateriKelasKuliah($pastTahunAkademik);
+    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $activeClass->id]);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $pastClass->id]);
+
+    $this->actingAs($mahasiswa)
+        ->get('/mahasiswa/jadwal')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Mahasiswa/JadwalKuliah')
+            ->has('kelasKuliahs', 1)
+            ->where('kelasKuliahs.0.id', $activeClass->id));
 });
 
 it('shows enrolled class detail and forbids other classes', function () {

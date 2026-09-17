@@ -32,7 +32,7 @@ it('defaults the admin class list to the active academic year', function () {
     $aktif = tahunAkademikAktif(true);
     $nonaktif = tahunAkademikAktif(false);
 
-    $referensi = createMateriKelasKuliah();
+    $referensi = createMateriKelasKuliah($nonaktif);
     $kelasAktif = kelasKuliahDenganTahun($aktif, 'AKTIF-A', $referensi);
     kelasKuliahDenganTahun($nonaktif, 'LAMA-A', $referensi);
 
@@ -90,7 +90,7 @@ it('defaults the dosen class list to the active academic year for own classes on
     $aktif = tahunAkademikAktif(true);
     $nonaktif = tahunAkademikAktif(false);
 
-    $referensi = createMateriKelasKuliah();
+    $referensi = createMateriKelasKuliah($nonaktif);
     $dosen = $referensi->dosen->user;
     $kelasAktif = kelasKuliahDenganTahun($aktif, 'AKTIF-A', $referensi);
     kelasKuliahDenganTahun($nonaktif, 'LAMA-A', $referensi);
@@ -112,8 +112,9 @@ it('defaults the dosen class list to the active academic year for own classes on
 
 it('filters the dosen class list by a single class', function () {
     $aktif = tahunAkademikAktif(true);
+    $nonaktif = tahunAkademikAktif(false);
 
-    $referensi = createMateriKelasKuliah();
+    $referensi = createMateriKelasKuliah($nonaktif);
     $dosen = $referensi->dosen->user;
     $kelasAktif = kelasKuliahDenganTahun($aktif, 'AKTIF-A', $referensi);
     $kelasLain = kelasKuliahDenganTahun($aktif, 'AKTIF-B', $referensi);
