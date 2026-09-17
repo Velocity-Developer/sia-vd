@@ -241,9 +241,17 @@ class DatabaseSeeder extends Seeder
         }
 
         $mahasiswaProfiles = User::where('role', Role::Mahasiswa->value)->with('mahasiswaProfile')->get()->pluck('mahasiswaProfile')->filter()->values();
+        $tahunDenganNilai = TahunAkademik::whereIn('tahun', ['2023/2024', '2024/2025'])
+            ->whereIn('semester', ['Ganjil', 'Genap'])
+            ->pluck('id')
+            ->all();
+        $nilaiHuruf = ['A', 'B', 'C', 'D', 'E'];
+
         foreach ($kelasKonten as $kelasIndex => $kelas) {
+            $beriNilai = in_array($kelas->tahun_akademik_id, $tahunDenganNilai, true);
+
             foreach ($mahasiswaProfiles->slice(0, 3) as $studentIndex => $profile) {
-                Krs::create(['mahasiswa_id' => $profile->id, 'kelas_id' => $kelas->id, 'nilai' => $kelasIndex % 2 === 0 ? 80 + $studentIndex : null, 'status' => 'Aktif']);
+                Krs::create(['mahasiswa_id' => $profile->id, 'kelas_id' => $kelas->id, 'nilai' => $beriNilai ? $nilaiHuruf[($kelasIndex + $studentIndex) % count($nilaiHuruf)] : null, 'status' => 'Aktif']);
             }
             $tugas = $kelas->tugas->first();
             if ($tugas) {
