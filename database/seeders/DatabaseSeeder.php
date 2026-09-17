@@ -5,11 +5,15 @@ namespace Database\Seeders;
 use App\Models\Fakultas;
 use App\Models\Jadwal;
 use App\Models\KelasKuliah;
+use App\Models\Krs;
 use App\Models\MataKuliah;
 use App\Models\Materi;
+use App\Models\PengumpulanTugas;
 use App\Models\ProgramStudi;
 use App\Models\Question;
 use App\Models\Quiz;
+use App\Models\QuizAnswer;
+use App\Models\QuizAttempt;
 use App\Models\Ruang;
 use App\Models\TahunAkademik;
 use App\Models\Tugas;
@@ -22,6 +26,18 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        QuizAnswer::query()->delete();
+        QuizAttempt::query()->delete();
+        PengumpulanTugas::query()->delete();
+        Krs::query()->delete();
+        Question::query()->delete();
+        Quiz::query()->delete();
+        Tugas::query()->delete();
+        Materi::query()->delete();
+        Jadwal::query()->delete();
+        KelasKuliah::query()->delete();
+        TahunAkademik::query()->delete();
+
         $kota = ['Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Semarang', 'Malang', 'Bogor', 'Depok', 'Tangerang', 'Makassar'];
         $agama = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu'];
         $jenisKelamin = ['Laki-laki', 'Perempuan'];
@@ -143,42 +159,31 @@ class DatabaseSeeder extends Seeder
 
         // Kelas Kuliah — kode_kelas unik per matkul (A/B/C), round-robin dosen & tahun ajaran
         $tahunAkademik = [];
-        foreach ([['2024/2025', 'Ganjil', '2024-08-01', '2025-01-31'], ['2024/2025', 'Genap', '2025-02-01', '2025-07-31'], ['2025/2026', 'Ganjil', '2025-08-01', '2026-01-31']] as [$tahun, $semester, $tanggalMulai, $tanggalAkhir]) {
+        foreach ([
+            ['2023/2024', 'Ganjil', '2023-08-01', '2024-01-31'],
+            ['2023/2024', 'Genap', '2024-02-01', '2024-07-31'],
+            ['2024/2025', 'Ganjil', '2024-08-01', '2025-01-31'],
+            ['2024/2025', 'Genap', '2025-02-01', '2025-07-31'],
+            ['2025/2026', 'Ganjil', '2025-08-01', '2026-01-31'],
+        ] as [$tahun, $semester, $tanggalMulai, $tanggalAkhir]) {
             $akademik = TahunAkademik::updateOrCreate(['tahun' => $tahun, 'semester' => $semester], ['tanggal_mulai' => $tanggalMulai, 'tanggal_akhir' => $tanggalAkhir, 'tanggal_krs_awal' => $tanggalMulai, 'tanggal_krs_akhir' => date('Y-m-d', strtotime($tanggalMulai.' +14 days')), 'status' => $tahun === '2025/2026' && $semester === 'Ganjil']);
             $tahunAkademik[] = $akademik->id;
         }
 
-        foreach ($mataKuliahIds as $index => $matkulId) {
-            $mk = MataKuliah::find($matkulId);
-
-            for ($section = 0; $section < 3; $section++) {
-                $suffix = chr(65 + $section);
-                $kodeKelas = $mk ? $mk->kode_matkul.'-'.$suffix : 'KK-'.$matkulId.'-'.$suffix;
-
-                KelasKuliah::updateOrCreate(['kode_kelas' => $kodeKelas], [
-                    'tahun_akademik_id' => $tahunAkademik[2],
-                    'kapasitas' => 30 + $section * 10,
-                    'dosen_id' => $section === 0
-                        ? $dosenProfiles[0]->id
-                        : $dosenProfiles[($index + $section) % count($dosenProfiles)]->id,
-                    'matkul_id' => $matkulId,
-                ]);
+        foreach ($tahunAkademik as $periodeIndex => $tahunAkademikId) {
+            foreach ($mataKuliahIds as $index => $matkulId) {
+                $mk = MataKuliah::find($matkulId);
+                for ($section = 0; $section < 3; $section++) {
+                    $suffix = chr(65 + $section);
+                    $tahunAkademik = TahunAkademik::find($tahunAkademikId);
+                    $kodeTahun = substr($tahunAkademik->tahun, 2, 2).substr($tahunAkademik->tahun, 7, 2);
+                    $kodeKelas = ($mk?->kode_matkul ?? 'KK-'.$matkulId).'-'.$kodeTahun.'-'.$periodeIndex.$suffix;
+                    KelasKuliah::create(['kode_kelas' => $kodeKelas, 'tahun_akademik_id' => $tahunAkademikId, 'kapasitas' => 30 + $section * 10, 'dosen_id' => $section === 0 ? $dosenProfiles[0]->id : $dosenProfiles[($index + $section) % count($dosenProfiles)]->id, 'matkul_id' => $matkulId]);
+                }
             }
         }
 
-        $kelasDosenUtama = KelasKuliah::updateOrCreate(
-            ['kode_kelas' => 'IF402-A'],
-            [
-                'tahun_akademik_id' => $tahunAkademik[2],
-                'kapasitas' => 40,
-                'dosen_id' => $dosenProfiles[0]->id,
-                'matkul_id' => MataKuliah::where('kode_matkul', 'IF402')->value('id'),
-            ],
-        );
-
-        $kelasKonten = KelasKuliah::where('dosen_id', $dosenProfiles[0]->id)
-            ->where('tahun_akademik_id', $tahunAkademik[2])
-            ->get();
+        $kelasKonten = KelasKuliah::all();
 
         foreach ($kelasKonten as $kelas) {
             Materi::updateOrCreate(
@@ -233,6 +238,23 @@ class DatabaseSeeder extends Seeder
                     'points' => 10,
                 ],
             );
+        }
+
+        $mahasiswaProfiles = User::where('role', Role::Mahasiswa->value)->with('mahasiswaProfile')->get()->pluck('mahasiswaProfile')->filter()->values();
+        foreach ($kelasKonten as $kelasIndex => $kelas) {
+            foreach ($mahasiswaProfiles->slice(0, 3) as $studentIndex => $profile) {
+                Krs::create(['mahasiswa_id' => $profile->id, 'kelas_id' => $kelas->id, 'nilai' => $kelasIndex % 2 === 0 ? 80 + $studentIndex : null, 'status' => 'Aktif']);
+            }
+            $tugas = $kelas->tugas->first();
+            if ($tugas) {
+                PengumpulanTugas::create(['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswaProfiles[0]->id, 'file_jawaban' => [], 'nilai' => 85, 'submitted_at' => '2025-10-01 10:00:00']);
+            }
+            $quiz = $kelas->quizzes->first();
+            $question = $quiz?->questions->first();
+            if ($quiz && $question) {
+                $attempt = QuizAttempt::create(['quiz_id' => $quiz->id, 'mahasiswa_id' => $mahasiswaProfiles[0]->id, 'started_at' => '2025-10-01 09:00:00', 'submitted_at' => '2025-10-01 09:20:00', 'score' => 10]);
+                QuizAnswer::create(['attempt_id' => $attempt->id, 'question_id' => $question->id, 'answer' => ['text' => 'Memahami konsep dasar'], 'point' => 10]);
+            }
         }
 
         // Jadwal — Senin..Jumat, jam 07:00/10:00/13:00/16:00, round-robin kelas & ruang
