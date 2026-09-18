@@ -151,6 +151,8 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->
     Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
     Route::get('info-kuliah', [MahasiswaInfoKuliahController::class, 'index'])->name('mahasiswa.info-kuliah');
     Route::get('hasil-studi', [HasilStudiController::class, 'index'])->name('mahasiswa.hasil-studi');
+    Route::get('transkrip', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.transkrip');
+    Route::get('khs/transkrip-nilai', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.khs.transkrip-nilai');
     Route::get('khs', [HasilStudiController::class, 'index'])->name('mahasiswa.khs');
     Route::get('pindah-kelas', [MahasiswaPindahKelasController::class, 'index'])->name('mahasiswa.pindah-kelas');
     Route::post('pindah-kelas', [MahasiswaPindahKelasController::class, 'store'])->name('mahasiswa.pindah-kelas.store');
@@ -170,7 +172,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->
     foreach ([
         'profile' => 'Profile', 'info-perkuliahan' => 'Info Perkuliahan',
         'pendaftaran-wisuda' => 'Pendaftaran Wisuda', 'perpustakaan' => 'Perpustakaan',
-        'info-biaya-kuliah' => 'Info Biaya Kuliah', 'khs/transkrip-nilai' => 'Transkrip Nilai',
+        'info-biaya-kuliah' => 'Info Biaya Kuliah',
         'perpustakaan/pinjaman-aktif' => 'Pinjaman Aktif', 'perpustakaan/riwayat-pinjaman' => 'Riwayat Pinjaman',
     ] as $path => $title) {
         Route::get($path, fn () => Inertia::render('MahasiswaPlaceholder', ['title' => $title]))

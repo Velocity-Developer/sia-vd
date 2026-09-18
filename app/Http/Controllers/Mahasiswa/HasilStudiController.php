@@ -11,6 +11,37 @@ use Inertia\Response;
 
 class HasilStudiController extends Controller
 {
+    public function transkrip(Request $request): Response
+    {
+        $mahasiswa = $request->user()->mahasiswaProfile;
+        abort_if($mahasiswa === null, 403);
+
+        $krs = Krs::query()
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->whereNotNull('nilai')
+            ->with('kelasKuliah.mataKuliah', 'kelasKuliah.tahunAkademik')
+            ->get();
+        $bobotNilai = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1, 'E' => 0];
+        $transkrip = $krs->filter(fn (Krs $item): bool => isset($bobotNilai[strtoupper((string) $item->nilai)]) && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0)
+            ->map(fn (Krs $item): array => [
+                'id' => $item->id,
+                'kode' => $item->kelasKuliah->mataKuliah->kode_matkul,
+                'nama' => $item->kelasKuliah->mataKuliah->nama_matkul,
+                'jenis' => $item->kelasKuliah->mataKuliah->jenis,
+                'sks' => $item->kelasKuliah->mataKuliah->sks,
+                'nilai' => strtoupper($item->nilai),
+                'bobot' => $bobotNilai[strtoupper($item->nilai)],
+                'mutu' => $item->kelasKuliah->mataKuliah->sks * $bobotNilai[strtoupper($item->nilai)],
+            ])->values();
+        $totalSks = $transkrip->sum('sks');
+        $totalMutu = $transkrip->sum('mutu');
+
+        return Inertia::render('Mahasiswa/TranskripNilai', [
+            'transkrip' => $transkrip,
+            'ringkasan' => ['totalMatkul' => $transkrip->count(), 'totalSks' => $totalSks, 'totalMutu' => $totalMutu, 'ipk' => $totalSks > 0 ? round($totalMutu / $totalSks, 2) : null],
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $mahasiswa = $request->user()->mahasiswaProfile;
