@@ -151,6 +151,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified', 'role:mahasiswa'])->
     Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
     Route::get('info-kuliah', [MahasiswaInfoKuliahController::class, 'index'])->name('mahasiswa.info-kuliah');
     Route::get('hasil-studi', [HasilStudiController::class, 'index'])->name('mahasiswa.hasil-studi');
+    Route::get('hasil-studi/download', [HasilStudiController::class, 'downloadKhs'])->name('mahasiswa.hasil-studi.download');
     Route::get('transkrip', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.transkrip');
     Route::get('khs/transkrip-nilai', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.khs.transkrip-nilai');
     Route::get('khs', [HasilStudiController::class, 'index'])->name('mahasiswa.khs');

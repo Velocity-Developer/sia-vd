@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Mahasiswa;
 
 use App\Http\Controllers\Controller;
 use App\Models\Krs;
+use App\Models\MahasiswaProfile;
 use App\Models\TahunAkademik;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -44,19 +48,58 @@ class HasilStudiController extends Controller
 
     public function index(Request $request): Response
     {
+        $mahasiswa = $this->mahasiswa($request);
+        $data = $this->dataKhs($mahasiswa, $request->integer('tahun_akademik_id'));
+
+        return Inertia::render('Mahasiswa/HasilStudi', [
+            'krs' => $data['krs'],
+            'tahunAkademiks' => $data['tahunAkademiks'],
+            'tahunAkademikTerpilih' => $data['tahunAkademik']?->id,
+            'ringkasan' => $data['ringkasan'],
+        ]);
+    }
+
+    public function downloadKhs(Request $request): HttpResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+        $data = $this->dataKhs($mahasiswa, $request->integer('tahun_akademik_id'));
+
+        $pdf = Pdf::loadView('pdf.khs', [
+            'mahasiswa' => $mahasiswa->loadMissing('user', 'prodi', 'dosenWali.user'),
+            'tahunAkademik' => $data['tahunAkademik'],
+            'krs' => $data['krs'],
+            'ringkasan' => $data['ringkasan'],
+        ]);
+
+        $tahun = str_replace('/', '-', (string) $data['tahunAkademik']?->tahun);
+
+        return $pdf->download("khs-{$mahasiswa->nim}-{$tahun}-{$data['tahunAkademik']?->semester}.pdf");
+    }
+
+    private function mahasiswa(Request $request): MahasiswaProfile
+    {
         $mahasiswa = $request->user()->mahasiswaProfile;
         abort_if($mahasiswa === null, 403);
 
+        return $mahasiswa;
+    }
+
+    /**
+     * @return array{krs: Collection<int, Krs>, tahunAkademiks: Collection<int, TahunAkademik>, tahunAkademik: TahunAkademik|null, ringkasan: array{totalSks: int, totalSksDinilai: int, totalMutu: int, ip: float|null}}
+     */
+    private function dataKhs(MahasiswaProfile $mahasiswa, ?int $tahunAkademikId): array
+    {
         $tahunAkademik = TahunAkademik::query()
             ->orderByDesc('tahun')
             ->orderByDesc('semester')
             ->get(['id', 'tahun', 'semester', 'status']);
         $tahunAkademikAktif = $tahunAkademik->firstWhere('status', true) ?? $tahunAkademik->first();
-        $tahunAkademikId = $request->integer('tahun_akademik_id') ?: $tahunAkademikAktif?->id;
+        $tahunAkademikTerpilih = $tahunAkademikId ? $tahunAkademik->firstWhere('id', $tahunAkademikId) : $tahunAkademikAktif;
+        $tahunAkademikTerpilih ??= $tahunAkademikAktif;
 
         $krs = Krs::query()
             ->where('mahasiswa_id', $mahasiswa->id)
-            ->when($tahunAkademikId, fn ($query) => $query->whereHas('kelasKuliah', fn ($kelas) => $kelas->where('tahun_akademik_id', $tahunAkademikId)))
+            ->when($tahunAkademikTerpilih, fn ($query) => $query->whereHas('kelasKuliah', fn ($kelas) => $kelas->where('tahun_akademik_id', $tahunAkademikTerpilih->id)))
             ->with(['kelasKuliah.mataKuliah', 'kelasKuliah.tahunAkademik'])
             ->get();
         $bobotNilai = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1, 'E' => 0];
@@ -64,16 +107,16 @@ class HasilStudiController extends Controller
         $totalSksDinilai = $krsDinilai->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
         $totalMutu = $krsDinilai->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks * $bobotNilai[strtoupper($item->nilai)]);
 
-        return Inertia::render('Mahasiswa/HasilStudi', [
+        return [
             'krs' => $krs,
             'tahunAkademiks' => $tahunAkademik,
-            'tahunAkademikTerpilih' => $tahunAkademikId,
+            'tahunAkademik' => $tahunAkademikTerpilih,
             'ringkasan' => [
                 'totalSks' => $krs->sum(fn (Krs $item): int => $item->kelasKuliah?->mataKuliah?->sks ?? 0),
                 'totalSksDinilai' => $totalSksDinilai,
                 'totalMutu' => $totalMutu,
                 'ip' => $totalSksDinilai > 0 ? round($totalMutu / $totalSksDinilai, 2) : null,
             ],
-        ]);
+        ];
     }
 }
