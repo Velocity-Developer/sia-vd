@@ -5,12 +5,11 @@ use App\Models\Krs;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanPindahKelas;
 use App\Models\User;
-use App\Role;
 
 function createAdminPindahKelas(): array
 {
-    $admin = User::factory()->create(['role' => Role::Admin]);
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $admin = User::factory()->admin()->create();
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $profile = $mahasiswa->mahasiswaProfile;
 
     $kelasAsal = createMateriKelasKuliah();
@@ -109,7 +108,7 @@ it('approves past a full target class because admin overrides capacity', functio
     [$admin, , , , $kelasTujuan, , $pengajuan] = createAdminPindahKelas();
     $kelasTujuan->update(['kapasitas' => 1]);
 
-    $lain = User::factory()->create(['role' => Role::Mahasiswa]);
+    $lain = User::factory()->mahasiswa()->create();
     Krs::create(['mahasiswa_id' => $lain->mahasiswaProfile->id, 'kelas_id' => $kelasTujuan->id, 'status' => 'Aktif']);
 
     $this->actingAs($admin)->put(route('admin.pindah-kelas.approve', $pengajuan))->assertRedirect();

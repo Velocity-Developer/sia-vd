@@ -2,11 +2,12 @@
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { type NavItem, type SharedData } from '@/types';
-import { Link, usePage } from '@inertiajs/vue3';
+import { usePermissions } from '@/composables/usePermissions';
+import { type NavItem } from '@/types';
+import { Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-const page = usePage<SharedData>();
+const { can } = usePermissions();
 
 const sidebarNavItems: NavItem[] = [
     {
@@ -24,7 +25,7 @@ const sidebarNavItems: NavItem[] = [
 ];
 
 const navItems = computed<NavItem[]>(() => {
-    if (page.props.auth?.user?.role !== 'admin') {
+    if (!can('admin.institusi')) {
         return sidebarNavItems;
     }
 

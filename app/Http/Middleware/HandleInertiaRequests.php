@@ -45,7 +45,9 @@ class HandleInertiaRequests extends Middleware
             'institusi' => fn (): array => PengaturanInstitusi::shared(),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->withoutRelations(),
+                'role' => fn (): ?array => $request->user()?->role?->only(['id', 'name', 'slug', 'user_type']),
+                'permissions' => fn (): array => $request->user()?->permissionKeys() ?? [],
             ],
             'flash' => [
                 'success' => fn (): ?string => $request->session()->get('success'),

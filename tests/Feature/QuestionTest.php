@@ -4,10 +4,9 @@ use App\Models\Krs;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\User;
-use App\Role;
 
 it('shows questions below quiz detail', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
     $quiz = $kelas->quizzes()->create([
         'nama_quiz' => 'Quiz Soal',
@@ -36,7 +35,7 @@ it('shows questions below quiz detail', function () {
 });
 
 it('shows quiz detail to enrolled students', function () {
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
     $quiz = $kelas->quizzes()->create([
@@ -58,7 +57,7 @@ it('shows quiz detail to enrolled students', function () {
 });
 
 it('rejects quiz detail for students outside the class', function () {
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();
     $quiz = $kelas->quizzes()->create([
         'nama_quiz' => 'Quiz Terbatas',
@@ -71,7 +70,7 @@ it('rejects quiz detail for students outside the class', function () {
 });
 
 it('starts and submits a quiz attempt once', function () {
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
     $quiz = $kelas->quizzes()->create(['nama_quiz' => 'Quiz Submit', 'waktu_pengerjaan' => 30, 'uploaded_by' => $kelas->dosen->user_id]);
@@ -103,7 +102,7 @@ it('starts and submits a quiz attempt once', function () {
 });
 
 it('rejects manual submit after the time is up but accepts auto submit', function () {
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
     $quiz = $kelas->quizzes()->create(['nama_quiz' => 'Quiz Habis', 'waktu_pengerjaan' => 30, 'uploaded_by' => $kelas->dosen->user_id]);
@@ -133,7 +132,7 @@ it('rejects manual submit after the time is up but accepts auto submit', functio
 });
 
 it('stores multiple questions at once', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
     $quiz = $kelas->quizzes()->create([
         'nama_quiz' => 'Quiz Bulk',
@@ -181,7 +180,7 @@ it('stores multiple questions at once', function () {
 });
 
 it('rejects bulk questions from another class', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
     $otherKelas = createMateriKelasKuliah();
     $quiz = $otherKelas->quizzes()->create([

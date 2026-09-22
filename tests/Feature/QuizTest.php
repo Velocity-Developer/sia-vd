@@ -3,10 +3,9 @@
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\User;
-use App\Role;
 
 it('stores quiz with duration and deadline under a class', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
 
     $this->actingAs($admin)->post(route('admin.kelas-kuliah.quiz.store', $kelas), [
@@ -26,7 +25,7 @@ it('stores quiz with duration and deadline under a class', function () {
 });
 
 it('shows quiz detail scoped to its class', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
     $quiz = $kelas->quizzes()->create([
         'nama_quiz' => 'Quiz Detail',
@@ -47,8 +46,8 @@ it('shows quiz detail scoped to its class', function () {
 });
 
 it('shows quiz attempts and scores to admin', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $admin = User::factory()->admin()->create();
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();
     $quiz = $kelas->quizzes()->create([
         'nama_quiz' => 'Quiz Attempt',
@@ -72,7 +71,7 @@ it('shows quiz attempts and scores to admin', function () {
 });
 
 it('rejects quiz detail from another class', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
     $otherKelas = createMateriKelasKuliah();
     $quiz = $otherKelas->quizzes()->create([
@@ -86,7 +85,7 @@ it('rejects quiz detail from another class', function () {
 });
 
 it('allows nullable quiz notes, duration, and deadline', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
 
     $this->actingAs($admin)->post(route('admin.kelas-kuliah.quiz.store', $kelas), [

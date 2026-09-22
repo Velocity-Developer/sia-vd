@@ -2,12 +2,12 @@
 
 use App\Models\PengaturanInstitusi;
 use App\Models\User;
-use App\Role;
+use App\UserType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('lets admin open the institution settings page', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
         ->get(route('institusi.edit'))
@@ -18,18 +18,18 @@ it('lets admin open the institution settings page', function () {
         );
 });
 
-it('blocks non admins from the institution settings page', function (Role $role) {
-    $user = User::factory()->create(['role' => $role]);
+it('blocks non admins from the institution settings page', function (UserType $type) {
+    $user = User::factory()->ofType($type)->create();
 
     $this->actingAs($user)->get(route('institusi.edit'))->assertForbidden();
     $this->actingAs($user)->put(route('institusi.update'), ['nama_pt' => 'Kampus Lain'])->assertForbidden();
 })->with([
-    [Role::Dosen],
-    [Role::Mahasiswa],
+    [UserType::Dosen],
+    [UserType::Mahasiswa],
 ]);
 
 it('lets admin update the institution settings', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->put(route('institusi.update'), [
         'nama_pt' => 'Universitas Contoh',
@@ -54,7 +54,7 @@ it('lets admin update the institution settings', function () {
 
 it('stores a new logo and replaces the previous one', function () {
     Storage::fake('public');
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->put(route('institusi.update'), [
         'nama_pt' => 'Universitas Contoh',
@@ -79,7 +79,7 @@ it('stores a new logo and replaces the previous one', function () {
 });
 
 it('validates the institution fields', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->put(route('institusi.update'), [
         'nama_pt' => '',

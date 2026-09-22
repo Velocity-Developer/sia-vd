@@ -6,7 +6,6 @@ use App\Models\MataKuliah;
 use App\Models\ProgramStudi;
 use App\Models\TahunAkademik;
 use App\Models\User;
-use App\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -54,7 +53,7 @@ expect()->extend('toBeOne', function () {
 function createMateriKelasKuliah(?TahunAkademik $tahunAkademik = null): KelasKuliah
 {
     $suffix = bin2hex(random_bytes(3));
-    $dosen = User::factory()->create(['role' => Role::Dosen]);
+    $dosen = User::factory()->dosen()->create();
     $fakultas = Fakultas::create(['kode_fakultas' => "FT{$suffix}", 'nama_fakultas' => "Fakultas Teknologi Informasi {$suffix}", 'dekan_id' => $dosen->dosenProfile->id, 'tanggal_berdiri' => '2001-08-17', 'no_telp' => '021-5551001', 'email' => "fti-{$suffix}@example.ac.id"]);
     $prodi = ProgramStudi::create(['fakultas_id' => $fakultas->id, 'kode_prodi' => "TI-{$suffix}", 'nama_prodi' => 'Teknik Informatika', 'jenjang' => 'S1', 'status_akreditasi' => 'Unggul', 'tanggal_akreditasi_mulai' => '2022-06-01', 'tanggal_akreditasi_akhir' => '2027-06-01', 'kaprodi' => $dosen->dosenProfile->id, 'tahun_berdiri' => 2001]);
     $matkul = MataKuliah::create(['kode_matkul' => "IF{$suffix}", 'nama_matkul' => 'Algoritma dan Pemrograman', 'sks' => 3, 'semester' => 1, 'jenis' => 'Wajib', 'prodi_id' => $prodi->id]);

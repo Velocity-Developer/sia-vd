@@ -4,14 +4,14 @@ use App\Models\Krs;
 use App\Models\PengaturanInstitusi;
 use App\Models\TahunAkademik;
 use App\Models\User;
-use App\Role;
+use App\UserType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('shows student study results filtered by selected academic year', function () {
     $this->seed();
 
-    $mahasiswa = User::where('role', Role::Mahasiswa->value)->first();
+    $mahasiswa = User::ofType(UserType::Mahasiswa)->first();
     $profil = $mahasiswa->mahasiswaProfile;
     $tahunAkademik = TahunAkademik::where('tahun', '2023/2024')->where('semester', 'Ganjil')->first();
     $expectedCount = Krs::where('mahasiswa_id', $profil->id)->whereHas('kelasKuliah', fn ($query) => $query->where('tahun_akademik_id', $tahunAkademik->id))->count();
@@ -30,7 +30,7 @@ it('shows student study results filtered by selected academic year', function ()
 it('defaults study results to active academic year', function () {
     $this->seed();
 
-    $mahasiswa = User::where('role', Role::Mahasiswa->value)->first();
+    $mahasiswa = User::ofType(UserType::Mahasiswa)->first();
     $activeYear = TahunAkademik::where('status', true)->first();
 
     $this->actingAs($mahasiswa)
@@ -41,7 +41,7 @@ it('defaults study results to active academic year', function () {
 it('downloads study result card as pdf for the selected academic year', function () {
     $this->seed();
 
-    $mahasiswa = User::where('role', Role::Mahasiswa->value)->first();
+    $mahasiswa = User::ofType(UserType::Mahasiswa)->first();
     $tahunAkademik = TahunAkademik::where('tahun', '2023/2024')->where('semester', 'Ganjil')->first();
 
     $response = $this->actingAs($mahasiswa)
@@ -61,7 +61,7 @@ it('downloads the study result card with the institution logo', function () {
     $path = UploadedFile::fake()->image('logo.png')->store('institusi', 'public');
     PengaturanInstitusi::current()->update(['logo' => $path, 'nama_pt' => 'Universitas Contoh Nusantara']);
 
-    $this->actingAs(User::where('role', Role::Mahasiswa->value)->first())
+    $this->actingAs(User::ofType(UserType::Mahasiswa)->first())
         ->get(route('mahasiswa.hasil-studi.download'))
         ->assertSuccessful()
         ->assertHeader('content-type', 'application/pdf');
@@ -70,7 +70,7 @@ it('downloads the study result card with the institution logo', function () {
 it('forbids study result card download for user without student profile', function () {
     $this->seed();
 
-    $admin = User::where('role', Role::Admin->value)->first();
+    $admin = User::ofType(UserType::Admin)->first();
 
     $this->actingAs($admin)
         ->get(route('mahasiswa.hasil-studi.download'))
@@ -89,7 +89,7 @@ it('renders the study result card header from the institution settings', functio
         'website' => 'https://example.ac.id',
     ]);
 
-    $mahasiswa = User::where('role', Role::Mahasiswa->value)->first()->mahasiswaProfile;
+    $mahasiswa = User::ofType(UserType::Mahasiswa)->first()->mahasiswaProfile;
 
     $html = view('pdf.khs', [
         'institusi' => $institusi->refresh(),
@@ -124,7 +124,7 @@ it('embeds the institution logo into the study result card header', function () 
         'institusi' => $institusi,
         'logoSrc' => $logoSrc,
         'kontak' => [],
-        'mahasiswa' => User::where('role', Role::Mahasiswa->value)->first()->mahasiswaProfile->loadMissing('user', 'prodi'),
+        'mahasiswa' => User::ofType(UserType::Mahasiswa)->first()->mahasiswaProfile->loadMissing('user', 'prodi'),
         'tahunAkademik' => null,
         'krs' => collect(),
         'ringkasan' => ['totalSks' => 0, 'totalSksDinilai' => 0, 'totalMutu' => 0, 'ip' => null],
@@ -139,7 +139,7 @@ it('adds the institution data to the shared inertia props', function () {
     $institusi = PengaturanInstitusi::current();
     $institusi->update(['nama_pt' => 'Universitas Contoh Nusantara', 'singkatan' => 'UCN']);
 
-    $this->actingAs(User::where('role', Role::Mahasiswa->value)->first())
+    $this->actingAs(User::ofType(UserType::Mahasiswa)->first())
         ->get(route('mahasiswa.hasil-studi'))
         ->assertInertia(fn ($page) => $page
             ->where('institusi.nama_pt', 'Universitas Contoh Nusantara')

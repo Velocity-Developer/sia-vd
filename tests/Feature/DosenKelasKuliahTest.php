@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use App\Role;
 
 it('lists only classes taught by the authenticated dosen', function () {
     $kelasMilikDosen = createMateriKelasKuliah();
@@ -43,7 +42,7 @@ it('forbids class detail owned by another dosen', function () {
 
 it('forbids non-dosen roles from dosen class pages', function () {
     $kelas = createMateriKelasKuliah();
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
 
     $this->actingAs($mahasiswa)->get(route('dosen.kelas-kuliah.index'))->assertForbidden();
     $this->actingAs($mahasiswa)->get(route('dosen.kelas-kuliah.show', $kelas))->assertForbidden();

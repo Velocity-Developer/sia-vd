@@ -2,13 +2,12 @@
 
 use App\Models\InfoKuliah;
 use App\Models\User;
-use App\Role;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('admin manages info kuliah with file upload', function () {
     Storage::fake('public');
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->post(route('admin.info-kuliah.store'), [
         'information' => 'Jadwal kuliah tersedia.',
@@ -24,13 +23,13 @@ it('admin manages info kuliah with file upload', function () {
 });
 
 it('requires information and file when creating info kuliah', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $this->actingAs($admin)->post(route('admin.info-kuliah.store'), [])->assertSessionHasErrors(['information', 'file']);
 });
 
 it('lets mahasiswa view info kuliah but blocks other roles', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $admin = User::factory()->admin()->create();
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $info = InfoKuliah::create(['information' => 'Pengumuman akademik.', 'file' => 'info-kuliahs/pengumuman.pdf', 'uploaded_by' => $admin->id]);
 
     $this->actingAs($mahasiswa)->get(route('mahasiswa.info-kuliah'))

@@ -18,7 +18,7 @@ use App\Models\QuizAttempt;
 use App\Models\TahunAkademik;
 use App\Models\Tugas;
 use App\Models\User;
-use App\Role;
+use App\UserType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
@@ -36,8 +36,8 @@ it('seeds role users without duplicates', function () {
         ->and(ProgramStudi::count())->toBe(4)
         ->and(Fakultas::where('kode_fakultas', 'FTI')->whereHas('dekan')->whereHas('programStudis', fn ($query) => $query->where('kode_prodi', 'TI-S1')->whereHas('ketuaProgramStudi'))->exists())->toBeTrue()
         ->and(ProgramStudi::where('kode_prodi', 'AK-S1')->whereHas('fakultas', fn ($query) => $query->where('kode_fakultas', 'FEB'))->whereHas('ketuaProgramStudi')->exists())->toBeTrue()
-        ->and(User::where('role', Role::Dosen->value)->count())->toBe(51)
-        ->and(User::where('role', Role::Mahasiswa->value)->count())->toBe(101)
+        ->and(User::ofType(UserType::Dosen)->count())->toBe(51)
+        ->and(User::ofType(UserType::Mahasiswa)->count())->toBe(101)
         ->and(User::where('username', 'admin')->whereHas('adminProfile', fn ($query) => $query->whereKeyNot(0))->exists())->toBeTrue()
         ->and(User::where('username', 'dosen1')->whereHas('dosenProfile', fn ($query) => $query->whereNotNull('nidn')->whereNotNull('tanggal_lahir'))->exists())->toBeTrue()
         ->and(User::where('username', 'mahasiswa1')->whereHas('mahasiswaProfile', fn ($query) => $query->whereNotNull('nim')->whereNotNull('alamat'))->exists())->toBeTrue()

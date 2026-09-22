@@ -5,12 +5,11 @@ use App\Models\Krs;
 use App\Models\Ruang;
 use App\Models\TahunAkademik;
 use App\Models\User;
-use App\Role;
 
 it('shows schedules only from mahasiswa KRS', function () {
     $takenClass = createMateriKelasKuliah();
     $otherClass = createMateriKelasKuliah();
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
 
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $takenClass->id]);
     $ruang = Ruang::create(['kode_ruang' => 'R-101', 'nama_ruang' => 'Ruang 101', 'kapasitas' => 30]);
@@ -31,7 +30,7 @@ it('hides schedules from inactive academic years', function () {
     $activeClass = createMateriKelasKuliah();
     $pastTahunAkademik = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
     $pastClass = createMateriKelasKuliah($pastTahunAkademik);
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
 
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $activeClass->id]);
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $pastClass->id]);
@@ -48,7 +47,7 @@ it('hides schedules from inactive academic years', function () {
 it('shows enrolled class detail and forbids other classes', function () {
     $takenClass = createMateriKelasKuliah();
     $otherClass = createMateriKelasKuliah();
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
 
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $takenClass->id]);
 

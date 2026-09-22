@@ -7,11 +7,10 @@ use App\Models\MataKuliah;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanPindahKelas;
 use App\Models\User;
-use App\Role;
 
 function createPindahKelasMahasiswa(): array
 {
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $profile = $mahasiswa->mahasiswaProfile;
 
     $kelasAsal = createMateriKelasKuliah();
@@ -194,7 +193,7 @@ it('shows the submission history to the mahasiswa', function () {
 });
 
 it('forbids non mahasiswa roles from the pindah kelas page', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->get(route('mahasiswa.pindah-kelas'))->assertForbidden();
     $this->actingAs($admin)->post(route('mahasiswa.pindah-kelas.store'), [])->assertForbidden();
@@ -213,7 +212,7 @@ it('does not count a pending request from another mahasiswa', function () {
     PengaturanPindahKelas::current()->update(['is_active' => true]);
     [, $profile, $kelasAsal, $kelasTujuan] = createPindahKelasMahasiswa();
 
-    $mahasiswaLain = User::factory()->create(['role' => Role::Mahasiswa]);
+    $mahasiswaLain = User::factory()->mahasiswa()->create();
     $mahasiswaLain->mahasiswaProfile->update(['prodi_id' => $profile->prodi_id]);
     Krs::create(['mahasiswa_id' => $mahasiswaLain->mahasiswaProfile->id, 'kelas_id' => $kelasAsal->id, 'status' => 'Aktif']);
 
@@ -236,7 +235,7 @@ it('does not count a pending request from another mahasiswa', function () {
 
 it('requires an existing mahasiswa profile', function () {
     PengaturanPindahKelas::current()->update(['is_active' => true]);
-    $user = User::factory()->create(['role' => Role::Mahasiswa]);
+    $user = User::factory()->mahasiswa()->create();
     $user->mahasiswaProfile()->delete();
 
     $this->actingAs($user)->get(route('mahasiswa.pindah-kelas'))->assertForbidden();

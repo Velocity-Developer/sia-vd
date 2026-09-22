@@ -2,13 +2,12 @@
 
 use App\Models\Materi;
 use App\Models\User;
-use App\Role;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('stores materi files with sanitized original name plus random suffix', function () {
     Storage::fake('public');
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
 
     $this->actingAs($admin)->post(route('admin.kelas-kuliah.materi.store', $kelas), [
@@ -36,7 +35,7 @@ it('stores materi files with sanitized original name plus random suffix', functi
 
 it('stores distinct paths when uploading the same original name twice', function () {
     Storage::fake('public');
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
 
     $this->actingAs($admin)->post(route('admin.kelas-kuliah.materi.store', $kelas), [

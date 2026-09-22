@@ -2,16 +2,15 @@
 
 use App\Models\TahunAkademik;
 use App\Models\User;
-use App\Role;
 
 function tahunAkademikAdmin(): User
 {
-    return User::factory()->create(['role' => Role::Admin]);
+    return User::factory()->admin()->create();
 }
 
 function tahunAkademikDosen(): User
 {
-    return User::factory()->create(['role' => Role::Dosen]);
+    return User::factory()->dosen()->create();
 }
 
 it('allows admins to manage academic years', function () {

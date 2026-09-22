@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 
-const props = defineProps<{ title: string; type: string; user: Record<string, any> | null; dosenWali: { id: number; name: string }[]; programStudi: { id: number; nama_prodi: string; jenjang: string; fakultas: string | null }[] }>();
+const props = defineProps<{ title: string; type: string; user: Record<string, any> | null; roles: { id: number; name: string }[]; defaultRoleId: number | null; dosenWali: { id: number; name: string }[]; programStudi: { id: number; nama_prodi: string; jenjang: string; fakultas: string | null }[] }>();
 const common = ['name', 'username', 'email', 'tempat_lahir', 'tanggal_lahir', 'no_telepon', 'kewarganegaraan'];
 const roleFields =
     props.type === 'karyawan'
@@ -86,6 +86,7 @@ const labels: Record<string, string> = {
     email_ibu: 'Email Ibu',
     alamat_ibu: 'Alamat Ibu',
     alamat: 'Alamat',
+    role_id: 'Role',
     password: 'Kata Sandi',
     password_confirmation: 'Konfirmasi Kata Sandi',
 };
@@ -109,9 +110,10 @@ const pekerjaanIbuOptions = computed(() => (form.pekerjaan_ibu && !pekerjaanOpti
 const penghasilanIbuOptions = computed(() => (form.penghasilan_ibu && !penghasilanOptions.includes(form.penghasilan_ibu) ? [...penghasilanOptions, form.penghasilan_ibu] : penghasilanOptions));
 const isMahasiswa = props.type === 'mahasiswa';
 const title = computed(() => `${props.user ? 'Edit' : 'Tambah'} Pengguna - ${props.type.charAt(0).toUpperCase()}${props.type.slice(1)}`);
-const form = useForm(
-    Object.fromEntries([...common, ...roleFields, 'jenis_kelamin', 'agama', 'alamat', 'password', 'password_confirmation'].map((field) => [field, props.user?.[field] ?? ''])),
-);
+const form = useForm({
+    role_id: props.defaultRoleId ?? '',
+    ...Object.fromEntries([...common, ...roleFields, 'jenis_kelamin', 'agama', 'alamat', 'password', 'password_confirmation'].map((field) => [field, props.user?.[field] ?? ''])),
+});
 const search = ref('');
 const dosenWaliOpen = ref(false);
 const dosenWaliRef = ref<HTMLElement | null>(null);
@@ -194,7 +196,10 @@ const sel = 'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px
                             <div class="grid gap-2"><Label for="name" class="text-sm font-medium text-black">{{ labels.name }}</Label><Input id="name" v-model="form.name" :class="inp" required /><InputError :message="form.errors.name" /></div>
                             <div class="grid gap-2"><Label for="username" class="text-sm font-medium text-black">{{ labels.username }}</Label><Input id="username" v-model="form.username" :class="inp" required /><InputError :message="form.errors.username" /></div>
                         </div>
-                        <div class="mt-4 grid gap-2"><Label for="email" class="text-sm font-medium text-black">{{ labels.email }}</Label><Input id="email" type="email" v-model="form.email" :class="inp" required /><InputError :message="form.errors.email" /></div>
+                        <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+                            <div class="grid gap-2"><Label for="email" class="text-sm font-medium text-black">{{ labels.email }}</Label><Input id="email" type="email" v-model="form.email" :class="inp" required /><InputError :message="form.errors.email" /></div>
+                            <div class="grid gap-2"><Label for="role_id" class="text-sm font-medium text-black">{{ labels.role_id }}</Label><select id="role_id" v-model="form.role_id" :class="sel" required><option value="">Pilih role</option><option v-for="role in props.roles" :key="role.id" :value="role.id">{{ role.name }}</option></select><InputError :message="form.errors.role_id" /></div>
+                        </div>
                     </section>
 
                     <!-- Data Pribadi -->
@@ -293,6 +298,7 @@ const sel = 'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px
                 <!-- Dosen / Karyawan: flat form on paper card -->
                 <form v-else @submit.prevent="submit" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
                     <div class="space-y-4">
+                        <div class="grid gap-2"><Label for="role_id" class="text-sm font-medium text-black">{{ labels.role_id }}</Label><select id="role_id" v-model="form.role_id" :class="sel" required><option value="">Pilih role</option><option v-for="role in props.roles" :key="role.id" :value="role.id">{{ role.name }}</option></select><InputError :message="form.errors.role_id" /></div>
                         <template v-for="field in common" :key="field">
                             <div v-if="field === 'tanggal_lahir'" class="grid gap-2"><Label :for="field" class="text-sm font-medium text-black">{{ labels[field] }}</Label><DatePicker :id="field" v-model="form[field]" placeholder="Pilih tanggal lahir" /><InputError :message="form.errors[field]" /></div>
                             <div v-else class="grid gap-2"><Label :for="field" class="text-sm font-medium text-black">{{ labels[field] }}</Label><Input :id="field" :type="field.includes('email') ? 'email' : 'text'" v-model="form[field]" :class="inp" required /><InputError :message="form.errors[field]" /></div>

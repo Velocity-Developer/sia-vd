@@ -1,7 +1,16 @@
 import type { LucideIcon } from 'lucide-vue-next';
 
+export interface AuthRole {
+    id: number;
+    name: string;
+    slug: string;
+    user_type: 'admin' | 'dosen' | 'mahasiswa';
+}
+
 export interface Auth {
     user: User;
+    role: AuthRole | null;
+    permissions: string[];
 }
 
 export interface BreadcrumbItem {
@@ -12,6 +21,7 @@ export interface BreadcrumbItem {
 export interface NavItem {
     title: string;
     href: string;
+    permission?: string;
     icon?: LucideIcon;
     isActive?: boolean;
     items?: NavItem[];
@@ -46,7 +56,7 @@ export interface User {
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
-    role?: 'admin' | 'dosen' | 'mahasiswa';
+    role_id?: number | null;
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;

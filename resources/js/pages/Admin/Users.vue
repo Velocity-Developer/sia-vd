@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
-type User = { id: number; name: string; username: string; email: string; profile?: { nomor_induk?: string | null; nidn?: string | null; nim?: string | null } | null };
+type User = { id: number; name: string; username: string; email: string; role_name?: string | null; profile?: { nomor_induk?: string | null; nidn?: string | null; nim?: string | null } | null };
 type Pagination = { data: User[]; links: { url: string | null; label: string; active: boolean }[]; from: number | null; to: number | null; total: number };
 
 const props = defineProps<{ title: string; type: string; users: Pagination; search?: string; angkatan?: number | null; angkatans?: number[] }>();
@@ -105,6 +105,7 @@ const confirmDelete = () => {
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">{{ idLabel[props.type] }}</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Username</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Email</th>
+                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Role</th>
                                     <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
                                 </tr>
                             </thead>
@@ -117,6 +118,7 @@ const confirmDelete = () => {
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ idValue(user) }}</td>
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.username }}</td>
                                     <td class="max-w-[220px] truncate px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.email }}</td>
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.role_name ?? '-' }}</td>
                                     <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route(`admin.users.${props.type}.show`, user.id)" title="Lihat Detail" aria-label="Lihat Detail">
@@ -132,7 +134,7 @@ const confirmDelete = () => {
                                     </td>
                                 </tr>
                                 <tr v-if="!props.users.data.length">
-                                    <td colspan="6" class="px-4 py-16 text-center">
+                                    <td colspan="7" class="px-4 py-16 text-center">
                                         <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8">
                                             <p class="text-sm font-medium text-black">Belum ada data</p>
                                             <p class="mt-1 text-sm leading-5 text-[#615d59]">Data {{ props.type }} akan tampil di sini. Tambahkan data baru untuk memulai.</p>

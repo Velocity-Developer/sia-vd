@@ -20,7 +20,7 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('settings/Appearance');
     })->name('appearance');
 
-    Route::middleware('role:admin')->group(function (): void {
+    Route::middleware('can:admin.institusi')->group(function (): void {
         Route::get('settings/institusi', [InstitusiController::class, 'edit'])->name('institusi.edit');
         Route::put('settings/institusi', [InstitusiController::class, 'update'])->name('institusi.update');
     });

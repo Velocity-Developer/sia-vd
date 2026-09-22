@@ -34,6 +34,7 @@ const akun = [
     { label: 'Nama', key: 'name' },
     { label: 'Username', key: 'username' },
     { label: 'Email', key: 'email' },
+    { label: 'Role', key: 'role_name' },
 ];
 
 const pribadi = [

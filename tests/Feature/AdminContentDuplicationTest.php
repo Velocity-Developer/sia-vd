@@ -1,10 +1,9 @@
 <?php
 
 use App\Models\User;
-use App\Role;
 
 it('duplicates materi to selected classes', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $sourceClass = createMateriKelasKuliah();
     $targetClass = createMateriKelasKuliah();
     $materi = $sourceClass->materis()->create([
@@ -30,7 +29,7 @@ it('duplicates materi to selected classes', function () {
 });
 
 it('duplicates tugas to selected classes', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $sourceClass = createMateriKelasKuliah();
     $targetClass = createMateriKelasKuliah();
     $tugas = $sourceClass->tugas()->create([
@@ -53,7 +52,7 @@ it('duplicates tugas to selected classes', function () {
 });
 
 it('duplicates quiz and its questions to selected classes', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $sourceClass = createMateriKelasKuliah();
     $targetClass = createMateriKelasKuliah();
     $quiz = $sourceClass->quizzes()->create([
@@ -85,7 +84,7 @@ it('duplicates quiz and its questions to selected classes', function () {
 });
 
 it('rejects the source class as a duplication target', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $sourceClass = createMateriKelasKuliah();
     $materi = $sourceClass->materis()->create([
         'judul_materi' => 'Materi Sumber',

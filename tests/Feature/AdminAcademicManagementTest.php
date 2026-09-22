@@ -3,16 +3,15 @@
 use App\Models\Fakultas;
 use App\Models\ProgramStudi;
 use App\Models\User;
-use App\Role;
 
 function adminUser(): User
 {
-    return User::factory()->create(['role' => Role::Admin]);
+    return User::factory()->admin()->create();
 }
 
 function dosenUser(): User
 {
-    return User::factory()->create(['role' => Role::Dosen]);
+    return User::factory()->dosen()->create();
 }
 
 function fakultasPayload(int $dekanId, string $suffix = ''): array

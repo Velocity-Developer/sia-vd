@@ -3,7 +3,6 @@
 use App\Models\KelasKuliah;
 use App\Models\TahunAkademik;
 use App\Models\User;
-use App\Role;
 
 function tahunAkademikAktif(bool $status): TahunAkademik
 {
@@ -28,7 +27,7 @@ function kelasKuliahDenganTahun(TahunAkademik $tahunAkademik, string $kodeKelas,
 }
 
 it('defaults the admin class list to the active academic year', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $aktif = tahunAkademikAktif(true);
     $nonaktif = tahunAkademikAktif(false);
 
@@ -49,7 +48,7 @@ it('defaults the admin class list to the active academic year', function () {
 });
 
 it('shows every academic year when the admin picks all', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $aktif = tahunAkademikAktif(true);
     $nonaktif = tahunAkademikAktif(false);
 
@@ -68,7 +67,7 @@ it('shows every academic year when the admin picks all', function () {
 });
 
 it('filters the admin class list by a single class', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
+    $admin = User::factory()->admin()->create();
     $aktif = tahunAkademikAktif(true);
     $nonaktif = tahunAkademikAktif(false);
 

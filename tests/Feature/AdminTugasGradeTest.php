@@ -3,11 +3,10 @@
 use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
 use App\Models\User;
-use App\Role;
 
 it('shows task submissions and updates their grades', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $admin = User::factory()->admin()->create();
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();
     $tugas = Tugas::create([
         'kelas_id' => $kelas->id,
@@ -42,8 +41,8 @@ it('shows task submissions and updates their grades', function () {
 });
 
 it('rejects submissions that do not belong to the task', function () {
-    $admin = User::factory()->create(['role' => Role::Admin]);
-    $mahasiswa = User::factory()->create(['role' => Role::Mahasiswa]);
+    $admin = User::factory()->admin()->create();
+    $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();
     $tugas = Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $admin->id, 'judul_tugas' => 'Tugas Satu']);
     $otherTugas = Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $admin->id, 'judul_tugas' => 'Tugas Dua']);
