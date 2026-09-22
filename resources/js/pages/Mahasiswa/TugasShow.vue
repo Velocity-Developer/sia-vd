@@ -219,9 +219,9 @@ const submit = () => {
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">File Tugas</h2>
                         <div v-if="files(props.tugas.file).length" class="mt-3 space-y-2">
                             <a
-                                v-for="path in files(props.tugas.file)"
+                                v-for="(path, fileIndex) in files(props.tugas.file)"
                                 :key="path"
-                                :href="`/storage/${path}`"
+                                :href="route('berkas.tugas', [props.tugas.id, fileIndex])"
                                 target="_blank"
                                 class="flex items-center justify-between rounded-lg border border-[#e6e6e6] px-3 py-2 text-sm text-[#0075de] transition hover:border-[#0075de] hover:bg-[#f8fbff]"
                             >

@@ -120,9 +120,9 @@ const kelas = () => props.materi.kelasKuliah ?? props.materi.kelas_kuliah;
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">File</h2>
                         <div v-if="files().length" class="mt-3 space-y-2">
                             <a
-                                v-for="path in files()"
+                                v-for="(path, fileIndex) in files()"
                                 :key="path"
-                                :href="`/storage/${path}`"
+                                :href="route('berkas.materi', [props.materi.id, fileIndex])"
                                 target="_blank"
                                 class="flex items-center justify-between rounded-lg border border-[#e6e6e6] px-3 py-2 text-sm text-[#0075de] transition hover:border-[#0075de] hover:bg-[#f8fbff]"
                             >

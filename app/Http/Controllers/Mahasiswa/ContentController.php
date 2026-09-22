@@ -42,7 +42,8 @@ class ContentController extends Controller
         $kelasKuliah->load([
             'mataKuliah.prodi.fakultas',
             'tahunAkademik',
-            'dosen.user',
+            'dosen:id,user_id',
+            'dosen.user:id,name',
             'jadwals.ruang',
             'materis.uploader:id,name',
             'tugas.uploader:id,name',

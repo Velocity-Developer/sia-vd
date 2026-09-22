@@ -88,7 +88,7 @@ const saveGrade = (submission: Submission) => {
                     </dl>
                     <div v-if="props.tugas.catatan" class="mt-4"><dt class="text-xs uppercase text-[#a39e98]">Catatan</dt><p class="mt-1 whitespace-pre-line text-sm text-[#31302e]">{{ props.tugas.catatan }}</p></div>
                     <ul v-if="files(props.tugas.file).length" class="mt-4 space-y-1">
-                        <li v-for="path in files(props.tugas.file)" :key="path"><a :href="`/storage/${path}`" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"><Download class="size-4" />{{ fileName(path) }}</a></li>
+                        <li v-for="(path, fileIndex) in files(props.tugas.file)" :key="path"><a :href="route('berkas.tugas', [props.tugas.id, fileIndex])" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"><Download class="size-4" />{{ fileName(path) }}</a></li>
                     </ul>
                 </section>
 
@@ -104,7 +104,7 @@ const saveGrade = (submission: Submission) => {
                                     <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
                                     <td class="px-4 py-3 text-sm"><span class="font-medium text-black">{{ submission.mahasiswa?.user?.name ?? '-' }}</span><span class="block text-[#615d59]">{{ submission.mahasiswa?.nim ?? '-' }}</span></td>
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDate(submission.submitted_at) }}</td>
-                                    <td class="px-4 py-3 text-sm"><ul class="space-y-1"><li v-for="path in files(submission.file_jawaban)" :key="path"><a :href="`/storage/${path}`" target="_blank" rel="noopener" class="text-[#0075de] hover:underline">{{ fileName(path) }}</a></li></ul></td>
+                                    <td class="px-4 py-3 text-sm"><ul class="space-y-1"><li v-for="(path, fileIndex) in files(submission.file_jawaban)" :key="path"><a :href="route('berkas.pengumpulan', [submission.id, fileIndex])" target="_blank" rel="noopener" class="text-[#0075de] hover:underline">{{ fileName(path) }}</a></li></ul></td>
                                     <td class="px-4 py-3 text-sm"><input v-if="editing === submission.id" v-model="grade" type="number" min="0" max="100" class="h-9 w-24 rounded-lg border border-[#e6e6e6] px-3" /><span v-else class="font-semibold">{{ submission.nilai ?? '-' }}</span></td>
                                     <td class="px-4 py-3 text-right"><template v-if="editing === submission.id"><Button size="sm" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" @click="saveGrade(submission)">Simpan</Button><Button size="sm" variant="outline" class="ml-2 rounded-full" @click="editing = null">Batal</Button></template><Button v-else size="sm" variant="outline" class="rounded-full" @click="editGrade(submission)">Ubah Nilai</Button></td>
                                 </tr>

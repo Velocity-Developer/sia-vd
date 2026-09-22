@@ -100,6 +100,36 @@ class User extends Authenticatable
     }
 
     /**
+     * Role boleh diberikan oleh user ini bila seluruh hak aksesnya juga dimiliki user ini,
+     * kecuali user pemegang Kelola Role yang boleh memberikan role apa pun.
+     */
+    public function canAssignRole(Role $role): bool
+    {
+        return $this->hasPermission(Role::SUPER_PERMISSION)
+            || array_diff($role->permissionKeys(), $this->permissionKeys()) === [];
+    }
+
+    /**
+     * User lain hanya boleh diubah/dihapus bila haknya tidak melebihi hak user ini.
+     */
+    public function canManage(User $target): bool
+    {
+        return $target->role === null || $this->canAssignRole($target->role);
+    }
+
+    /**
+     * Apakah user ini satu-satunya yang masih memegang akses Kelola Role.
+     */
+    public function isLastRoleManager(): bool
+    {
+        return $this->hasPermission(Role::SUPER_PERMISSION)
+            && static::query()
+                ->whereKeyNot($this->id)
+                ->whereHas('role.permissions', fn ($query) => $query->where('key', Role::SUPER_PERMISSION))
+                ->doesntExist();
+    }
+
+    /**
      * Nama route halaman awal setelah login, berdasarkan permission yang dimiliki.
      */
     public function homeRoute(): string

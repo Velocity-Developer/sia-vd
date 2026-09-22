@@ -17,7 +17,7 @@ class MahasiswaKelasController extends Controller
         abort_if($dosenProfileId === null, 403);
 
         $search = $request->string('search')->trim()->toString();
-        $krs = Krs::with(['mahasiswa.user', 'mahasiswa.prodi', 'kelasKuliah.mataKuliah'])
+        $krs = Krs::with(['mahasiswa:id,user_id,nim,prodi_id', 'mahasiswa.user:id,name,email', 'mahasiswa.prodi:id,nama_prodi', 'kelasKuliah.mataKuliah'])
             ->whereHas('kelasKuliah', fn ($query) => $query->where('dosen_id', $dosenProfileId))
             ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
                 $query->whereHas('mahasiswa', fn ($query) => $query->where('nim', 'like', "%{$search}%")

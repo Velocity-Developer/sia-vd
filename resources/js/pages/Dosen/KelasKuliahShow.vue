@@ -490,9 +490,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         </td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <ul v-if="materiFiles(materi).length" class="space-y-1">
-                                                <li v-for="path in materiFiles(materi)" :key="path">
+                                                <li v-for="(path, fileIndex) in materiFiles(materi)" :key="path">
                                                     <a
-                                                        :href="`/storage/${path}`"
+                                                        :href="route('berkas.materi', [materi.id, fileIndex])"
                                                         target="_blank"
                                                         rel="noopener"
                                                         class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"
@@ -619,9 +619,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ formatTenggat(tugas.tenggat_waktu) }}</td>
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <ul v-if="tugasFiles(tugas).length" class="space-y-1">
-                                                <li v-for="path in tugasFiles(tugas)" :key="path">
+                                                <li v-for="(path, fileIndex) in tugasFiles(tugas)" :key="path">
                                                     <a
-                                                        :href="`/storage/${path}`"
+                                                        :href="route('berkas.tugas', [tugas.id, fileIndex])"
                                                         target="_blank"
                                                         rel="noopener"
                                                         class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"

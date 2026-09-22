@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -102,6 +103,7 @@ class UserController extends Controller
     {
         $role = $this->role($type);
         abort_unless($user->type() === $role, 404);
+        abort_unless(request()->user()->canManage($user), 403, 'Anda tidak dapat mengubah akun dengan hak akses lebih tinggi.');
         $user->load($this->profileRelation($role));
 
         $profile = $user->profile?->toArray();
@@ -126,8 +128,23 @@ class UserController extends Controller
      */
     private function roleOptions(UserType $type): array
     {
-        return Role::query()->ofType($type)->orderByDesc('is_system')->orderBy('name')->get(['id', 'name'])
-            ->map(fn (Role $role): array => ['id' => $role->id, 'name' => $role->name])->all();
+        $actor = request()->user();
+
+        return Role::query()->ofType($type)->with('permissions')->orderByDesc('is_system')->orderBy('name')->get()
+            ->filter(fn (Role $role): bool => $actor === null || $actor->canAssignRole($role))
+            ->map(fn (Role $role): array => ['id' => $role->id, 'name' => $role->name])->values()->all();
+    }
+
+    /**
+     * Cegah pemberian role yang hak aksesnya melebihi hak akses pengguna yang sedang login.
+     */
+    private function ensureCanAssignRole(Request $request, int $roleId): void
+    {
+        if (! $request->user()->canAssignRole(Role::query()->with('permissions')->findOrFail($roleId))) {
+            throw ValidationException::withMessages([
+                'role_id' => 'Anda tidak dapat memberikan role dengan hak akses yang tidak Anda miliki.',
+            ]);
+        }
     }
 
     private function dosenOptions(): array
@@ -145,10 +162,13 @@ class UserController extends Controller
     {
         $role = $this->role($type);
         $data = $request->validate($this->rules(null, $role), $this->messages(), $this->attributes());
+        $this->ensureCanAssignRole($request, (int) $data['role_id']);
         $label = $this->roleLabel($type);
         try {
-            $user = User::create($this->userData($data));
-            $user->profile()->create($this->profileData($data, $role));
+            DB::transaction(function () use ($data, $role): void {
+                $user = User::create($this->userData($data));
+                $user->profile()->create($this->profileData($data, $role));
+            });
         } catch (Throwable) {
             return to_route('admin.users.'.$type)->with('error', $label.' gagal ditambahkan.');
         }
@@ -160,6 +180,7 @@ class UserController extends Controller
     {
         $role = $this->role($type);
         abort_unless($user->type() === $role, 404);
+        abort_unless($request->user()->canManage($user), 403, 'Anda tidak dapat mengubah akun dengan hak akses lebih tinggi.');
         if (! $request->filled('password')) {
             $request->merge([
                 'password' => null,
@@ -170,11 +191,14 @@ class UserController extends Controller
         if (blank($data['password'] ?? null)) {
             unset($data['password'], $data['password_confirmation']);
         }
-        $losesRoleManagement = $request->user()->is($user)
-            && $user->hasPermission(Role::SUPER_PERMISSION)
+        $this->ensureCanAssignRole($request, (int) $data['role_id']);
+        $losesRoleManagement = $user->hasPermission(Role::SUPER_PERMISSION)
             && ! Role::query()->findOrFail($data['role_id'])->hasPermission(Role::SUPER_PERMISSION);
-        if ($losesRoleManagement) {
+        if ($losesRoleManagement && $request->user()->is($user)) {
             return back()->withErrors(['role_id' => 'Anda tidak dapat memindahkan akun sendiri ke role tanpa akses Kelola Role.'])->withInput();
+        }
+        if ($losesRoleManagement && $user->isLastRoleManager()) {
+            return back()->withErrors(['role_id' => 'Akun ini satu-satunya yang memegang akses Kelola Role, sehingga role-nya tidak dapat diganti.'])->withInput();
         }
         $label = $this->roleLabel($type);
         try {
@@ -194,6 +218,18 @@ class UserController extends Controller
         $role = $this->role($type);
         abort_unless($user->type() === $role, 404);
         $label = $this->roleLabel($type);
+
+        if (request()->user()->is($user)) {
+            return to_route('admin.users.'.$type)->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        if (! request()->user()->canManage($user)) {
+            return to_route('admin.users.'.$type)->with('error', $label.' memiliki hak akses lebih tinggi dari Anda sehingga tidak dapat dihapus.');
+        }
+
+        if ($user->isLastRoleManager()) {
+            return to_route('admin.users.'.$type)->with('error', $label.' adalah satu-satunya pemegang akses Kelola Role sehingga tidak dapat dihapus.');
+        }
 
         if ($user->dosenProfile?->kelasKuliah()->exists()) {
             return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena masih mengampu kelas kuliah.');

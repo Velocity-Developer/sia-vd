@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
@@ -52,7 +53,7 @@ class PengumpulanTugasController extends Controller
         $paths = collect($request->file('file_jawaban'))->filter(fn ($file): bool => $file instanceof UploadedFile && $file->isValid())->map(fn (UploadedFile $file): string => $this->storeFile($file))->values()->all();
         abort_if($paths === [], 422);
         if ($old) {
-            Storage::disk('public')->delete($old->file_jawaban ?? []);
+            Storage::disk(AllowedUpload::DISK)->delete($old->file_jawaban ?? []);
         }
         PengumpulanTugas::updateOrCreate(
             ['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswa->id],
@@ -73,6 +74,6 @@ class PengumpulanTugasController extends Controller
         $extension = strtolower($file->getClientOriginalExtension());
         $filename = $base.'-'.Str::lower(Str::random(6)).($extension ? '.'.$extension : '');
 
-        return $file->storeAs('pengumpulan-tugas', $filename, 'public');
+        return $file->storeAs('pengumpulan-tugas', $filename, AllowedUpload::DISK);
     }
 }

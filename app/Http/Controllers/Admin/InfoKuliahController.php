@@ -17,7 +17,7 @@ class InfoKuliahController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('Admin/InfoKuliah', ['infoKuliahs' => InfoKuliah::with('uploader')->latest()->paginate(10)]);
+        return Inertia::render('Admin/InfoKuliah', ['infoKuliahs' => InfoKuliah::with('uploader:id,name')->latest()->paginate(10)]);
     }
 
     public function create(): Response
@@ -47,7 +47,7 @@ class InfoKuliahController extends Controller
             'file' => ['nullable', 'file', 'max:10240', AllowedUpload::rule()],
         ], ['required' => ':attribute wajib diisi.', 'extensions' => AllowedUpload::message()], ['information' => 'informasi', 'file' => 'file']);
         if ($request->hasFile('file')) {
-            Storage::disk('public')->delete($infoKuliah->file);
+            Storage::disk(AllowedUpload::DISK)->delete($infoKuliah->file);
             $data['file'] = $this->storeFile($request->file('file'));
         } else {
             unset($data['file']);
@@ -59,7 +59,7 @@ class InfoKuliahController extends Controller
 
     public function destroy(InfoKuliah $infoKuliah): RedirectResponse
     {
-        Storage::disk('public')->delete($infoKuliah->file);
+        Storage::disk(AllowedUpload::DISK)->delete($infoKuliah->file);
         $infoKuliah->delete();
 
         return to_route('admin.info-kuliah.index')->with('success', 'Informasi kuliah berhasil dihapus.');
@@ -67,7 +67,7 @@ class InfoKuliahController extends Controller
 
     private function storeFile(UploadedFile $file): string
     {
-        return $file->storeAs('info-kuliahs', Str::random(40).'.'.strtolower($file->getClientOriginalExtension()), 'public');
+        return $file->storeAs('info-kuliahs', Str::random(40).'.'.strtolower($file->getClientOriginalExtension()), AllowedUpload::DISK);
     }
 
     private function validated(Request $request, bool $fileRequired = true): array

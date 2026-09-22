@@ -44,7 +44,7 @@ class TugasController extends Controller
     {
         $this->ensureScoped($kelasKuliah, $tugas);
         $kelasKuliah->load('mataKuliah');
-        $tugas->load(['uploader:id,name', 'pengumpulanTugas.mahasiswa.user', 'pengumpulanTugas.mahasiswa.prodi']);
+        $tugas->load(['uploader:id,name', 'pengumpulanTugas.mahasiswa:id,user_id,nim,prodi_id', 'pengumpulanTugas.mahasiswa.user:id,name', 'pengumpulanTugas.mahasiswa.prodi:id,nama_prodi']);
 
         return Inertia::render('Admin/TugasShow', [
             'kelasKuliah' => $kelasKuliah,
@@ -164,12 +164,12 @@ class TugasController extends Controller
         $suffix = Str::lower(Str::random(6));
         $filename = $sanitized.'-'.$suffix.($extension !== '' ? '.'.$extension : '');
 
-        while (Storage::disk('public')->exists('tugas/'.$filename)) {
+        while (Storage::disk(AllowedUpload::DISK)->exists('tugas/'.$filename)) {
             $suffix = Str::lower(Str::random(6));
             $filename = $sanitized.'-'.$suffix.($extension !== '' ? '.'.$extension : '');
         }
 
-        return $uploaded->storeAs('tugas', $filename, 'public');
+        return $uploaded->storeAs('tugas', $filename, AllowedUpload::DISK);
     }
 
     /**
@@ -197,7 +197,7 @@ class TugasController extends Controller
     private function deleteFiles(array $paths): void
     {
         if ($paths !== []) {
-            Storage::disk('public')->delete(array_values($paths));
+            Storage::disk(AllowedUpload::DISK)->delete(array_values($paths));
         }
     }
 

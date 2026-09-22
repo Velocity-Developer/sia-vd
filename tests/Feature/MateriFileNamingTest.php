@@ -6,7 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('stores materi files with sanitized original name plus random suffix', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
 
@@ -26,7 +26,7 @@ it('stores materi files with sanitized original name plus random suffix', functi
     $path = $files[0];
     $basename = basename($path);
     expect($path)->toStartWith('materis/');
-    Storage::disk('public')->assertExists($path);
+    Storage::disk('local')->assertExists($path);
     expect($basename)->toContain('modul_pertemuan_1')
         ->toEndWith('.pdf')
         ->not->toBe('Modul Pertemuan 1.pdf')
@@ -34,7 +34,7 @@ it('stores materi files with sanitized original name plus random suffix', functi
 });
 
 it('stores distinct paths when uploading the same original name twice', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $admin = User::factory()->admin()->create();
     $kelas = createMateriKelasKuliah();
 
@@ -52,7 +52,7 @@ it('stores distinct paths when uploading the same original name twice', function
     expect($files[0])->not->toBe($files[1]);
 
     foreach ($files as $path) {
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('local')->assertExists($path);
         expect(basename($path))->toMatch('/^tugas_akhir-[a-z0-9]{6}\.pdf$/');
     }
 });

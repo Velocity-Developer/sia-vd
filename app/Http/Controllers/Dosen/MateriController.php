@@ -167,12 +167,12 @@ class MateriController extends Controller
         $suffix = Str::lower(Str::random(6));
         $filename = $sanitized.'-'.$suffix.($extension !== '' ? '.'.$extension : '');
 
-        while (Storage::disk('public')->exists('materis/'.$filename)) {
+        while (Storage::disk(AllowedUpload::DISK)->exists('materis/'.$filename)) {
             $suffix = Str::lower(Str::random(6));
             $filename = $sanitized.'-'.$suffix.($extension !== '' ? '.'.$extension : '');
         }
 
-        return $uploaded->storeAs('materis', $filename, 'public');
+        return $uploaded->storeAs('materis', $filename, AllowedUpload::DISK);
     }
 
     /**
@@ -200,7 +200,7 @@ class MateriController extends Controller
     private function deleteFiles(array $paths): void
     {
         if ($paths !== []) {
-            Storage::disk('public')->delete(array_values($paths));
+            Storage::disk(AllowedUpload::DISK)->delete(array_values($paths));
         }
     }
 

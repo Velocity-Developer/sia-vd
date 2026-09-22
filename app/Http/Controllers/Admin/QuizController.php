@@ -45,7 +45,8 @@ class QuizController extends Controller
             'attempts' => fn ($query) => $query->withExists(['answers as essay_belum_dinilai' => fn ($answers) => $answers
                 ->whereNull('point')
                 ->whereHas('question', fn ($question) => $question->where('question_type', 'essay'))]),
-            'attempts.mahasiswa.user',
+            'attempts.mahasiswa:id,user_id,nim',
+            'attempts.mahasiswa.user:id,name',
         ]);
 
         return Inertia::render('Admin/QuizShow', [

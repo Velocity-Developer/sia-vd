@@ -7,7 +7,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('rejects executable or browser-rendered files on materi uploads', function (string $filename) {
-    Storage::fake('public');
+    Storage::fake('local');
     $kelas = createMateriKelasKuliah();
     $dosen = $kelas->dosen->user;
 
@@ -19,11 +19,11 @@ it('rejects executable or browser-rendered files on materi uploads', function (s
     ])->assertSessionHasErrors('file.0');
 
     expect(Materi::count())->toBe(0);
-    expect(Storage::disk('public')->allFiles())->toBe([]);
+    expect(Storage::disk('local')->allFiles())->toBe([]);
 })->with(['shell.php', 'shell.phtml', 'page.html', 'image.svg', 'script.js', 'noextension']);
 
 it('accepts document uploads on materi', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $kelas = createMateriKelasKuliah();
 
     $this->actingAs($kelas->dosen->user)->post(route('dosen.kelas-kuliah.materi.store', $kelas), [
@@ -37,7 +37,7 @@ it('accepts document uploads on materi', function () {
 });
 
 it('rejects a php file on info kuliah and names accepted files by their allowed extension', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->post(route('admin.info-kuliah.store'), [

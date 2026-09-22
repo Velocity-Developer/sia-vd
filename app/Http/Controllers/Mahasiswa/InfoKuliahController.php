@@ -11,6 +11,6 @@ class InfoKuliahController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('Mahasiswa/InfoKuliah', ['infoKuliahs' => InfoKuliah::with('uploader')->latest()->paginate(10)]);
+        return Inertia::render('Mahasiswa/InfoKuliah', ['infoKuliahs' => InfoKuliah::with('uploader:id,name')->latest()->paginate(10)]);
     }
 }

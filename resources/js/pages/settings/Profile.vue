@@ -13,11 +13,12 @@ import { type BreadcrumbItem, type SharedData, type User } from '@/types';
 
 interface Props {
     mustVerifyEmail: boolean;
+    namaTerkunci?: boolean;
     status?: string;
     className?: string;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -52,7 +53,8 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="name">Name</Label>
-                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" />
+                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" :disabled="props.namaTerkunci" />
+                        <p v-if="props.namaTerkunci" class="mt-1 text-xs text-muted-foreground">Nama mengikuti data akademik. Hubungi bagian akademik untuk mengubahnya.</p>
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 

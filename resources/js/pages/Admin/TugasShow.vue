@@ -118,9 +118,9 @@ const saveGrade = (submission: Submission) => {
                         <p class="mt-1 whitespace-pre-line text-sm text-[#31302e]">{{ props.tugas.catatan }}</p>
                     </div>
                     <ul v-if="files(props.tugas.file).length" class="mt-4 space-y-1">
-                        <li v-for="path in files(props.tugas.file)" :key="path">
+                        <li v-for="(path, fileIndex) in files(props.tugas.file)" :key="path">
                             <a
-                                :href="`/storage/${path}`"
+                                :href="route('berkas.tugas', [props.tugas.id, fileIndex])"
                                 target="_blank"
                                 rel="noopener"
                                 class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"
@@ -164,8 +164,8 @@ const saveGrade = (submission: Submission) => {
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDate(submission.submitted_at) }}</td>
                                     <td class="px-4 py-3 text-sm">
                                         <ul class="space-y-1">
-                                            <li v-for="path in files(submission.file_jawaban)" :key="path">
-                                                <a :href="`/storage/${path}`" target="_blank" rel="noopener" class="text-[#0075de] hover:underline">{{
+                                            <li v-for="(path, fileIndex) in files(submission.file_jawaban)" :key="path">
+                                                <a :href="route('berkas.pengumpulan', [submission.id, fileIndex])" target="_blank" rel="noopener" class="text-[#0075de] hover:underline">{{
                                                     fileName(path)
                                                 }}</a>
                                             </li>

@@ -18,7 +18,7 @@ it('denies task detail outside enrolled class', function () {
 });
 
 it('stores multiple answer files and replaces previous submission', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $kelas = createMateriKelasKuliah();
     $mahasiswa = User::factory()->mahasiswa()->create();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
@@ -31,7 +31,7 @@ it('stores multiple answer files and replaces previous submission', function () 
 });
 
 it('rejects answer submission after the deadline', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $kelas = createMateriKelasKuliah();
     $mahasiswa = User::factory()->mahasiswa()->create();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
@@ -44,7 +44,7 @@ it('rejects answer submission after the deadline', function () {
 });
 
 it('accepts answer submission before the deadline', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $kelas = createMateriKelasKuliah();
     $mahasiswa = User::factory()->mahasiswa()->create();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
@@ -55,7 +55,7 @@ it('accepts answer submission before the deadline', function () {
 });
 
 it('rejects an answer file whose extension is not allowed even when its content looks valid', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $kelas = createMateriKelasKuliah();
     $mahasiswa = User::factory()->mahasiswa()->create();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
@@ -66,5 +66,5 @@ it('rejects an answer file whose extension is not allowed even when its content 
         ->assertSessionHasErrors('file_jawaban.0');
 
     expect($tugas->pengumpulanTugas()->count())->toBe(0)
-        ->and(Storage::disk('public')->allFiles())->toBe([]);
+        ->and(Storage::disk('local')->allFiles())->toBe([]);
 });

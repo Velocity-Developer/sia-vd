@@ -35,7 +35,8 @@ class KrsController extends Controller
             ->with([
                 'mataKuliah.prodi',
                 'tahunAkademik',
-                'dosen.user',
+                'dosen:id,user_id',
+                'dosen.user:id,name',
                 'jadwals' => fn ($query) => $query->with('ruang')->orderBy('jam_mulai'),
             ])
             ->withCount('krs')

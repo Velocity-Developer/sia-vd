@@ -58,7 +58,7 @@ class KelasKuliahController extends Controller
 
     public function show(KelasKuliah $kelasKuliah): Response
     {
-        $kelasKuliah->load(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi.fakultas', 'jadwals.ruang', 'materis.uploader:id,name', 'tugas.uploader:id,name', 'quizzes.uploader:id,name', 'krs.mahasiswa.user', 'krs.mahasiswa.prodi']);
+        $kelasKuliah->load(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi.fakultas', 'jadwals.ruang', 'materis.uploader:id,name', 'tugas.uploader:id,name', 'quizzes.uploader:id,name', 'krs.mahasiswa:id,user_id,nim,prodi_id', 'krs.mahasiswa.user:id,name', 'krs.mahasiswa.prodi:id,nama_prodi']);
 
         return Inertia::render('Admin/KelasKuliahShow', [
             'kelasKuliah' => $kelasKuliah,

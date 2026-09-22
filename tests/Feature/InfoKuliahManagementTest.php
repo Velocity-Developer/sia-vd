@@ -6,7 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 it('admin manages info kuliah with file upload', function () {
-    Storage::fake('public');
+    Storage::fake('local');
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)->post(route('admin.info-kuliah.store'), [
@@ -16,7 +16,7 @@ it('admin manages info kuliah with file upload', function () {
 
     $info = InfoKuliah::first();
     expect($info->uploaded_by)->toBe($admin->id);
-    Storage::disk('public')->assertExists($info->file);
+    Storage::disk('local')->assertExists($info->file);
 
     $this->actingAs($admin)->delete(route('admin.info-kuliah.destroy', $info))->assertRedirect();
     expect(InfoKuliah::find($info->id))->toBeNull();

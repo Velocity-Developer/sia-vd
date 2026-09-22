@@ -111,8 +111,9 @@ class KelasKuliahController extends Controller
             'materis.uploader:id,name',
             'tugas.uploader:id,name',
             'quizzes.uploader:id,name',
-            'krs.mahasiswa.user',
-            'krs.mahasiswa.prodi',
+            'krs.mahasiswa:id,user_id,nim,prodi_id',
+            'krs.mahasiswa.user:id,name',
+            'krs.mahasiswa.prodi:id,nama_prodi',
         ]);
 
         return Inertia::render('Dosen/KelasKuliahShow', [

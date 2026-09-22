@@ -56,6 +56,7 @@ const submit = () => {
                     <div class="flex items-center justify-between">
                         <Label for="password">Password</Label>
                         <TextLink v-if="canResetPassword" :href="route('password.request')" class="text-sm" :tabindex="5"> Forgot password? </TextLink>
+                        <span v-else class="text-sm text-muted-foreground">Lupa kata sandi? Hubungi admin.</span>
                     </div>
                     <Input
                         id="password"

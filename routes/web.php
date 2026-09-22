@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\RuangController;
 use App\Http\Controllers\Admin\TahunAkademikController;
 use App\Http\Controllers\Admin\TugasController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\KelasKuliahController as DosenKelasKuliahController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
 use App\Http\Controllers\Dosen\MateriController as DosenMateriController;
@@ -51,6 +52,14 @@ Route::get('admin', fn () => Inertia::render('Dashboard', ['role' => 'admin']))
 Route::get('admin/data', fn () => Inertia::render('Dashboard', ['role' => 'admin', 'viewAllData' => true]))
     ->middleware(['auth', 'verified', 'can:admin.dashboard'])
     ->name('admin.data');
+
+// Berkas kuliah disimpan di disk privat; hak akses dicek di BerkasController.
+Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): void {
+    Route::get('materi/{materi}/{index}', [BerkasController::class, 'materi'])->whereNumber('index')->name('berkas.materi');
+    Route::get('tugas/{tugas}/{index}', [BerkasController::class, 'tugas'])->whereNumber('index')->name('berkas.tugas');
+    Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
+    Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
+});
 
 Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function () {
     foreach (['dosen', 'mahasiswa', 'karyawan'] as $type) {

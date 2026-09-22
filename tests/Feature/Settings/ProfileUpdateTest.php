@@ -13,7 +13,8 @@ test('profile page is displayed', function () {
 });
 
 test('profile information can be updated', function () {
-    $user = User::factory()->create();
+    // Mahasiswa tidak boleh mengganti nama (lihat AkunMahasiswaTest), jadi pakai akun admin.
+    $user = User::factory()->admin()->create();
 
     $response = $this
         ->actingAs($user)
