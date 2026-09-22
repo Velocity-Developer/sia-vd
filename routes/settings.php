@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\InstitusiController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -18,4 +19,9 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/Appearance');
     })->name('appearance');
+
+    Route::middleware('role:admin')->group(function (): void {
+        Route::get('settings/institusi', [InstitusiController::class, 'edit'])->name('institusi.edit');
+        Route::put('settings/institusi', [InstitusiController::class, 'update'])->name('institusi.update');
+    });
 });

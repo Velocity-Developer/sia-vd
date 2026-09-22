@@ -7,7 +7,11 @@
         * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #1a1a1a; margin: 0; }
         .header { border-bottom: 2px solid #0075de; padding-bottom: 10px; margin-bottom: 14px; }
-        .header h1 { font-size: 16px; margin: 0; letter-spacing: 0.5px; }
+        .kop { width: 100%; }
+        .kop td { vertical-align: middle; }
+        .kop-logo { width: 72px; }
+        .kop-logo img { max-height: 64px; max-width: 64px; }
+        .kop-teks h1 { font-size: 15px; margin: 0; letter-spacing: 0.3px; text-transform: uppercase; }
         .header p { margin: 3px 0 0; font-size: 10px; color: #555; }
         .title { text-align: center; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px; }
         .subtitle { text-align: center; font-size: 10px; color: #555; margin: 0 0 14px; }
@@ -32,8 +36,22 @@
 </head>
 <body>
     <div class="header">
-        <h1>{{ config('app.name') }}</h1>
-        <p>{{ $mahasiswa->prodi?->nama_prodi ?? '-' }}@if ($mahasiswa->prodi?->jenjang) — {{ $mahasiswa->prodi->jenjang }}@endif</p>
+        <table class="kop">
+            <tr>
+                @if ($logoSrc)
+                    <td class="kop-logo"><img src="{{ $logoSrc }}" alt="Logo {{ $institusi->nama_pt }}"></td>
+                @endif
+                <td class="kop-teks">
+                    <h1>{{ $institusi->nama_pt }}</h1>
+                    @if ($kontak)
+                        <p>{{ implode(' | ', $kontak) }}</p>
+                    @endif
+                    @if ($mahasiswa->prodi?->nama_prodi)
+                        <p>{{ $mahasiswa->prodi->nama_prodi }}@if ($mahasiswa->prodi->jenjang) — {{ $mahasiswa->prodi->jenjang }}@endif</p>
+                    @endif
+                </td>
+            </tr>
+        </table>
     </div>
 
     <p class="title">Kartu Hasil Studi</p>

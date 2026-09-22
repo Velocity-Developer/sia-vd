@@ -17,10 +17,17 @@ export interface NavItem {
     items?: NavItem[];
 }
 
+export interface Institusi {
+    nama_pt: string;
+    singkatan: string | null;
+    logo_url: string | null;
+}
+
 export interface SharedData {
     [key: string]: unknown;
     name: string;
     quote: { message: string; author: string };
+    institusi: Institusi;
     auth: Auth;
     ziggy: {
         location: string;

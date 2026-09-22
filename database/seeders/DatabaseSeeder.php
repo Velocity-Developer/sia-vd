@@ -8,6 +8,7 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MataKuliah;
 use App\Models\Materi;
+use App\Models\PengaturanInstitusi;
 use App\Models\PengumpulanTugas;
 use App\Models\ProgramStudi;
 use App\Models\Question;
@@ -26,6 +27,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        PengaturanInstitusi::updateOrCreate(
+            ['id' => PengaturanInstitusi::SINGLETON_ID],
+            ['nama_pt' => 'SIA VD', 'singkatan' => 'SIA VD'],
+        );
+
         QuizAnswer::query()->delete();
         QuizAttempt::query()->delete();
         PengumpulanTugas::query()->delete();

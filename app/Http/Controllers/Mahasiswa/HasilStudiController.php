@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Http\Controllers\Controller;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
+use App\Models\PengaturanInstitusi;
 use App\Models\TahunAkademik;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -63,8 +65,17 @@ class HasilStudiController extends Controller
     {
         $mahasiswa = $this->mahasiswa($request);
         $data = $this->dataKhs($mahasiswa, $request->integer('tahun_akademik_id'));
+        $institusi = PengaturanInstitusi::current();
 
         $pdf = Pdf::loadView('pdf.khs', [
+            'institusi' => $institusi,
+            'logoSrc' => $this->logoSrc($institusi),
+            'kontak' => array_values(array_filter([
+                $institusi->alamat,
+                $institusi->telepon ? "Telp. {$institusi->telepon}" : null,
+                $institusi->email,
+                $institusi->website,
+            ])),
             'mahasiswa' => $mahasiswa->loadMissing('user', 'prodi', 'dosenWali.user'),
             'tahunAkademik' => $data['tahunAkademik'],
             'krs' => $data['krs'],
@@ -74,6 +85,26 @@ class HasilStudiController extends Controller
         $tahun = str_replace('/', '-', (string) $data['tahunAkademik']?->tahun);
 
         return $pdf->download("khs-{$mahasiswa->nim}-{$tahun}-{$data['tahunAkademik']?->semester}.pdf");
+    }
+
+    /**
+     * Ubah logo institusi menjadi data URI agar bisa dirender DomPDF tanpa akses remote.
+     */
+    private function logoSrc(PengaturanInstitusi $institusi): ?string
+    {
+        if ($institusi->logo === null) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($institusi->logo)) {
+            return null;
+        }
+
+        $mime = $disk->mimeType($institusi->logo) ?: 'image/png';
+
+        return "data:{$mime};base64,".base64_encode($disk->get($institusi->logo));
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile
