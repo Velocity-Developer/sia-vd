@@ -84,6 +84,7 @@ class MateriController extends Controller
         foreach ($targets as $target) {
             $copy = $materi->replicate();
             $copy->kelas_id = $target->id;
+            $copy->file = AllowedUpload::salinBerkas($this->fileList($materi));
             $copy->uploaded_by = $request->user()->id;
             $copy->save();
         }

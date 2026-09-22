@@ -6,6 +6,7 @@ use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 
 class PengaturanInstitusi extends Model
 {
@@ -15,6 +16,8 @@ class PengaturanInstitusi extends Model
      * Baris singleton yang selalu dipakai.
      */
     public const SINGLETON_ID = 1;
+
+    private const SHARED_CACHE_KEY = 'institusi.shared';
 
     protected $table = 'pengaturan_institusi';
 
@@ -48,13 +51,22 @@ class PengaturanInstitusi extends Model
      */
     public static function shared(): array
     {
-        $institusi = static::query()->find(self::SINGLETON_ID);
+        // Dibaca di setiap halaman, jadi disimpan di cache; dihapus otomatis saat pengaturan disimpan (lihat booted()).
+        return Cache::rememberForever(self::SHARED_CACHE_KEY, function (): array {
+            $institusi = static::query()->find(self::SINGLETON_ID);
 
-        return [
-            'nama_pt' => $institusi?->nama_pt ?? config('app.name'),
-            'singkatan' => $institusi?->singkatan,
-            'logo_url' => $institusi?->logo_url,
-        ];
+            return [
+                'nama_pt' => $institusi?->nama_pt ?? config('app.name'),
+                'singkatan' => $institusi?->singkatan,
+                'logo_url' => $institusi?->logo_url,
+            ];
+        });
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget(self::SHARED_CACHE_KEY));
+        static::deleted(fn () => Cache::forget(self::SHARED_CACHE_KEY));
     }
 
     protected function logoUrl(): Attribute

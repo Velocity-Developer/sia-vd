@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
+use App\Models\Fakultas;
+use App\Models\MahasiswaProfile;
 use App\Models\ProgramStudi;
 use App\Models\Role;
 use App\Models\User;
@@ -48,10 +50,15 @@ class UserController extends Controller
                 $query->orWhereHas($this->profileRelation($role), fn ($profile) => $profile->where($table.'.'.$idColumn, 'like', "%{$search}%"));
             }))
             ->select(['id', 'name', 'username', 'email', 'role_id'])->orderBy('name')->paginate(10)->withQueryString()
-            ->through(fn (User $user): array => $user->only(['id', 'name', 'username', 'email']) + ['role_name' => $user->role?->name, 'profile' => $user->profile?->toArray()]);
+            // Pakai relasi profil yang sudah di-eager-load (bukan $user->profile yang memicu query per baris),
+            // dan kirim hanya nomor induk yang ditampilkan di tabel.
+            ->through(fn (User $user): array => $user->only(['id', 'name', 'username', 'email']) + [
+                'role_name' => $user->role?->name,
+                'profile' => $user->getRelation($this->profileRelation($role))?->only(['nomor_induk', 'nidn', 'nim']),
+            ]);
 
         $angkatans = $role === UserType::Mahasiswa
-            ? User::query()->ofType(UserType::Mahasiswa)->whereHas('mahasiswaProfile')->with('mahasiswaProfile')->get()->pluck('mahasiswaProfile.angkatan')->filter()->unique()->sortDesc()->values()->all()
+            ? MahasiswaProfile::query()->whereNotNull('angkatan')->distinct()->orderByDesc('angkatan')->pluck('angkatan')->all()
             : [];
 
         return Inertia::render('Admin/Users', ['title' => 'Manage User - '.ucfirst($type), 'type' => $type, 'users' => $users, 'search' => $search->toString(), 'angkatan' => $angkatan, 'angkatans' => $angkatans]);
@@ -235,6 +242,18 @@ class UserController extends Controller
             return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena masih mengampu kelas kuliah.');
         }
 
+        if ($user->dosenProfile !== null && Fakultas::query()->where('dekan_id', $user->dosenProfile->id)->exists()) {
+            return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena masih menjabat dekan. Ganti dekan fakultasnya terlebih dahulu.');
+        }
+
+        if ($user->dosenProfile !== null && ProgramStudi::query()->where('kaprodi', $user->dosenProfile->id)->exists()) {
+            return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena masih menjabat kaprodi. Ganti kaprodi program studinya terlebih dahulu.');
+        }
+
+        if ($user->dosenProfile?->mahasiswaWali()->exists()) {
+            return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena masih menjadi dosen wali. Pindahkan mahasiswa bimbingannya ke dosen wali lain terlebih dahulu.');
+        }
+
         if ($user->mahasiswaProfile?->krs()->exists()) {
             return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena sudah memiliki KRS.');
         }
@@ -302,7 +321,7 @@ class UserController extends Controller
             $rules += ['nidn' => ['required', 'string', 'max:50', Rule::unique('dosen_profiles')->ignore($user?->dosenProfile?->id)], 'jabatan_fungsional' => ['required', 'string', 'max:100'], 'pendidikan_terakhir' => ['required', 'string', 'max:100'], 'status_kepegawaian' => ['required', 'string', 'max:100'], 'prodi_id' => ['required', 'exists:program_studis,id']];
         }
         if ($role === UserType::Mahasiswa) {
-            $rules += ['nim' => ['nullable', 'string', 'max:50', Rule::unique('mahasiswa_profiles')->ignore($user?->mahasiswaProfile?->id)], 'angkatan' => ['required', 'integer'], 'semester' => ['required', 'integer'], 'status' => ['required', 'in:Aktif,Nonaktif,Lulus,Dropout,Cuti,Mengundurkan Diri,Meninggal,Transfer Masuk'], 'dosen_wali_id' => ['required', 'exists:dosen_profiles,id'], 'prodi_id' => ['required', 'exists:program_studis,id'], 'sekolah_asal' => ['required', 'string', 'max:255'], 'nisn' => ['required', 'string', 'digits:10', Rule::unique('mahasiswa_profiles', 'nisn')->ignore($user?->mahasiswaProfile?->id)], 'email_alternatif' => ['required', 'email', 'max:255', 'different:email', Rule::unique('mahasiswa_profiles', 'email_alternatif')->ignore($user?->mahasiswaProfile?->id)], 'nama_ayah_kandung' => ['required', 'string', 'max:255'], 'nama_ibu_kandung' => ['required', 'string', 'max:255'], 'tanggal_lahir_ayah' => ['required', 'date'], 'tanggal_lahir_ibu' => ['required', 'date'], 'pendidikan_terakhir_ayah' => ['required', 'string', 'max:100'], 'pendidikan_terakhir_ibu' => ['required', 'string', 'max:100'], 'pekerjaan_ayah' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'pekerjaan_ibu' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'penghasilan_ayah' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'penghasilan_ibu' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'no_telepon_ayah' => ['required', 'string', 'max:50'], 'no_telepon_ibu' => ['required', 'string', 'max:50'], 'email_ayah' => ['required', 'email', 'max:255'], 'email_ibu' => ['required', 'email', 'max:255'], 'alamat_ayah' => ['required', 'string', 'max:1000'], 'alamat_ibu' => ['required', 'string', 'max:1000']];
+            $rules += ['nim' => ['required', 'string', 'max:50', Rule::unique('mahasiswa_profiles')->ignore($user?->mahasiswaProfile?->id)], 'angkatan' => ['required', 'integer'], 'semester' => ['required', 'integer'], 'status' => ['required', 'in:Aktif,Nonaktif,Lulus,Dropout,Cuti,Mengundurkan Diri,Meninggal,Transfer Masuk'], 'dosen_wali_id' => ['required', 'exists:dosen_profiles,id'], 'prodi_id' => ['required', 'exists:program_studis,id'], 'sekolah_asal' => ['required', 'string', 'max:255'], 'nisn' => ['required', 'string', 'digits:10', Rule::unique('mahasiswa_profiles', 'nisn')->ignore($user?->mahasiswaProfile?->id)], 'email_alternatif' => ['required', 'email', 'max:255', 'different:email', Rule::unique('mahasiswa_profiles', 'email_alternatif')->ignore($user?->mahasiswaProfile?->id)], 'nama_ayah_kandung' => ['required', 'string', 'max:255'], 'nama_ibu_kandung' => ['required', 'string', 'max:255'], 'tanggal_lahir_ayah' => ['required', 'date'], 'tanggal_lahir_ibu' => ['required', 'date'], 'pendidikan_terakhir_ayah' => ['required', 'string', 'max:100'], 'pendidikan_terakhir_ibu' => ['required', 'string', 'max:100'], 'pekerjaan_ayah' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'pekerjaan_ibu' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'penghasilan_ayah' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'penghasilan_ibu' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'no_telepon_ayah' => ['required', 'string', 'max:50'], 'no_telepon_ibu' => ['required', 'string', 'max:50'], 'email_ayah' => ['required', 'email', 'max:255'], 'email_ibu' => ['required', 'email', 'max:255'], 'alamat_ayah' => ['required', 'string', 'max:1000'], 'alamat_ibu' => ['required', 'string', 'max:1000']];
         }
         $rules['tanggal_lahir'] = ['required', 'date'];
 

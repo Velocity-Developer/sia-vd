@@ -99,11 +99,7 @@ type KelasKuliahShowProps = {
     krs?: KrsShow[];
 };
 
-type OtherClass = {
-    id: number;
-    kode_kelas: string;
-    mataKuliah?: { nama_matkul: string } | null;
-};
+type OtherClass = { id: number; kode_kelas: string; nama_matkul?: string | null };
 
 const props = defineProps<{ kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[]; skalaNilai: string[]; nilaiTerkunci: boolean }>();
 
@@ -998,7 +994,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                         <div class="mt-4 flex max-h-80 flex-col gap-3 overflow-y-auto pr-2">
                             <label v-for="kelas in props.otherClasses" :key="kelas.id" class="flex gap-2 text-sm">
                                 <input v-model="duplicateTargets" type="checkbox" :value="kelas.id" />
-                                {{ kelas.kode_kelas }} — {{ kelas.mataKuliah?.nama_matkul ?? '-' }}
+                                {{ kelas.kode_kelas }} — {{ kelas.nama_matkul ?? '-' }}
                             </label>
                         </div>
                         <div class="mt-5 flex justify-end gap-2">

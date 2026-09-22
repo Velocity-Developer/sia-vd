@@ -38,6 +38,7 @@ type Tugas = {
 };
 
 type Submission = {
+    id: number;
     file_jawaban: string[] | string | null;
     nilai?: string | null;
 } | null;
@@ -96,6 +97,7 @@ const lewatTenggat = computed<boolean>(() => {
     return new Date(props.tugas.tenggat_waktu).getTime() < Date.now();
 });
 
+const sudahDinilai = computed(() => props.submission?.nilai !== null && props.submission?.nilai !== undefined);
 const form = useForm<{ file_jawaban: File[] }>({ file_jawaban: [] });
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -238,11 +240,14 @@ const submit = () => {
                     <div v-if="props.submission" class="mt-3 space-y-1 text-sm text-[#615d59]">
                         <p>
                             Jawaban tersimpan:
-                            <span
-                                v-for="file in files(props.submission.file_jawaban)"
+                            <a
+                                v-for="(file, fileIndex) in files(props.submission.file_jawaban)"
                                 :key="file"
-                                class="mr-2 text-[#0075de]"
-                                >{{ fileName(file) }}</span
+                                :href="route('berkas.pengumpulan', [props.submission.id, fileIndex])"
+                                target="_blank"
+                                rel="noopener"
+                                class="mr-2 text-[#0075de] hover:underline"
+                                >{{ fileName(file) }}</a
                             >
                         </p>
                         <p v-if="props.submission.nilai">Nilai {{ props.submission.nilai }}</p>
@@ -250,6 +255,9 @@ const submit = () => {
 
                     <p v-if="lewatTenggat" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#dd5b00]">
                         Tenggat waktu telah berakhir. Jawaban tidak dapat diunggah lagi.
+                    </p>
+                    <p v-else-if="sudahDinilai" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#615d59]">
+                        Jawaban sudah dinilai dosen dan tidak dapat diganti lagi.
                     </p>
 
                     <form v-else class="mt-4 space-y-3" @submit.prevent="submit">

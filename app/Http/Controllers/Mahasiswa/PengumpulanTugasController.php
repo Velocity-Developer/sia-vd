@@ -39,6 +39,11 @@ class PengumpulanTugasController extends Controller
             return to_route('mahasiswa.tugas.show', $tugas)->with('error', 'Tenggat waktu telah berakhir. Jawaban tidak dapat diunggah lagi.');
         }
 
+        // Jawaban yang sudah dinilai dikunci, agar nilai selalu sesuai dengan berkas yang dinilai dosen.
+        if ($tugas->pengumpulanTugas()->where('mahasiswa_id', $mahasiswa->id)->whereNotNull('nilai')->exists()) {
+            return to_route('mahasiswa.tugas.show', $tugas)->with('error', 'Jawaban sudah dinilai dan tidak dapat diganti lagi.');
+        }
+
         $request->validate([
             'file_jawaban' => ['required', 'array', 'min:1', 'max:5'],
             // extensions: nama berkas asli, mimes: isi berkas. Keduanya wajib cocok, karena berkas disajikan

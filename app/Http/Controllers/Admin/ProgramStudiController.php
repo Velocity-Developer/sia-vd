@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
 use App\Models\Fakultas;
+use App\Models\MahasiswaProfile;
 use App\Models\ProgramStudi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,6 +60,10 @@ class ProgramStudiController extends Controller
     {
         if ($programStudi->mataKuliah()->exists()) {
             return to_route('admin.program-studi.index')->with('error', 'Program Studi tidak dapat dihapus karena masih memiliki mata kuliah.');
+        }
+
+        if (MahasiswaProfile::query()->where('prodi_id', $programStudi->id)->exists() || DosenProfile::query()->where('prodi_id', $programStudi->id)->exists()) {
+            return to_route('admin.program-studi.index')->with('error', 'Program Studi tidak dapat dihapus karena masih memiliki mahasiswa atau dosen.');
         }
 
         try {

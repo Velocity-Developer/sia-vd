@@ -118,7 +118,15 @@ class KelasKuliahController extends Controller
 
         return Inertia::render('Dosen/KelasKuliahShow', [
             'kelasKuliah' => $kelasKuliah,
-            'otherClasses' => KelasKuliah::with('mataKuliah')->where('dosen_id', $dosenProfileId)->whereKeyNot($kelasKuliah->id)->orderBy('kode_kelas')->get(),
+            // Target duplikasi: kelas lain milik dosen ini di tahun akademik yang sama.
+            'otherClasses' => KelasKuliah::query()
+                ->where('dosen_id', $dosenProfileId)
+                ->where('tahun_akademik_id', $kelasKuliah->tahun_akademik_id)
+                ->whereKeyNot($kelasKuliah->id)
+                ->with('mataKuliah:id,nama_matkul')
+                ->orderBy('kode_kelas')
+                ->get(['id', 'kode_kelas', 'matkul_id'])
+                ->map(fn (KelasKuliah $kelas): array => ['id' => $kelas->id, 'kode_kelas' => $kelas->kode_kelas, 'nama_matkul' => $kelas->mataKuliah?->nama_matkul]),
             'skalaNilai' => SkalaNilai::huruf(),
             'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
         ]);

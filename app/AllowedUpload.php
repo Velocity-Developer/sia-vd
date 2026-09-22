@@ -2,6 +2,9 @@
 
 namespace App;
 
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 /**
  * Ekstensi berkas yang boleh diunggah untuk materi, tugas, dan info kuliah.
  *
@@ -31,5 +34,35 @@ class AllowedUpload
     public static function message(): string
     {
         return ':attribute harus berformat '.implode(', ', self::EXTENSIONS).'.';
+    }
+
+    /**
+     * Salin berkas ke nama baru (untuk duplikasi materi/tugas), agar salinan tidak berbagi berkas fisik
+     * dengan aslinya dan menghapus salah satunya tidak menghapus berkas yang lain.
+     *
+     * @param  list<string>  $paths
+     * @return list<string>
+     */
+    public static function salinBerkas(array $paths): array
+    {
+        $disk = Storage::disk(self::DISK);
+
+        return collect($paths)
+            ->filter(fn ($path): bool => is_string($path) && $disk->exists($path))
+            ->map(function (string $path) use ($disk): string {
+                $info = pathinfo($path);
+                $nama = preg_replace('/-[a-z0-9]{6}$/', '', $info['filename']);
+                $ekstensi = isset($info['extension']) ? '.'.$info['extension'] : '';
+
+                do {
+                    $salinan = $info['dirname'].'/'.$nama.'-'.Str::lower(Str::random(6)).$ekstensi;
+                } while ($disk->exists($salinan));
+
+                $disk->copy($path, $salinan);
+
+                return $salinan;
+            })
+            ->values()
+            ->all();
     }
 }

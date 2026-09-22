@@ -122,6 +122,7 @@ class TugasController extends Controller
         foreach ($targets as $target) {
             $copy = $tugas->replicate();
             $copy->kelas_id = $target->id;
+            $copy->file = AllowedUpload::salinBerkas($this->fileList($tugas));
             $copy->uploaded_by = $request->user()->id;
             $copy->save();
         }

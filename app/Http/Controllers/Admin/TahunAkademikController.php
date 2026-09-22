@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,6 +48,10 @@ class TahunAkademikController extends Controller
 
     public function destroy(TahunAkademik $tahunAkademik): RedirectResponse
     {
+        if ($tahunAkademik->kelasKuliahs()->exists()) {
+            return to_route('admin.tahun-akademik.index')->with('error', 'Tahun Akademik tidak dapat dihapus karena sudah memiliki kelas kuliah.');
+        }
+
         try {
             $tahunAkademik->delete();
         } catch (Throwable) {
@@ -60,7 +65,7 @@ class TahunAkademikController extends Controller
     {
         $validated = $request->validate(
             [
-                'tahun' => ['required', 'string', 'max:20'],
+                'tahun' => ['required', 'string', 'max:20', Rule::unique('tahun_akademik', 'tahun')->where('semester', $request->input('semester'))->ignore($model)],
                 'semester' => ['required', 'string', 'max:20'],
                 'tanggal_mulai' => ['required', 'date'],
                 'tanggal_akhir' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
@@ -74,6 +79,7 @@ class TahunAkademikController extends Controller
                 'after_or_equal' => ':attribute harus sama atau setelah :date.',
                 'string' => ':attribute harus berupa teks.',
                 'max' => ':attribute maksimal :max karakter.',
+                'tahun.unique' => 'Tahun akademik dengan tahun dan semester ini sudah ada.',
             ],
             [
                 'tahun' => 'tahun akademik',

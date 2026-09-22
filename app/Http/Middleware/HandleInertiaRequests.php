@@ -39,7 +39,7 @@ class HandleInertiaRequests extends Middleware
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
 
-        return array_merge(parent::share($request), [
+        return [
             ...parent::share($request),
             'name' => config('app.name'),
             'institusi' => fn (): array => PengaturanInstitusi::shared(),
@@ -68,6 +68,6 @@ class HandleInertiaRequests extends Middleware
                 'pindah_kelas_error' => fn (): ?string => $request->session()->get('pindah_kelas_error'),
                 'pindah_kelas_warning' => fn (): ?string => $request->session()->get('pindah_kelas_warning'),
             ],
-        ]);
+        ];
     }
 }

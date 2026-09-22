@@ -62,7 +62,14 @@ class KelasKuliahController extends Controller
 
         return Inertia::render('Admin/KelasKuliahShow', [
             'kelasKuliah' => $kelasKuliah,
-            'otherClasses' => KelasKuliah::with('mataKuliah')->whereKeyNot($kelasKuliah->id)->orderBy('kode_kelas')->get(),
+            // Target duplikasi: kelas lain di tahun akademik yang sama, hanya kolom yang ditampilkan di modal.
+            'otherClasses' => KelasKuliah::query()
+                ->where('tahun_akademik_id', $kelasKuliah->tahun_akademik_id)
+                ->whereKeyNot($kelasKuliah->id)
+                ->with('mataKuliah:id,nama_matkul')
+                ->orderBy('kode_kelas')
+                ->get(['id', 'kode_kelas', 'matkul_id'])
+                ->map(fn (KelasKuliah $kelas): array => ['id' => $kelas->id, 'kode_kelas' => $kelas->kode_kelas, 'nama_matkul' => $kelas->mataKuliah?->nama_matkul]),
             'skalaNilai' => SkalaNilai::huruf(),
             'nilaiTerkunci' => false,
         ]);
@@ -215,7 +222,7 @@ class KelasKuliahController extends Controller
     private function save(Request $request, KelasKuliah $model): void
     {
         $data = $request->validate([
-            'kode_kelas' => ['required', 'string', 'max:50', Rule::unique('kelas_kuliah', 'kode_kelas')->ignore($model)],
+            'kode_kelas' => ['required', 'string', 'max:50', Rule::unique('kelas_kuliah', 'kode_kelas')->where('tahun_akademik_id', $request->input('tahun_akademik_id'))->ignore($model)],
             'tahun_akademik_id' => ['required', 'exists:tahun_akademik,id'],
             'kapasitas' => ['required', 'integer', 'min:1', 'max:500'],
             'dosen_id' => ['required', 'exists:dosen_profiles,id'],
