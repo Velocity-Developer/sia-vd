@@ -39,7 +39,7 @@ it('shows quiz detail scoped to its class', function () {
         ->get(route('admin.kelas-kuliah.quiz.show', [$kelas, $quiz]))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Admin/QuizShow')
+            ->component('Kelas/QuizShow')
             ->where('quiz.id', $quiz->id)
             ->where('quiz.nama_quiz', 'Quiz Detail')
             ->where('kelasKuliah.id', $kelas->id));

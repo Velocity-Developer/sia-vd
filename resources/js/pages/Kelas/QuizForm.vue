@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import InputError from '@/components/InputError.vue';
@@ -9,10 +10,11 @@ import { Label } from '@/components/ui/label';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
-const props = defineProps<{
+const props = defineProps<{ peran: Peran;
     kelasKuliah: Record<string, any>;
     quiz: Record<string, any> | null;
 }>();
+const rute = rutePeran(props.peran);
 
 const title = `${props.quiz ? 'Edit' : 'Tambah'} Quiz`;
 const now = new Date();
@@ -32,9 +34,9 @@ const form = useForm({
 
 const submit = () => {
     if (props.quiz) {
-        form.put(route('dosen.kelas-kuliah.quiz.update', [props.kelasKuliah.id, props.quiz.id]));
+        form.put(rute('kelas-kuliah.quiz.update', [props.kelasKuliah.id, props.quiz.id]));
     } else {
-        form.post(route('dosen.kelas-kuliah.quiz.store', props.kelasKuliah.id));
+        form.post(rute('kelas-kuliah.quiz.store', props.kelasKuliah.id));
     }
 };
 
@@ -46,7 +48,7 @@ const area =
 
 <template>
     <Head :title="title" />
-    <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: route('dosen.kelas-kuliah.index') }]">
+    <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') }]">
         <div class="min-h-full bg-[#f6f5f4]">
             <div class="mx-auto w-full max-w-[1000px] px-4 py-6 sm:px-6 lg:px-8">
                 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -56,7 +58,7 @@ const area =
                             Kelas {{ props.kelasKuliah?.kode_kelas }} — lengkapi nama quiz, durasi, tenggat waktu, dan catatan.
                         </p>
                     </div>
-                    <Link :href="route('dosen.kelas-kuliah.show', props.kelasKuliah.id)"
+                    <Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)"
                         ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
                     >
                 </div>
@@ -107,4 +109,3 @@ const area =
         </div>
     </AppLayout>
 </template>
-

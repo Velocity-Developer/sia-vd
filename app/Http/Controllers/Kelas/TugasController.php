@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Dosen;
+namespace App\Http\Controllers\Kelas;
 
 use App\AllowedUpload;
+use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\PengumpulanTugas;
@@ -18,27 +19,15 @@ use Throwable;
 
 class TugasController extends Controller
 {
-    public function index(Request $request): Response
+    use KontenKelas;
+
+    public function create(KelasKuliah $kelasKuliah): Response
     {
-        $dosenProfileId = $request->user()?->dosenProfile?->id;
-
-        abort_if($dosenProfileId === null, 403);
-
-        $tugas = Tugas::with(['kelasKuliah.mataKuliah'])
-            ->whereHas('kelasKuliah', fn ($query) => $query->where('dosen_id', $dosenProfileId))
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        return Inertia::render('Dosen/ContentIndex', ['type' => 'tugas', 'items' => $tugas, 'otherClasses' => KelasKuliah::with('mataKuliah')->where('dosen_id', $dosenProfileId)->get()]);
-    }
-
-    public function create(Request $request, KelasKuliah $kelasKuliah): Response
-    {
-        $this->ensureOwner($request, $kelasKuliah);
+        $this->pastikanAksesKelas($kelasKuliah);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Dosen/TugasForm', [
+        return Inertia::render('Kelas/TugasForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'tugas' => null,
         ]);
@@ -46,7 +35,7 @@ class TugasController extends Controller
 
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
-        $this->ensureOwner($request, $kelasKuliah);
+        $this->pastikanAksesKelas($kelasKuliah);
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
 
         $data['file'] = $this->storeFiles($request);
@@ -54,7 +43,7 @@ class TugasController extends Controller
         $data['uploaded_by'] = $request->user()->id;
         Tugas::create($data);
 
-        return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', 'Tugas berhasil ditambahkan.');
+        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil ditambahkan.');
     }
 
     public function show(KelasKuliah $kelasKuliah, Tugas $tugas): Response
@@ -63,7 +52,8 @@ class TugasController extends Controller
         $kelasKuliah->load('mataKuliah');
         $tugas->load(['uploader:id,name', 'pengumpulanTugas.mahasiswa:id,user_id,nim,prodi_id', 'pengumpulanTugas.mahasiswa.user:id,name', 'pengumpulanTugas.mahasiswa.prodi:id,nama_prodi']);
 
-        return Inertia::render('Dosen/TugasShow', [
+        return Inertia::render('Kelas/TugasShow', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'tugas' => $tugas,
         ]);
@@ -83,7 +73,8 @@ class TugasController extends Controller
         $this->ensureScoped($kelasKuliah, $tugas);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Dosen/TugasForm', [
+        return Inertia::render('Kelas/TugasForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'tugas' => $tugas,
         ]);
@@ -109,16 +100,13 @@ class TugasController extends Controller
 
         $tugas->update($data);
 
-        return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', 'Tugas berhasil diperbarui.');
+        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil diperbarui.');
     }
 
     public function duplicate(Request $request, KelasKuliah $kelasKuliah, Tugas $tugas): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $tugas);
-        $validated = $request->validate(['target_ids' => ['required', 'array', 'min:1'], 'target_ids.*' => ['integer'], 'from_index' => ['sometimes', 'boolean']]);
-        $ids = $validated['target_ids'];
-        $targets = KelasKuliah::where('dosen_id', $request->user()->dosenProfile->id)->whereIn('id', $ids)->get();
-        abort_if($targets->count() !== count(array_unique($ids)), 403);
+        $targets = $this->kelasTujuanDuplikasi($request, $kelasKuliah);
         foreach ($targets as $target) {
             $copy = $tugas->replicate();
             $copy->kelas_id = $target->id;
@@ -127,11 +115,7 @@ class TugasController extends Controller
             $copy->save();
         }
 
-        $message = 'Tugas berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.';
-
-        return $validated['from_index'] ?? false
-            ? to_route('dosen.tugas')->with('tugas_success', $message)
-            : to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', $message);
+        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.');
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Tugas $tugas): RedirectResponse
@@ -142,20 +126,15 @@ class TugasController extends Controller
             $this->deleteFiles($this->fileList($tugas));
             $tugas->delete();
         } catch (Throwable) {
-            return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('tugas_error', 'Tugas gagal dihapus.');
+            return $this->keKelas($kelasKuliah)->with('tugas_error', 'Tugas gagal dihapus.');
         }
 
-        return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('tugas_success', 'Tugas berhasil dihapus.');
-    }
-
-    private function ensureOwner(Request $request, KelasKuliah $kelasKuliah): void
-    {
-        abort_unless($kelasKuliah->dosen_id === $request->user()->dosenProfile?->id, 403);
+        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil dihapus.');
     }
 
     private function ensureScoped(KelasKuliah $kelasKuliah, Tugas $tugas): void
     {
-        $this->ensureOwner(request(), $kelasKuliah);
+        $this->pastikanAksesKelas($kelasKuliah);
         abort_unless($tugas->kelas_id === $kelasKuliah->id, 404);
     }
 

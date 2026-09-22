@@ -26,7 +26,7 @@ it('shows class detail owned by the authenticated dosen', function () {
         ->get(route('dosen.kelas-kuliah.show', $kelas))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Dosen/KelasKuliahShow')
+            ->component('Kelas/KelasKuliahShow')
             ->where('kelasKuliah.id', $kelas->id));
 });
 

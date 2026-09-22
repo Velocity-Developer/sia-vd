@@ -110,9 +110,10 @@ const pekerjaanIbuOptions = computed(() => (form.pekerjaan_ibu && !pekerjaanOpti
 const penghasilanIbuOptions = computed(() => (form.penghasilan_ibu && !penghasilanOptions.includes(form.penghasilan_ibu) ? [...penghasilanOptions, form.penghasilan_ibu] : penghasilanOptions));
 const isMahasiswa = props.type === 'mahasiswa';
 const title = computed(() => `${props.user ? 'Edit' : 'Tambah'} Pengguna - ${props.type.charAt(0).toUpperCase()}${props.type.slice(1)}`);
-const form = useForm({
-    role_id: props.defaultRoleId ?? '',
-    ...Object.fromEntries([...common, ...roleFields, 'jenis_kelamin', 'agama', 'alamat', 'password', 'password_confirmation'].map((field) => [field, props.user?.[field] ?? ''])),
+// Field dibangun dinamis sesuai jenis user, jadi tipenya berupa peta nama field -> nilai.
+const form = useForm<Record<string, string>>({
+    role_id: props.defaultRoleId ? String(props.defaultRoleId) : '',
+    ...Object.fromEntries([...common, ...roleFields, 'jenis_kelamin', 'agama', 'alamat', 'password', 'password_confirmation'].map((field) => [field, props.user?.[field] == null ? '' : String(props.user[field])])),
 });
 const search = ref('');
 const dosenWaliOpen = ref(false);
@@ -127,7 +128,7 @@ const closeDosenWali = () => {
     dosenWaliOpen.value = false;
 };
 const selectDosenWali = (id: number) => {
-    form.dosen_wali_id = id;
+    form.dosen_wali_id = String(id);
     dosenWaliOpen.value = false;
     search.value = '';
 };

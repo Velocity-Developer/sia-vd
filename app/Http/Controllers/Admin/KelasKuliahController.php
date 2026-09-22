@@ -60,7 +60,8 @@ class KelasKuliahController extends Controller
     {
         $kelasKuliah->load(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi.fakultas', 'jadwals.ruang', 'materis.uploader:id,name', 'tugas.uploader:id,name', 'quizzes.uploader:id,name', 'krs.mahasiswa:id,user_id,nim,prodi_id', 'krs.mahasiswa.user:id,name', 'krs.mahasiswa.prodi:id,nama_prodi']);
 
-        return Inertia::render('Admin/KelasKuliahShow', [
+        return Inertia::render('Kelas/KelasKuliahShow', [
+            'peran' => 'admin',
             'kelasKuliah' => $kelasKuliah,
             // Target duplikasi: kelas lain di tahun akademik yang sama, hanya kolom yang ditampilkan di modal.
             'otherClasses' => KelasKuliah::query()

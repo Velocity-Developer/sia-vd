@@ -1,6 +1,9 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Kelas;
+
+use App\Http\Controllers\Concerns\KontenKelas;
+use App\Http\Controllers\Controller;
 
 use App\Models\KelasKuliah;
 use App\Models\Question;
@@ -18,15 +21,16 @@ use Inertia\Response;
  */
 class QuizPenilaianController extends Controller
 {
+    use KontenKelas;
+
     public function show(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz, QuizAttempt $attempt): Response
     {
         $this->ensureAccess($request, $kelasKuliah, $quiz, $attempt);
         $kelasKuliah->load('mataKuliah:id,nama_matkul');
         $attempt->load(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name', 'answers']);
         $answers = $attempt->answers->keyBy('question_id');
-        $prefix = $this->routePrefix($request);
 
-        return Inertia::render('QuizPenilaian', [
+        return Inertia::render('Kelas/QuizPenilaian', [
             'kelasKuliah' => ['id' => $kelasKuliah->id, 'kode_kelas' => $kelasKuliah->kode_kelas, 'nama_matkul' => $kelasKuliah->mataKuliah?->nama_matkul],
             'quiz' => $quiz->only(['id', 'nama_quiz']),
             'attempt' => [
@@ -48,10 +52,10 @@ class QuizPenilaianController extends Controller
                 'point' => $answers->get($question->id)?->point,
             ])->values(),
             'urls' => [
-                'grade' => route($prefix.'.kelas-kuliah.quiz.attempts.grade', [$kelasKuliah, $quiz, $attempt]),
-                'back' => route($prefix.'.kelas-kuliah.quiz.show', [$kelasKuliah, $quiz]),
+                'grade' => route($this->rute('kelas-kuliah.quiz.attempts.grade'), [$kelasKuliah, $quiz, $attempt]),
+                'back' => route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz]),
             ],
-            'breadcrumbKelas' => route($prefix.'.kelas-kuliah.show', $kelasKuliah),
+            'breadcrumbKelas' => route($this->rute('kelas-kuliah.show'), $kelasKuliah),
         ]);
     }
 
@@ -94,14 +98,6 @@ class QuizPenilaianController extends Controller
     private function ensureAccess(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz, QuizAttempt $attempt): void
     {
         abort_unless($quiz->kelas_id === $kelasKuliah->id && $attempt->quiz_id === $quiz->id, 404);
-
-        if ($this->routePrefix($request) === 'dosen') {
-            abort_unless($kelasKuliah->dosen_id === $request->user()?->dosenProfile?->id, 403);
-        }
-    }
-
-    private function routePrefix(Request $request): string
-    {
-        return $request->routeIs('dosen.*') ? 'dosen' : 'admin';
+        $this->pastikanAksesKelas($kelasKuliah);
     }
 }

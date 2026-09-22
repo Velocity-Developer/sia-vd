@@ -24,7 +24,7 @@ it('shows task submissions and updates their grades', function () {
         ->get(route('admin.kelas-kuliah.tugas.show', [$kelas, $tugas]))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Admin/TugasShow')
+            ->component('Kelas/TugasShow')
             ->where('tugas.id', $tugas->id)
             ->where('tugas.pengumpulan_tugas.0.id', $submission->id)
             ->where('tugas.pengumpulan_tugas.0.mahasiswa.user.name', $mahasiswa->name));

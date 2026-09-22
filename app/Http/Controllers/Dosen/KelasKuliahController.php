@@ -116,7 +116,8 @@ class KelasKuliahController extends Controller
             'krs.mahasiswa.prodi:id,nama_prodi',
         ]);
 
-        return Inertia::render('Dosen/KelasKuliahShow', [
+        return Inertia::render('Kelas/KelasKuliahShow', [
+            'peran' => 'dosen',
             'kelasKuliah' => $kelasKuliah,
             // Target duplikasi: kelas lain milik dosen ini di tahun akademik yang sama.
             'otherClasses' => KelasKuliah::query()

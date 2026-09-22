@@ -15,7 +15,7 @@ function tahunAkademikDosen(): User
 
 it('allows admins to manage academic years', function () {
     $admin = tahunAkademikAdmin();
-    $payload = ['tahun' => '2025/2026', 'semester' => 'Ganjil', 'tanggal_mulai' => '2025-08-01', 'tanggal_akhir' => '2026-01-31', 'status' => true];
+    $payload = ['tahun' => '2025/2026', 'semester' => 'Ganjil', 'tanggal_mulai' => '2025-08-01', 'tanggal_akhir' => '2026-01-31', 'tanggal_krs_awal' => '2025-08-01', 'tanggal_krs_akhir' => '2025-08-14', 'status' => true];
     $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), $payload)->assertRedirect();
     $tahunAkademik = TahunAkademik::firstOrFail();
     expect($tahunAkademik->status)->toBeTrue();
@@ -30,6 +30,8 @@ it('rejects a second active academic year', function () {
         'semester' => 'Ganjil',
         'tanggal_mulai' => '2025-08-01',
         'tanggal_akhir' => '2026-01-31',
+        'tanggal_krs_awal' => '2025-08-01',
+        'tanggal_krs_akhir' => '2025-08-14',
         'status' => true,
     ]);
 
@@ -38,6 +40,8 @@ it('rejects a second active academic year', function () {
         'semester' => 'Ganjil',
         'tanggal_mulai' => '2026-08-01',
         'tanggal_akhir' => '2027-01-31',
+        'tanggal_krs_awal' => '2026-08-01',
+        'tanggal_krs_akhir' => '2026-08-14',
         'status' => true,
     ])->assertSessionHasErrors('status');
 

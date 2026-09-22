@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rutePeran, type Peran } from '@/lib/rutePeran';
 import AlertModal from '@/components/AlertModal.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,7 +102,10 @@ type KelasKuliahShowProps = {
 
 type OtherClass = { id: number; kode_kelas: string; nama_matkul?: string | null };
 
-const props = defineProps<{ kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[]; skalaNilai: string[]; nilaiTerkunci: boolean }>();
+const props = defineProps<{ peran: Peran; kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[]; skalaNilai: string[]; nilaiTerkunci: boolean }>();
+const rute = rutePeran(props.peran);
+// Kelola jadwal, edit kelas, data dosen pengampu, dan pembatalan KRS hanya untuk admin.
+const isAdmin = computed(() => props.peran === 'admin');
 
 const v = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '-';
@@ -144,7 +148,7 @@ const editGrade = (krs: KrsShow) => {
 };
 const saveGrade = (krs: KrsShow) =>
     router.put(
-        route('admin.kelas-kuliah.krs.nilai', [props.kelasKuliah.id, krs.id]),
+        rute('kelas-kuliah.krs.nilai', [props.kelasKuliah.id, krs.id]),
         { nilai: grade.value || null },
         {
             onSuccess: () => {
@@ -160,7 +164,7 @@ const cancelKrs = (krs: KrsShow) => {
 const confirmCancelKrs = () => {
     if (!pendingCancelKrs.value) return;
 
-    router.delete(route('admin.kelas-kuliah.krs.destroy', [props.kelasKuliah.id, pendingCancelKrs.value.id]), {
+    router.delete(rute('kelas-kuliah.krs.destroy', [props.kelasKuliah.id, pendingCancelKrs.value.id]), {
         preserveScroll: true,
         onFinish: () => {
             pendingCancelKrs.value = null;
@@ -198,7 +202,7 @@ const removeJadwal = (jadwal: JadwalShow) => {
 
 const confirmDelete = () => {
     if (!pendingJadwal.value) return;
-    router.delete(route('admin.kelas-kuliah.jadwal.destroy', [props.kelasKuliah.id, pendingJadwal.value.id]), {
+    router.delete(rute('kelas-kuliah.jadwal.destroy', [props.kelasKuliah.id, pendingJadwal.value.id]), {
         onFinish: () => {
             confirmOpen.value = false;
             pendingJadwal.value = null;
@@ -213,7 +217,7 @@ const removeMateri = (materi: MateriShow) => {
 
 const confirmDeleteMateri = () => {
     if (!pendingMateri.value) return;
-    router.delete(route('admin.kelas-kuliah.materi.destroy', [props.kelasKuliah.id, pendingMateri.value.id]), {
+    router.delete(rute('kelas-kuliah.materi.destroy', [props.kelasKuliah.id, pendingMateri.value.id]), {
         onFinish: () => {
             confirmMateriOpen.value = false;
             pendingMateri.value = null;
@@ -228,7 +232,7 @@ const removeTugas = (tugas: TugasShow) => {
 
 const confirmDeleteTugas = () => {
     if (!pendingTugas.value) return;
-    router.delete(route('admin.kelas-kuliah.tugas.destroy', [props.kelasKuliah.id, pendingTugas.value.id]), {
+    router.delete(rute('kelas-kuliah.tugas.destroy', [props.kelasKuliah.id, pendingTugas.value.id]), {
         onFinish: () => {
             confirmTugasOpen.value = false;
             pendingTugas.value = null;
@@ -243,7 +247,7 @@ const removeQuiz = (quiz: QuizShow) => {
 
 const confirmDeleteQuiz = () => {
     if (!pendingQuiz.value) return;
-    router.delete(route('admin.kelas-kuliah.quiz.destroy', [props.kelasKuliah.id, pendingQuiz.value.id]), {
+    router.delete(rute('kelas-kuliah.quiz.destroy', [props.kelasKuliah.id, pendingQuiz.value.id]), {
         onFinish: () => {
             confirmQuizOpen.value = false;
             pendingQuiz.value = null;
@@ -310,10 +314,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                         <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan kode kelas, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route('admin.kelas-kuliah.index')"
+                        <Link :href="rute('kelas-kuliah.index')"
                             ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
                         >
-                        <Link :href="route('admin.kelas-kuliah.edit', props.kelasKuliah.id)"
+                        <Link v-if="isAdmin" :href="rute('kelas-kuliah.edit', props.kelasKuliah.id)"
                             ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
                         >
                     </div>
@@ -346,6 +350,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                 </section>
 
                 <section
+                    v-if="isAdmin"
                     class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Dosen Pengampu</h2>
@@ -411,7 +416,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal</h2>
                             <p class="text-sm leading-5 text-[#615d59]">Hari, jam, dan ruang untuk kelas ini.</p>
                         </div>
-                        <Link :href="route('admin.kelas-kuliah.jadwal.create', props.kelasKuliah.id)">
+                        <Link v-if="isAdmin" :href="rute('kelas-kuliah.jadwal.create', props.kelasKuliah.id)">
                             <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Jadwal</Button>
                         </Link>
                     </div>
@@ -439,7 +444,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Hari</th>
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jam</th>
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Ruang</th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                        <th v-if="isAdmin" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
@@ -455,10 +460,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block">{{ v(jadwal.ruang?.kode_ruang) }} — {{ v(jadwal.ruang?.nama_ruang) }}</span>
                                         </td>
-                                        <td class="px-4 py-3">
+                                        <td v-if="isAdmin" class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <Link
-                                                    :href="route('admin.kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
+                                                    :href="rute('kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
                                                     title="Edit"
                                                     aria-label="Edit"
                                                 >
@@ -504,7 +509,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Materi</h2>
                             <p class="text-sm leading-5 text-[#615d59]">Bahan ajar per pertemuan untuk kelas ini.</p>
                         </div>
-                        <Link :href="route('admin.kelas-kuliah.materi.create', props.kelasKuliah.id)">
+                        <Link :href="rute('kelas-kuliah.materi.create', props.kelasKuliah.id)">
                             <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Materi</Button>
                         </Link>
                     </div>
@@ -585,7 +590,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     /></Button>
                                                 </button>
                                                 <Link
-                                                    :href="route('admin.kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
+                                                    :href="rute('kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
                                                     title="Edit"
                                                     aria-label="Edit"
                                                 >
@@ -633,7 +638,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tugas</h2>
                             <p class="text-sm leading-5 text-[#615d59]">Daftar tugas beserta tenggat waktu untuk kelas ini.</p>
                         </div>
-                        <Link :href="route('admin.kelas-kuliah.tugas.create', props.kelasKuliah.id)">
+                        <Link :href="rute('kelas-kuliah.tugas.create', props.kelasKuliah.id)">
                             <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Tugas</Button>
                         </Link>
                     </div>
@@ -700,7 +705,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <Link
-                                                    :href="route('admin.kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
+                                                    :href="rute('kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
                                                     title="Lihat detail"
                                                     aria-label="Lihat detail"
                                                 >
@@ -722,7 +727,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     /></Button>
                                                 </button>
                                                 <Link
-                                                    :href="route('admin.kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
+                                                    :href="rute('kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
                                                     title="Edit"
                                                     aria-label="Edit"
                                                 >
@@ -770,7 +775,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Quiz</h2>
                             <p class="text-sm leading-5 text-[#615d59]">Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini.</p>
                         </div>
-                        <Link :href="route('admin.kelas-kuliah.quiz.create', props.kelasKuliah.id)">
+                        <Link :href="rute('kelas-kuliah.quiz.create', props.kelasKuliah.id)">
                             <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Quiz</Button>
                         </Link>
                     </div>
@@ -825,7 +830,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <Link
-                                                    :href="route('admin.kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
+                                                    :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
                                                     title="Detail"
                                                     aria-label="Detail"
                                                 >
@@ -847,7 +852,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     /></Button>
                                                 </button>
                                                 <Link
-                                                    :href="route('admin.kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
+                                                    :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
                                                     title="Edit"
                                                     aria-label="Edit"
                                                 >
@@ -964,10 +969,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     >Batal</Button
                                                 >
                                             </template>
+                                            <span v-else-if="props.nilaiTerkunci" class="text-xs text-[#a39e98]">Nilai terkunci</span>
                                             <template v-else>
                                                 <Button size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)">Ubah Nilai</Button>
                                                 <Button
-                                                    v-if="!krs.nilai"
+                                                    v-if="isAdmin && !krs.nilai"
                                                     size="sm"
                                                     variant="outline"
                                                     class="ml-2 rounded-full text-[#dd5b00]"

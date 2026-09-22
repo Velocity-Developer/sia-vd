@@ -27,7 +27,7 @@ it('shows questions below quiz detail', function () {
         ->get(route('admin.kelas-kuliah.quiz.show', [$kelas, $quiz]))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Admin/QuizShow')
+            ->component('Kelas/QuizShow')
             ->has('quiz.questions', 1)
             ->where('quiz.questions.0.question_text', 'Apa kepanjangan CPU?')
             ->where('quiz.questions.0.question_type', 'single_choice')

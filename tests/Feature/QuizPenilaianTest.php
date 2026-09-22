@@ -38,7 +38,7 @@ it('grades an essay and adds it to the score', function () {
     $this->actingAs($kelas->dosen->user)
         ->get(route('dosen.kelas-kuliah.quiz.attempts.show', [$kelas, $quiz, $attempt]))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('QuizPenilaian')->has('items', 2));
+        ->assertInertia(fn ($page) => $page->component('Kelas/QuizPenilaian')->has('items', 2));
 
     $this->actingAs($kelas->dosen->user)
         ->put(route('dosen.kelas-kuliah.quiz.attempts.grade', [$kelas, $quiz, $attempt]), ['points' => [$esai->id => 15]])

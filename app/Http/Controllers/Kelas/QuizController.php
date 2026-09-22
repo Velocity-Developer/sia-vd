@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\Dosen;
+namespace App\Http\Controllers\Kelas;
 
+use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Question;
@@ -15,27 +16,15 @@ use Throwable;
 
 class QuizController extends Controller
 {
-    public function index(Request $request): Response
+    use KontenKelas;
+
+    public function create(KelasKuliah $kelasKuliah): Response
     {
-        $dosenProfileId = $request->user()?->dosenProfile?->id;
-
-        abort_if($dosenProfileId === null, 403);
-
-        $quiz = Quiz::with(['kelasKuliah.mataKuliah'])
-            ->whereHas('kelasKuliah', fn ($query) => $query->where('dosen_id', $dosenProfileId))
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        return Inertia::render('Dosen/ContentIndex', ['type' => 'quiz', 'items' => $quiz, 'otherClasses' => KelasKuliah::with('mataKuliah')->where('dosen_id', $dosenProfileId)->get()]);
-    }
-
-    public function create(Request $request, KelasKuliah $kelasKuliah): Response
-    {
-        $this->ensureOwner($request, $kelasKuliah);
+        $this->pastikanAksesKelas($kelasKuliah);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Dosen/QuizForm', [
+        return Inertia::render('Kelas/QuizForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'quiz' => null,
         ]);
@@ -43,13 +32,13 @@ class QuizController extends Controller
 
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
-        $this->ensureOwner($request, $kelasKuliah);
+        $this->pastikanAksesKelas($kelasKuliah);
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
         $data['kelas_id'] = $kelasKuliah->id;
         $data['uploaded_by'] = $request->user()->id;
         Quiz::create($data);
 
-        return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('quiz_success', 'Quiz berhasil ditambahkan.');
+        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil ditambahkan.');
     }
 
     public function show(KelasKuliah $kelasKuliah, Quiz $quiz): Response
@@ -66,7 +55,8 @@ class QuizController extends Controller
             'attempts.mahasiswa.user:id,name',
         ]);
 
-        return Inertia::render('Dosen/QuizShow', [
+        return Inertia::render('Kelas/QuizShow', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'quiz' => $quiz,
         ]);
@@ -77,7 +67,8 @@ class QuizController extends Controller
         $this->ensureScoped($kelasKuliah, $quiz);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Dosen/QuizForm', [
+        return Inertia::render('Kelas/QuizForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'quiz' => $quiz,
         ]);
@@ -89,7 +80,7 @@ class QuizController extends Controller
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
         $quiz->update($data);
 
-        return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('quiz_success', 'Quiz berhasil diperbarui.');
+        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil diperbarui.');
     }
 
     public function storeQuestions(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
@@ -168,7 +159,7 @@ class QuizController extends Controller
             ]);
         }
 
-        return to_route('dosen.kelas-kuliah.quiz.show', [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil ditambahkan.');
+        return to_route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil ditambahkan.');
     }
 
     public function updateQuestion(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz, Question $question): RedirectResponse
@@ -214,7 +205,7 @@ class QuizController extends Controller
         $question->update($data);
         $quiz->regradeAttempts();
 
-        return to_route('dosen.kelas-kuliah.quiz.show', [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil diperbarui.');
+        return to_route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil diperbarui.');
     }
 
     public function destroyQuestion(KelasKuliah $kelasKuliah, Quiz $quiz, Question $question): RedirectResponse
@@ -224,32 +215,27 @@ class QuizController extends Controller
         $question->delete();
         $quiz->regradeAttempts();
 
-        return to_route('dosen.kelas-kuliah.quiz.show', [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil dihapus.');
+        return to_route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil dihapus.');
     }
 
     public function duplicate(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
-        $validated = $request->validate(['target_ids' => ['required', 'array', 'min:1'], 'target_ids.*' => ['integer'], 'from_index' => ['sometimes', 'boolean']]);
-        $ids = $validated['target_ids'];
-        $targets = KelasKuliah::where('dosen_id', $request->user()->dosenProfile->id)->whereIn('id', $ids)->get();
-        abort_if($targets->count() !== count(array_unique($ids)), 403);
+        $targets = $this->kelasTujuanDuplikasi($request, $kelasKuliah);
         $quiz->load('questions');
+
         foreach ($targets as $target) {
             $copy = $quiz->replicate();
             $copy->kelas_id = $target->id;
             $copy->uploaded_by = $request->user()->id;
             $copy->save();
+
             foreach ($quiz->questions as $question) {
                 $copy->questions()->create($question->only(['question_text', 'question_type', 'question_option', 'points']));
             }
         }
 
-        $message = 'Quiz berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.';
-
-        return $validated['from_index'] ?? false
-            ? to_route('dosen.quiz')->with('quiz_success', $message)
-            : to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('quiz_success', $message);
+        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.');
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
@@ -259,20 +245,15 @@ class QuizController extends Controller
         try {
             $quiz->delete();
         } catch (Throwable) {
-            return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('quiz_error', 'Quiz gagal dihapus.');
+            return $this->keKelas($kelasKuliah)->with('quiz_error', 'Quiz gagal dihapus.');
         }
 
-        return to_route('dosen.kelas-kuliah.show', $kelasKuliah)->with('quiz_success', 'Quiz berhasil dihapus.');
-    }
-
-    private function ensureOwner(Request $request, KelasKuliah $kelasKuliah): void
-    {
-        abort_unless($kelasKuliah->dosen_id === $request->user()->dosenProfile?->id, 403);
+        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil dihapus.');
     }
 
     private function ensureScoped(KelasKuliah $kelasKuliah, Quiz $quiz): void
     {
-        $this->ensureOwner(request(), $kelasKuliah);
+        $this->pastikanAksesKelas($kelasKuliah);
         abort_unless($quiz->kelas_id === $kelasKuliah->id, 404);
     }
 

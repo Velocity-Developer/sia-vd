@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { TransitionRoot } from '@headlessui/vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
@@ -93,15 +92,9 @@ const submit = () => {
                     <div class="flex items-center gap-4">
                         <Button :disabled="form.processing">Save</Button>
 
-                        <TransitionRoot
-                            :show="form.recentlySuccessful"
-                            enter="transition ease-in-out"
-                            enter-from="opacity-0"
-                            leave="transition ease-in-out"
-                            leave-to="opacity-0"
-                        >
-                            <p class="text-sm text-neutral-600">Saved.</p>
-                        </TransitionRoot>
+                        <Transition enter-active-class="transition ease-in-out" enter-from-class="opacity-0" leave-active-class="transition ease-in-out" leave-to-class="opacity-0">
+                            <p v-if="form.recentlySuccessful" class="text-sm text-neutral-600">Saved.</p>
+                        </Transition>
                     </div>
                 </form>
             </div>

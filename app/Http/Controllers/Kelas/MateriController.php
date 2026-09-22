@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Kelas;
 
 use App\AllowedUpload;
+use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
@@ -17,11 +18,15 @@ use Throwable;
 
 class MateriController extends Controller
 {
+    use KontenKelas;
+
     public function create(KelasKuliah $kelasKuliah): Response
     {
+        $this->pastikanAksesKelas($kelasKuliah);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Admin/MateriForm', [
+        return Inertia::render('Kelas/MateriForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'materi' => null,
         ]);
@@ -29,6 +34,7 @@ class MateriController extends Controller
 
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
+        $this->pastikanAksesKelas($kelasKuliah);
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
 
         $data['file'] = $this->storeFiles($request);
@@ -36,7 +42,7 @@ class MateriController extends Controller
         $data['uploaded_by'] = $request->user()->id;
         Materi::create($data);
 
-        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('materi_success', 'Materi berhasil ditambahkan.');
+        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil ditambahkan.');
     }
 
     public function edit(KelasKuliah $kelasKuliah, Materi $materi): Response
@@ -44,7 +50,8 @@ class MateriController extends Controller
         $this->ensureScoped($kelasKuliah, $materi);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Admin/MateriForm', [
+        return Inertia::render('Kelas/MateriForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'materi' => $materi,
         ]);
@@ -70,17 +77,13 @@ class MateriController extends Controller
 
         $materi->update($data);
 
-        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('materi_success', 'Materi berhasil diperbarui.');
+        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil diperbarui.');
     }
 
     public function duplicate(Request $request, KelasKuliah $kelasKuliah, Materi $materi): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $materi);
-        $validated = $request->validate(['target_ids' => ['required', 'array', 'min:1'], 'target_ids.*' => ['integer']]);
-        $ids = $validated['target_ids'];
-        $targets = KelasKuliah::whereIn('id', $ids)->whereKeyNot($kelasKuliah->id)->get();
-        abort_if($targets->count() !== count(array_unique($ids)), 404);
-
+        $targets = $this->kelasTujuanDuplikasi($request, $kelasKuliah);
         foreach ($targets as $target) {
             $copy = $materi->replicate();
             $copy->kelas_id = $target->id;
@@ -89,7 +92,7 @@ class MateriController extends Controller
             $copy->save();
         }
 
-        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('materi_success', 'Materi berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.');
+        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil diduplikasi ke: '.$targets->map(fn (KelasKuliah $target): string => $target->kode_kelas)->join(', ').'.');
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Materi $materi): RedirectResponse
@@ -100,14 +103,15 @@ class MateriController extends Controller
             $this->deleteFiles($this->fileList($materi));
             $materi->delete();
         } catch (Throwable) {
-            return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('materi_error', 'Materi gagal dihapus.');
+            return $this->keKelas($kelasKuliah)->with('materi_error', 'Materi gagal dihapus.');
         }
 
-        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('materi_success', 'Materi berhasil dihapus.');
+        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil dihapus.');
     }
 
     private function ensureScoped(KelasKuliah $kelasKuliah, Materi $materi): void
     {
+        $this->pastikanAksesKelas($kelasKuliah);
         abort_unless($materi->kelas_id === $kelasKuliah->id, 404);
     }
 

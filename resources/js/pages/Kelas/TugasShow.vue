@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
@@ -33,7 +34,8 @@ type KelasKuliah = {
     mata_kuliah?: { nama_matkul: string } | null;
 };
 
-const props = defineProps<{ kelasKuliah: KelasKuliah; tugas: Tugas }>();
+const props = defineProps<{ peran: Peran; kelasKuliah: KelasKuliah; tugas: Tugas }>();
+const rute = rutePeran(props.peran);
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const editing = ref<number | null>(null);
 const grade = ref<string | number>('');
@@ -58,7 +60,7 @@ const editGrade = (submission: Submission) => {
 
 const saveGrade = (submission: Submission) => {
     router.put(
-        route('admin.kelas-kuliah.tugas.pengumpulan.nilai', [props.kelasKuliah.id, props.tugas.id, submission.id]),
+        rute('kelas-kuliah.tugas.pengumpulan.nilai', [props.kelasKuliah.id, props.tugas.id, submission.id]),
         { nilai: grade.value },
         {
             onSuccess: () => {
@@ -73,8 +75,8 @@ const saveGrade = (submission: Submission) => {
     <Head :title="`Detail Tugas ${props.tugas.judul_tugas}`" />
     <AppLayout
         :breadcrumbs="[
-            { title: 'Kelas Kuliah', href: route('admin.kelas-kuliah.index') },
-            { title: props.kelasKuliah.kode_kelas, href: route('admin.kelas-kuliah.show', props.kelasKuliah.id) },
+            { title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') },
+            { title: props.kelasKuliah.kode_kelas, href: rute('kelas-kuliah.show', props.kelasKuliah.id) },
             { title: 'Detail Tugas', href: '#' },
         ]"
     >
@@ -85,7 +87,7 @@ const saveGrade = (submission: Submission) => {
                         <h1 class="text-[26px] font-bold text-black">Detail Tugas</h1>
                         <p class="text-sm text-[#615d59]">Informasi tugas dan daftar mahasiswa yang sudah mengumpulkan jawaban.</p>
                     </div>
-                    <Link :href="route('admin.kelas-kuliah.show', props.kelasKuliah.id)"
+                    <Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)"
                         ><Button variant="outline" class="rounded-lg bg-white">Kembali</Button></Link
                     >
                 </div>

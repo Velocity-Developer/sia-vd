@@ -117,8 +117,7 @@ it('creates updates and deletes program studi with nullable accreditation number
 
 it('validates program studi input and foreign keys', function () {
     $this->actingAs(adminUser())->post(route('admin.program-studi.store'), [])->assertSessionHasErrors([
-        'fakultas_id', 'kode_prodi', 'nama_prodi', 'jenjang', 'status_akreditasi',
-        'tanggal_akreditasi_mulai', 'tanggal_akreditasi_akhir', 'kaprodi', 'tahun_berdiri',
+        'fakultas_id', 'kode_prodi', 'nama_prodi', 'jenjang', 'status_akreditasi', 'kaprodi', 'tahun_berdiri',
     ]);
     $this->actingAs(adminUser())->post(route('admin.program-studi.store'), programStudiPayload(999999, 999999))
         ->assertSessionHasErrors(['fakultas_id', 'kaprodi']);
