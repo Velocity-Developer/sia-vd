@@ -195,6 +195,14 @@ class UserController extends Controller
         abort_unless($user->type() === $role, 404);
         $label = $this->roleLabel($type);
 
+        if ($user->dosenProfile?->kelasKuliah()->exists()) {
+            return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena masih mengampu kelas kuliah.');
+        }
+
+        if ($user->mahasiswaProfile?->krs()->exists()) {
+            return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena sudah memiliki KRS.');
+        }
+
         try {
             DB::transaction(fn (): ?bool => $user->delete());
         } catch (Throwable) {

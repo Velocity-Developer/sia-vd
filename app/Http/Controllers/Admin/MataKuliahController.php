@@ -61,6 +61,10 @@ class MataKuliahController extends Controller
 
     public function destroy(MataKuliah $mataKuliah): RedirectResponse
     {
+        if ($mataKuliah->kelasKuliah()->exists()) {
+            return to_route('admin.mata-kuliah.index')->with('error', 'Mata Kuliah tidak dapat dihapus karena masih dipakai oleh kelas kuliah.');
+        }
+
         try {
             $mataKuliah->delete();
         } catch (Throwable) {

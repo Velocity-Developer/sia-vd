@@ -24,6 +24,7 @@ type QuizAttempt = {
     started_at?: string | null;
     submitted_at?: string | null;
     score?: string | number | null;
+    auto_closed?: boolean;
     mahasiswa?: { nim?: string | null; user?: { name: string } | null } | null;
 };
 
@@ -587,7 +588,7 @@ const sel =
                                     </td>
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.started_at) }}</td>
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.submitted_at) }}</td>
-                                    <td class="px-4 py-3 text-sm font-semibold text-black">{{ attempt.score ?? '-' }}</td>
+                                    <td class="px-4 py-3 text-sm font-semibold text-black">{{ attempt.score ?? '-' }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]">Ditutup otomatis (waktu habis)</span></td>
                                 </tr>
                                 <tr v-if="!(props.quiz.attempts ?? []).length">
                                     <td colspan="5" class="px-4 py-10 text-center text-sm text-[#615d59]">Belum ada mahasiswa yang mengerjakan quiz.</td>

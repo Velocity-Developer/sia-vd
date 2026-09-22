@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Quiz extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = ['nama_quiz', 'catatan', 'waktu_pengerjaan', 'tenggat_waktu', 'uploaded_by', 'kelas_id'];
 
     protected function casts(): array

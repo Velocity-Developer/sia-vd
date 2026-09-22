@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\UserType;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,7 +16,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SerializesDatesInAppTimezone;
 
     /**
      * Dashboard yang dicoba saat menentukan halaman awal user. Nama route sama dengan key permission-nya.

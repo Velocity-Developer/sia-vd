@@ -53,3 +53,18 @@ it('accepts answer submission before the deadline', function () {
     $this->actingAs($mahasiswa)->post(route('mahasiswa.tugas.pengumpulan.store', $tugas), ['file_jawaban' => [UploadedFile::fake()->create('Jawaban.pdf')]])->assertRedirect();
     expect($tugas->pengumpulanTugas()->count())->toBe(1);
 });
+
+it('rejects an answer file whose extension is not allowed even when its content looks valid', function () {
+    Storage::fake('public');
+    $kelas = createMateriKelasKuliah();
+    $mahasiswa = User::factory()->mahasiswa()->create();
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
+    $tugas = Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $kelas->dosen->user_id, 'judul_tugas' => 'Tugas']);
+
+    $this->actingAs($mahasiswa)
+        ->post(route('mahasiswa.tugas.pengumpulan.store', $tugas), ['file_jawaban' => [UploadedFile::fake()->create('jawaban.html', 10, 'image/png')]])
+        ->assertSessionHasErrors('file_jawaban.0');
+
+    expect($tugas->pengumpulanTugas()->count())->toBe(0)
+        ->and(Storage::disk('public')->allFiles())->toBe([]);
+});

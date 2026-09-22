@@ -56,6 +56,10 @@ class RuangController extends Controller
 
     public function destroy(Ruang $ruang): RedirectResponse
     {
+        if ($ruang->jadwals()->exists()) {
+            return to_route('admin.ruang.index')->with('error', 'Ruang tidak dapat dihapus karena masih dipakai di jadwal kuliah.');
+        }
+
         try {
             $ruang->delete();
         } catch (Throwable) {

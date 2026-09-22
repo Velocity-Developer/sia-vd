@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengaturanPindahKelas extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     /**
      * Baris singleton yang selalu dipakai.
      */

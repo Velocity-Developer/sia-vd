@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Dosen;
 
+use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
@@ -159,7 +160,7 @@ class MateriController extends Controller
 
     private function storeUploadedFile(UploadedFile $uploaded): string
     {
-        $extension = $uploaded->getClientOriginalExtension();
+        $extension = strtolower($uploaded->getClientOriginalExtension());
         $base = pathinfo($uploaded->getClientOriginalName(), PATHINFO_FILENAME);
         $sanitized = Str::slug($base, '_');
         $sanitized = substr($sanitized !== '' ? $sanitized : 'file', 0, 100);
@@ -213,7 +214,7 @@ class MateriController extends Controller
             'pertemuan_ke' => ['required', 'integer', 'min:1', 'max:32'],
             'jenis' => ['required', 'in:Materi,Pengumuman'],
             'file' => ['nullable', 'array', 'max:5'],
-            'file.*' => ['file', 'max:10240'],
+            'file.*' => ['file', 'max:10240', AllowedUpload::rule()],
             'kept_files' => ['nullable', 'array'],
             'kept_files.*' => ['string'],
             'catatan' => ['nullable', 'string'],
@@ -230,6 +231,7 @@ class MateriController extends Controller
             'string' => ':attribute harus berupa teks.',
             'integer' => ':attribute harus berupa angka.',
             'file' => ':attribute harus berupa berkas.',
+            'extensions' => AllowedUpload::message(),
             'max.string' => ':attribute maksimal :max karakter.',
             'max.file' => ':attribute maksimal :max kilobita.',
             'min' => ':attribute minimal :min.',

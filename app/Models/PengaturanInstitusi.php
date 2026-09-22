@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengaturanInstitusi extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     /**
      * Baris singleton yang selalu dipakai.
      */

@@ -55,6 +55,10 @@ class FakultasController extends Controller
 
     public function destroy(Fakultas $fakulta): RedirectResponse
     {
+        if ($fakulta->programStudis()->exists()) {
+            return to_route('admin.fakultas.index')->with('error', 'Fakultas tidak dapat dihapus karena masih memiliki program studi.');
+        }
+
         try {
             $fakulta->delete();
         } catch (Throwable) {

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengumpulanTugas extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $table = 'pengumpulan_tugas';
 
     protected $fillable = ['tugas_id', 'mahasiswa_id', 'file_jawaban', 'nilai', 'submitted_at'];

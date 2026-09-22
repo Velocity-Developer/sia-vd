@@ -57,6 +57,10 @@ class ProgramStudiController extends Controller
 
     public function destroy(ProgramStudi $programStudi): RedirectResponse
     {
+        if ($programStudi->mataKuliah()->exists()) {
+            return to_route('admin.program-studi.index')->with('error', 'Program Studi tidak dapat dihapus karena masih memiliki mata kuliah.');
+        }
+
         try {
             $programStudi->delete();
         } catch (Throwable) {

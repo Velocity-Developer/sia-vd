@@ -15,6 +15,8 @@ use Inertia\Response;
 
 class PengumpulanTugasController extends Controller
 {
+    private const EXTENSIONS = 'pdf,doc,docx,xls,xlsx,ppt,pptx,zip,jpg,jpeg,png';
+
     public function show(Request $request, Tugas $tugas): Response
     {
         $mahasiswa = $request->user()->mahasiswaProfile;
@@ -38,7 +40,12 @@ class PengumpulanTugasController extends Controller
 
         $request->validate([
             'file_jawaban' => ['required', 'array', 'min:1', 'max:5'],
-            'file_jawaban.*' => ['required', 'file', 'max:10240', 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,jpg,jpeg,png'],
+            // extensions: nama berkas asli, mimes: isi berkas. Keduanya wajib cocok, karena berkas disajikan
+            // dengan ekstensi aslinya (mis. .html berisi header PDF tidak boleh lolos).
+            'file_jawaban.*' => ['required', 'file', 'max:10240', 'extensions:'.self::EXTENSIONS, 'mimes:'.self::EXTENSIONS],
+        ], [
+            'extensions' => 'File jawaban harus berformat '.str_replace(',', ', ', self::EXTENSIONS).'.',
+            'mimes' => 'Isi file jawaban tidak sesuai dengan formatnya.',
         ]);
 
         $old = $tugas->pengumpulanTugas()->where('mahasiswa_id', $mahasiswa->id)->first();
@@ -63,7 +70,7 @@ class PengumpulanTugasController extends Controller
     private function storeFile(UploadedFile $file): string
     {
         $base = substr(Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME), '_') ?: 'file', 0, 100);
-        $extension = $file->getClientOriginalExtension();
+        $extension = strtolower($file->getClientOriginalExtension());
         $filename = $base.'-'.Str::lower(Str::random(6)).($extension ? '.'.$extension : '');
 
         return $file->storeAs('pengumpulan-tugas', $filename, 'public');

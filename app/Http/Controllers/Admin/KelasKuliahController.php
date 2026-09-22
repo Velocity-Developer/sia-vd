@@ -99,6 +99,10 @@ class KelasKuliahController extends Controller
 
     public function destroy(KelasKuliah $kelasKuliah): RedirectResponse
     {
+        if ($kelasKuliah->krs()->exists()) {
+            return to_route('admin.kelas-kuliah.index')->with('error', 'Kelas Kuliah tidak dapat dihapus karena sudah memiliki KRS mahasiswa.');
+        }
+
         try {
             $kelasKuliah->delete();
         } catch (Throwable) {

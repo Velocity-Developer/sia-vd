@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PengajuanPindahKelas extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_DISETUJUI = 'disetujui';

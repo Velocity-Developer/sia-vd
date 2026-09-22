@@ -8,6 +8,7 @@ use App\Models\Krs;
 use App\Models\Materi;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -70,12 +71,23 @@ class ContentController extends Controller
 
         abort_unless($quiz->kelasKuliah()->whereHas('krs', fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id))->exists(), 403);
 
-        $quiz->load(['kelasKuliah.mataKuliah', 'uploader:id,name', 'questions']);
+        $quiz->load(['kelasKuliah.mataKuliah', 'uploader:id,name']);
         $attempt = QuizAttempt::query()
             ->where('quiz_id', $quiz->id)
             ->where('mahasiswa_id', $mahasiswa->id)
             ->with('answers')
             ->first();
+
+        $attempt?->setRelation('quiz', $quiz)->closeIfExpired();
+        $deadline = $attempt?->submitted_at === null ? $attempt?->deadline() : null;
+        $attempt?->unsetRelation('quiz');
+
+        // Soal hanya dikirim selama attempt berjalan, agar tidak bisa dibaca sebelum quiz dimulai.
+        if ($attempt !== null && $attempt->submitted_at === null) {
+            $quiz->load('questions');
+        } else {
+            $quiz->setRelation('questions', new EloquentCollection);
+        }
 
         $quiz->questions->each(function ($question): void {
             $question->question_option = collect($question->question_option ?? [])
@@ -83,6 +95,12 @@ class ContentController extends Controller
                 ->all();
         });
 
-        return Inertia::render('Mahasiswa/QuizShow', compact('quiz', 'attempt'));
+        return Inertia::render('Mahasiswa/QuizShow', [
+            'quiz' => $quiz,
+            'attempt' => $attempt,
+            // Hitung mundur di browser memakai jam server, bukan jam perangkat mahasiswa.
+            'deadline' => $deadline?->toIso8601String(),
+            'serverNow' => now()->toIso8601String(),
+        ]);
     }
 }

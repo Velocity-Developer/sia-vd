@@ -87,30 +87,24 @@ class JadwalController extends Controller
     }
 
     /**
+     * Cegah bentrok jadwal di tahun akademik yang sama: kelas yang sama, ruang yang sama, atau dosen yang sama.
+     *
      * @param  array<string, mixed>  $data
      */
     private function ensureNoConflict(KelasKuliah $kelasKuliah, array $data, ?Jadwal $ignore): void
     {
-        $mulai = $data['jam_mulai'].':00';
-        $akhir = $data['jam_akhir'].':00';
+        $overlapping = fn () => Jadwal::query()
+            ->overlapping($data['hari'], $data['jam_mulai'].':00', $data['jam_akhir'].':00')
+            ->inTahunAkademik($kelasKuliah->tahun_akademik_id)
+            ->when($ignore, fn ($query) => $query->whereKeyNot($ignore->id));
 
-        $overlap = fn ($query) => $query
-            ->where('hari', $data['hari'])
-            ->where('jam_mulai', '<', $akhir)
-            ->where('jam_akhir', '>', $mulai)
-            ->when($ignore, fn ($query) => $query->where('id', '!=', $ignore->id));
-
-        $kelasConflict = (clone $overlap(Jadwal::query()))
-            ->where('kelas_id', $kelasKuliah->id)
-            ->exists();
-
-        if ($kelasConflict) {
+        if ($overlapping()->where('kelas_id', $kelasKuliah->id)->exists()) {
             throw ValidationException::withMessages([
                 'hari' => 'Kelas ini sudah memiliki jadwal pada hari dan jam yang sama.',
             ]);
         }
 
-        $ruangConflict = (clone $overlap(Jadwal::query()))
+        $ruangConflict = $overlapping()
             ->where('ruang_id', $data['ruang_id'])
             ->with('kelasKuliah:id,kode_kelas')
             ->first();
@@ -118,6 +112,18 @@ class JadwalController extends Controller
         if ($ruangConflict) {
             throw ValidationException::withMessages([
                 'ruang_id' => 'Ruang pada jam ini sudah digunakan oleh kelas '.($ruangConflict->kelasKuliah?->kode_kelas ?? '-').'.',
+            ]);
+        }
+
+        $dosenConflict = $overlapping()
+            ->where('kelas_id', '!=', $kelasKuliah->id)
+            ->whereHas('kelasKuliah', fn ($query) => $query->where('dosen_id', $kelasKuliah->dosen_id))
+            ->with('kelasKuliah:id,kode_kelas')
+            ->first();
+
+        if ($dosenConflict) {
+            throw ValidationException::withMessages([
+                'jam_mulai' => 'Dosen pengampu sudah mengajar kelas '.($dosenConflict->kelasKuliah?->kode_kelas ?? '-').' pada hari dan jam ini.',
             ]);
         }
     }

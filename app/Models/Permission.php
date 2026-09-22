@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\UserType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Permission extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $fillable = ['key', 'name', 'group', 'user_type', 'description', 'sort_order'];
 
     public function roles(): BelongsToMany

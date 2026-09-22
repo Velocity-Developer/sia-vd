@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TahunAkademik extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $table = 'tahun_akademik';
 
     protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'status'];

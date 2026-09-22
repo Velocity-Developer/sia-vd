@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ruang extends Model
 {
+    use SerializesDatesInAppTimezone;
+
     protected $table = 'ruangs';
 
     protected $fillable = ['kode_ruang', 'nama_ruang', 'kapasitas', 'detail'];

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
@@ -28,31 +28,40 @@ type Quiz = {
     kelas_kuliah?: Kelas | null;
     questions?: Question[];
 };
-type AttemptAnswer = { question_id: number; answer: string | string[] | null };
+type AttemptAnswer = { question_id: number; answer: string[] | null };
 type Attempt = {
     id: number;
     started_at: string;
     submitted_at?: string | null;
     score?: string | number | null;
+    auto_closed?: boolean;
     answers?: AttemptAnswer[];
 } | null;
 
 type PageProps = { flash?: { success?: string; error?: string } };
 
-const props = defineProps<{ quiz: Quiz; attempt: Attempt }>();
+const props = defineProps<{ quiz: Quiz; attempt: Attempt; deadline: string | null; serverNow: string }>();
 const page = usePage<PageProps>();
 const kelas = computed(() => props.quiz.kelasKuliah ?? props.quiz.kelas_kuliah ?? null);
 const answers = ref<Record<number, string | string[]>>({});
 const remainingSeconds = ref(0);
 const expired = ref(false);
+const saveStatus = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 let timer: number | undefined;
+let heartbeat: number | undefined;
+let saveTimeout: number | undefined;
+let retryTimeout: number | undefined;
+let hydrating = false;
+
+// Selisih jam perangkat terhadap jam server, agar hitung mundur tidak bergantung pada jam laptop/HP mahasiswa.
+let clockOffset = 0;
+const serverTime = () => Date.now() + clockOffset;
 
 const startForm = useForm({});
 const submitForm = useForm<{ answers: Record<number, string | string[]>; auto_submit: boolean }>({ answers: {}, auto_submit: false });
 const hasAttempt = computed(() => props.attempt !== null);
 const submitted = computed(() => Boolean(props.attempt?.submitted_at));
-const deadline = computed(() => (props.quiz.tenggat_waktu ? new Date(props.quiz.tenggat_waktu).getTime() : null));
-const durationSeconds = computed(() => (props.quiz.waktu_pengerjaan ?? 0) * 60);
+const tenggat = computed(() => (props.quiz.tenggat_waktu ? new Date(props.quiz.tenggat_waktu).getTime() : null));
 
 const formatTenggat = (value: string | null | undefined): string => {
     if (!value) return '-';
@@ -67,42 +76,76 @@ const formatTenggat = (value: string | null | undefined): string => {
 
 const durationLabel = computed(() => props.quiz.waktu_pengerjaan ? `${props.quiz.waktu_pengerjaan} menit` : 'Tidak ada batas waktu pengerjaan');
 const timeLabel = computed(() => `${Math.floor(remainingSeconds.value / 60).toString().padStart(2, '0')}:${(remainingSeconds.value % 60).toString().padStart(2, '0')}`);
-const deadlinePassed = () => deadline.value !== null && deadline.value <= Date.now();
+const saveLabel = computed(() => ({ idle: '', saving: 'Menyimpan…', saved: 'Jawaban tersimpan otomatis', error: 'Gagal menyimpan, akan dicoba lagi' })[saveStatus.value]);
+const deadlinePassed = () => tenggat.value !== null && tenggat.value <= serverTime();
 
-const stopTimer = () => {
-    if (timer !== undefined) {
-        window.clearInterval(timer);
-        timer = undefined;
+const stopTimers = () => {
+    window.clearInterval(timer);
+    window.clearInterval(heartbeat);
+    window.clearTimeout(saveTimeout);
+    window.clearTimeout(retryTimeout);
+    timer = heartbeat = saveTimeout = retryTimeout = undefined;
+};
+
+const xsrfToken = () => decodeURIComponent(document.cookie.split('; ').find((cookie) => cookie.startsWith('XSRF-TOKEN='))?.slice('XSRF-TOKEN='.length) ?? '');
+
+const saveAnswers = async () => {
+    if (!props.attempt || submitted.value || expired.value) return;
+
+    saveStatus.value = 'saving';
+
+    try {
+        const response = await fetch(route('mahasiswa.quiz.answers', props.quiz.id), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': xsrfToken() },
+            body: JSON.stringify({ answers: answers.value }),
+        });
+
+        if (response.status === 409) {
+            stopTimers();
+            router.reload();
+
+            return;
+        }
+
+        saveStatus.value = response.ok ? 'saved' : 'error';
+    } catch {
+        saveStatus.value = 'error';
     }
+};
+
+const scheduleSave = () => {
+    window.clearTimeout(saveTimeout);
+    saveTimeout = window.setTimeout(saveAnswers, 1500);
 };
 
 const submitQuiz = (autoSubmit = false) => {
     if (submitted.value || submitForm.processing) return;
 
+    window.clearTimeout(saveTimeout);
     submitForm.answers = { ...answers.value };
     submitForm.auto_submit = autoSubmit;
     submitForm.post(route('mahasiswa.quiz.submit', props.quiz.id), {
         preserveScroll: true,
-        onFinish: stopTimer,
+        onFinish: () => {
+            // Kiriman otomatis gagal (mis. koneksi putus): muat ulang berkala sampai server menutup attempt.
+            if (autoSubmit && !submitted.value) {
+                retryTimeout = window.setTimeout(() => router.reload(), 15000);
+            }
+        },
     });
 };
 
 const expireQuiz = () => {
     expired.value = true;
-    stopTimer();
+    stopTimers();
     submitQuiz(true);
 };
 
 const tick = () => {
-    if (!props.attempt || submitted.value) return;
+    if (!props.attempt || submitted.value || !props.deadline) return;
 
-    const startedAt = new Date(props.attempt.started_at).getTime();
-    const durationEnd = durationSeconds.value ? startedAt + durationSeconds.value * 1000 : null;
-    const endsAt = [durationEnd, deadline.value].filter((value): value is number => value !== null).sort((a, b) => a - b)[0] ?? null;
-
-    if (endsAt === null) return;
-
-    remainingSeconds.value = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+    remainingSeconds.value = Math.max(0, Math.ceil((new Date(props.deadline).getTime() - serverTime()) / 1000));
 
     if (remainingSeconds.value === 0) expireQuiz();
 };
@@ -112,7 +155,8 @@ const startQuiz = () => {
 };
 
 const syncAttempt = () => {
-    stopTimer();
+    stopTimers();
+    clockOffset = new Date(props.serverNow).getTime() - Date.now();
 
     const attempt = props.attempt;
 
@@ -122,23 +166,48 @@ const syncAttempt = () => {
         return;
     }
 
-    answers.value = {};
+    const questions = new Map((props.quiz.questions ?? []).map((question) => [question.id, question]));
+    const next: Record<number, string | string[]> = {};
+
+    // Checkbox pilihan ganda harus terikat ke array; tanpa ini Vue memperlakukannya sebagai satu nilai true/false.
+    for (const question of questions.values()) {
+        if (question.question_type === 'multiple_choice') next[question.id] = [];
+    }
 
     for (const answer of attempt.answers ?? []) {
-        if (answer.answer !== null) {
-            answers.value[answer.question_id] = answer.answer;
-        }
+        if (answer.answer === null) continue;
+
+        next[answer.question_id] = questions.get(answer.question_id)?.question_type === 'multiple_choice' ? answer.answer : (answer.answer[0] ?? '');
     }
+
+    hydrating = true;
+    answers.value = next;
 
     if (attempt.submitted_at) return;
 
+    expired.value = false;
     tick();
     timer = window.setInterval(tick, 1000);
+    // Simpan berkala sekaligus menjaga sesi login tetap aktif selama quiz panjang.
+    heartbeat = window.setInterval(saveAnswers, 5 * 60 * 1000);
 };
 
+watch(
+    answers,
+    () => {
+        if (hydrating) {
+            hydrating = false;
+
+            return;
+        }
+
+        scheduleSave();
+    },
+    { deep: true },
+);
 watch(() => props.attempt, syncAttempt, { immediate: true });
 
-onBeforeUnmount(stopTimer);
+onBeforeUnmount(stopTimers);
 </script>
 
 <template>
@@ -172,7 +241,8 @@ onBeforeUnmount(stopTimer);
                 </section>
 
                 <section v-if="submitted" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <p class="text-sm text-[#1aae39]">Quiz berhasil ter-submit.</p>
+                    <p v-if="props.attempt?.auto_closed" class="text-sm text-[#dd5b00]">Waktu quiz telah habis. Jawaban terakhir yang tersimpan otomatis sudah dinilai.</p>
+                    <p v-else class="text-sm text-[#1aae39]">Quiz berhasil ter-submit.</p>
                     <p v-if="props.attempt?.score !== null && props.attempt?.score !== undefined" class="mt-2 text-sm text-[#615d59]">Score: {{ props.attempt.score }}</p>
                 </section>
                 <section v-else-if="!hasAttempt" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
@@ -181,7 +251,7 @@ onBeforeUnmount(stopTimer);
                 </section>
                 <section v-else-if="expired" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm"><p class="text-sm text-[#dd5b00]">Waktu quiz telah habis. Jawaban Anda sedang dikirim otomatis.</p></section>
                 <form v-else class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="submitQuiz()">
-                    <div class="sticky top-4 z-10 mb-6 flex items-center justify-between rounded-lg border border-[#e6e6e6] bg-white px-4 py-3"><span class="text-sm font-medium text-[#615d59]">Sisa waktu</span><span class="text-xl font-bold text-[#0075de]">{{ timeLabel }}</span></div>
+                    <div class="sticky top-4 z-10 mb-6 flex items-center justify-between rounded-lg border border-[#e6e6e6] bg-white px-4 py-3"><div><span class="text-sm font-medium text-[#615d59]">Sisa waktu</span><span class="block text-xs" :class="saveStatus === 'error' ? 'text-[#dd5b00]' : 'text-[#a39e98]'" aria-live="polite">{{ saveLabel }}</span></div><span class="text-xl font-bold text-[#0075de]">{{ props.deadline ? timeLabel : 'Tanpa batas' }}</span></div>
                     <div class="space-y-6">
                         <article v-for="(question, index) in props.quiz.questions ?? []" :key="question.id" class="border-b border-[#e6e6e6] pb-5 last:border-0">
                             <h2 class="font-medium text-black">{{ index + 1 }}. {{ question.question_text }}</h2>
