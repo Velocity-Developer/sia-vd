@@ -47,4 +47,34 @@ class MahasiswaProfile extends Model
     {
         return $this->hasMany(PengajuanPindahKelas::class, 'mahasiswa_id');
     }
+
+    /**
+     * IPS pada semester terakhir yang sudah bernilai sebelum tahun akademik tertentu.
+     *
+     * @return array{tahun_akademik: TahunAkademik, ips: float}|null
+     */
+    public function ipsSemesterSebelum(?TahunAkademik $tahunAkademik): ?array
+    {
+        $krsDinilai = $this->krs()
+            ->whereNotNull('nilai')
+            ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query
+                ->when($tahunAkademik?->tanggal_mulai, fn ($query, $mulai) => $query->where('tanggal_mulai', '<', $mulai)))
+            ->with('kelasKuliah.tahunAkademik', 'kelasKuliah.mataKuliah:id,sks')
+            ->get()
+            ->filter(fn (Krs $krs): bool => SkalaNilai::bobot($krs->nilai) !== null && ($krs->kelasKuliah->mataKuliah?->sks ?? 0) > 0);
+
+        $terakhir = $krsDinilai
+            ->groupBy(fn (Krs $krs): int => $krs->kelasKuliah->tahun_akademik_id)
+            ->sortByDesc(fn ($krs) => $krs->first()->kelasKuliah->tahunAkademik->tanggal_mulai)
+            ->first();
+
+        if ($terakhir === null) {
+            return null;
+        }
+
+        $sks = $terakhir->sum(fn (Krs $krs): int => $krs->kelasKuliah->mataKuliah->sks);
+        $mutu = $terakhir->sum(fn (Krs $krs): float => $krs->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($krs->nilai));
+
+        return ['tahun_akademik' => $terakhir->first()->kelasKuliah->tahunAkademik, 'ips' => round($mutu / $sks, 2)];
+    }
 }

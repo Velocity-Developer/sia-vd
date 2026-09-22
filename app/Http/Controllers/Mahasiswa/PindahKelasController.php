@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Mahasiswa;
 
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
+use App\Models\MahasiswaProfile;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanPindahKelas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -21,9 +23,7 @@ class PindahKelasController extends Controller
 
         abort_if($mahasiswa === null, 403);
 
-        $kelasDiambil = $mahasiswa->krs()
-            ->where('status', 'Aktif')
-            ->pluck('kelas_id');
+        $kelasDiambil = $this->kelasDiambilTahunAktif($mahasiswa);
 
         $kelasAsal = KelasKuliah::query()
             ->with(['mataKuliah', 'dosen.user', 'tahunAkademik'])
@@ -42,6 +42,7 @@ class PindahKelasController extends Controller
         $kelasTujuan = KelasKuliah::query()
             ->with(['mataKuliah', 'dosen.user'])
             ->whereIn('matkul_id', $kelasAsal->pluck('matkul_id')->unique()->all())
+            ->whereHas('tahunAkademik', fn ($query) => $query->where('status', true))
             ->whereNotIn('id', $kelasDiambil)
             ->orderBy('kode_kelas')
             ->get()
@@ -89,7 +90,7 @@ class PindahKelasController extends Controller
         abort_if($mahasiswa === null, 403);
         abort_unless(PengaturanPindahKelas::current()->is_active, 403);
 
-        $kelasDiambil = $mahasiswa->krs()->where('status', 'Aktif')->pluck('kelas_id');
+        $kelasDiambil = $this->kelasDiambilTahunAktif($mahasiswa);
 
         $data = $request->validate([
             'kelas_asal_id' => [
@@ -130,6 +131,12 @@ class PindahKelasController extends Controller
             ]);
         }
 
+        if ($kelasTujuan->tahun_akademik_id !== $kelasAsal->tahun_akademik_id) {
+            throw ValidationException::withMessages([
+                'kelas_tujuan_id' => 'Kelas tujuan harus berada pada tahun akademik yang sama dengan kelas asal.',
+            ]);
+        }
+
         $mahasiswa->pengajuanPindahKelas()->create([
             'kelas_asal_id' => $kelasAsal->id,
             'kelas_tujuan_id' => $kelasTujuan->id,
@@ -138,5 +145,18 @@ class PindahKelasController extends Controller
         ]);
 
         return back()->with('pindah_kelas_success', 'Pengajuan pindah kelas berhasil dikirim dan menunggu persetujuan admin.');
+    }
+
+    /**
+     * Kelas di KRS mahasiswa pada tahun akademik aktif: hanya kelas ini yang boleh diajukan pindah.
+     *
+     * @return Collection<int, int>
+     */
+    private function kelasDiambilTahunAktif(MahasiswaProfile $mahasiswa): Collection
+    {
+        return $mahasiswa->krs()
+            ->where('status', 'Aktif')
+            ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query->where('status', true))
+            ->pluck('kelas_id');
     }
 }

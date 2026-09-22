@@ -46,7 +46,7 @@ class Question extends Model
                 $key => ['nullable', 'array'],
                 $key.'.*' => ['string', Rule::in($this->optionTexts())],
             ],
-            'single_choice' => [
+            'single_choice', 'true_false' => [
                 $key => ['nullable', 'string', Rule::in($this->optionTexts())],
             ],
             default => [
@@ -65,7 +65,7 @@ class Question extends Model
         }
 
         $correct = collect($this->question_option ?? [])
-            ->filter(fn (array $option): bool => ($option['is_correct'] ?? false) === true)
+            ->filter(fn (array $option): bool => filter_var($option['is_correct'] ?? false, FILTER_VALIDATE_BOOLEAN))
             ->pluck('text')
             ->values()
             ->all();

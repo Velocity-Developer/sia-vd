@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
 use App\Models\PengaturanInstitusi;
+use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -27,8 +28,10 @@ class HasilStudiController extends Controller
             ->whereNotNull('nilai')
             ->with('kelasKuliah.mataKuliah', 'kelasKuliah.tahunAkademik')
             ->get();
-        $bobotNilai = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1, 'E' => 0];
-        $transkrip = $krs->filter(fn (Krs $item): bool => isset($bobotNilai[strtoupper((string) $item->nilai)]) && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0)
+        // Mata kuliah yang diulang hanya dihitung sekali, memakai nilai terbaiknya.
+        $transkrip = $krs->filter(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0)
+            ->groupBy(fn (Krs $item): int => $item->kelasKuliah->matkul_id)
+            ->map(fn (Collection $percobaan): Krs => $percobaan->sortByDesc(fn (Krs $item): float => SkalaNilai::bobot($item->nilai))->first())
             ->map(fn (Krs $item): array => [
                 'id' => $item->id,
                 'kode' => $item->kelasKuliah->mataKuliah->kode_matkul,
@@ -36,15 +39,19 @@ class HasilStudiController extends Controller
                 'jenis' => $item->kelasKuliah->mataKuliah->jenis,
                 'sks' => $item->kelasKuliah->mataKuliah->sks,
                 'nilai' => strtoupper($item->nilai),
-                'bobot' => $bobotNilai[strtoupper($item->nilai)],
-                'mutu' => $item->kelasKuliah->mataKuliah->sks * $bobotNilai[strtoupper($item->nilai)],
-            ])->values();
+                'bobot' => SkalaNilai::bobot($item->nilai),
+                'mutu' => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai),
+                'diambil' => $krs->filter(fn (Krs $lain): bool => $lain->kelasKuliah?->matkul_id === $item->kelasKuliah->matkul_id)->count(),
+            ])
+            ->sortBy('kode')
+            ->values();
         $totalSks = $transkrip->sum('sks');
         $totalMutu = $transkrip->sum('mutu');
+        $totalSksLulus = $transkrip->filter(fn (array $item): bool => SkalaNilai::lulus($item['nilai']))->sum('sks');
 
         return Inertia::render('Mahasiswa/TranskripNilai', [
             'transkrip' => $transkrip,
-            'ringkasan' => ['totalMatkul' => $transkrip->count(), 'totalSks' => $totalSks, 'totalMutu' => $totalMutu, 'ipk' => $totalSks > 0 ? round($totalMutu / $totalSks, 2) : null],
+            'ringkasan' => ['totalMatkul' => $transkrip->count(), 'totalSks' => $totalSks, 'totalSksLulus' => $totalSksLulus, 'totalMutu' => $totalMutu, 'ipk' => $totalSks > 0 ? round($totalMutu / $totalSks, 2) : null],
         ]);
     }
 
@@ -116,7 +123,7 @@ class HasilStudiController extends Controller
     }
 
     /**
-     * @return array{krs: Collection<int, Krs>, tahunAkademiks: Collection<int, TahunAkademik>, tahunAkademik: TahunAkademik|null, ringkasan: array{totalSks: int, totalSksDinilai: int, totalMutu: int, ip: float|null}}
+     * @return array{krs: Collection<int, Krs>, tahunAkademiks: Collection<int, TahunAkademik>, tahunAkademik: TahunAkademik|null, ringkasan: array{totalSks: int, totalSksDinilai: int, totalMutu: float, ip: float|null}}
      */
     private function dataKhs(MahasiswaProfile $mahasiswa, ?int $tahunAkademikId): array
     {
@@ -133,10 +140,9 @@ class HasilStudiController extends Controller
             ->when($tahunAkademikTerpilih, fn ($query) => $query->whereHas('kelasKuliah', fn ($kelas) => $kelas->where('tahun_akademik_id', $tahunAkademikTerpilih->id)))
             ->with(['kelasKuliah.mataKuliah', 'kelasKuliah.tahunAkademik'])
             ->get();
-        $bobotNilai = ['A' => 4, 'B' => 3, 'C' => 2, 'D' => 1, 'E' => 0];
-        $krsDinilai = $krs->filter(fn (Krs $item): bool => isset($bobotNilai[strtoupper((string) $item->nilai)]) && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0);
+        $krsDinilai = $krs->filter(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0);
         $totalSksDinilai = $krsDinilai->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
-        $totalMutu = $krsDinilai->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks * $bobotNilai[strtoupper($item->nilai)]);
+        $totalMutu = $krsDinilai->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai));
 
         return [
             'krs' => $krs,

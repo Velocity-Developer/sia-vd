@@ -101,6 +101,7 @@ class ContentController extends Controller
             // Hitung mundur di browser memakai jam server, bukan jam perangkat mahasiswa.
             'deadline' => $deadline?->toIso8601String(),
             'serverNow' => now()->toIso8601String(),
+            'essayBelumDinilai' => $attempt?->submitted_at !== null && $attempt->hasUngradedEssay(),
         ]);
     }
 }

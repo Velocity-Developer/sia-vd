@@ -7,6 +7,7 @@ use App\Models\DosenProfile;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MataKuliah;
+use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,15 +63,33 @@ class KelasKuliahController extends Controller
         return Inertia::render('Admin/KelasKuliahShow', [
             'kelasKuliah' => $kelasKuliah,
             'otherClasses' => KelasKuliah::with('mataKuliah')->whereKeyNot($kelasKuliah->id)->orderBy('kode_kelas')->get(),
+            'skalaNilai' => SkalaNilai::huruf(),
+            'nilaiTerkunci' => false,
         ]);
     }
 
     public function updateGrade(Request $request, KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse
     {
         abort_if($krs->kelas_id !== $kelasKuliah->id, 404);
-        $krs->update($request->validate(['nilai' => ['required', Rule::in(['A', 'B', 'C', 'D', 'E'])]]));
+        $krs->update($request->validate(['nilai' => ['nullable', Rule::in(SkalaNilai::huruf())]]));
 
         return back()->with('success', 'Nilai berhasil diperbarui.');
+    }
+
+    /**
+     * Batalkan KRS yang salah input. KRS yang sudah bernilai tidak bisa dibatalkan agar riwayat nilai tetap utuh.
+     */
+    public function destroyKrs(KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse
+    {
+        abort_if($krs->kelas_id !== $kelasKuliah->id, 404);
+
+        if (filled($krs->nilai)) {
+            return back()->with('error', 'KRS yang sudah memiliki nilai tidak dapat dibatalkan. Kosongkan nilainya terlebih dahulu.');
+        }
+
+        $krs->cancel();
+
+        return back()->with('success', 'KRS mahasiswa berhasil dibatalkan.');
     }
 
     public function edit(KelasKuliah $kelasKuliah): Response

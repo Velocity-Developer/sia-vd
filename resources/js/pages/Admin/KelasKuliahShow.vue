@@ -105,7 +105,7 @@ type OtherClass = {
     mataKuliah?: { nama_matkul: string } | null;
 };
 
-const props = defineProps<{ kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[] }>();
+const props = defineProps<{ kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[]; skalaNilai: string[]; nilaiTerkunci: boolean }>();
 
 const v = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '-';
@@ -149,13 +149,28 @@ const editGrade = (krs: KrsShow) => {
 const saveGrade = (krs: KrsShow) =>
     router.put(
         route('admin.kelas-kuliah.krs.nilai', [props.kelasKuliah.id, krs.id]),
-        { nilai: grade.value },
+        { nilai: grade.value || null },
         {
             onSuccess: () => {
                 editingKrs.value = null;
             },
         },
     );
+
+const pendingCancelKrs = ref<KrsShow | null>(null);
+const cancelKrs = (krs: KrsShow) => {
+    pendingCancelKrs.value = krs;
+};
+const confirmCancelKrs = () => {
+    if (!pendingCancelKrs.value) return;
+
+    router.delete(route('admin.kelas-kuliah.krs.destroy', [props.kelasKuliah.id, pendingCancelKrs.value.id]), {
+        preserveScroll: true,
+        onFinish: () => {
+            pendingCancelKrs.value = null;
+        },
+    });
+};
 
 const openDuplicate = (type: 'materi' | 'tugas' | 'quiz', item: MateriShow | TugasShow | QuizShow) => {
     duplicateType.value = type;
@@ -934,7 +949,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 v-model="grade"
                                                 class="h-9 rounded-lg border border-[#e6e6e6] bg-white px-3 text-sm"
                                             >
-                                                <option v-for="option in ['A', 'B', 'C', 'D', 'E']" :key="option" :value="option">
+                                                <option value="">— Kosong —</option>
+                                                <option v-for="option in props.skalaNilai" :key="option" :value="option">
                                                     {{ option }}
                                                 </option>
                                             </select>
@@ -952,9 +968,17 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     >Batal</Button
                                                 >
                                             </template>
-                                            <Button v-else size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)"
-                                                >Ubah Nilai</Button
-                                            >
+                                            <template v-else>
+                                                <Button size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)">Ubah Nilai</Button>
+                                                <Button
+                                                    v-if="!krs.nilai"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    class="ml-2 rounded-full text-[#dd5b00]"
+                                                    @click="cancelKrs(krs)"
+                                                    >Batalkan KRS</Button
+                                                >
+                                            </template>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -983,6 +1007,15 @@ const formatTenggat = (value: string | null | undefined): string => {
                         </div>
                     </div>
                 </div>
+                <AlertModal
+                    :open="pendingCancelKrs !== null"
+                    :description="`Batalkan KRS ${pendingCancelKrs?.mahasiswa?.user?.name ?? ''} di kelas ini? Kursinya akan dilepas untuk mahasiswa lain.`"
+                    confirm-text="Batalkan KRS"
+                    cancel-text="Kembali"
+                    @update:open="!$event && (pendingCancelKrs = null)"
+                    @confirm="confirmCancelKrs"
+                    @cancel="pendingCancelKrs = null"
+                />
                 <AlertModal
                     :open="confirmOpen"
                     description="Anda yakin ingin menghapus data ini?"

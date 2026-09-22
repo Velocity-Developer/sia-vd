@@ -60,6 +60,7 @@ it('rejects a KRS class whose schedule clashes with a class already taken', func
     $ruangA = Ruang::create(['kode_ruang' => 'R-101', 'nama_ruang' => 'Ruang 101', 'kapasitas' => 30]);
     $ruangB = Ruang::create(['kode_ruang' => 'R-102', 'nama_ruang' => 'Ruang 102', 'kapasitas' => 30]);
     $diambil = createMateriKelasKuliah();
+    $diambil->tahunAkademik->update(['tanggal_krs_awal' => now()->subDay(), 'tanggal_krs_akhir' => now()->addDay()]);
     $prodiId = $diambil->mataKuliah->prodi_id;
     $matkulLain = MataKuliah::create(['kode_matkul' => 'IF-LAIN', 'nama_matkul' => 'Basis Data', 'sks' => 3, 'semester' => 1, 'jenis' => 'Wajib', 'prodi_id' => $prodiId]);
     $target = KelasKuliah::create(['kode_kelas' => 'BD-A', 'tahun_akademik_id' => $diambil->tahun_akademik_id, 'kapasitas' => 30, 'dosen_id' => $diambil->dosen_id, 'matkul_id' => $matkulLain->id]);

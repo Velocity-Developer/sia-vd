@@ -37,6 +37,12 @@ const props = defineProps<{
     kelasKuliahs: KelasKuliah[];
     mahasiswa: { semester: number; angkatan: string; prodi_id: number };
     kelasDiambil: number[];
+    krsTahunIni: { id: number; kelas_id: number; nilai: string | null }[];
+    matkulMengulang: number[];
+    sksDiambil: number;
+    maksSks: number;
+    ipsSebelumnya: { ips: number; tahun_akademik: string } | null;
+    bolehKrs: boolean;
     tahunAkademik: { tahun: string; semester: string; tanggal_krs_awal: string; tanggal_krs_akhir: string } | null;
     periodeKrsAktif: boolean;
 }>();
@@ -53,10 +59,10 @@ const showResult = () => {
     const success = page.props.flash?.krs_success;
 
     if (error) {
-        resultTitle.value = 'Pengambilan Kelas Gagal';
+        resultTitle.value = 'KRS Gagal Diproses';
         resultMessage.value = error;
     } else if (success) {
-        resultTitle.value = 'Pengambilan Kelas Berhasil';
+        resultTitle.value = 'KRS Berhasil Diperbarui';
         resultMessage.value = success;
     } else {
         return;
@@ -65,8 +71,28 @@ const showResult = () => {
     resultModalOpen.value = true;
 };
 const isTaken = (kelasId: number) => props.kelasDiambil.includes(kelasId);
+const krsBisaDibatalkan = (kelasId: number) => props.krsTahunIni.find((krs) => krs.kelas_id === kelasId && !krs.nilai);
 const selectedKelasId = ref<number | null>(null);
 const modalOpen = ref(false);
+const batalKrsId = ref<number | null>(null);
+const batalModalOpen = ref(false);
+
+const batalkanKelas = (kelasId: number) => {
+    batalKrsId.value = krsBisaDibatalkan(kelasId)?.id ?? null;
+    batalModalOpen.value = batalKrsId.value !== null;
+};
+
+const confirmBatalKelas = () => {
+    if (batalKrsId.value === null) return;
+
+    router.delete(route('mahasiswa.krs.destroy', batalKrsId.value), {
+        preserveScroll: true,
+        onFinish: () => {
+            batalModalOpen.value = false;
+            batalKrsId.value = null;
+        },
+    });
+};
 
 const ambilKelas = (kelasId: number) => {
     selectedKelasId.value = kelasId;
@@ -150,8 +176,9 @@ const jadwal = (kelas: KelasKuliah) =>
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div><p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Semester</p><p class="mt-1 font-medium text-black">{{ mahasiswa.semester }}</p></div>
                         <div><p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Angkatan</p><p class="mt-1 font-medium text-black">{{ mahasiswa.angkatan }}</p></div>
-                        <div><p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Jumlah Kelas</p><p class="mt-1 font-medium text-black">{{ kelasKuliahs.length }}</p></div>
+                        <div><p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">SKS Diambil</p><p class="mt-1 font-medium text-black">{{ sksDiambil }} / {{ maksSks }} SKS</p><p class="text-xs text-[#a39e98]">{{ ipsSebelumnya ? `Berdasarkan IPS ${ipsSebelumnya.ips.toFixed(2)} (${ipsSebelumnya.tahun_akademik})` : 'Belum ada IPS semester sebelumnya' }}</p></div>
                     </div>
+                    <p v-if="!bolehKrs" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#dd5b00]">Status akademik Anda saat ini tidak memungkinkan pengisian KRS. Silakan hubungi bagian akademik.</p>
                 </div>
 
                 <div v-if="periodeKrsAktif" class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
@@ -169,7 +196,7 @@ const jadwal = (kelas: KelasKuliah) =>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <template v-for="group in groupedKelasKuliahs" :key="group.matkul.kode_matkul">
                                     <tr class="bg-[#f6f5f4]">
-                                        <td colspan="9" class="px-4 py-3 text-sm font-semibold text-black">{{ group.matkul.kode_matkul }} — {{ group.matkul.nama_matkul }} <span class="font-normal text-[#615d59]">({{ group.matkul.sks }} SKS - {{ group.matkul.jenis }})</span></td>
+                                        <td colspan="9" class="px-4 py-3 text-sm font-semibold text-black">{{ group.matkul.kode_matkul }} — {{ group.matkul.nama_matkul }} <span class="font-normal text-[#615d59]">({{ group.matkul.sks }} SKS - {{ group.matkul.jenis }})</span> <span v-if="matkulMengulang.includes(group.matkul.id)" class="ml-1 rounded-full bg-[#fff4e5] px-2 py-0.5 text-xs font-medium text-[#dd5b00]">Mengulang</span></td>
                                     </tr>
                                     <tr v-for="kelas in group.kelas" :key="kelas.id" class="hover:bg-[#f6f5f4]/60">
                                         <td class="px-4 py-3 text-sm font-medium text-black">{{ kelas.kode_kelas }}</td>
@@ -183,11 +210,21 @@ const jadwal = (kelas: KelasKuliah) =>
                                         <td class="px-4 py-3 text-sm text-[#31302e]">{{ kelas.kapasitas }} total · {{ Math.max(kelas.kapasitas - kelas.krs_count, 0) }} tersisa</td>
                                         <td class="px-4 py-3 text-right">
                                             <Button
+                                                v-if="isTaken(kelas.id) && krsBisaDibatalkan(kelas.id)"
+                                                size="sm"
+                                                variant="outline"
+                                                class="text-[#dd5b00]"
+                                                @click="batalkanKelas(kelas.id)"
+                                            >
+                                                Batalkan
+                                            </Button>
+                                            <Button
+                                                v-else
                                                 size="sm"
                                                 :class="isTaken(kelas.id)
                                                     ? 'bg-white text-[#0075de] hover:bg-white'
                                                     : 'bg-[#0075de] text-white hover:bg-[#005bab]'"
-                                                :disabled="isTaken(kelas.id)"
+                                                :disabled="isTaken(kelas.id) || !bolehKrs"
                                                 @click="ambilKelas(kelas.id)"
                                             >
                                                 {{ isTaken(kelas.id) ? 'Sudah Diambil' : 'Ambil' }}
@@ -213,10 +250,18 @@ const jadwal = (kelas: KelasKuliah) =>
         <AlertModal
             v-model:open="modalOpen"
             title="Apakah Anda yakin ingin mengambil kelas ini?"
-            description="Kelas yang sudah diambil tidak dapat dibatalkan. Pastikan Anda telah memilih kelas yang sesuai sebelum melanjutkan."
+            description="Kelas yang sudah diambil masih dapat dibatalkan selama periode KRS berlangsung dan belum ada nilai."
             confirm-text="Ambil"
             cancel-text="Batal"
             @confirm="confirmAmbilKelas"
+        />
+        <AlertModal
+            v-model:open="batalModalOpen"
+            title="Batalkan kelas ini?"
+            description="Kelas akan dihapus dari KRS Anda dan kursinya dilepas untuk mahasiswa lain."
+            confirm-text="Batalkan Kelas"
+            cancel-text="Kembali"
+            @confirm="confirmBatalKelas"
         />
     </AppLayout>
 </template>

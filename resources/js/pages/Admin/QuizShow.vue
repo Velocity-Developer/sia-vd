@@ -25,6 +25,7 @@ type QuizAttempt = {
     submitted_at?: string | null;
     score?: string | number | null;
     auto_closed?: boolean;
+    essay_belum_dinilai?: boolean;
     mahasiswa?: { nim?: string | null; user?: { name: string } | null } | null;
 };
 
@@ -725,6 +726,7 @@ const sel =
                                     <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Mulai</th>
                                     <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Selesai</th>
                                     <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Score</th>
+                                    <th class="px-4 py-3 text-right text-xs uppercase text-[#a39e98]">Jawaban</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
@@ -736,10 +738,18 @@ const sel =
                                     </td>
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.started_at) }}</td>
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.submitted_at) }}</td>
-                                    <td class="px-4 py-3 text-sm font-semibold text-black">{{ attempt.score ?? '-' }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]">Ditutup otomatis (waktu habis)</span></td>
+                                    <td class="px-4 py-3 text-sm font-semibold text-black">{{ attempt.score ?? '-' }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]">Ditutup otomatis (waktu habis)</span><span v-if="attempt.essay_belum_dinilai" class="mt-0.5 block text-xs font-normal text-[#dd5b00]">Esai belum dinilai</span></td>
+                                    <td class="px-4 py-3 text-right">
+                                        <Link
+                                            v-if="attempt.submitted_at"
+                                            :href="route('admin.kelas-kuliah.quiz.attempts.show', [props.kelasKuliah.id, props.quiz.id, attempt.id])"
+                                            class="text-sm font-medium text-[#0075de] hover:underline"
+                                            >{{ attempt.essay_belum_dinilai ? 'Koreksi' : 'Lihat' }}</Link
+                                        >
+                                    </td>
                                 </tr>
                                 <tr v-if="!(props.quiz.attempts ?? []).length">
-                                    <td colspan="5" class="px-4 py-10 text-center text-sm text-[#615d59]">
+                                    <td colspan="6" class="px-4 py-10 text-center text-sm text-[#615d59]">
                                         Belum ada mahasiswa yang mengerjakan quiz.
                                     </td>
                                 </tr>

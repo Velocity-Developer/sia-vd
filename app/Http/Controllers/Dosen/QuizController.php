@@ -56,7 +56,14 @@ class QuizController extends Controller
     {
         $this->ensureScoped($kelasKuliah, $quiz);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
-        $quiz->load(['uploader:id,name', 'questions', 'attempts.mahasiswa.user']);
+        $quiz->load([
+            'uploader:id,name',
+            'questions',
+            'attempts' => fn ($query) => $query->withExists(['answers as essay_belum_dinilai' => fn ($answers) => $answers
+                ->whereNull('point')
+                ->whereHas('question', fn ($question) => $question->where('question_type', 'essay'))]),
+            'attempts.mahasiswa.user',
+        ]);
 
         return Inertia::render('Dosen/QuizShow', [
             'kelasKuliah' => $kelasKuliah,
@@ -95,7 +102,7 @@ class QuizController extends Controller
             'questions.*.question_option' => ['nullable', 'array'],
             'questions.*.question_option.*.text' => ['required', 'string', 'max:255'],
             'questions.*.question_option.*.is_correct' => ['required', 'boolean'],
-            'questions.*.points' => ['required', 'integer', 'min:0'],
+            'questions.*.points' => ['required', 'integer', 'min:0', 'max:1000'],
         ], [
             'required' => ':attribute wajib diisi.',
             'questions.required' => 'Minimal satu question wajib diisi.',
@@ -174,7 +181,7 @@ class QuizController extends Controller
             'question_option' => ['required_unless:question_type,essay', 'array', 'min:1'],
             'question_option.*.text' => ['required', 'string', 'max:255'],
             'question_option.*.is_correct' => ['required', 'boolean'],
-            'points' => ['required', 'integer', 'min:0'],
+            'points' => ['required', 'integer', 'min:0', 'max:1000'],
         ]);
 
         if ($data['question_type'] !== 'essay' && empty($data['question_option'])) {
@@ -196,9 +203,15 @@ class QuizController extends Controller
             ];
         } elseif ($data['question_type'] === 'essay') {
             $data['question_option'] = null;
+        } else {
+            $data['question_option'] = collect($data['question_option'])
+                ->map(fn (array $option): array => ['text' => trim($option['text']), 'is_correct' => (bool) $option['is_correct']])
+                ->values()
+                ->all();
         }
 
         $question->update($data);
+        $quiz->regradeAttempts();
 
         return to_route('dosen.kelas-kuliah.quiz.show', [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil diperbarui.');
     }
@@ -208,6 +221,7 @@ class QuizController extends Controller
         $this->ensureScoped($kelasKuliah, $quiz);
         abort_unless($question->quiz_id === $quiz->id, 404);
         $question->delete();
+        $quiz->regradeAttempts();
 
         return to_route('dosen.kelas-kuliah.quiz.show', [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil dihapus.');
     }

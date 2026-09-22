@@ -32,6 +32,7 @@ class PermissionCatalog
             ['key' => 'admin.ruang', 'name' => 'Ruang', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola data ruang.', 'defaults' => $admin],
             ['key' => 'admin.kelas-kuliah', 'name' => 'Kelas Kuliah', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola kelas kuliah beserta jadwal, materi, tugas, quiz, dan nilai.', 'defaults' => $admin],
             ['key' => 'admin.pindah-kelas', 'name' => 'Pindah Kelas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Memproses pengajuan dan pengaturan pindah kelas.', 'defaults' => $admin],
+            ['key' => 'admin.pengaturan-akademik', 'name' => 'Pengaturan Akademik', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengatur batas SKS per semester dan skala nilai.', 'defaults' => $admin],
             ['key' => 'admin.users.dosen', 'name' => 'Manage User Dosen', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengelola akun dan profil dosen.', 'defaults' => $admin],
             ['key' => 'admin.users.mahasiswa', 'name' => 'Manage User Mahasiswa', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengelola akun dan profil mahasiswa.', 'defaults' => $admin],
             ['key' => 'admin.users.karyawan', 'name' => 'Manage User Karyawan', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengelola akun dan profil karyawan.', 'defaults' => $admin],

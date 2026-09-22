@@ -115,7 +115,20 @@ class PindahKelasController extends Controller
             return back()->with('error', 'Mahasiswa sudah terdaftar pada kelas tujuan, pengajuan tidak dapat disetujui.');
         }
 
-        DB::transaction(function () use ($request, $pengajuan, $krs): void {
+        $pengajuan->loadMissing('kelasAsal', 'kelasTujuan');
+
+        if ($pengajuan->kelasTujuan?->tahun_akademik_id !== $pengajuan->kelasAsal?->tahun_akademik_id) {
+            return back()->with('error', 'Kelas tujuan berada di tahun akademik yang berbeda dengan kelas asal, pengajuan tidak dapat disetujui.');
+        }
+
+        // Kunci pengajuan agar tidak disetujui dua kali. Kapasitas kelas tujuan sengaja tidak dicek (admin boleh melebihi).
+        $error = DB::transaction(function () use ($request, $pengajuan, $krs): ?string {
+            $terkunci = PengajuanPindahKelas::query()->whereKey($pengajuan->id)->lockForUpdate()->first();
+
+            if ($terkunci?->status !== PengajuanPindahKelas::STATUS_PENDING) {
+                return 'Pengajuan ini sudah diproses.';
+            }
+
             $krs->update(['kelas_id' => $pengajuan->kelas_tujuan_id]);
 
             $pengajuan->update([
@@ -123,7 +136,13 @@ class PindahKelasController extends Controller
                 'diproses_oleh' => $request->user()->id,
                 'diproses_at' => now(),
             ]);
+
+            return null;
         });
+
+        if ($error !== null) {
+            return back()->with('error', $error);
+        }
 
         return back()->with('success', 'Pengajuan pindah kelas disetujui dan mahasiswa dipindahkan ke kelas tujuan.');
     }

@@ -18,6 +18,7 @@ import {
     LayoutGrid,
     Library,
     ShieldCheck,
+    SlidersHorizontal,
     Users,
     CalendarRange,
 } from 'lucide-vue-next';
@@ -40,6 +41,7 @@ const navigationSections: { label: string; items: NavItem[] }[] = [
             { title: 'Ruang', href: route('admin.ruang.index'), icon: DoorOpen, permission: 'admin.ruang' },
             { title: 'Kelas Kuliah', href: route('admin.kelas-kuliah.index'), icon: ClipboardList, permission: 'admin.kelas-kuliah' },
             { title: 'Pindah Kelas', href: route('admin.pindah-kelas.index'), icon: ArrowLeftRight, permission: 'admin.pindah-kelas' },
+            { title: 'Pengaturan Akademik', href: route('admin.pengaturan-akademik.index'), icon: SlidersHorizontal, permission: 'admin.pengaturan-akademik' },
             {
                 title: 'Manage User',
                 href: '/admin/users/dosen',

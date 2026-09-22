@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MataKuliah;
+use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,7 +88,12 @@ class KelasKuliahController extends Controller
     public function updateGrade(Request $request, KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse
     {
         abort_if($kelasKuliah->dosen_id !== $request->user()?->dosenProfile?->id || $krs->kelas_id !== $kelasKuliah->id, 403);
-        $krs->update($request->validate(['nilai' => ['required', Rule::in(['A', 'B', 'C', 'D', 'E'])]]));
+
+        if ($this->nilaiTerkunci($kelasKuliah)) {
+            return back()->with('error', 'Nilai terkunci karena tahun akademik kelas ini sudah tidak aktif. Hubungi admin untuk perubahan nilai.');
+        }
+
+        $krs->update($request->validate(['nilai' => ['nullable', Rule::in(SkalaNilai::huruf())]]));
 
         return back()->with('success', 'Nilai berhasil diperbarui.');
     }
@@ -112,6 +118,16 @@ class KelasKuliahController extends Controller
         return Inertia::render('Dosen/KelasKuliahShow', [
             'kelasKuliah' => $kelasKuliah,
             'otherClasses' => KelasKuliah::with('mataKuliah')->where('dosen_id', $dosenProfileId)->whereKeyNot($kelasKuliah->id)->orderBy('kode_kelas')->get(),
+            'skalaNilai' => SkalaNilai::huruf(),
+            'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
         ]);
+    }
+
+    /**
+     * Dosen hanya bisa mengubah nilai selama tahun akademik kelas masih aktif; setelah itu hanya admin.
+     */
+    private function nilaiTerkunci(KelasKuliah $kelasKuliah): bool
+    {
+        return $kelasKuliah->loadMissing('tahunAkademik')->tahunAkademik?->status !== true;
     }
 }

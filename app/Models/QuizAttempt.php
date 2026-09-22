@@ -153,6 +153,22 @@ class QuizAttempt extends Model
         });
     }
 
+    public function recalculateScore(): void
+    {
+        $this->update(['score' => (float) $this->answers()->sum('point')]);
+    }
+
+    /**
+     * Masih ada jawaban esai yang belum dikoreksi dosen.
+     */
+    public function hasUngradedEssay(): bool
+    {
+        return $this->answers()
+            ->whereNull('point')
+            ->whereHas('question', fn ($query) => $query->where('question_type', 'essay'))
+            ->exists();
+    }
+
     /**
      * Jawaban disimpan sebagai daftar: pilihan tunggal/esai menjadi [teks], kosong menjadi null.
      *

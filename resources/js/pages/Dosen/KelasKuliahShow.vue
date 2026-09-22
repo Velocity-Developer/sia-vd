@@ -106,7 +106,7 @@ type OtherClass = {
     mataKuliah?: { nama_matkul: string } | null;
 };
 
-const props = defineProps<{ kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[] }>();
+const props = defineProps<{ kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[]; skalaNilai: string[]; nilaiTerkunci: boolean }>();
 
 const v = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '-';
@@ -159,7 +159,7 @@ const editGrade = (krs: KrsShow) => {
 const saveGrade = (krs: KrsShow) =>
     router.put(
         route('dosen.kelas-kuliah.krs.nilai', [props.kelasKuliah.id, krs.id]),
-        { nilai: grade.value },
+        { nilai: grade.value || null },
         {
             onSuccess: () => {
                 editingKrs.value = null;
@@ -881,7 +881,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 v-model="grade"
                                                 class="h-9 rounded-lg border border-[#e6e6e6] bg-white px-3 text-sm"
                                             >
-                                                <option v-for="option in ['A', 'B', 'C', 'D', 'E']" :key="option" :value="option">
+                                                <option value="">— Kosong —</option>
+                                                <option v-for="option in props.skalaNilai" :key="option" :value="option">
                                                     {{ option }}
                                                 </option>
                                             </select>
@@ -899,6 +900,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     >Batal</Button
                                                 >
                                             </template>
+                                            <span v-else-if="props.nilaiTerkunci" class="text-xs text-[#a39e98]">Nilai terkunci</span>
                                             <Button v-else size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)"
                                                 >Ubah Nilai</Button
                                             >

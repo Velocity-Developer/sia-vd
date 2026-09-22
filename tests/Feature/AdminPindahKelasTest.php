@@ -18,6 +18,7 @@ function createAdminPindahKelas(): array
         'kapasitas' => $kelasAsal->kapasitas,
         'dosen_id' => $kelasAsal->dosen_id,
         'matkul_id' => $kelasAsal->matkul_id,
+        'tahun_akademik_id' => $kelasAsal->tahun_akademik_id,
     ]);
 
     $krs = Krs::create(['mahasiswa_id' => $profile->id, 'kelas_id' => $kelasAsal->id, 'status' => 'Aktif']);

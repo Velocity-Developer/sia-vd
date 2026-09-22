@@ -19,6 +19,7 @@ function createPindahKelasMahasiswa(): array
         'kapasitas' => $kelasAsal->kapasitas,
         'dosen_id' => $kelasAsal->dosen_id,
         'matkul_id' => $kelasAsal->matkul_id,
+        'tahun_akademik_id' => $kelasAsal->tahun_akademik_id,
     ]);
 
     Krs::create(['mahasiswa_id' => $profile->id, 'kelas_id' => $kelasAsal->id, 'status' => 'Aktif']);
@@ -253,7 +254,27 @@ it('removes pengajuan rows when the mahasiswa profile is deleted', function () {
         'status' => PengajuanPindahKelas::STATUS_PENDING,
     ]);
 
+    // Profil yang masih punya KRS tidak boleh dihapus (FK restrict), jadi KRS-nya dibatalkan dulu.
+    Krs::query()->where('mahasiswa_id', $profile->id)->delete();
     MahasiswaProfile::query()->whereKey($profile->id)->delete();
+
+    expect(PengajuanPindahKelas::count())->toBe(0);
+});
+
+it('rejects moving to a class of the same course in another tahun akademik', function () {
+    PengaturanPindahKelas::current()->update(['is_active' => true]);
+    [$mahasiswa, , $kelasAsal] = createPindahKelasMahasiswa();
+    $lalu = \App\Models\TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
+    $kelasLalu = KelasKuliah::create(['kode_kelas' => 'LALU-A', 'tahun_akademik_id' => $lalu->id, 'kapasitas' => 30, 'dosen_id' => $kelasAsal->dosen_id, 'matkul_id' => $kelasAsal->matkul_id]);
+
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.pindah-kelas'))
+        ->assertInertia(fn ($page) => $page->where('kelasTujuan', fn ($kelas) => ! collect($kelas)->pluck('id')->contains($kelasLalu->id)));
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.pindah-kelas.store'), [
+        'kelas_asal_id' => $kelasAsal->id,
+        'kelas_tujuan_id' => $kelasLalu->id,
+        'alasan' => 'Coba pindah ke tahun lain.',
+    ])->assertSessionHasErrors('kelas_tujuan_id');
 
     expect(PengajuanPindahKelas::count())->toBe(0);
 });
