@@ -97,9 +97,11 @@ defineExpose({ kirim });
 </script>
 
 <template>
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div class="grid gap-3 sm:grid-cols-2 xl:flex xl:items-center">
-            <div class="relative w-full sm:max-w-sm">
+    <!-- Baris 1: pencarian + jumlah data. Baris 2: filter yang membungkus sendiri bila layar sempit,
+         karena menu ini punya sampai enam filter (halaman Kelas Kuliah hanya tiga). -->
+    <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="relative w-full sm:w-80">
                 <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                 <Input
                     v-model="search"
@@ -109,6 +111,14 @@ defineExpose({ kirim });
                 />
             </div>
 
+            <p class="text-sm text-[#615d59]">
+                <span class="font-medium text-black">{{ props.total }}</span> data<span v-if="props.filter.search">
+                    · hasil untuk "{{ props.filter.search }}"</span
+                >
+            </p>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
             <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="gantiTahunAkademik">
                 <option :value="semua">Semua Tahun Akademik</option>
                 <option v-for="item in props.tahunAkademikOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
@@ -136,11 +146,5 @@ defineExpose({ kirim });
 
             <slot name="tambahan" />
         </div>
-
-        <p class="text-sm text-[#615d59]">
-            <span class="font-medium text-black">{{ props.total }}</span> data<span v-if="props.filter.search">
-                · hasil untuk "{{ props.filter.search }}"</span
-            >
-        </p>
     </div>
 </template>

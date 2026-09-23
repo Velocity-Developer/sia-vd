@@ -10,11 +10,11 @@ const model = defineModel<number | string | null>({ required: true });
 </script>
 
 <template>
-    <div class="relative w-full sm:w-auto">
+    <div class="relative w-full lg:w-[200px]">
         <select
             v-model="model"
             :aria-label="label"
-            class="h-10 w-full appearance-none rounded-lg border border-[#d8d5d2] bg-white py-2 pl-3 pr-10 text-sm text-[#31302e] shadow-sm outline-none transition-colors hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:w-auto sm:min-w-[180px]"
+            class="h-10 w-full appearance-none rounded-lg border border-[#d8d5d2] bg-white py-2 pl-3 pr-10 text-sm text-[#31302e] shadow-sm outline-none transition-colors hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
         >
             <slot />
         </select>

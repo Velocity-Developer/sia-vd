@@ -120,7 +120,7 @@ const ruangText = (item: KelasKuliah) => {
 
                 <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                     <div class="grid gap-3 sm:grid-cols-2 xl:flex xl:items-center">
-                        <div class="relative w-full sm:max-w-sm">
+                        <div class="relative w-full sm:max-w-sm xl:w-80 xl:shrink-0">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                             <Input
                                 v-model="search"
