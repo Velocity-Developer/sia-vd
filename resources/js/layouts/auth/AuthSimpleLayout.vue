@@ -3,6 +3,7 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, ClipboardList, GraduationCap } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 defineProps<{
     title?: string;
@@ -10,7 +11,7 @@ defineProps<{
 }>();
 
 const page = usePage<SharedData>();
-const institusi = page.props.institusi;
+const institusi = computed(() => page.props.institusi);
 const tahun = new Date().getFullYear();
 
 // Ditulis di panel merek supaya pengguna tahu sistem ini untuk apa sebelum masuk.

@@ -75,7 +75,17 @@ const removeFile = () => {
 };
 
 const submit = () => {
-    form.transform((data) => ({ ...data, _method: 'put' })).post(route('institusi.update'), { forceFormData: true, preserveScroll: true });
+    form.transform((data) => ({ ...data, _method: 'put' })).post(route('institusi.update'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            // Berkas yang sudah terunggah dilepas dan pratinjau memakai logo tersimpan,
+            // supaya yang tampil setelah menyimpan adalah data yang benar-benar ada di server.
+            form.logo = null;
+            if (fileInput.value) fileInput.value.value = '';
+            preview.value = props.institusi.logo_url ?? null;
+        },
+    });
 };
 
 const inp =

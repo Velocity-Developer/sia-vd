@@ -2,6 +2,7 @@
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { type SharedData } from '@/types';
 import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 interface Props {
     class?: string;
@@ -10,7 +11,9 @@ interface Props {
 defineProps<Props>();
 
 const page = usePage<SharedData>();
-const institusi = page.props.institusi;
+// Dibaca lewat computed supaya identitas institusi ikut berubah begitu pengaturannya disimpan,
+// tanpa menunggu halaman dimuat ulang (komponen ini hidup terus di layout).
+const institusi = computed(() => page.props.institusi);
 </script>
 
 <template>
