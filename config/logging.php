@@ -58,6 +58,15 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        // Surel yang dikirim lewat mailer "log" ditulis pada level debug; kanal sendiri ini
+        // membuatnya tetap terbaca walau LOG_LEVEL aplikasi dinaikkan ke info.
+        'mail' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/mail.log'),
+            'level' => 'debug',
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

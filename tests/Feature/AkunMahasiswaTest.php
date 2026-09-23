@@ -24,9 +24,13 @@ it('still lets dosen change their own name', function () {
     expect($dosen->fresh()->name)->toBe('Nama Baru');
 });
 
-it('has no public password reset flow', function () {
-    $this->get('/forgot-password')->assertNotFound();
-    $this->post('/reset-password', [])->assertNotFound();
+it('opens the password reset flow for guests only', function () {
+    // Alur atur ulang kata sandi kini tersedia (lihat PasswordResetTest), tetapi hanya untuk tamu.
+    $this->get('/forgot-password')->assertOk();
+
+    $this->actingAs(User::factory()->mahasiswa()->create())
+        ->get('/forgot-password')
+        ->assertRedirect();
 });
 
 it('does not run demo data in production', function () {

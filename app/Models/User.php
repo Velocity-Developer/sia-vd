@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use App\Notifications\AturUlangKataSandi;
 use App\UserType;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -182,5 +183,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Surel tautan atur ulang kata sandi versi sendiri (berbahasa Indonesia).
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new AturUlangKataSandi($token));
     }
 }
