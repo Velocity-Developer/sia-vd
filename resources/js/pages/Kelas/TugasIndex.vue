@@ -108,7 +108,7 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                                         <Link
                                             v-if="item.kelas_kuliah"
                                             :href="rute('kelas-kuliah.tugas.show', [item.kelas_kuliah.id, item.id])"
-                                            class="text-sm font-medium text-[#0075de] hover:underline"
+                                            class="whitespace-nowrap text-sm font-medium text-[#0075de] hover:underline"
                                         >
                                             Detail &amp; nilai
                                         </Link>

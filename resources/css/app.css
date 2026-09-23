@@ -231,11 +231,13 @@ html {
         padding: 0.5rem 0;
     }
 
+    /* Grid dua kolom: label tetap di kiri, isi sel menumpuk ke bawah di kanan
+       (sel bisa berisi beberapa baris, mis. nama mata kuliah + nama dosen). */
     .tabel-responsif tbody td {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 1rem;
+        display: grid;
+        grid-template-columns: minmax(0, 8.5rem) minmax(0, 1fr);
+        align-items: start;
+        gap: 0 1rem;
         padding: 0.25rem 1rem;
         max-width: none;
         text-align: right;
@@ -243,9 +245,17 @@ html {
         overflow-wrap: anywhere;
     }
 
+    /* Isi sel menempel ke kanan dan selebar isinya, supaya lencana status atau tombol
+       aksi tidak melar selebar kartu. */
+    .tabel-responsif tbody td > * {
+        grid-column: 2;
+        justify-self: end;
+        max-width: 100%;
+    }
+
     .tabel-responsif tbody td::before {
         content: attr(data-label);
-        flex: 0 0 auto;
+        grid-area: 1 / 1;
         padding-top: 0.15rem;
         font-size: 0.6875rem;
         font-weight: 600;
@@ -259,6 +269,15 @@ html {
     .tabel-responsif tbody td:not([data-label])::before,
     .tabel-responsif tbody td[data-label='']::before {
         content: none;
+    }
+
+    /* Isian form di dalam sel dibuat selebar kolom nilai agar tidak bergerigi;
+       kotak centang tetap kecil dan menempel kanan. */
+    .tabel-responsif tbody td input:not([type='checkbox']):not([type='radio']),
+    .tabel-responsif tbody td select,
+    .tabel-responsif tbody td textarea {
+        width: 100%;
+        justify-self: stretch;
     }
 
     /* Baris keadaan kosong memakai colspan: biarkan melebar penuh seperti semula. */

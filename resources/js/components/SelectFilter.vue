@@ -10,7 +10,7 @@ const model = defineModel<number | string | null>({ required: true });
 </script>
 
 <template>
-    <div class="relative w-full lg:w-[200px]">
+    <div class="relative w-full lg:min-w-[170px] lg:max-w-[220px] lg:flex-1">
         <select
             v-model="model"
             :aria-label="label"

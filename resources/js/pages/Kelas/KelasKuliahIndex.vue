@@ -118,9 +118,10 @@ const ruangText = (item: KelasKuliah) => {
                     </Link>
                 </div>
 
-                <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                    <div class="grid gap-3 sm:grid-cols-2 xl:flex xl:items-center">
-                        <div class="relative w-full sm:max-w-sm xl:w-80 xl:shrink-0">
+                <!-- Susunan sama dengan FilterKonten pada menu Jadwal/Materi/Tugas/Quiz. -->
+                <div class="flex flex-col gap-3">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="relative w-full sm:w-80">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                             <Input
                                 v-model="search"
@@ -128,6 +129,15 @@ const ruangText = (item: KelasKuliah) => {
                                 class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
                             />
                         </div>
+
+                        <p class="text-sm text-[#615d59]">
+                            <span class="font-medium text-black">{{ props.kelasKuliahs.total }}</span> data<span v-if="props.search">
+                                · hasil untuk "{{ props.search }}"</span
+                            >
+                        </p>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
                         <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="onTahunAkademikChange">
                             <option value="all">Semua Tahun Akademik</option>
                             <option v-for="ta in props.tahunAkademiks" :key="ta.id" :value="ta.id">{{ ta.name }}</option>
@@ -143,11 +153,6 @@ const ruangText = (item: KelasKuliah) => {
                             <option v-for="dosen in props.dosenOptions ?? []" :key="dosen.id" :value="dosen.id">{{ dosen.name }}</option>
                         </SelectFilter>
                     </div>
-                    <p class="text-sm text-[#615d59]">
-                        <span class="font-medium text-black">{{ props.kelasKuliahs.total }}</span> data<span v-if="props.search">
-                            · hasil untuk "{{ props.search }}"</span
-                        >
-                    </p>
                 </div>
 
                 <div

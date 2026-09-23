@@ -117,5 +117,8 @@ return [
         'password' => 'Kata Sandi',
         'current_password' => 'Kata Sandi Saat Ini',
         'username' => 'Username',
+        'password_confirmation' => 'Konfirmasi Kata Sandi',
+        'file_jawaban.*' => 'Berkas Jawaban',
+        'target_ids.*' => 'Kelas Tujuan',
     ],
 ];
