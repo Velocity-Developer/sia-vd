@@ -21,6 +21,7 @@ type Baris = {
     tanggal_lunas: string | null;
     diubah_oleh: string | null;
     diubah_pada: string | null;
+    krs_tersimpan: boolean;
 };
 type Opsi = { id: number; name: string };
 
@@ -84,6 +85,16 @@ const ubahStatus = (baris: Baris) => {
         },
         { preserveScroll: true, preserveState: true },
     );
+};
+
+const bukaKunciKrs = (baris: Baris) => {
+    if (!confirm(`Buka kunci KRS ${baris.nama}? Mahasiswa bisa mengubah kelasnya lagi selama periode KRS masih berjalan.`)) return;
+
+    router.delete(route('admin.tagihan.buka-kunci-krs', baris.id), {
+        data: { tahun_akademik_id: tahunAkademikId.value },
+        preserveScroll: true,
+        preserveState: true,
+    });
 };
 
 const terbitkan = () => {
@@ -181,7 +192,7 @@ const waktu = (nilai: string | null) =>
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
                     <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[920px] text-left">
+                        <table class="w-full min-w-[1040px] text-left">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -189,6 +200,7 @@ const waktu = (nilai: string | null) =>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Program Studi</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tagihan</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Status</th>
+                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">KRS</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Terakhir Diubah</th>
                                     <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
                                 </tr>
@@ -215,6 +227,21 @@ const waktu = (nilai: string | null) =>
                                         <span v-if="baris.tanggal_lunas" class="mt-1 block text-xs text-[#a39e98]">{{
                                             tanggal(baris.tanggal_lunas)
                                         }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-[15px]">
+                                        <template v-if="baris.krs_tersimpan">
+                                            <span class="whitespace-nowrap rounded-full bg-[#f6f5f4] px-2 py-0.5 text-xs font-medium text-[#31302e]">
+                                                Tersimpan
+                                            </span>
+                                            <button
+                                                type="button"
+                                                class="mt-1 block text-xs font-medium text-[#0075de] hover:underline"
+                                                @click="bukaKunciKrs(baris)"
+                                            >
+                                                Buka kunci
+                                            </button>
+                                        </template>
+                                        <span v-else class="text-xs text-[#a39e98]">Belum disimpan</span>
                                     </td>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <template v-if="baris.diubah_pada">

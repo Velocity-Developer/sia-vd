@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\JenisBiaya;
+use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\ProgramStudi;
 use App\Models\TagihanSemester;
@@ -144,6 +145,7 @@ class TagihanController extends Controller
 
         return Inertia::render('Admin/TagihanRincian', [
             'mahasiswa' => [
+                'id' => $mahasiswa->id,
                 'nama' => $mahasiswa->user?->name,
                 'nim' => $mahasiswa->nim,
                 'prodi' => $mahasiswa->prodi?->nama_prodi,
@@ -152,7 +154,74 @@ class TagihanController extends Controller
             'tahunAkademik' => $tahunAkademik ? $tahunAkademik->tahun.' '.$tahunAkademik->semester : null,
             'tagihan' => $tagihan,
             'sks' => $tahunAkademik ? TagihanSemester::sksDiambil($mahasiswa->id, $tahunAkademik->id) : 0,
+            'krsTersimpan' => $tahunAkademik !== null && KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id),
+            'tahunAkademikId' => $tahunAkademik?->id,
         ]);
+    }
+
+    /**
+     * Buka kunci KRS mahasiswa agar bisa memperbaiki pilihan kelasnya sendiri.
+     * Dipakai untuk kasus salah ambil mata kuliah, yang tidak bisa ditolong form pindah kelas.
+     */
+    public function bukaKunciKrs(Request $request, MahasiswaProfile $mahasiswa): RedirectResponse
+    {
+        $data = $request->validate([
+            'tahun_akademik_id' => ['required', 'integer', Rule::exists('tahun_akademik', 'id')],
+        ], attributes: ['tahun_akademik_id' => 'Tahun akademik']);
+
+        $dihapus = KrsSemester::query()
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->where('tahun_akademik_id', $data['tahun_akademik_id'])
+            ->delete();
+
+        if ($dihapus === 0) {
+            return back()->with('error', 'KRS mahasiswa ini memang belum dikunci.');
+        }
+
+        return back()->with('success', 'Kunci KRS '.$mahasiswa->user?->name.' dibuka. Mahasiswa bisa mengubah KRS selama periode masih berjalan.');
+    }
+
+    /**
+     * Simpan rincian tagihan yang diketik admin. Total dihitung ulang dari rinciannya.
+     */
+    public function simpanRincian(Request $request, MahasiswaProfile $mahasiswa): RedirectResponse
+    {
+        $data = $request->validate([
+            'tahun_akademik_id' => ['required', 'integer', Rule::exists('tahun_akademik', 'id')],
+            'items' => ['array'],
+            'items.*.nama' => ['required', 'string', 'max:255'],
+            'items.*.subtotal' => ['required', 'integer', 'min:0', 'max:9999999999'],
+        ], attributes: [
+            'items.*.nama' => 'Nama komponen',
+            'items.*.subtotal' => 'Nominal',
+        ]);
+
+        $tagihan = TagihanSemester::query()->firstOrNew([
+            'mahasiswa_id' => $mahasiswa->id,
+            'tahun_akademik_id' => $data['tahun_akademik_id'],
+        ]);
+
+        DB::transaction(function () use ($data, $request, $tagihan): void {
+            $tagihan->fill(['diubah_oleh' => $request->user()->id])->save();
+            $tagihan->items()->delete();
+
+            $total = 0;
+
+            foreach ($data['items'] ?? [] as $item) {
+                $total += $item['subtotal'];
+                $tagihan->items()->create([
+                    'nama' => $item['nama'],
+                    'cara_hitung' => JenisBiaya::TETAP,
+                    'nominal_satuan' => $item['subtotal'],
+                    'jumlah' => 1,
+                    'subtotal' => $item['subtotal'],
+                ]);
+            }
+
+            $tagihan->forceFill(['total' => $total])->save();
+        });
+
+        return back()->with('success', 'Rincian tagihan disimpan.');
     }
 
     private function tahunAkademikTerpilih(Request $request): ?TahunAkademik
@@ -170,6 +239,7 @@ class TagihanController extends Controller
             ->where('status', 'Aktif')
             ->with(['user:id,name', 'prodi:id,nama_prodi,jenjang'])
             ->with(['tagihan' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)->with('editor:id,name')])
+            ->with(['krsSemester' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)])
             ->whereHas('user');
     }
 
@@ -193,6 +263,7 @@ class TagihanController extends Controller
             'tanggal_lunas' => $tagihan?->tanggal_lunas?->toDateString(),
             'diubah_oleh' => $tagihan?->editor?->name,
             'diubah_pada' => $tagihan?->updated_at?->toDateTimeString(),
+            'krs_tersimpan' => $mahasiswa->krsSemester->isNotEmpty(),
         ];
     }
 

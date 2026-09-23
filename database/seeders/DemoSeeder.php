@@ -10,6 +10,7 @@ use App\Models\Jadwal;
 use App\Models\JenisBiaya;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
+use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\Materi;
@@ -118,6 +119,7 @@ class DemoSeeder extends Seeder
         Materi::query()->delete();
         Jadwal::query()->delete();
         KelasKuliah::query()->delete();
+        KrsSemester::query()->delete();
         TagihanItem::query()->delete();
         TagihanSemester::query()->delete();
         TarifBiaya::query()->delete();
@@ -743,7 +745,8 @@ class DemoSeeder extends Seeder
             'nama' => 'SPP per SKS',
             'cara_hitung' => JenisBiaya::PER_SKS,
             'keterangan' => 'Dihitung dari jumlah SKS yang diambil.',
-            'aktif' => true,
+            // Nonaktif: tagihan terbit sebelum KRS diisi, jadi jumlah SKS belum diketahui.
+            'aktif' => false,
             'urutan' => 2,
         ]);
 
@@ -764,7 +767,7 @@ class DemoSeeder extends Seeder
             ]);
         }
 
-        $jenisBiaya = JenisBiaya::query()->with('tarif')->orderBy('urutan')->get();
+        $jenisBiaya = JenisBiaya::query()->where('aktif', true)->with('tarif')->orderBy('urutan')->get();
         $tahunAktif = $tahunAkademik->last();
 
         foreach ($tahunAkademik as $tahun) {
@@ -778,7 +781,7 @@ class DemoSeeder extends Seeder
                 $tagihan->susunRincian($profil, $jenisBiaya);
 
                 if ($tagihan->total === 0) {
-                    // Mahasiswa belum mengambil kelas pada tahun itu: tagihan kosong tidak perlu disimpan.
+                    // Tidak ada komponen biaya yang berlaku untuk mahasiswa ini.
                     $tagihan->delete();
 
                     continue;
@@ -792,6 +795,15 @@ class DemoSeeder extends Seeder
                         'status' => TagihanSemester::LUNAS,
                         'tanggal_lunas' => $tahun->tanggal_mulai,
                     ])->save();
+                }
+
+                // KRS semester lampau sudah dikunci mahasiswa; semester berjalan sengaja dibiarkan
+                // terbuka agar alur simpan KRS bisa dicoba.
+                if ($tahun->id !== $tahunAktif->id && $profil->krs()->whereHas('kelasKuliah', fn ($query) => $query->where('tahun_akademik_id', $tahun->id))->exists()) {
+                    KrsSemester::query()->updateOrCreate(
+                        ['mahasiswa_id' => $profil->id, 'tahun_akademik_id' => $tahun->id],
+                        ['disimpan_pada' => $tahun->tanggal_krs_akhir ?? $tahun->tanggal_mulai],
+                    );
                 }
             }
         }

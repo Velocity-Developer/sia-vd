@@ -17,17 +17,19 @@ class PengaturanAkademik extends Model
 
     protected $table = 'pengaturan_akademik';
 
-    protected $fillable = ['maks_sks_tanpa_ips', 'updated_by'];
+    protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'updated_by'];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
         'maks_sks_tanpa_ips' => 20,
+        'kunci_krs_aktif' => false,
     ];
 
     protected function casts(): array
     {
         return [
             'maks_sks_tanpa_ips' => 'integer',
+            'kunci_krs_aktif' => 'boolean',
         ];
     }
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -10,7 +11,7 @@ import { Plus, Trash2 } from 'lucide-vue-next';
 type BatasSks = { ips_minimal: number | string; maks_sks: number | string };
 type SkalaNilai = { huruf: string; bobot: number | string; lulus: boolean; boleh_diulang: boolean; dipakai?: number };
 
-const props = defineProps<{ maksSksTanpaIps: number; batasSks: BatasSks[]; skalaNilai: SkalaNilai[] }>();
+const props = defineProps<{ maksSksTanpaIps: number; kunciKrsAktif: boolean; batasSks: BatasSks[]; skalaNilai: SkalaNilai[] }>();
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 
 const sksForm = useForm({
@@ -25,6 +26,10 @@ const nilaiForm = useForm({
 const dipakai = (huruf: string) => props.skalaNilai.find((row) => row.huruf === huruf.toUpperCase())?.dipakai ?? 0;
 const errorOf = (form: { errors: object }, key: string) => (form.errors as Record<string, string | undefined>)[key];
 
+const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
+
+const simpanKunciKrs = () => kunciForm.put(route('admin.pengaturan-akademik.kunci-krs'), { preserveScroll: true });
+
 const saveSks = () => sksForm.put(route('admin.pengaturan-akademik.batas-sks'), { preserveScroll: true });
 const saveNilai = () => nilaiForm.put(route('admin.pengaturan-akademik.skala-nilai'), { preserveScroll: true });
 
@@ -38,12 +43,35 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
             <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div class="space-y-1">
                     <h1 class="text-[26px] font-bold">Pengaturan Akademik</h1>
-                    <p class="text-sm text-[#615d59]">Batas SKS saat mengisi KRS dan skala nilai untuk KHS serta transkrip.</p>
+                    <p class="text-sm text-[#615d59]">Penguncian KRS, batas SKS saat mengisi KRS, dan skala nilai untuk KHS serta transkrip.</p>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
                     {{ page.props.flash.success }}
                 </div>
+
+                <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="simpanKunciKrs">
+                    <h2 class="text-lg font-semibold text-black">Penguncian KRS oleh Pembayaran</h2>
+                    <p class="mt-1 text-sm text-[#615d59]">
+                        Saat menyala, mahasiswa yang tagihan semester berjalannya belum lunas tidak bisa membuka halaman KRS. Mahasiswa yang
+                        tagihannya belum diterbitkan tidak terpengaruh, dan jadwal, KHS, transkrip, serta Info Biaya Kuliah tetap terbuka.
+                    </p>
+
+                    <Label for="kunci_krs_aktif" class="mt-4 flex w-fit items-center gap-2.5 text-sm text-[#31302e]">
+                        <Checkbox id="kunci_krs_aktif" v-model:checked="kunciForm.kunci_krs_aktif" />
+                        <span>Kunci pengisian KRS bila tagihan semester berjalan belum lunas</span>
+                    </Label>
+
+                    <div class="mt-5 flex justify-end">
+                        <Button
+                            type="submit"
+                            :disabled="kunciForm.processing"
+                            class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
+                        >
+                            Simpan Pengaturan Kunci
+                        </Button>
+                    </div>
+                </form>
 
                 <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="saveSks">
                     <h2 class="text-lg font-semibold text-black">Batas SKS per Semester</h2>

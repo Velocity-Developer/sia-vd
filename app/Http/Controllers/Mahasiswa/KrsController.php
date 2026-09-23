@@ -6,13 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Jadwal;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
+use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\PengaturanAkademik;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -69,6 +69,11 @@ class KrsController extends Controller
             'bolehKrs' => in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true),
             'tahunAkademik' => $tahunAkademik,
             'periodeKrsAktif' => $periodeKrsAktif,
+            'krsTersimpan' => $tahunAkademik !== null && KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id),
+            'krsDisimpanPada' => $tahunAkademik === null ? null : KrsSemester::query()
+                ->where('mahasiswa_id', $mahasiswa->id)
+                ->where('tahun_akademik_id', $tahunAkademik->id)
+                ->value('disimpan_pada'),
         ]);
     }
 
@@ -81,6 +86,10 @@ class KrsController extends Controller
 
         if (! $this->periodeKrsAktif($kelasKuliah->tahunAkademik)) {
             return back()->with('krs_error', 'Periode pengambilan KRS belum dibuka atau sudah berakhir.');
+        }
+
+        if (KrsSemester::tersimpan($mahasiswa->id, $kelasKuliah->tahun_akademik_id)) {
+            return back()->with('krs_error', 'KRS Anda sudah disimpan dan terkunci. Gunakan form pindah kelas, atau hubungi admin bila perlu membukanya.');
         }
 
         if (! in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true)) {
@@ -149,6 +158,10 @@ class KrsController extends Controller
             return back()->with('krs_error', 'Kelas hanya dapat dibatalkan selama periode pengambilan KRS.');
         }
 
+        if (KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id)) {
+            return back()->with('krs_error', 'KRS Anda sudah disimpan dan terkunci, kelas tidak dapat dibatalkan sendiri.');
+        }
+
         if (filled($krs->nilai)) {
             return back()->with('krs_error', 'Kelas yang sudah memiliki nilai tidak dapat dibatalkan.');
         }
@@ -156,6 +169,48 @@ class KrsController extends Controller
         $krs->cancel();
 
         return back()->with('krs_success', 'Kelas berhasil dibatalkan.');
+    }
+
+    /**
+     * Simpan (kunci) KRS semester berjalan. Setelah ini mahasiswa tidak bisa menambah atau
+     * membatalkan kelas sendiri; perubahan hanya lewat pengajuan pindah kelas atau admin.
+     */
+    public function simpan(Request $request): RedirectResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+        $tahunAkademik = TahunAkademik::where('status', true)->first();
+
+        if (! $this->periodeKrsAktif($tahunAkademik)) {
+            return back()->with('krs_error', 'Periode pengambilan KRS belum dibuka atau sudah berakhir.');
+        }
+
+        if (KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id)) {
+            return back()->with('krs_error', 'KRS Anda sudah tersimpan sebelumnya.');
+        }
+
+        $krsTahunIni = $this->semuaKrs($mahasiswa)
+            ->filter(fn (Krs $krs): bool => $krs->kelasKuliah?->tahun_akademik_id === $tahunAkademik->id);
+
+        if ($krsTahunIni->isEmpty()) {
+            return back()->with('krs_error', 'Ambil minimal satu kelas sebelum menyimpan KRS.');
+        }
+
+        $sksDiambil = $krsTahunIni->sum(fn (Krs $krs): int => $krs->kelasKuliah?->mataKuliah?->sks ?? 0);
+        $maksSks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null);
+
+        // Mengambil SKS di bawah batas boleh saja (mis. semester akhir), tetapi harus disadari
+        // karena sesudah disimpan KRS tidak bisa ditambah sendiri.
+        if ($sksDiambil < $maksSks && ! $request->boolean('konfirmasi')) {
+            return back()->with('krs_konfirmasi', "Anda baru mengambil {$sksDiambil} dari {$maksSks} SKS yang menjadi jatah Anda. Tambah kelas lagi, atau simpan bila sisa mata kuliah Anda memang tinggal ini.");
+        }
+
+        KrsSemester::create([
+            'mahasiswa_id' => $mahasiswa->id,
+            'tahun_akademik_id' => $tahunAkademik->id,
+            'disimpan_pada' => now(),
+        ]);
+
+        return back()->with('krs_success', 'KRS berhasil disimpan dan dikunci.');
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile
@@ -168,13 +223,7 @@ class KrsController extends Controller
 
     private function periodeKrsAktif(?TahunAkademik $tahunAkademik): bool
     {
-        return $tahunAkademik !== null
-            && $tahunAkademik->tanggal_krs_awal !== null
-            && $tahunAkademik->tanggal_krs_akhir !== null
-            && Carbon::today()->between(
-                Carbon::parse($tahunAkademik->tanggal_krs_awal)->startOfDay(),
-                Carbon::parse($tahunAkademik->tanggal_krs_akhir)->endOfDay(),
-            );
+        return $tahunAkademik?->periodeKrsAktif() === true;
     }
 
     /**

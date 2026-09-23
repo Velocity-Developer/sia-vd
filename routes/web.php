@@ -94,6 +94,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
         Route::get('pengaturan-akademik', [PengaturanAkademikController::class, 'index'])->name('admin.pengaturan-akademik.index');
         Route::put('pengaturan-akademik/batas-sks', [PengaturanAkademikController::class, 'updateBatasSks'])->name('admin.pengaturan-akademik.batas-sks');
         Route::put('pengaturan-akademik/skala-nilai', [PengaturanAkademikController::class, 'updateSkalaNilai'])->name('admin.pengaturan-akademik.skala-nilai');
+        Route::put('pengaturan-akademik/kunci-krs', [PengaturanAkademikController::class, 'updateKunciKrs'])->name('admin.pengaturan-akademik.kunci-krs');
     });
 
     Route::middleware('can:admin.jenis-biaya')->group(function (): void {
@@ -110,6 +111,8 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
         Route::get('tagihan/{mahasiswa}/rincian', [TagihanController::class, 'rincian'])->name('admin.tagihan.rincian');
         Route::post('tagihan/terbitkan', [TagihanController::class, 'terbitkan'])->name('admin.tagihan.terbitkan');
         Route::put('tagihan/status', [TagihanController::class, 'ubahStatus'])->name('admin.tagihan.status');
+        Route::put('tagihan/{mahasiswa}/rincian', [TagihanController::class, 'simpanRincian'])->name('admin.tagihan.rincian.simpan');
+        Route::delete('tagihan/{mahasiswa}/kunci-krs', [TagihanController::class, 'bukaKunciKrs'])->name('admin.tagihan.buka-kunci-krs');
     });
 
     Route::middleware('can:admin.pindah-kelas')->group(function (): void {
@@ -253,8 +256,9 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('info-kuliah', [MahasiswaInfoKuliahController::class, 'index'])->name('mahasiswa.info-kuliah');
     });
 
-    Route::middleware('can:mahasiswa.krs')->group(function (): void {
+    Route::middleware(['can:mahasiswa.krs', 'tagihan.lunas'])->group(function (): void {
         Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
+        Route::post('krs/simpan', [KrsController::class, 'simpan'])->name('mahasiswa.krs.simpan');
         Route::post('krs/{kelasKuliah}', [KrsController::class, 'store'])->name('mahasiswa.krs.store');
         Route::delete('krs/{krs}', [KrsController::class, 'destroy'])->name('mahasiswa.krs.destroy');
     });

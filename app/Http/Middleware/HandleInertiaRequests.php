@@ -60,6 +60,7 @@ class HandleInertiaRequests extends Middleware
                 'question_error' => fn (): ?string => $request->session()->get('question_error'),
                 'krs_success' => fn (): ?string => $request->session()->get('krs_success'),
                 'krs_error' => fn (): ?string => $request->session()->get('krs_error'),
+                'krs_konfirmasi' => fn (): ?string => $request->session()->get('krs_konfirmasi'),
                 'pindah_kelas_success' => fn (): ?string => $request->session()->get('pindah_kelas_success'),
                 'pindah_kelas_error' => fn (): ?string => $request->session()->get('pindah_kelas_error'),
                 'pindah_kelas_warning' => fn (): ?string => $request->session()->get('pindah_kelas_warning'),

@@ -44,6 +44,11 @@ class MahasiswaProfile extends Model
         return $this->hasMany(QuizAttempt::class, 'mahasiswa_id');
     }
 
+    public function krsSemester(): HasMany
+    {
+        return $this->hasMany(KrsSemester::class, 'mahasiswa_id');
+    }
+
     public function tagihan(): HasMany
     {
         return $this->hasMany(TagihanSemester::class, 'mahasiswa_id');

@@ -45,12 +45,14 @@ const props = defineProps<{
     bolehKrs: boolean;
     tahunAkademik: { tahun: string; semester: string; tanggal_krs_awal: string; tanggal_krs_akhir: string } | null;
     periodeKrsAktif: boolean;
+    krsTersimpan: boolean;
+    krsDisimpanPada: string | null;
 }>();
 
 const formatTanggal = (value?: string) =>
     value ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(value)) : '-';
 
-const page = usePage<{ flash?: { krs_success?: string; krs_error?: string } }>();
+const page = usePage<{ flash?: { krs_success?: string; krs_error?: string; krs_konfirmasi?: string } }>();
 const resultModalOpen = ref(false);
 const resultMessage = ref('');
 const resultTitle = ref('Informasi');
@@ -118,6 +120,24 @@ const confirmAmbilKelas = () => {
 
 onMounted(showResult);
 watch(() => [page.props.flash?.krs_error, page.props.flash?.krs_success], showResult);
+
+const simpanModalOpen = ref(false);
+const pesanKonfirmasi = ref('');
+
+const simpanKrs = (konfirmasi = false) => {
+    router.post(
+        route('mahasiswa.krs.simpan'),
+        { konfirmasi },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                const perlu = page.props.flash?.krs_konfirmasi;
+                pesanKonfirmasi.value = perlu ?? '';
+                simpanModalOpen.value = Boolean(perlu);
+            },
+        },
+    );
+};
 
 const matkul = (kelas: KelasKuliah) => kelas.mataKuliah ?? kelas.mata_kuliah;
 
@@ -206,6 +226,26 @@ const jadwal = (kelas: KelasKuliah) =>
                     <p v-if="!bolehKrs" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#dd5b00]">
                         Status akademik Anda saat ini tidak memungkinkan pengisian KRS. Silakan hubungi bagian akademik.
                     </p>
+
+                    <div
+                        v-if="krsTersimpan"
+                        class="mt-4 rounded-lg border border-[#c9ecd2] bg-[#f2fbf4] px-4 py-3 text-sm text-[#1aae39]"
+                        role="status"
+                    >
+                        KRS sudah disimpan dan terkunci{{ krsDisimpanPada ? ` pada ${formatTanggal(krsDisimpanPada)}` : '' }}. Perubahan kelas hanya
+                        bisa lewat form pindah kelas, atau minta admin membuka kuncinya.
+                    </div>
+
+                    <div v-else-if="bolehKrs" class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e6e6] pt-4">
+                        <p class="text-sm text-[#615d59]">Setelah disimpan, KRS terkunci dan kelas tidak bisa ditambah atau dibatalkan sendiri.</p>
+                        <Button
+                            class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
+                            :disabled="sksDiambil === 0"
+                            @click="simpanKrs(false)"
+                        >
+                            Simpan KRS
+                        </Button>
+                    </div>
                 </div>
 
                 <div v-if="periodeKrsAktif" class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
@@ -247,7 +287,7 @@ const jadwal = (kelas: KelasKuliah) =>
                                         </td>
                                         <td class="px-4 py-3 text-right">
                                             <Button
-                                                v-if="isTaken(kelas.id) && krsBisaDibatalkan(kelas.id)"
+                                                v-if="isTaken(kelas.id) && krsBisaDibatalkan(kelas.id) && !krsTersimpan"
                                                 size="sm"
                                                 variant="outline"
                                                 class="text-[#dd5b00]"
@@ -263,10 +303,10 @@ const jadwal = (kelas: KelasKuliah) =>
                                                         ? 'bg-white text-[#0075de] hover:bg-white'
                                                         : 'bg-[#0075de] text-white hover:bg-[#005bab]'
                                                 "
-                                                :disabled="isTaken(kelas.id) || !bolehKrs"
+                                                :disabled="isTaken(kelas.id) || !bolehKrs || krsTersimpan"
                                                 @click="ambilKelas(kelas.id)"
                                             >
-                                                {{ isTaken(kelas.id) ? 'Sudah Diambil' : 'Ambil' }}
+                                                {{ isTaken(kelas.id) ? 'Sudah Diambil' : krsTersimpan ? 'KRS Terkunci' : 'Ambil' }}
                                             </Button>
                                         </td>
                                     </tr>
@@ -297,6 +337,17 @@ const jadwal = (kelas: KelasKuliah) =>
             confirm-text="Ambil"
             cancel-text="Batal"
             @confirm="confirmAmbilKelas"
+        />
+        <AlertModal
+            v-model:open="simpanModalOpen"
+            title="Simpan KRS dengan SKS di bawah jatah?"
+            :description="pesanKonfirmasi"
+            confirm-text="Ya, Simpan KRS"
+            cancel-text="Tambah Kelas Dulu"
+            @confirm="
+                simpanModalOpen = false;
+                simpanKrs(true);
+            "
         />
         <AlertModal
             v-model:open="batalModalOpen"

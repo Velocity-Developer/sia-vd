@@ -22,10 +22,30 @@ class PengaturanAkademikController extends Controller
 
         return Inertia::render('Admin/PengaturanAkademik', [
             'maksSksTanpaIps' => PengaturanAkademik::current()->maks_sks_tanpa_ips,
+            'kunciKrsAktif' => PengaturanAkademik::current()->kunci_krs_aktif,
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
             'skalaNilai' => SkalaNilai::query()->orderByDesc('bobot')->orderBy('huruf')->get(['huruf', 'bobot', 'lulus', 'boleh_diulang'])
                 ->map(fn (SkalaNilai $nilai): array => [...$nilai->toArray(), 'dipakai' => $dipakai[$nilai->huruf] ?? 0]),
         ]);
+    }
+
+    /**
+     * Nyalakan/matikan penguncian KRS bagi mahasiswa yang tagihan semester berjalannya belum lunas.
+     */
+    public function updateKunciKrs(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'kunci_krs_aktif' => ['required', 'boolean'],
+        ], attributes: ['kunci_krs_aktif' => 'Penguncian KRS']);
+
+        PengaturanAkademik::current()->update([
+            'kunci_krs_aktif' => $data['kunci_krs_aktif'],
+            'updated_by' => $request->user()->id,
+        ]);
+
+        return back()->with('success', $data['kunci_krs_aktif']
+            ? 'Penguncian KRS dinyalakan: mahasiswa dengan tagihan belum lunas tidak bisa mengisi KRS.'
+            : 'Penguncian KRS dimatikan.');
     }
 
     public function updateBatasSks(Request $request): RedirectResponse
