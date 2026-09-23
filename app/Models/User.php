@@ -118,6 +118,21 @@ class User extends Authenticatable
     }
 
     /**
+     * Kelompok route Ziggy yang dikirim ke browser untuk user ini (lihat config/ziggy.php).
+     * Pemegang izin admin/dosen mendapat daftar lengkap; selain itu cukup route mahasiswa.
+     */
+    public function grupRute(): string
+    {
+        foreach ($this->permissionKeys() as $key) {
+            if (str_starts_with($key, 'admin.') || str_starts_with($key, 'dosen.')) {
+                return 'staf';
+            }
+        }
+
+        return 'mahasiswa';
+    }
+
+    /**
      * Apakah user ini satu-satunya yang masih memegang akses Kelola Role.
      */
     public function isLastRoleManager(): bool

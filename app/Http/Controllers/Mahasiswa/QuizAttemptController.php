@@ -9,6 +9,7 @@ use App\Models\QuizAttempt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class QuizAttemptController extends Controller
 {
@@ -22,7 +23,7 @@ class QuizAttemptController extends Controller
             return to_route('mahasiswa.quiz.show', $quiz)->with('error', 'Tenggat quiz telah berakhir.');
         }
 
-        $attempt = QuizAttempt::firstOrCreate(
+        $attempt = QuizAttempt::createOrFirst(
             ['quiz_id' => $quiz->id, 'mahasiswa_id' => $mahasiswa->id],
             ['started_at' => now()],
         );
@@ -40,33 +41,56 @@ class QuizAttemptController extends Controller
      */
     public function saveAnswers(Request $request, Quiz $quiz): JsonResponse
     {
-        $attempt = $this->currentAttempt($request, $quiz);
+        $jawaban = $this->validatedAnswers($request, $quiz);
 
-        if ($attempt->submitted_at !== null || $attempt->closeIfExpired()) {
-            return response()->json(['closed' => true], 409);
-        }
+        // Attempt dikunci selama disimpan, agar simpan otomatis yang terlambat tiba tidak menimpa
+        // attempt yang sudah dikirim atau ditutup.
+        $tertutup = DB::transaction(function () use ($request, $quiz, $jawaban): bool {
+            $attempt = $this->currentAttempt($request, $quiz, terkunci: true);
 
-        $attempt->saveDraft($this->validatedAnswers($request, $quiz));
+            if ($attempt->submitted_at !== null || $attempt->closeIfExpired()) {
+                return true;
+            }
 
-        return response()->json(['closed' => false, 'saved_at' => now()->toIso8601String()]);
+            $attempt->saveDraft($jawaban);
+
+            return false;
+        });
+
+        return response()->json(
+            $tertutup ? ['closed' => true] : ['closed' => false, 'saved_at' => now()->toIso8601String()],
+            $tertutup ? 409 : 200,
+        );
     }
 
     public function submit(Request $request, Quiz $quiz): RedirectResponse
     {
-        $attempt = $this->currentAttempt($request, $quiz);
-
-        if ($attempt->submitted_at !== null) {
-            return to_route('mahasiswa.quiz.show', $quiz)->with('error', 'Quiz sudah pernah dikirim.');
-        }
-
-        // Batas waktu selalu dicek di server. Kiriman yang terlambat diabaikan; yang dinilai adalah
-        // jawaban terakhir yang tersimpan otomatis sebelum waktu habis.
-        if ($attempt->closeIfExpired()) {
-            return to_route('mahasiswa.quiz.show', $quiz)->with('error', 'Waktu quiz telah habis. Jawaban terakhir yang tersimpan otomatis sudah dinilai.');
-        }
-
         $request->validate(['auto_submit' => ['sometimes', 'boolean']]);
-        $attempt->finalize($this->validatedAnswers($request, $quiz));
+        $jawaban = $this->validatedAnswers($request, $quiz);
+
+        // Satu attempt hanya boleh dinilai sekali: baris dikunci dan statusnya dicek ulang di dalam kunci,
+        // sehingga dua kiriman bersamaan (atau kiriman yang beradu dengan penutupan otomatis) tidak saling menimpa.
+        $error = DB::transaction(function () use ($request, $quiz, $jawaban): ?string {
+            $attempt = $this->currentAttempt($request, $quiz, terkunci: true);
+
+            if ($attempt->submitted_at !== null) {
+                return 'Quiz sudah pernah dikirim.';
+            }
+
+            // Batas waktu selalu dicek di server. Kiriman yang terlambat diabaikan; yang dinilai adalah
+            // jawaban terakhir yang tersimpan otomatis sebelum waktu habis.
+            if ($attempt->closeIfExpired()) {
+                return 'Waktu quiz telah habis. Jawaban terakhir yang tersimpan otomatis sudah dinilai.';
+            }
+
+            $attempt->finalize($jawaban);
+
+            return null;
+        });
+
+        if ($error !== null) {
+            return to_route('mahasiswa.quiz.show', $quiz)->with('error', $error);
+        }
 
         $message = $request->boolean('auto_submit')
             ? 'Waktu quiz telah habis. Jawaban yang sudah Anda isi berhasil terkirim.'
@@ -75,7 +99,7 @@ class QuizAttemptController extends Controller
         return to_route('mahasiswa.quiz.show', $quiz)->with('success', $message);
     }
 
-    private function currentAttempt(Request $request, Quiz $quiz): QuizAttempt
+    private function currentAttempt(Request $request, Quiz $quiz, bool $terkunci = false): QuizAttempt
     {
         $mahasiswa = $request->user()->mahasiswaProfile;
         abort_if($mahasiswa === null, 403);
@@ -84,6 +108,7 @@ class QuizAttemptController extends Controller
         return QuizAttempt::query()
             ->where('quiz_id', $quiz->id)
             ->where('mahasiswa_id', $mahasiswa->id)
+            ->when($terkunci, fn ($query) => $query->lockForUpdate())
             ->firstOrFail()
             ->setRelation('quiz', $quiz);
     }

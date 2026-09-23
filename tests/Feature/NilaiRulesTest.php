@@ -56,3 +56,30 @@ it('counts a retaken course once in the transcript using its best grade', functi
             ->where('ringkasan.totalSksLulus', $sks)
             ->where('ringkasan.ipk', 3));
 });
+
+it('locks essay grading, tugas grading, and question edits once the tahun akademik is inactive', function () {
+    $kelas = createMateriKelasKuliah();
+    $mahasiswa = User::factory()->mahasiswa()->create();
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
+    $quiz = $kelas->quizzes()->create(['nama_quiz' => 'Quiz', 'uploaded_by' => $kelas->dosen->user_id]);
+    $soal = $quiz->questions()->create(['question_text' => 'Jelaskan', 'question_type' => 'essay', 'points' => 20]);
+    $attempt = \App\Models\QuizAttempt::create(['quiz_id' => $quiz->id, 'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'started_at' => now()]);
+    $attempt->setRelation('quiz', $quiz)->finalize([$soal->id => 'Jawaban']);
+    $tugas = \App\Models\Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $kelas->dosen->user_id, 'judul_tugas' => 'Tugas']);
+    $pengumpulan = \App\Models\PengumpulanTugas::create(['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'file_jawaban' => ['pengumpulan-tugas/a.pdf'], 'submitted_at' => now()]);
+    $kelas->tahunAkademik->update(['status' => false]);
+    $dosen = $kelas->dosen->user;
+
+    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.quiz.attempts.grade', [$kelas, $quiz, $attempt]), ['points' => [$soal->id => 10]])->assertForbidden();
+    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.tugas.pengumpulan.nilai', [$kelas, $tugas, $pengumpulan]), ['nilai' => 90])->assertForbidden();
+    $this->actingAs($dosen)->delete(route('dosen.kelas-kuliah.quiz.questions.destroy', [$kelas, $quiz, $soal]))->assertForbidden();
+
+    expect((float) $attempt->fresh()->score)->toBe(0.0)
+        ->and($pengumpulan->fresh()->nilai)->toBeNull()
+        ->and($quiz->questions()->count())->toBe(1);
+
+    // Admin tetap bisa mengoreksi.
+    $this->actingAs(User::factory()->admin()->create())
+        ->put(route('admin.kelas-kuliah.quiz.attempts.grade', [$kelas, $quiz, $attempt]), ['points' => [$soal->id => 10]])
+        ->assertSessionHas('success');
+});

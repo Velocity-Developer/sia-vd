@@ -153,3 +153,29 @@ it('refreshes the cached institution name after it is changed', function () {
 
     expect(PengaturanInstitusi::shared()['nama_pt'])->toBe('Universitas Contoh');
 });
+
+it('does not let the course or academic year of a class with KRS be changed', function () {
+    $admin = User::factory()->admin()->create();
+    $kelas = createMateriKelasKuliah();
+    $lain = createMateriKelasKuliah();
+    $mahasiswa = User::factory()->mahasiswa()->create();
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id, 'nilai' => 'A']);
+    $payload = ['kode_kelas' => $kelas->kode_kelas, 'tahun_akademik_id' => $kelas->tahun_akademik_id, 'kapasitas' => 40, 'dosen_id' => $kelas->dosen_id, 'matkul_id' => $kelas->matkul_id];
+    $matkulAwal = $kelas->matkul_id;
+    $tahunAwal = $kelas->tahun_akademik_id;
+
+    $this->actingAs($admin)->put(route('admin.kelas-kuliah.update', $kelas), [...$payload, 'matkul_id' => $lain->matkul_id])
+        ->assertSessionHasErrors('matkul_id');
+
+    $tahunBaru = TahunAkademik::create(['tahun' => '2027/2028', 'semester' => 'Ganjil', 'tanggal_mulai' => '2027-08-01', 'tanggal_akhir' => '2028-01-31', 'tanggal_krs_awal' => '2027-08-01', 'tanggal_krs_akhir' => '2027-08-14', 'status' => false]);
+    $this->actingAs($admin)->put(route('admin.kelas-kuliah.update', $kelas), [...$payload, 'tahun_akademik_id' => $tahunBaru->id])
+        ->assertSessionHasErrors('tahun_akademik_id');
+
+    // Kapasitas tetap boleh diubah.
+    $this->actingAs($admin)->put(route('admin.kelas-kuliah.update', $kelas), $payload)->assertSessionHasNoErrors();
+
+    $kelas->refresh();
+    expect($kelas->matkul_id)->toBe($matkulAwal)
+        ->and($kelas->tahun_akademik_id)->toBe($tahunAwal)
+        ->and($kelas->kapasitas)->toBe(40);
+});

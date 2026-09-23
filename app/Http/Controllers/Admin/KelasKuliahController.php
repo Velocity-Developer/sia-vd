@@ -12,6 +12,7 @@ use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -25,7 +26,7 @@ class KelasKuliahController extends Controller
         $mataKuliahId = $request->integer('mata_kuliah_id') ?: null;
         $dosenId = $request->integer('dosen_id') ?: null;
 
-        $kelasKuliahs = KelasKuliah::with(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi', 'jadwals.ruang'])
+        $kelasKuliahs = KelasKuliah::with(['tahunAkademik:id,tahun,semester', 'dosen:id,user_id,nidn', 'dosen.user:id,name', 'mataKuliah:id,kode_matkul,nama_matkul,prodi_id', 'mataKuliah.prodi:id,nama_prodi', 'jadwals:id,kelas_id,hari,jam_mulai,jam_akhir,ruang_id', 'jadwals.ruang:id,kode_ruang,nama_ruang'])
             ->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId))
             ->when($mataKuliahId !== null, fn ($query) => $query->where('matkul_id', $mataKuliahId))
             ->when($dosenId !== null, fn ($query) => $query->where('dosen_id', $dosenId))
@@ -229,6 +230,19 @@ class KelasKuliahController extends Controller
             'dosen_id' => ['required', 'exists:dosen_profiles,id'],
             'matkul_id' => ['required', 'exists:mata_kuliahs,id'],
         ], $this->messages(), $this->attributes());
+
+        // Mata kuliah dan tahun akademik ikut menentukan isi KHS/transkrip, jadi tidak boleh berubah
+        // setelah ada mahasiswa yang mengambil kelas ini.
+        if ($model->exists && $model->krs()->exists()) {
+            foreach (['matkul_id' => 'Mata Kuliah', 'tahun_akademik_id' => 'Tahun Akademik'] as $kolom => $label) {
+                if ((int) $data[$kolom] !== (int) $model->{$kolom}) {
+                    throw ValidationException::withMessages([
+                        $kolom => $label.' tidak dapat diubah karena kelas ini sudah memiliki KRS mahasiswa.',
+                    ]);
+                }
+            }
+        }
+
         $model->fill($data)->save();
     }
 

@@ -25,7 +25,9 @@ class KrsController extends Controller
         $mahasiswa = $this->mahasiswa($request);
         $tahunAkademik = TahunAkademik::where('status', true)->first();
         $periodeKrsAktif = $this->periodeKrsAktif($tahunAkademik);
-        $riwayat = $this->riwayatMatkul($mahasiswa);
+        // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk riwayat, IPS, dan ringkasan SKS.
+        $semuaKrs = $this->semuaKrs($mahasiswa);
+        $riwayat = $this->riwayatMatkul($mahasiswa, $semuaKrs);
         $matkulMengulang = $riwayat->filter(fn (Collection $krs, int $matkulId): bool => $this->alasanTidakBolehAmbil($riwayat, $matkulId, $tahunAkademik) === null)
             ->keys()
             ->values();
@@ -47,17 +49,15 @@ class KrsController extends Controller
             ->orderBy('kode_kelas')
             ->get();
 
-        $ipsSebelumnya = $mahasiswa->ipsSemesterSebelum($tahunAkademik);
-
-        $krsTahunIni = $tahunAkademik === null ? collect() : $mahasiswa->krs()
-            ->whereHas('kelasKuliah', fn ($query) => $query->where('tahun_akademik_id', $tahunAkademik->id))
-            ->with('kelasKuliah.mataKuliah:id,sks')
-            ->get();
+        $ipsSebelumnya = $mahasiswa->ipsSemesterSebelum($tahunAkademik, $semuaKrs);
+        $krsTahunIni = $tahunAkademik === null
+            ? collect()
+            : $semuaKrs->filter(fn (Krs $krs): bool => $krs->kelasKuliah?->tahun_akademik_id === $tahunAkademik->id);
 
         return Inertia::render('Mahasiswa/Krs', [
             'kelasKuliahs' => $kelasKuliahs,
             'mahasiswa' => $mahasiswa->only(['semester', 'angkatan', 'prodi_id', 'status']),
-            'kelasDiambil' => $mahasiswa->krs()->pluck('kelas_id')->values(),
+            'kelasDiambil' => $semuaKrs->pluck('kelas_id')->values(),
             'krsTahunIni' => $krsTahunIni->map(fn (Krs $krs): array => ['id' => $krs->id, 'kelas_id' => $krs->kelas_id, 'nilai' => $krs->nilai])->values(),
             'matkulMengulang' => $matkulMengulang,
             'sksDiambil' => $krsTahunIni->sum(fn (Krs $krs): int => $krs->kelasKuliah?->mataKuliah?->sks ?? 0),
@@ -91,7 +91,9 @@ class KrsController extends Controller
         $error = DB::transaction(function () use ($mahasiswa, $kelasKuliah): ?string {
             MahasiswaProfile::query()->whereKey($mahasiswa->id)->lockForUpdate()->first();
             $kelas = KelasKuliah::query()->whereKey($kelasKuliah->id)->lockForUpdate()->first();
-            $riwayat = $this->riwayatMatkul($mahasiswa);
+            // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk riwayat, IPS, dan ringkasan SKS.
+        $semuaKrs = $this->semuaKrs($mahasiswa);
+        $riwayat = $this->riwayatMatkul($mahasiswa, $semuaKrs);
             $alasan = $this->alasanTidakBolehAmbil($riwayat, $kelas->matkul_id, $kelasKuliah->tahunAkademik);
 
             if ($alasan !== null) {
@@ -180,11 +182,29 @@ class KrsController extends Controller
      *
      * @return Collection<int, Collection<int, Krs>>
      */
-    private function riwayatMatkul(MahasiswaProfile $mahasiswa): Collection
+    /**
+     * Seluruh KRS mahasiswa beserta data kelas yang dibutuhkan halaman KRS.
+     *
+     * @return Collection<int, Krs>
+     */
+    private function semuaKrs(MahasiswaProfile $mahasiswa): Collection
     {
         return $mahasiswa->krs()
-            ->with('kelasKuliah:id,matkul_id,tahun_akademik_id')
-            ->get()
+            ->with([
+                'kelasKuliah:id,matkul_id,tahun_akademik_id',
+                'kelasKuliah.mataKuliah:id,sks',
+                'kelasKuliah.tahunAkademik:id,tahun,semester,tanggal_mulai',
+            ])
+            ->get();
+    }
+
+    /**
+     * @param  Collection<int, Krs>|null  $krsTerpakai
+     * @return Collection<int, Collection<int, Krs>>
+     */
+    private function riwayatMatkul(MahasiswaProfile $mahasiswa, ?Collection $krsTerpakai = null): Collection
+    {
+        return ($krsTerpakai ?? $this->semuaKrs($mahasiswa))
             ->filter(fn (Krs $krs): bool => $krs->kelasKuliah !== null)
             ->groupBy(fn (Krs $krs): int => $krs->kelasKuliah->matkul_id);
     }

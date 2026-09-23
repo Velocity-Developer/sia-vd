@@ -27,21 +27,26 @@ import AppLogo from './AppLogo.vue';
 
 const { can } = usePermissions();
 
+// URL dibentuk setelah menu difilter izin: daftar route yang dikirim ke browser hanya berisi
+// route milik peran pengguna (lihat config/ziggy.php), jadi route('admin…') tidak boleh dipanggil
+// untuk pengguna yang tidak punya izin itu.
+type MenuItem = Omit<NavItem, 'href' | 'items'> & { href?: string; routeName?: string; items?: MenuItem[] };
+
 // Setiap menu hanya tampil jika role user memiliki permission terkait (diatur di halaman Kelola Role).
-const navigationSections: { label: string; items: NavItem[] }[] = [
+const navigationSections: { label: string; items: MenuItem[] }[] = [
     {
         label: 'Admin',
         items: [
             { title: 'Dashboard Admin', href: '/admin', icon: LayoutGrid, permission: 'admin.dashboard' },
-            { title: 'Info Kuliah', href: route('admin.info-kuliah.index'), icon: FileText, permission: 'admin.info-kuliah' },
-            { title: 'Tahun Akademik', href: route('admin.tahun-akademik.index'), icon: CalendarRange, permission: 'admin.tahun-akademik' },
-            { title: 'Fakultas', href: route('admin.fakultas.index'), icon: GraduationCap, permission: 'admin.fakultas' },
-            { title: 'Program Studi', href: route('admin.program-studi.index'), icon: BookOpen, permission: 'admin.program-studi' },
-            { title: 'Mata Kuliah', href: route('admin.mata-kuliah.index'), icon: Library, permission: 'admin.mata-kuliah' },
-            { title: 'Ruang', href: route('admin.ruang.index'), icon: DoorOpen, permission: 'admin.ruang' },
-            { title: 'Kelas Kuliah', href: route('admin.kelas-kuliah.index'), icon: ClipboardList, permission: 'admin.kelas-kuliah' },
-            { title: 'Pindah Kelas', href: route('admin.pindah-kelas.index'), icon: ArrowLeftRight, permission: 'admin.pindah-kelas' },
-            { title: 'Pengaturan Akademik', href: route('admin.pengaturan-akademik.index'), icon: SlidersHorizontal, permission: 'admin.pengaturan-akademik' },
+            { title: 'Info Kuliah', routeName: 'admin.info-kuliah.index', icon: FileText, permission: 'admin.info-kuliah' },
+            { title: 'Tahun Akademik', routeName: 'admin.tahun-akademik.index', icon: CalendarRange, permission: 'admin.tahun-akademik' },
+            { title: 'Fakultas', routeName: 'admin.fakultas.index', icon: GraduationCap, permission: 'admin.fakultas' },
+            { title: 'Program Studi', routeName: 'admin.program-studi.index', icon: BookOpen, permission: 'admin.program-studi' },
+            { title: 'Mata Kuliah', routeName: 'admin.mata-kuliah.index', icon: Library, permission: 'admin.mata-kuliah' },
+            { title: 'Ruang', routeName: 'admin.ruang.index', icon: DoorOpen, permission: 'admin.ruang' },
+            { title: 'Kelas Kuliah', routeName: 'admin.kelas-kuliah.index', icon: ClipboardList, permission: 'admin.kelas-kuliah' },
+            { title: 'Pindah Kelas', routeName: 'admin.pindah-kelas.index', icon: ArrowLeftRight, permission: 'admin.pindah-kelas' },
+            { title: 'Pengaturan Akademik', routeName: 'admin.pengaturan-akademik.index', icon: SlidersHorizontal, permission: 'admin.pengaturan-akademik' },
             {
                 title: 'Manage User',
                 href: '/admin/users/dosen',
@@ -52,7 +57,7 @@ const navigationSections: { label: string; items: NavItem[] }[] = [
                     { title: 'Karyawan', href: '/admin/users/karyawan', permission: 'admin.users.karyawan' },
                 ],
             },
-            { title: 'Kelola Role', href: route('admin.roles.index'), icon: ShieldCheck, permission: 'admin.roles' },
+            { title: 'Kelola Role', routeName: 'admin.roles.index', icon: ShieldCheck, permission: 'admin.roles' },
         ],
     },
     {
@@ -67,8 +72,8 @@ const navigationSections: { label: string; items: NavItem[] }[] = [
         label: 'Mahasiswa',
         items: [
             { title: 'Beranda', href: '/mahasiswa', icon: LayoutGrid, permission: 'mahasiswa.dashboard' },
-            { title: 'Info Kuliah', href: route('mahasiswa.info-kuliah'), icon: FileText, permission: 'mahasiswa.info-kuliah' },
-            { title: 'Pindah Kelas', href: route('mahasiswa.pindah-kelas'), icon: ArrowLeftRight, permission: 'mahasiswa.pindah-kelas' },
+            { title: 'Info Kuliah', routeName: 'mahasiswa.info-kuliah', icon: FileText, permission: 'mahasiswa.info-kuliah' },
+            { title: 'Pindah Kelas', routeName: 'mahasiswa.pindah-kelas', icon: ArrowLeftRight, permission: 'mahasiswa.pindah-kelas' },
             {
                 title: 'Rencana dan Hasil Studi',
                 href: '/mahasiswa/krs',
@@ -87,14 +92,18 @@ const navigationSections: { label: string; items: NavItem[] }[] = [
     },
 ];
 
-const filterItems = (items: NavItem[]): NavItem[] =>
-    items.flatMap((item) => {
+const filterItems = (items: MenuItem[]): NavItem[] =>
+    items.flatMap((item): NavItem[] => {
         if (!can(item.permission)) return [];
-        if (!item.items) return [item];
 
-        const subItems = filterItems(item.items);
+        const { routeName, items: subMenu, ...sisa } = item;
+        const href = routeName ? route(routeName) : (item.href ?? '#');
 
-        return subItems.length ? [{ ...item, href: subItems[0].href, items: subItems }] : [];
+        if (!subMenu) return [{ ...sisa, href }];
+
+        const subItems = filterItems(subMenu);
+
+        return subItems.length ? [{ ...sisa, href: subItems[0].href, items: subItems }] : [];
     });
 
 const visibleSections = computed(() =>

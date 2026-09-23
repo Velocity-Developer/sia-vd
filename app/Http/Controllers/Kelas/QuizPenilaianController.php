@@ -62,6 +62,7 @@ class QuizPenilaianController extends Controller
     public function grade(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz, QuizAttempt $attempt): RedirectResponse
     {
         $this->ensureAccess($request, $kelasKuliah, $quiz, $attempt);
+        $this->pastikanNilaiTidakTerkunci($kelasKuliah);
         abort_if($attempt->submitted_at === null, 422, 'Quiz belum dikirim mahasiswa.');
 
         $essays = $quiz->questions()->where('question_type', 'essay')->get()->keyBy('id');

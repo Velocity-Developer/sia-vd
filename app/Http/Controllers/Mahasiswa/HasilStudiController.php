@@ -26,8 +26,9 @@ class HasilStudiController extends Controller
         $krs = Krs::query()
             ->where('mahasiswa_id', $mahasiswa->id)
             ->whereNotNull('nilai')
-            ->with('kelasKuliah.mataKuliah', 'kelasKuliah.tahunAkademik')
-            ->get();
+            ->with(['kelasKuliah:id,matkul_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul,jenis,sks'])
+            ->get(['id', 'kelas_id', 'nilai']);
+        $jumlahPengambilan = $krs->countBy(fn (Krs $item): ?int => $item->kelasKuliah?->matkul_id);
         // Mata kuliah yang diulang hanya dihitung sekali, memakai nilai terbaiknya.
         $transkrip = $krs->filter(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0)
             ->groupBy(fn (Krs $item): int => $item->kelasKuliah->matkul_id)
@@ -41,7 +42,7 @@ class HasilStudiController extends Controller
                 'nilai' => strtoupper($item->nilai),
                 'bobot' => SkalaNilai::bobot($item->nilai),
                 'mutu' => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai),
-                'diambil' => $krs->filter(fn (Krs $lain): bool => $lain->kelasKuliah?->matkul_id === $item->kelasKuliah->matkul_id)->count(),
+                'diambil' => $jumlahPengambilan[$item->kelasKuliah->matkul_id] ?? 1,
             ])
             ->sortBy('kode')
             ->values();
@@ -138,14 +139,21 @@ class HasilStudiController extends Controller
         $krs = Krs::query()
             ->where('mahasiswa_id', $mahasiswa->id)
             ->when($tahunAkademikTerpilih, fn ($query) => $query->whereHas('kelasKuliah', fn ($kelas) => $kelas->where('tahun_akademik_id', $tahunAkademikTerpilih->id)))
-            ->with(['kelasKuliah.mataKuliah', 'kelasKuliah.tahunAkademik'])
+            ->with(['kelasKuliah:id,matkul_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul,sks'])
             ->get();
         $krsDinilai = $krs->filter(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0);
         $totalSksDinilai = $krsDinilai->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
         $totalMutu = $krsDinilai->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai));
 
         return [
-            'krs' => $krs,
+            // Halaman KHS dan PDF hanya menampilkan kode, nama, SKS, dan nilai.
+            'krs' => $krs->map(fn (Krs $item): array => [
+                'id' => $item->id,
+                'kode' => $item->kelasKuliah?->mataKuliah?->kode_matkul,
+                'nama' => $item->kelasKuliah?->mataKuliah?->nama_matkul,
+                'sks' => $item->kelasKuliah?->mataKuliah?->sks,
+                'nilai' => $item->nilai,
+            ])->values(),
             'tahunAkademiks' => $tahunAkademik,
             'tahunAkademik' => $tahunAkademikTerpilih,
             'ringkasan' => [

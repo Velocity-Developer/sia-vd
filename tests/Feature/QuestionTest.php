@@ -317,3 +317,18 @@ it('rejects bulk questions from another class', function () {
         ])
         ->assertNotFound();
 });
+
+it('rejects a second submit and any autosave once the attempt is finalized', function () {
+    [$mahasiswa, $quiz, $question, $attempt] = createTimedQuizAttempt(['waktu_pengerjaan' => 30], now());
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.quiz.submit', $quiz), ['answers' => [$question->id => 'A']])->assertSessionHas('success');
+    $skor = (float) $attempt->fresh()->score;
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.quiz.submit', $quiz), ['answers' => [$question->id => 'B']])->assertSessionHas('error');
+    $this->actingAs($mahasiswa)->postJson(route('mahasiswa.quiz.answers', $quiz), ['answers' => [$question->id => 'B']])
+        ->assertStatus(409)->assertJson(['closed' => true]);
+
+    $attempt->refresh();
+    expect((float) $attempt->score)->toBe($skor)
+        ->and(QuizAnswer::where('attempt_id', $attempt->id)->value('answer'))->toBe(['A']);
+});

@@ -23,7 +23,12 @@ class ContentController extends Controller
         $kelasKuliahs = Krs::query()
             ->where('mahasiswa_id', $mahasiswa->id)
             ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query->where('status', true))
-            ->with('kelasKuliah.mataKuliah', 'kelasKuliah.jadwals.ruang')
+            ->with([
+                'kelasKuliah:id,kode_kelas,matkul_id',
+                'kelasKuliah.mataKuliah:id,nama_matkul,sks',
+                'kelasKuliah.jadwals:id,kelas_id,hari,jam_mulai,jam_akhir,ruang_id',
+                'kelasKuliah.jadwals.ruang:id,kode_ruang,nama_ruang',
+            ])
             ->get()
             ->pluck('kelasKuliah')
             ->filter()

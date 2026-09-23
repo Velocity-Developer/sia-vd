@@ -6,6 +6,7 @@ use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class MahasiswaProfile extends Model
 {
@@ -49,32 +50,51 @@ class MahasiswaProfile extends Model
     }
 
     /**
-     * IPS pada semester terakhir yang sudah bernilai sebelum tahun akademik tertentu.
+     * IPS pada semester terakhir yang diambil mahasiswa sebelum tahun akademik tertentu.
      *
+     * Bernilai null bila mahasiswa belum pernah mengambil kelas, atau bila nilai semester itu belum
+     * lengkap — batas SKS lalu memakai angka "tanpa IPS" ketimbang IPS dari sebagian nilai saja.
+     *
+     * @param  Collection<int, Krs>|null  $krsTerpakai  KRS yang sudah dimuat, agar halaman KRS tidak query ulang.
      * @return array{tahun_akademik: TahunAkademik, ips: float}|null
      */
-    public function ipsSemesterSebelum(?TahunAkademik $tahunAkademik): ?array
+    public function ipsSemesterSebelum(?TahunAkademik $tahunAkademik, ?Collection $krsTerpakai = null): ?array
     {
-        $krsDinilai = $this->krs()
-            ->whereNotNull('nilai')
+        $krs = $krsTerpakai !== null
+            ? $krsTerpakai->filter(fn (Krs $item): bool => $tahunAkademik?->tanggal_mulai === null
+                || ($item->kelasKuliah?->tahunAkademik?->tanggal_mulai !== null
+                    && $item->kelasKuliah->tahunAkademik->tanggal_mulai < $tahunAkademik->tanggal_mulai))
+            : $this->krs()
             ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query
                 ->when($tahunAkademik?->tanggal_mulai, fn ($query, $mulai) => $query->where('tanggal_mulai', '<', $mulai)))
             ->with('kelasKuliah.tahunAkademik', 'kelasKuliah.mataKuliah:id,sks')
-            ->get()
-            ->filter(fn (Krs $krs): bool => SkalaNilai::bobot($krs->nilai) !== null && ($krs->kelasKuliah->mataKuliah?->sks ?? 0) > 0);
+            ->get();
 
-        $terakhir = $krsDinilai
-            ->groupBy(fn (Krs $krs): int => $krs->kelasKuliah->tahun_akademik_id)
-            ->sortByDesc(fn ($krs) => $krs->first()->kelasKuliah->tahunAkademik->tanggal_mulai)
+        $krs = $krs->filter(fn (Krs $item): bool => $item->kelasKuliah?->tahunAkademik !== null);
+
+        $semesterTerakhir = $krs
+            ->groupBy(fn (Krs $item): int => $item->kelasKuliah->tahun_akademik_id)
+            ->sortByDesc(fn ($rows) => $rows->first()->kelasKuliah->tahunAkademik->tanggal_mulai)
             ->first();
 
-        if ($terakhir === null) {
+        if ($semesterTerakhir === null) {
             return null;
         }
 
-        $sks = $terakhir->sum(fn (Krs $krs): int => $krs->kelasKuliah->mataKuliah->sks);
-        $mutu = $terakhir->sum(fn (Krs $krs): float => $krs->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($krs->nilai));
+        // Selama masih ada nilai yang belum masuk, IPS semester itu belum bisa dipakai.
+        if ($semesterTerakhir->contains(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) === null)) {
+            return null;
+        }
 
-        return ['tahun_akademik' => $terakhir->first()->kelasKuliah->tahunAkademik, 'ips' => round($mutu / $sks, 2)];
+        $dihitung = $semesterTerakhir->filter(fn (Krs $item): bool => ($item->kelasKuliah->mataKuliah?->sks ?? 0) > 0);
+        $sks = $dihitung->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
+
+        if ($sks === 0) {
+            return null;
+        }
+
+        $mutu = $dihitung->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai));
+
+        return ['tahun_akademik' => $semesterTerakhir->first()->kelasKuliah->tahunAkademik, 'ips' => round($mutu / $sks, 2)];
     }
 }

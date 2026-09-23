@@ -6,11 +6,10 @@ import { computed, ref } from 'vue';
 
 type Krs = {
     id: number;
+    kode: string | null;
+    nama: string | null;
+    sks: number | null;
     nilai: string | null;
-    kelas_kuliah: {
-        kode_kelas: string;
-        mata_kuliah: { kode_matkul: string; nama_matkul: string; sks: number } | null;
-    } | null;
 };
 
 type TahunAkademik = { id: number; tahun: string; semester: string; status: boolean };
@@ -67,7 +66,7 @@ const changeYear = () => {
                         <table class="w-full min-w-[720px] text-left">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800"><tr><th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th><th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</th><th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">SKS</th><th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nilai</th></tr></thead>
                             <tbody class="divide-y divide-[#e6e6e6] dark:divide-gray-800">
-                                <tr v-for="(item, index) in krs" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"><td class="px-4 py-4 text-sm text-[#615d59] dark:text-gray-400">{{ index + 1 }}</td><td class="px-4 py-4"><p class="text-sm font-semibold text-black dark:text-white">{{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}</p><p class="text-xs text-[#8a8580]">{{ item.kelas_kuliah?.mata_kuliah?.kode_matkul ?? '-' }}</p></td><td class="px-4 py-4 text-center text-sm text-[#31302e] dark:text-gray-200">{{ item.kelas_kuliah?.mata_kuliah?.sks ?? '-' }}</td><td class="px-4 py-4 text-center"><span class="inline-flex min-w-9 justify-center rounded-full px-2.5 py-1 text-sm font-bold uppercase" :class="nilaiClass(item.nilai)">{{ item.nilai ?? 'Belum ada' }}</span></td></tr>
+                                <tr v-for="(item, index) in krs" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"><td class="px-4 py-4 text-sm text-[#615d59] dark:text-gray-400">{{ index + 1 }}</td><td class="px-4 py-4"><p class="text-sm font-semibold text-black dark:text-white">{{ item.nama ?? '-' }}</p><p class="text-xs text-[#8a8580]">{{ item.kode ?? '-' }}</p></td><td class="px-4 py-4 text-center text-sm text-[#31302e] dark:text-gray-200">{{ item.sks ?? '-' }}</td><td class="px-4 py-4 text-center"><span class="inline-flex min-w-9 justify-center rounded-full px-2.5 py-1 text-sm font-bold uppercase" :class="nilaiClass(item.nilai)">{{ item.nilai ?? 'Belum ada' }}</span></td></tr>
                                 <tr v-if="!krs.length"><td colspan="4" class="px-4 py-16 text-center text-sm text-[#615d59] dark:text-gray-400">Belum ada hasil studi pada tahun akademik ini.</td></tr>
                             </tbody>
                         </table>

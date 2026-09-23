@@ -128,3 +128,21 @@ it('lets admin cancel an ungraded KRS but not a graded one', function () {
     $this->actingAs($admin)->delete(route('admin.kelas-kuliah.krs.destroy', [$kelas, $krs]))->assertSessionHas('success');
     expect(Krs::find($krs->id))->toBeNull();
 });
+
+it('uses the previous semester IPS and falls back while its grades are incomplete', function () {
+    [$mahasiswa, $kelas] = krsSetup();
+    $lalu = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Genap', 'tanggal_mulai' => '2025-02-01', 'tanggal_akhir' => '2025-07-31', 'tanggal_krs_awal' => '2025-02-01', 'tanggal_krs_akhir' => '2025-02-14', 'status' => false]);
+    $kelasLalu = fn (string $kode) => KelasKuliah::create(['kode_kelas' => $kode, 'tahun_akademik_id' => $lalu->id, 'kapasitas' => 30, 'dosen_id' => $kelas->dosen_id, 'matkul_id' => kelasLainDiProdi($kelas, 3, $lalu)->matkul_id]);
+    $profil = $mahasiswa->mahasiswaProfile;
+    Krs::create(['mahasiswa_id' => $profil->id, 'kelas_id' => $kelasLalu('LALU-A')->id, 'nilai' => 'A']);
+    $belumDinilai = Krs::create(['mahasiswa_id' => $profil->id, 'kelas_id' => $kelasLalu('LALU-B')->id]);
+
+    // Selama masih ada nilai yang belum masuk, batas SKS memakai angka "tanpa IPS".
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
+        ->assertInertia(fn ($page) => $page->where('ipsSebelumnya', null)->where('maksSks', PengaturanAkademik::current()->maks_sks_tanpa_ips));
+
+    $belumDinilai->update(['nilai' => 'A']);
+
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
+        ->assertInertia(fn ($page) => $page->where('ipsSebelumnya.ips', 4)->where('maksSks', 24));
+});

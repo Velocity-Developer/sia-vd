@@ -63,6 +63,7 @@ class TugasController extends Controller
     {
         $this->ensureScoped($kelasKuliah, $tugas);
         abort_unless($pengumpulanTugas->tugas_id === $tugas->id, 404);
+        $this->pastikanNilaiTidakTerkunci($kelasKuliah);
         $pengumpulanTugas->update($request->validate(['nilai' => ['nullable', 'numeric', 'min:0', 'max:100']]));
 
         return back()->with('success', 'Nilai berhasil diperbarui.');

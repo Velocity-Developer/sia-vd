@@ -93,10 +93,10 @@
             @forelse ($krs as $index => $item)
                 <tr>
                     <td class="center">{{ $index + 1 }}</td>
-                    <td>{{ $item->kelasKuliah?->mataKuliah?->kode_matkul ?? '-' }}</td>
-                    <td>{{ $item->kelasKuliah?->mataKuliah?->nama_matkul ?? '-' }}</td>
-                    <td class="center">{{ $item->kelasKuliah?->mataKuliah?->sks ?? '-' }}</td>
-                    <td class="center">{{ $item->nilai ?? '-' }}</td>
+                    <td>{{ $item['kode'] ?? '-' }}</td>
+                    <td>{{ $item['nama'] ?? '-' }}</td>
+                    <td class="center">{{ $item['sks'] ?? '-' }}</td>
+                    <td class="center">{{ $item['nilai'] ?? '-' }}</td>
                 </tr>
             @empty
                 <tr><td class="kosong" colspan="5">Belum ada hasil studi pada tahun akademik ini.</td></tr>

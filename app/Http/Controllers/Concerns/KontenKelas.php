@@ -28,6 +28,20 @@ trait KontenKelas
         }
     }
 
+    /**
+     * Nilai dikunci untuk dosen setelah tahun akademik kelas tidak aktif lagi; admin tetap bisa mengubah.
+     */
+    protected function nilaiTerkunci(KelasKuliah $kelasKuliah): bool
+    {
+        return $this->peran() === 'dosen'
+            && $kelasKuliah->loadMissing('tahunAkademik')->tahunAkademik?->status !== true;
+    }
+
+    protected function pastikanNilaiTidakTerkunci(KelasKuliah $kelasKuliah): void
+    {
+        abort_if($this->nilaiTerkunci($kelasKuliah), 403, 'Tahun akademik kelas ini sudah tidak aktif, nilai tidak dapat diubah lagi.');
+    }
+
     protected function keKelas(KelasKuliah $kelasKuliah): RedirectResponse
     {
         return to_route($this->peran().'.kelas-kuliah.show', $kelasKuliah);

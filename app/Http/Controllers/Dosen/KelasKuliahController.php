@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Dosen;
 
+use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class KelasKuliahController extends Controller
 {
+    use KontenKelas;
+
     public function index(Request $request): Response
     {
         $dosenProfileId = $request->user()?->dosenProfile?->id;
@@ -26,7 +29,7 @@ class KelasKuliahController extends Controller
         $tahunAkademikId = $this->filterTahunAkademikId($request);
         $mataKuliahId = $request->integer('mata_kuliah_id') ?: null;
 
-        $kelasKuliahs = KelasKuliah::with(['mataKuliah.prodi', 'tahunAkademik', 'jadwals.ruang'])
+        $kelasKuliahs = KelasKuliah::with(['tahunAkademik:id,tahun,semester', 'mataKuliah:id,kode_matkul,nama_matkul,prodi_id', 'mataKuliah.prodi:id,nama_prodi', 'jadwals:id,kelas_id,hari,jam_mulai,jam_akhir,ruang_id', 'jadwals.ruang:id,kode_ruang,nama_ruang'])
             ->where('dosen_id', $dosenProfileId)
             ->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId))
             ->when($mataKuliahId !== null, fn ($query) => $query->where('matkul_id', $mataKuliahId))
@@ -133,11 +136,4 @@ class KelasKuliahController extends Controller
         ]);
     }
 
-    /**
-     * Dosen hanya bisa mengubah nilai selama tahun akademik kelas masih aktif; setelah itu hanya admin.
-     */
-    private function nilaiTerkunci(KelasKuliah $kelasKuliah): bool
-    {
-        return $kelasKuliah->loadMissing('tahunAkademik')->tahunAkademik?->status !== true;
-    }
 }

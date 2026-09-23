@@ -165,6 +165,8 @@ class QuizController extends Controller
     public function updateQuestion(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz, Question $question): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
+        // Mengubah atau menghapus soal menilai ulang attempt yang sudah dikirim.
+        $this->pastikanNilaiTidakTerkunci($kelasKuliah);
         abort_unless($question->quiz_id === $quiz->id, 404);
 
         $data = $request->validate([
@@ -211,6 +213,8 @@ class QuizController extends Controller
     public function destroyQuestion(KelasKuliah $kelasKuliah, Quiz $quiz, Question $question): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
+        // Mengubah atau menghapus soal menilai ulang attempt yang sudah dikirim.
+        $this->pastikanNilaiTidakTerkunci($kelasKuliah);
         abort_unless($question->quiz_id === $quiz->id, 404);
         $question->delete();
         $quiz->regradeAttempts();
