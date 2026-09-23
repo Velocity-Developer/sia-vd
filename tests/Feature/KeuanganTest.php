@@ -283,3 +283,19 @@ it('memperingatkan admin bila nilai semester sebelumnya belum lengkap', function
 
     expect(TagihanSemester::count())->toBe(1);
 });
+
+it('menjelaskan dasar perhitungan tagihan ke mahasiswa', function () {
+    [$mahasiswa, $kelas] = keuanganSetup(sks: 4);
+    jenisBiayaContoh($kelas->mataKuliah->prodi_id);
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.info-biaya-kuliah'))
+        ->assertInertia(fn ($page) => $page
+            ->where('dasar.tarif_per_sks', 100_000)
+            ->where('dasar.kuota_sks', 20)
+            ->where('dasar.sks_diambil', 4)
+            // 20 SKS ditagihkan, baru 4 yang diambil.
+            ->where('dasar.sisa_sks', 16)
+            ->where('dasar.prodi', 'Teknik Informatika'));
+});

@@ -5,7 +5,23 @@ import { Head } from '@inertiajs/vue3';
 type Item = { nama: string; cara_hitung: string; nominal_satuan: number; jumlah: number; subtotal: number };
 type Tagihan = { id: number; tahun_akademik: string; status: string; total: number; tanggal_lunas: string | null; items: Item[] };
 
-const props = defineProps<{ semesterBerjalan: Tagihan | null; tahunAktif: string | null; riwayat: Tagihan[] }>();
+type Dasar = {
+    tarif_per_sks: number;
+    kuota_sks: number;
+    prodi: string | null;
+    angkatan: number | null;
+    ips: number | null;
+    ips_tahun_akademik: string | null;
+    sks_diambil: number;
+    sisa_sks: number;
+};
+
+const props = defineProps<{
+    semesterBerjalan: Tagihan | null;
+    tahunAktif: string | null;
+    riwayat: Tagihan[];
+    dasar: Dasar | null;
+}>();
 
 const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nilai || 0);
 const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(nilai)) : null);
@@ -77,6 +93,53 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
 
                     <p v-else class="mt-4 rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59]">
                         Tagihan semester ini belum diterbitkan. Hubungi bagian keuangan bila Anda merasa seharusnya sudah ada.
+                    </p>
+                </div>
+
+                <div v-if="props.dasar" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-semibold text-black">Dari Mana Angka Ini?</h2>
+                    <p class="mt-1 text-sm text-[#615d59]">
+                        Biaya semester dihitung dari tarif per SKS yang berlaku untuk Anda dikali jatah SKS semester ini.
+                    </p>
+
+                    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+                        <div class="rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3">
+                            <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Tarif per SKS</p>
+                            <p class="mt-1 text-[17px] font-bold text-black">{{ rupiah(props.dasar.tarif_per_sks) }}</p>
+                            <p class="text-xs text-[#615d59]">
+                                {{ props.dasar.prodi ?? 'Program studi Anda'
+                                }}<span v-if="props.dasar.angkatan">, angkatan {{ props.dasar.angkatan }}</span>
+                            </p>
+                        </div>
+                        <div class="rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3">
+                            <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">SKS yang Harus Diambil</p>
+                            <p class="mt-1 text-[17px] font-bold text-black">{{ props.dasar.kuota_sks }} SKS</p>
+                            <p class="text-xs text-[#615d59]">
+                                {{
+                                    props.dasar.ips !== null
+                                        ? `Jatah SKS dari IPS ${props.dasar.ips.toFixed(2)} (${props.dasar.ips_tahun_akademik})`
+                                        : 'Jatah SKS untuk mahasiswa yang belum punya IPS'
+                                }}
+                            </p>
+                        </div>
+                        <div class="rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3">
+                            <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Total Semester Ini</p>
+                            <p class="mt-1 text-[17px] font-bold text-black">{{ rupiah(props.dasar.tarif_per_sks * props.dasar.kuota_sks) }}</p>
+                            <p class="text-xs text-[#615d59]">{{ props.dasar.kuota_sks }} SKS × {{ rupiah(props.dasar.tarif_per_sks) }}</p>
+                        </div>
+                    </div>
+
+                    <p
+                        class="mt-4 rounded-lg border px-4 py-3 text-sm"
+                        :class="
+                            props.dasar.sisa_sks > 0 ? 'border-[#f6d7c4] bg-[#fdf6f1] text-[#dd5b00]' : 'border-[#c9ecd2] bg-[#f2fbf4] text-[#1aae39]'
+                        "
+                    >
+                        <template v-if="props.dasar.sisa_sks > 0">
+                            Anda baru mengambil {{ props.dasar.sks_diambil }} SKS di KRS. Masih ada
+                            <span class="font-semibold">{{ props.dasar.sisa_sks }} SKS</span> yang sudah ikut ditagihkan tetapi belum Anda ambil.
+                        </template>
+                        <template v-else> Anda sudah mengambil {{ props.dasar.sks_diambil }} SKS, sesuai jatah yang ditagihkan. </template>
                     </p>
                 </div>
 
