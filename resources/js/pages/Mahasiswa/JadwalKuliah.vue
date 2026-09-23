@@ -51,7 +51,7 @@ const jadwalHariAktif = computed(() => jadwalGroups.value.find((group) => group.
                     <p class="text-sm leading-5 text-[#615d59]">Jadwal kuliah dari kelas yang Anda ambil.</p>
                 </div>
                 <div v-if="jadwalGroups.length" class="flex flex-col gap-5">
-                    <div class="overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white p-2 shadow-sm">
+                    <div class="relative overflow-x-auto rounded-xl border border-[#e6e6e6] bg-white p-2 shadow-sm">
                         <div class="flex min-w-max gap-2" role="tablist" aria-label="Hari jadwal kuliah">
                             <button
                                 v-for="group in jadwalGroups"

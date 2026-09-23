@@ -89,8 +89,8 @@ const hapus = () => {
                 />
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left md:min-w-[900px]">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[900px] text-left">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -104,29 +104,29 @@ const hapus = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.jadwals.data" :key="item.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td data-label="No." class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.jadwals.from ?? 0) + index }}</td>
-                                    <td data-label="Hari & Jam" class="px-4 py-3 text-[15px] text-black">
+                                    <td class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.jadwals.from ?? 0) + index }}</td>
+                                    <td class="px-4 py-3 text-[15px] text-black">
                                         <span class="block font-medium">{{ item.hari }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ jam(item.jam_mulai) }}–{{ jam(item.jam_akhir) }}</span>
                                     </td>
-                                    <td data-label="Kelas" class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block font-medium">{{ item.kelas_kuliah?.kode_kelas ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">
                                             {{ item.kelas_kuliah?.tahun_akademik?.tahun }} {{ item.kelas_kuliah?.tahun_akademik?.semester }}
                                         </span>
                                     </td>
-                                    <td data-label="Mata Kuliah" class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block">{{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.kelas_kuliah?.mata_kuliah?.kode_matkul }}</span>
                                     </td>
-                                    <td data-label="Dosen" v-if="isAdmin" class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td v-if="isAdmin" class="px-4 py-3 text-[15px] text-[#31302e]">
                                         {{ item.kelas_kuliah?.dosen?.user?.name ?? '-' }}
                                     </td>
-                                    <td data-label="Ruang" class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block">{{ item.ruang?.kode_ruang ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.ruang?.nama_ruang }}</span>
                                     </td>
-                                    <td data-label="Aksi" class="px-4 py-3">
+                                    <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link
                                                 :href="rute('kelas-kuliah.show', item.kelas_kuliah?.id ?? 0)"
@@ -163,7 +163,7 @@ const hapus = () => {
                                     </td>
                                 </tr>
                                 <tr v-if="!props.jadwals.data.length">
-                                    <td data-label="No." :colspan="isAdmin ? 7 : 6" class="px-4 py-14 text-center text-sm text-[#615d59]">
+                                    <td :colspan="isAdmin ? 7 : 6" class="px-4 py-14 text-center text-sm text-[#615d59]">
                                         Tidak ada jadwal yang cocok dengan filter.
                                     </td>
                                 </tr>

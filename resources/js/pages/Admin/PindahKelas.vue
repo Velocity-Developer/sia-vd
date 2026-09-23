@@ -253,8 +253,8 @@ watch(
                             </SelectFilter>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left md:min-w-[900px]">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[900px] text-left">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800">
                                     <th class="w-16 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -272,14 +272,14 @@ watch(
                                     :key="pengajuan.id"
                                     class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"
                                 >
-                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
                                         {{ (props.pengajuans.from ?? 1) + index }}
                                     </td>
-                                    <td data-label="Mahasiswa" class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block font-medium text-black dark:text-white">{{ pengajuan.mahasiswa ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.nim ?? '-' }} · {{ pengajuan.prodi ?? '-' }}</span>
                                     </td>
-                                    <td data-label="Kelas Asal" class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block">{{ pengajuan.kelas_asal ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_asal_matkul ?? '' }}</span>
                                         <span
@@ -289,17 +289,14 @@ watch(
                                             <AlertTriangle class="size-3" /> Nilai: {{ pengajuan.nilai }}
                                         </span>
                                     </td>
-                                    <td data-label="Kelas Tujuan" class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block">{{ pengajuan.kelas_tujuan ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_tujuan_matkul ?? '' }}</span>
                                     </td>
-                                    <td
-                                        data-label="Alasan"
-                                        class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200"
-                                    >
+                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         {{ pengajuan.alasan }}
                                     </td>
-                                    <td data-label="Status" class="px-4 py-3">
+                                    <td class="px-4 py-3">
                                         <span
                                             class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
                                             :class="statusClass[pengajuan.status] ?? ''"
@@ -318,7 +315,7 @@ watch(
                                             >{{ pengajuan.catatan_admin }}</span
                                         >
                                     </td>
-                                    <td data-label="Aksi" class="px-4 py-3">
+                                    <td class="px-4 py-3">
                                         <div v-if="pengajuan.status === 'pending'" class="flex justify-end gap-1.5">
                                             <Button
                                                 type="button"

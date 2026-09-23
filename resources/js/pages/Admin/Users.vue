@@ -105,7 +105,7 @@ const confirmDelete = () => {
                             <option v-for="item in props.angkatans" :key="item" :value="item">{{ item }}</option>
                         </SelectFilter>
                     </div>
-                    <p class="text-sm text-[#615d59]">
+                    <p class="whitespace-nowrap text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.users.total }}</span> data<span v-if="props.search">
                             · hasil untuk "{{ props.search }}"</span
                         >
@@ -128,8 +128,8 @@ const confirmDelete = () => {
                 <div
                     class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[920px] text-left lg:min-w-0">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -145,21 +145,21 @@ const confirmDelete = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(user, index) in props.users.data" :key="user.username" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
                                         {{ (props.users.from ?? 0) + index }}
                                     </td>
-                                    <td data-label="Nama" class="px-4 py-3">
+                                    <td class="px-4 py-3">
                                         <span class="text-[15px] font-medium leading-5 text-black">{{ user.name }}</span>
                                     </td>
-                                    <td :data-label="idLabel[props.type]" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         {{ idValue(user) }}
                                     </td>
-                                    <td data-label="Username" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.username }}</td>
-                                    <td data-label="Email" class="max-w-[220px] truncate px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.username }}</td>
+                                    <td class="max-w-[220px] truncate px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         {{ user.email }}
                                     </td>
-                                    <td data-label="Role" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.role_name ?? '-' }}</td>
-                                    <td data-label="Aksi" class="px-4 py-3">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.role_name ?? '-' }}</td>
+                                    <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link
                                                 :href="route(`admin.users.${props.type}.show`, user.id)"

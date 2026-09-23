@@ -169,8 +169,8 @@ const ruangText = (item: KelasKuliah) => {
                 <div
                     class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[1040px] text-left lg:min-w-0">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -185,31 +185,31 @@ const ruangText = (item: KelasKuliah) => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.kelasKuliahs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
                                         {{ (props.kelasKuliahs.from ?? 0) + index }}
                                     </td>
-                                    <td data-label="Kode Kelas" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">
+                                    <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">
                                         {{ item.kode_kelas }}
                                     </td>
-                                    <td data-label="Tahun Ajaran" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         {{ tahunAkademik(item) ? `${tahunAkademik(item)?.tahun} ${tahunAkademik(item)?.semester}` : '-' }}
                                     </td>
-                                    <td data-label="Kapasitas" class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">
                                         {{ item.kapasitas }}
                                     </td>
-                                    <td data-label="Dosen" v-if="isAdmin" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td v-if="isAdmin" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ dosenName(item) }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ dosenNidn(item) }}</span>
                                     </td>
-                                    <td data-label="Mata Kuliah" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ matkul(item)?.kode_matkul ?? '-' }} — {{ matkul(item)?.nama_matkul ?? '' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ matkul(item)?.prodi?.nama_prodi ?? '' }}</span>
                                     </td>
-                                    <td data-label="Jadwal" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ jadwalText(item) }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ ruangText(item) }}</span>
                                     </td>
-                                    <td data-label="Aksi" class="px-4 py-3">
+                                    <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="rute('kelas-kuliah.show', item.id)" title="Detail" aria-label="Detail">
                                                 <Button

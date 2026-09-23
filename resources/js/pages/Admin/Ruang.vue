@@ -61,7 +61,7 @@ const confirmDelete = () => {
                             class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
                         />
                     </div>
-                    <p class="text-sm text-[#615d59]">
+                    <p class="whitespace-nowrap text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.ruangs.total }}</span> data<span v-if="props.search">
                             · hasil untuk "{{ props.search }}"</span
                         >
@@ -82,8 +82,8 @@ const confirmDelete = () => {
                 <div
                     class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[780px] text-left lg:min-w-0">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -96,22 +96,18 @@ const confirmDelete = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.ruangs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
                                         {{ (props.ruangs.from ?? 0) + index }}
                                     </td>
-                                    <td data-label="Kode" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_ruang }}</td>
-                                    <td data-label="Nama Ruang" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.nama_ruang }}</td>
-                                    <td data-label="Kapasitas" class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_ruang }}</td>
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.nama_ruang }}</td>
+                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">
                                         {{ item.kapasitas }}
                                     </td>
-                                    <td
-                                        data-label="Detail"
-                                        class="max-w-[320px] truncate px-4 py-3 text-[15px] leading-5 text-[#615d59]"
-                                        :title="item.detail ?? ''"
-                                    >
+                                    <td class="max-w-[320px] truncate px-4 py-3 text-[15px] leading-5 text-[#615d59]" :title="item.detail ?? ''">
                                         {{ item.detail ?? '-' }}
                                     </td>
-                                    <td data-label="Aksi" class="px-4 py-3">
+                                    <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route('admin.ruang.show', item.id)" title="Detail" aria-label="Detail">
                                                 <Button

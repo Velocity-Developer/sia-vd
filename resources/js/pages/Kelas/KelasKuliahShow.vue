@@ -444,8 +444,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
 
                     <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="overflow-x-auto">
-                            <table class="tabel-responsif w-full text-left">
+                        <div class="relative overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
                                 <thead>
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Hari</th>
@@ -465,14 +465,14 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         :key="jadwal.id"
                                         class="transition-colors hover:bg-[#f6f5f4]/60"
                                     >
-                                        <td data-label="Hari" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ v(jadwal.hari) }}</td>
-                                        <td data-label="Jam" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ v(jadwal.hari) }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ jam(jadwal.jam_mulai) }}–{{ jam(jadwal.jam_akhir) }}
                                         </td>
-                                        <td data-label="Ruang" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block">{{ v(jadwal.ruang?.kode_ruang) }} — {{ v(jadwal.ruang?.nama_ruang) }}</span>
                                         </td>
-                                        <td data-label="Aksi" v-if="isAdmin" class="px-4 py-3">
+                                        <td v-if="isAdmin" class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <Link
                                                     :href="rute('kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
@@ -547,8 +547,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
 
                     <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="overflow-x-auto">
-                            <table class="tabel-responsif w-full text-left">
+                        <div class="relative overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
                                 <thead>
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pertemuan</th>
@@ -564,10 +564,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         :key="materi.id"
                                         class="transition-colors hover:bg-[#f6f5f4]/60"
                                     >
-                                        <td data-label="Pertemuan" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">
-                                            Pertemuan {{ v(materi.pertemuan_ke) }}
-                                        </td>
-                                        <td data-label="Judul Materi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">Pertemuan {{ v(materi.pertemuan_ke) }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block font-medium text-black">{{ v(materi.judul_materi) }}</span>
                                             <span
                                                 v-if="materi.catatan"
@@ -576,7 +574,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 >{{ materi.catatan }}</span
                                             >
                                         </td>
-                                        <td data-label="Berkas" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <ul v-if="materiFiles(materi).length" class="space-y-1">
                                                 <li v-for="(path, fileIndex) in materiFiles(materi)" :key="path">
                                                     <a
@@ -591,10 +589,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                                             </ul>
                                             <span v-else>-</span>
                                         </td>
-                                        <td data-label="Diunggah Oleh" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ v(materi.uploader?.name) }}
                                         </td>
-                                        <td data-label="Aksi" class="px-4 py-3">
+                                        <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <button
                                                     type="button"
@@ -685,8 +683,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
 
                     <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="overflow-x-auto">
-                            <table class="tabel-responsif w-full text-left">
+                        <div class="relative overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
                                 <thead>
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Judul Tugas</th>
@@ -702,7 +700,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         :key="tugas.id"
                                         class="transition-colors hover:bg-[#f6f5f4]/60"
                                     >
-                                        <td data-label="Judul Tugas" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block font-medium text-black">{{ v(tugas.judul_tugas) }}</span>
                                             <span
                                                 v-if="tugas.catatan"
@@ -711,10 +709,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 >{{ tugas.catatan }}</span
                                             >
                                         </td>
-                                        <td data-label="Tenggat Waktu" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ formatTenggat(tugas.tenggat_waktu) }}
                                         </td>
-                                        <td data-label="Berkas" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <ul v-if="tugasFiles(tugas).length" class="space-y-1">
                                                 <li v-for="(path, fileIndex) in tugasFiles(tugas)" :key="path">
                                                     <a
@@ -729,10 +727,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                                             </ul>
                                             <span v-else>-</span>
                                         </td>
-                                        <td data-label="Diunggah Oleh" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ v(tugas.uploader?.name) }}
                                         </td>
-                                        <td data-label="Aksi" class="px-4 py-3">
+                                        <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <Link
                                                     :href="rute('kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
@@ -831,8 +829,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
 
                     <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="overflow-x-auto">
-                            <table class="tabel-responsif w-full text-left">
+                        <div class="relative overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
                                 <thead>
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nama Quiz</th>
@@ -848,7 +846,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         :key="quiz.id"
                                         class="transition-colors hover:bg-[#f6f5f4]/60"
                                     >
-                                        <td data-label="Nama Quiz" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             <span class="block font-medium text-black">{{ v(quiz.nama_quiz) }}</span>
                                             <span
                                                 v-if="quiz.catatan"
@@ -857,16 +855,16 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 >{{ quiz.catatan }}</span
                                             >
                                         </td>
-                                        <td data-label="Durasi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ quiz.waktu_pengerjaan ? `${quiz.waktu_pengerjaan} menit` : '-' }}
                                         </td>
-                                        <td data-label="Tenggat Waktu" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ formatTenggat(quiz.tenggat_waktu) }}
                                         </td>
-                                        <td data-label="Diunggah Oleh" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ v(quiz.uploader?.name) }}
                                         </td>
-                                        <td data-label="Aksi" class="px-4 py-3">
+                                        <td class="px-4 py-3">
                                             <div class="flex justify-end gap-1.5">
                                                 <Link
                                                     :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
@@ -964,8 +962,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                         {{ page.props.flash.error }}
                     </div>
                     <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="overflow-x-auto">
-                            <table class="tabel-responsif w-full text-left md:min-w-[720px]">
+                        <div class="relative overflow-x-auto">
+                            <table class="w-full min-w-[720px] text-left">
                                 <thead>
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">No.</th>
@@ -977,15 +975,15 @@ const formatTenggat = (value: string | null | undefined): string => {
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
                                     <tr v-for="(krs, index) in filteredKrs" :key="krs.id" class="hover:bg-[#f6f5f4]/60">
-                                        <td data-label="No." class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                        <td data-label="Mahasiswa" class="px-4 py-3 text-sm font-medium text-black">
+                                        <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
+                                        <td class="px-4 py-3 text-sm font-medium text-black">
                                             {{ krs.mahasiswa?.user?.name ?? '-' }}
                                             <span class="text-[#615d59]">({{ krs.mahasiswa?.nim ?? '-' }})</span>
                                         </td>
-                                        <td data-label="Program Studi" class="px-4 py-3 text-sm text-[#31302e]">
+                                        <td class="px-4 py-3 text-sm text-[#31302e]">
                                             {{ krs.mahasiswa?.prodi?.nama_prodi ?? '-' }}
                                         </td>
-                                        <td data-label="Nilai" class="px-4 py-3 text-sm">
+                                        <td class="px-4 py-3 text-sm">
                                             <select
                                                 v-if="editingKrs === krs.id"
                                                 v-model="grade"
@@ -998,7 +996,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                             </select>
                                             <span v-else class="font-semibold">{{ krs.nilai ?? '-' }}</span>
                                         </td>
-                                        <td data-label="Aksi" class="px-4 py-3 text-right">
+                                        <td class="px-4 py-3 text-right">
                                             <template v-if="editingKrs === krs.id">
                                                 <Button
                                                     size="sm"

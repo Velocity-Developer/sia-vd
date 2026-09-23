@@ -96,8 +96,8 @@ const info = [
                         >
                     </div>
                     <div v-if="prodiList().length > 0" class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="overflow-x-auto">
-                            <table class="tabel-responsif w-full text-left">
+                        <div class="relative overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
                                 <thead>
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kode</th>
@@ -109,13 +109,13 @@ const info = [
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
                                     <tr v-for="p in prodiList()" :key="p.id" class="hover:bg-[#f6f5f4]/60">
-                                        <td data-label="Kode" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ p.kode_prodi }}</td>
-                                        <td data-label="Nama Prodi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ p.nama_prodi }}</td>
-                                        <td data-label="Jenjang" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ p.jenjang }}</td>
-                                        <td data-label="Akreditasi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ p.kode_prodi }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ p.nama_prodi }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ p.jenjang }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                             {{ p.status_akreditasi }}
                                         </td>
-                                        <td data-label="Kaprodi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ kaprodiName(p) }}</td>
+                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ kaprodiName(p) }}</td>
                                     </tr>
                                 </tbody>
                             </table>

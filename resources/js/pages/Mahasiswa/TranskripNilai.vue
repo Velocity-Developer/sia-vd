@@ -33,8 +33,8 @@ defineProps<{
                     </div>
                 </div>
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left md:min-w-[680px]">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[680px] text-left">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">No.</th>
@@ -46,18 +46,18 @@ defineProps<{
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6] dark:divide-gray-800">
                                 <tr v-for="(item, index) in transkrip" :key="item.id" class="hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800">
-                                    <td data-label="No." class="px-4 py-4 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                    <td data-label="Mata Kuliah" class="px-4 py-4">
+                                    <td class="px-4 py-4 text-sm text-[#615d59]">{{ index + 1 }}</td>
+                                    <td class="px-4 py-4">
                                         <p class="text-sm font-semibold text-black dark:text-white">{{ item.nama }}</p>
                                         <p class="text-xs text-[#8a8580]">
                                             {{ item.kode }}<span v-if="item.diambil > 1"> · diambil {{ item.diambil }}x, nilai terbaik</span>
                                         </p>
                                     </td>
-                                    <td data-label="Jenis Mata Kuliah" class="px-4 py-4 text-sm text-[#615d59] dark:text-gray-300">
+                                    <td class="px-4 py-4 text-sm text-[#615d59] dark:text-gray-300">
                                         {{ item.jenis }}
                                     </td>
-                                    <td data-label="SKS" class="px-4 py-4 text-center text-sm text-[#31302e] dark:text-gray-200">{{ item.sks }}</td>
-                                    <td data-label="Nilai" class="px-4 py-4 text-center">
+                                    <td class="px-4 py-4 text-center text-sm text-[#31302e] dark:text-gray-200">{{ item.sks }}</td>
+                                    <td class="px-4 py-4 text-center">
                                         <span
                                             class="inline-flex min-w-9 justify-center rounded-full bg-[#eaf4ff] px-2.5 py-1 text-sm font-bold text-[#0075de]"
                                             >{{ item.nilai }}</span

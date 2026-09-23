@@ -77,7 +77,7 @@ const confirmDelete = () => {
                             class="h-9 max-w-sm rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
                         />
                     </div>
-                    <p class="text-sm text-[#615d59]">
+                    <p class="whitespace-nowrap text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.tahunAkademiks.total }}</span> data<span v-if="props.search">
                             · hasil untuk "{{ props.search }}"</span
                         >
@@ -85,8 +85,8 @@ const confirmDelete = () => {
                 </div>
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[920px] text-left lg:min-w-0">
                             <thead>
                                 <tr class="border-b bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -100,25 +100,25 @@ const confirmDelete = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.tahunAkademiks.data" :key="item.id" class="hover:bg-[#fafafa]">
-                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
                                         {{ (props.tahunAkademiks.from ?? 0) + index }}
                                     </td>
-                                    <td data-label="Tahun" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.tahun }}</td>
-                                    <td data-label="Semester" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.semester }}</td>
-                                    <td data-label="Periode Kuliah" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.tahun }}</td>
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.semester }}</td>
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         {{ formatDate(item.tanggal_mulai) }} — {{ formatDate(item.tanggal_akhir) }}
                                     </td>
-                                    <td data-label="Periode KRS" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         {{ formatDate(item.tanggal_krs_awal) }} — {{ formatDate(item.tanggal_krs_akhir) }}
                                     </td>
-                                    <td data-label="Status" class="px-4 py-4">
+                                    <td class="px-4 py-4">
                                         <span
                                             class="whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold"
                                             :class="item.status ? 'bg-[#eaf8ed] text-[#16852b]' : 'bg-[#f1f1f1] text-[#77736f]'"
                                             >{{ item.status ? 'Aktif' : 'Tidak Aktif' }}</span
                                         >
                                     </td>
-                                    <td data-label="Aksi" class="px-4 py-4">
+                                    <td class="px-4 py-4">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route('admin.tahun-akademik.edit', item.id)"
                                                 ><Button variant="outline" size="icon" class="size-8 rounded-full text-[#2a9d99]" title="Edit"

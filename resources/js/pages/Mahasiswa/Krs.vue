@@ -209,8 +209,8 @@ const jadwal = (kelas: KelasKuliah) =>
                 </div>
 
                 <div v-if="periodeKrsAktif" class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[640px] text-left lg:min-w-0">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kelas</th>
@@ -234,18 +234,18 @@ const jadwal = (kelas: KelasKuliah) =>
                                         </td>
                                     </tr>
                                     <tr v-for="kelas in group.kelas" :key="kelas.id" class="hover:bg-[#f6f5f4]/60">
-                                        <td data-label="Kelas" class="px-4 py-3 text-sm font-medium text-black">{{ kelas.kode_kelas }}</td>
-                                        <td data-label="Dosen" class="px-4 py-3 text-sm text-[#31302e]">{{ kelas.dosen?.user?.name ?? '-' }}</td>
-                                        <td data-label="Jadwal" class="px-4 py-3 text-sm text-[#31302e]">
+                                        <td class="px-4 py-3 text-sm font-medium text-black">{{ kelas.kode_kelas }}</td>
+                                        <td class="px-4 py-3 text-sm text-[#31302e]">{{ kelas.dosen?.user?.name ?? '-' }}</td>
+                                        <td class="px-4 py-3 text-sm text-[#31302e]">
                                             <div v-if="jadwal(kelas).length">
                                                 <div v-for="(item, index) in jadwal(kelas)" :key="index">{{ item }}</div>
                                             </div>
                                             <span v-else>-</span>
                                         </td>
-                                        <td data-label="Kapasitas" class="px-4 py-3 text-sm text-[#31302e]">
+                                        <td class="px-4 py-3 text-sm text-[#31302e]">
                                             {{ kelas.kapasitas }} total · {{ Math.max(kelas.kapasitas - kelas.krs_count, 0) }} tersisa
                                         </td>
-                                        <td data-label="Aksi" class="px-4 py-3 text-right">
+                                        <td class="px-4 py-3 text-right">
                                             <Button
                                                 v-if="isTaken(kelas.id) && krsBisaDibatalkan(kelas.id)"
                                                 size="sm"

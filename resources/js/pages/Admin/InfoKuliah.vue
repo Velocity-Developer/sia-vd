@@ -53,8 +53,8 @@ const confirmDelete = () => {
                     {{ page.props.flash.error }}
                 </div>
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left md:min-w-[720px]">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[720px] text-left">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="w-16 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -66,13 +66,13 @@ const confirmDelete = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.infoKuliahs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
                                         {{ (props.infoKuliahs.from ?? 1) + index }}
                                     </td>
-                                    <td data-label="Informasi" class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         {{ item.information }}
                                     </td>
-                                    <td data-label="File" class="px-4 py-3">
+                                    <td class="px-4 py-3">
                                         <a
                                             :href="route('berkas.info-kuliah', item.id)"
                                             target="_blank"
@@ -80,8 +80,8 @@ const confirmDelete = () => {
                                             >Lihat file</a
                                         >
                                     </td>
-                                    <td data-label="Uploader" class="px-4 py-3 text-[15px] text-[#31302e]">{{ item.uploader?.name ?? '-' }}</td>
-                                    <td data-label="Aksi" class="px-4 py-3">
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ item.uploader?.name ?? '-' }}</td>
+                                    <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route('admin.info-kuliah.edit', item.id)" title="Edit" aria-label="Edit"
                                                 ><Button

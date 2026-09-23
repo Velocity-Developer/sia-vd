@@ -34,13 +34,13 @@ watch(search, (value) => router.get(route('dosen.mahasiswa-kelas'), { search: va
                             class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
                         />
                     </div>
-                    <p class="text-sm text-[#615d59]">
+                    <p class="whitespace-nowrap text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.krs.total }}</span> mahasiswa
                     </p>
                 </div>
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white">
-                    <div class="overflow-x-auto">
-                        <table class="tabel-responsif w-full text-left">
+                    <div class="relative overflow-x-auto">
+                        <table class="w-full min-w-[640px] text-left lg:min-w-0">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">No.</th>
@@ -52,18 +52,18 @@ watch(search, (value) => router.get(route('dosen.mahasiswa-kelas'), { search: va
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.krs.data" :key="item.id">
-                                    <td data-label="No." class="px-4 py-3 text-sm text-[#615d59]">{{ (props.krs.from ?? 0) + index }}</td>
-                                    <td data-label="Mahasiswa" class="px-4 py-3 text-sm">
+                                    <td class="px-4 py-3 text-sm text-[#615d59]">{{ (props.krs.from ?? 0) + index }}</td>
+                                    <td class="px-4 py-3 text-sm">
                                         <span class="block font-medium text-black">{{ item.mahasiswa?.user?.name ?? '-' }}</span
                                         ><span class="text-xs text-[#a39e98]"
                                             >{{ item.mahasiswa?.nim ?? '-' }} | {{ item.mahasiswa?.user?.email ?? '-' }}</span
                                         >
                                     </td>
-                                    <td data-label="Program Studi" class="px-4 py-3 text-sm text-[#31302e]">
+                                    <td class="px-4 py-3 text-sm text-[#31302e]">
                                         {{ item.mahasiswa?.prodi?.nama_prodi ?? '-' }}
                                     </td>
-                                    <td data-label="Kelas" class="px-4 py-3 text-sm text-[#31302e]">{{ item.kelas_kuliah?.kode_kelas ?? '-' }}</td>
-                                    <td data-label="Mata Kuliah" class="px-4 py-3 text-sm text-[#31302e]">
+                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ item.kelas_kuliah?.kode_kelas ?? '-' }}</td>
+                                    <td class="px-4 py-3 text-sm text-[#31302e]">
                                         {{ item.kelas_kuliah?.mata_kuliah?.kode_matkul ?? '-' }} —
                                         {{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '' }}
                                     </td>
