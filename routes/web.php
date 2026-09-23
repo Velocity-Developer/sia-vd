@@ -85,7 +85,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
     });
 
     Route::middleware('can:admin.info-kuliah')->group(function (): void {
-        Route::resource('info-kuliah', InfoKuliahController::class)->parameters(['info-kuliah' => 'infoKuliah'])->names('admin.info-kuliah');
+        Route::resource('info-kuliah', InfoKuliahController::class)->except('show')->parameters(['info-kuliah' => 'infoKuliah'])->names('admin.info-kuliah');
     });
 
     Route::middleware('can:admin.pengaturan-akademik')->group(function (): void {
@@ -118,7 +118,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
     });
 
     Route::middleware('can:admin.tahun-akademik')->group(function (): void {
-        Route::resource('tahun-akademik', TahunAkademikController::class)->parameters(['tahun-akademik' => 'tahunAkademik'])->names('admin.tahun-akademik');
+        Route::resource('tahun-akademik', TahunAkademikController::class)->except('show')->parameters(['tahun-akademik' => 'tahunAkademik'])->names('admin.tahun-akademik');
     });
 
     Route::middleware('can:admin.kelas-kuliah')->group(function (): void {

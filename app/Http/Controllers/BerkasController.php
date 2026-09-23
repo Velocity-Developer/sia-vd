@@ -78,11 +78,19 @@ class BerkasController extends Controller
         return array_values(array_filter((array) $files, fn ($file): bool => is_string($file) && $file !== ''))[$index] ?? null;
     }
 
+    /**
+     * Tipe berkas ditentukan dari ekstensi yang sudah divalidasi, bukan ditebak dari isinya; selain PDF dan
+     * gambar berkas diunduh, dan header sandbox mencegah isi berkas dijalankan sebagai halaman.
+     */
     private function kirim(?string $path): StreamedResponse
     {
         $disk = Storage::disk(AllowedUpload::DISK);
         abort_if($path === null || ! $disk->exists($path), 404);
 
-        return $disk->response($path, basename($path), ['X-Content-Type-Options' => 'nosniff']);
+        return $disk->response($path, basename($path), [
+            'Content-Type' => AllowedUpload::mime($path),
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "sandbox; default-src 'none'",
+        ], AllowedUpload::bolehInline($path) ? 'inline' : 'attachment');
     }
 }

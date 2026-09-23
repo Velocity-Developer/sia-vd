@@ -216,7 +216,7 @@ class TugasController extends Controller
             'judul_tugas' => ['required', 'string', 'max:255'],
             'tenggat_waktu' => ['nullable', 'date'],
             'file' => ['nullable', 'array', 'max:5'],
-            'file.*' => ['file', 'max:10240', AllowedUpload::rule()],
+            'file.*' => ['file', 'max:10240', ...AllowedUpload::rules()],
             'kept_files' => ['nullable', 'array'],
             'kept_files.*' => ['string'],
             'catatan' => ['nullable', 'string'],
@@ -234,6 +234,7 @@ class TugasController extends Controller
             'date' => ':attribute harus berupa tanggal yang valid.',
             'file' => ':attribute harus berupa berkas.',
             'extensions' => AllowedUpload::message(),
+            'mimes' => AllowedUpload::messageIsi(),
             'max.string' => ':attribute maksimal :max karakter.',
             'max.file' => ':attribute maksimal :max kilobita.',
         ];
