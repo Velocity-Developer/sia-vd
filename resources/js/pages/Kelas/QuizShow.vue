@@ -708,7 +708,7 @@ const sel =
                         <p class="text-sm leading-5 text-[#615d59]">Daftar mahasiswa yang sudah memulai atau menyelesaikan quiz.</p>
                     </div>
                     <div class="mt-4 overflow-x-auto rounded-xl border border-[#e6e6e6]">
-                        <table class="w-full min-w-[700px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[700px]">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">No.</th>
@@ -721,14 +721,14 @@ const sel =
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(attempt, index) in props.quiz.attempts ?? []" :key="attempt.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td data-label="No." class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
+                                    <td data-label="Mahasiswa" class="px-4 py-3 text-sm">
                                         <span class="font-medium text-black">{{ attempt.mahasiswa?.user?.name ?? '-' }}</span>
                                         <span v-if="attempt.mahasiswa?.nim" class="block text-[#615d59]">{{ attempt.mahasiswa.nim }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.started_at) }}</td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.submitted_at) }}</td>
-                                    <td class="px-4 py-3 text-sm font-semibold text-black">
+                                    <td data-label="Mulai" class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.started_at) }}</td>
+                                    <td data-label="Selesai" class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.submitted_at) }}</td>
+                                    <td data-label="Score" class="px-4 py-3 text-sm font-semibold text-black">
                                         {{ attempt.score ?? '-'
                                         }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]"
                                             >Ditutup otomatis (waktu habis)</span
@@ -736,7 +736,7 @@ const sel =
                                             >Esai belum dinilai</span
                                         >
                                     </td>
-                                    <td class="px-4 py-3 text-right">
+                                    <td data-label="Jawaban" class="px-4 py-3 text-right">
                                         <Link
                                             v-if="attempt.submitted_at"
                                             :href="rute('kelas-kuliah.quiz.attempts.show', [props.kelasKuliah.id, props.quiz.id, attempt.id])"

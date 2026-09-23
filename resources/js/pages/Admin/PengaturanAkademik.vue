@@ -35,7 +35,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
     <Head title="Pengaturan Akademik" />
     <AppLayout :breadcrumbs="[{ title: 'Pengaturan Akademik', href: route('admin.pengaturan-akademik.index') }]">
         <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex max-w-[1000px] flex-col gap-6 px-4 py-6">
+            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div class="space-y-1">
                     <h1 class="text-[26px] font-bold">Pengaturan Akademik</h1>
                     <p class="text-sm text-[#615d59]">Batas SKS saat mengisi KRS dan skala nilai untuk KHS serta transkrip.</p>
@@ -53,7 +53,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     </p>
 
                     <div class="mt-5 overflow-x-auto rounded-xl border border-[#e6e6e6]">
-                        <table class="w-full min-w-[420px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[420px]">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">IPS minimal</th>
@@ -63,7 +63,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(row, index) in sksForm.batas_sks" :key="index">
-                                    <td class="px-4 py-2">
+                                    <td data-label="IPS minimal" class="px-4 py-2">
                                         <Input
                                             v-model="row.ips_minimal"
                                             type="number"
@@ -75,11 +75,11 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                                         />
                                         <InputError :message="errorOf(sksForm, `batas_sks.${index}.ips_minimal`)" />
                                     </td>
-                                    <td class="px-4 py-2">
+                                    <td data-label="Maks SKS" class="px-4 py-2">
                                         <Input v-model="row.maks_sks" type="number" min="1" max="40" :class="inp" aria-label="Maks SKS" />
                                         <InputError :message="errorOf(sksForm, `batas_sks.${index}.maks_sks`)" />
                                     </td>
-                                    <td class="px-4 py-2 text-right">
+                                    <td data-label="Hapus" class="px-4 py-2 text-right">
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -122,7 +122,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     </p>
 
                     <div class="mt-5 overflow-x-auto rounded-xl border border-[#e6e6e6]">
-                        <table class="w-full min-w-[560px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[560px]">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">Huruf</th>
@@ -134,11 +134,11 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(row, index) in nilaiForm.skala_nilai" :key="index">
-                                    <td class="px-4 py-2">
+                                    <td data-label="Huruf" class="px-4 py-2">
                                         <Input v-model="row.huruf" maxlength="2" :class="[inp, 'w-20 uppercase']" aria-label="Huruf" />
                                         <InputError :message="errorOf(nilaiForm, `skala_nilai.${index}.huruf`)" />
                                     </td>
-                                    <td class="px-4 py-2">
+                                    <td data-label="Bobot" class="px-4 py-2">
                                         <Input
                                             v-model="row.bobot"
                                             type="number"
@@ -150,10 +150,10 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                                         />
                                         <InputError :message="errorOf(nilaiForm, `skala_nilai.${index}.bobot`)" />
                                     </td>
-                                    <td class="px-4 py-2 text-center">
+                                    <td data-label="Lulus" class="px-4 py-2 text-center">
                                         <input v-model="row.lulus" type="checkbox" class="size-4 accent-[#0075de]" aria-label="Lulus" />
                                     </td>
-                                    <td class="px-4 py-2 text-center">
+                                    <td data-label="Boleh diulang" class="px-4 py-2 text-center">
                                         <input
                                             v-model="row.boleh_diulang"
                                             type="checkbox"
@@ -161,7 +161,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                                             aria-label="Boleh diulang"
                                         />
                                     </td>
-                                    <td class="px-4 py-2 text-right">
+                                    <td data-label="Hapus" class="px-4 py-2 text-right">
                                         <Button
                                             type="button"
                                             variant="ghost"

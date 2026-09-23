@@ -2,6 +2,7 @@
 import AlertModal from '@/components/AlertModal.vue';
 import InputError from '@/components/InputError.vue';
 import Pagination from '@/components/Pagination.vue';
+import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -235,30 +236,25 @@ watch(
                         class="flex flex-col gap-3 border-b border-[#e6e6e6] px-6 py-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Daftar Pengajuan</h2>
-                        <div class="flex flex-col gap-3 sm:flex-row">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                             <div class="relative w-full sm:max-w-sm">
                                 <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                                 <Input
                                     v-model="search"
                                     placeholder="Cari nama atau NIM mahasiswa"
-                                    class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                                    class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
                                 />
                             </div>
-                            <select
-                                v-model="tahunAkademikId"
-                                class="h-9 rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm"
-                                aria-label="Filter tahun akademik"
-                                @change="applyFilters"
-                            >
+                            <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="applyFilters">
                                 <option value="all">Semua Tahun Akademik</option>
                                 <option v-for="tahun in props.tahunAkademiks" :key="tahun.id" :value="tahun.id">
                                     {{ tahun.tahun }} {{ tahun.semester }}
                                 </option>
-                            </select>
+                            </SelectFilter>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-[900px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[900px]">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800">
                                     <th class="w-16 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -276,14 +272,14 @@ watch(
                                     :key="pengajuan.id"
                                     class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"
                                 >
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
                                         {{ (props.pengajuans.from ?? 1) + index }}
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td data-label="Mahasiswa" class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block font-medium text-black dark:text-white">{{ pengajuan.mahasiswa ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.nim ?? '-' }} · {{ pengajuan.prodi ?? '-' }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td data-label="Kelas Asal" class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block">{{ pengajuan.kelas_asal ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_asal_matkul ?? '' }}</span>
                                         <span
@@ -293,14 +289,17 @@ watch(
                                             <AlertTriangle class="size-3" /> Nilai: {{ pengajuan.nilai }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td data-label="Kelas Tujuan" class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block">{{ pengajuan.kelas_tujuan ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_tujuan_matkul ?? '' }}</span>
                                     </td>
-                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td
+                                        data-label="Alasan"
+                                        class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200"
+                                    >
                                         {{ pengajuan.alasan }}
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="Status" class="px-4 py-3">
                                         <span
                                             class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
                                             :class="statusClass[pengajuan.status] ?? ''"
@@ -319,7 +318,7 @@ watch(
                                             >{{ pengajuan.catatan_admin }}</span
                                         >
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="Aksi" class="px-4 py-3">
                                         <div v-if="pengajuan.status === 'pending'" class="flex justify-end gap-1.5">
                                             <Button
                                                 type="button"

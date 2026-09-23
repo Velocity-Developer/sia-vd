@@ -70,7 +70,7 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-[960px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[960px]">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -85,29 +85,35 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.quizzes.data" :key="item.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.quizzes.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-black">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.quizzes.from ?? 0) + index }}</td>
+                                    <td data-label="Nama Quiz" class="px-4 py-3 text-[15px] text-black">
                                         <span class="block font-medium">{{ item.nama_quiz }}</span>
                                         <span class="block text-xs text-[#a39e98]">
                                             {{ item.waktu_pengerjaan ? `${item.waktu_pengerjaan} menit` : 'Tanpa batas waktu' }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td data-label="Kelas" class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block font-medium">{{ item.kelas_kuliah?.kode_kelas ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">
                                             {{ item.kelas_kuliah?.tahun_akademik?.tahun }} {{ item.kelas_kuliah?.tahun_akademik?.semester }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td data-label="Mata Kuliah" class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block">{{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.kelas_kuliah?.dosen?.user?.name }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px]" :class="lewat(item.tenggat_waktu) ? 'text-[#dd5b00]' : 'text-[#31302e]'">
+                                    <td
+                                        data-label="Tenggat"
+                                        class="px-4 py-3 text-[15px]"
+                                        :class="lewat(item.tenggat_waktu) ? 'text-[#dd5b00]' : 'text-[#31302e]'"
+                                    >
                                         {{ tenggat(item.tenggat_waktu) }}
                                     </td>
-                                    <td class="px-4 py-3 text-center text-[15px] text-[#31302e]">{{ item.questions_count }}</td>
-                                    <td class="px-4 py-3 text-center text-[15px] font-semibold text-black">{{ item.attempts_count }}</td>
-                                    <td class="px-4 py-3 text-right">
+                                    <td data-label="Soal" class="px-4 py-3 text-center text-[15px] text-[#31302e]">{{ item.questions_count }}</td>
+                                    <td data-label="Dikerjakan" class="px-4 py-3 text-center text-[15px] font-semibold text-black">
+                                        {{ item.attempts_count }}
+                                    </td>
+                                    <td data-label="Aksi" class="px-4 py-3 text-right">
                                         <Link
                                             v-if="item.kelas_kuliah"
                                             :href="rute('kelas-kuliah.quiz.show', [item.kelas_kuliah.id, item.id])"

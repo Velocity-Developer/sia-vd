@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import Pagination from '@/components/Pagination.vue';
+import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -75,26 +76,21 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                 </div>
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                         <div class="relative w-full sm:max-w-sm">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                             <Input
                                 v-model="search"
                                 placeholder="Cari kode atau nama mata kuliah"
-                                class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
                             />
                         </div>
-                        <select
-                            v-model="programStudiId"
-                            class="h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm outline-none hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:w-auto sm:min-w-[220px]"
-                            aria-label="Filter program studi"
-                            @change="applyFilters"
-                        >
+                        <SelectFilter v-model="programStudiId" label="Filter program studi" @change="applyFilters">
                             <option value="all">Semua Program Studi</option>
                             <option v-for="prodi in props.programStudis" :key="prodi.id" :value="prodi.id">
                                 {{ prodi.nama_prodi }} ({{ prodi.jenjang }})
                             </option>
-                        </select>
+                        </SelectFilter>
                     </div>
                     <p class="text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.mataKuliahs.total }}</span> data<span v-if="props.search">
@@ -118,7 +114,7 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                     class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left">
+                        <table class="tabel-responsif w-full text-left">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -133,21 +129,27 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.mataKuliahs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">{{ (props.mataKuliahs.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_matkul }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.nama_matkul }}</td>
-                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.sks }}</td>
-                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.semester }}</td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                        {{ (props.mataKuliahs.from ?? 0) + index }}
+                                    </td>
+                                    <td data-label="Kode" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_matkul }}</td>
+                                    <td data-label="Nama Mata Kuliah" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.nama_matkul }}
+                                    </td>
+                                    <td data-label="SKS" class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.sks }}</td>
+                                    <td data-label="Semester" class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.semester }}
+                                    </td>
+                                    <td data-label="Jenis" class="px-4 py-3">
                                         <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium" :class="jenisBadge(item.jenis)">{{
                                             item.jenis
                                         }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td data-label="Program Studi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ item.prodi?.nama_prodi ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.prodi?.fakultas?.nama_fakultas ?? '' }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="Aksi" class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route('admin.mata-kuliah.show', item.id)" title="Detail" aria-label="Detail">
                                                 <Button

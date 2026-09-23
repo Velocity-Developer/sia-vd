@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import Pagination from '@/components/Pagination.vue';
+import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -90,7 +91,7 @@ const confirmDelete = () => {
 
                 <!-- Controls on paper — search + meta -->
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                         <div class="relative w-full sm:max-w-sm">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                             <Input
@@ -99,16 +100,10 @@ const confirmDelete = () => {
                                 class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
                             />
                         </div>
-                        <select
-                            v-if="props.type === 'mahasiswa'"
-                            v-model="angkatan"
-                            class="h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm outline-none transition-colors hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:w-auto sm:min-w-[180px]"
-                            aria-label="Filter angkatan"
-                            @change="applyFilters"
-                        >
+                        <SelectFilter v-if="props.type === 'mahasiswa'" v-model="angkatan" label="Filter angkatan" @change="applyFilters">
                             <option value="all">Semua Angkatan</option>
                             <option v-for="item in props.angkatans" :key="item" :value="item">{{ item }}</option>
-                        </select>
+                        </SelectFilter>
                     </div>
                     <p class="text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.users.total }}</span> data<span v-if="props.search">
@@ -134,7 +129,7 @@ const confirmDelete = () => {
                     class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left">
+                        <table class="tabel-responsif w-full text-left">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -150,15 +145,21 @@ const confirmDelete = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(user, index) in props.users.data" :key="user.username" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">{{ (props.users.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                        {{ (props.users.from ?? 0) + index }}
+                                    </td>
+                                    <td data-label="Nama" class="px-4 py-3">
                                         <span class="text-[15px] font-medium leading-5 text-black">{{ user.name }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ idValue(user) }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.username }}</td>
-                                    <td class="max-w-[220px] truncate px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.email }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.role_name ?? '-' }}</td>
-                                    <td class="px-4 py-3">
+                                    <td :data-label="idLabel[props.type]" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        {{ idValue(user) }}
+                                    </td>
+                                    <td data-label="Username" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.username }}</td>
+                                    <td data-label="Email" class="max-w-[220px] truncate px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        {{ user.email }}
+                                    </td>
+                                    <td data-label="Role" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ user.role_name ?? '-' }}</td>
+                                    <td data-label="Aksi" class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link
                                                 :href="route(`admin.users.${props.type}.show`, user.id)"

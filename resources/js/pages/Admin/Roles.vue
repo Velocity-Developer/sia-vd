@@ -102,7 +102,7 @@ const confirmDelete = () => {
                     class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left">
+                        <table class="tabel-responsif w-full text-left">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -115,8 +115,10 @@ const confirmDelete = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.roles.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 align-top text-[15px] leading-5 text-[#615d59]">{{ (props.roles.from ?? 0) + index }}</td>
-                                    <td class="max-w-[360px] px-4 py-3 align-top">
+                                    <td data-label="No." class="px-4 py-3 align-top text-[15px] leading-5 text-[#615d59]">
+                                        {{ (props.roles.from ?? 0) + index }}
+                                    </td>
+                                    <td data-label="Role" class="max-w-[360px] px-4 py-3 align-top">
                                         <div class="flex flex-wrap items-center gap-2">
                                             <span class="text-[15px] font-medium leading-5 text-black">{{ item.name }}</span>
                                             <span
@@ -129,10 +131,16 @@ const confirmDelete = () => {
                                             {{ item.description }}
                                         </p>
                                     </td>
-                                    <td class="px-4 py-3 align-top text-[15px] leading-5 text-[#31302e]">{{ item.user_type_label }}</td>
-                                    <td class="px-4 py-3 text-center align-top text-[15px] leading-5 text-[#31302e]">{{ item.users_count }}</td>
-                                    <td class="px-4 py-3 text-center align-top text-[15px] leading-5 text-[#31302e]">{{ item.permissions_count }}</td>
-                                    <td class="px-4 py-3 align-top">
+                                    <td data-label="Jenis Pengguna" class="px-4 py-3 align-top text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.user_type_label }}
+                                    </td>
+                                    <td data-label="Pengguna" class="px-4 py-3 text-center align-top text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.users_count }}
+                                    </td>
+                                    <td data-label="Hak Akses" class="px-4 py-3 text-center align-top text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.permissions_count }}
+                                    </td>
+                                    <td data-label="Aksi" class="px-4 py-3 align-top">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route('admin.roles.edit', item.id)" title="Edit & atur hak akses" aria-label="Edit">
                                                 <Button

@@ -32,7 +32,7 @@ const formatDateTime = (value: string | null | undefined): string => {
                 </div>
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-[640px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[640px]">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800">
                                     <th class="w-16 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -47,13 +47,16 @@ const formatDateTime = (value: string | null | undefined): string => {
                                     :key="item.id"
                                     class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"
                                 >
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
                                         {{ (props.infoKuliahs.from ?? 1) + index }}
                                     </td>
-                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td
+                                        data-label="Informasi"
+                                        class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200"
+                                    >
                                         {{ item.information }}
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="File" class="px-4 py-3">
                                         <a
                                             :href="route('berkas.info-kuliah', item.id)"
                                             target="_blank"
@@ -62,7 +65,7 @@ const formatDateTime = (value: string | null | undefined): string => {
                                             >Lihat file</a
                                         >
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                    <td data-label="Tanggal Upload" class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
                                         {{ formatDateTime(item.created_at) ?? '-' }}
                                     </td>
                                 </tr>

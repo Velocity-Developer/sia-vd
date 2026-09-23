@@ -141,7 +141,7 @@ const saveGrade = (submission: Submission) => {
                         {{ page.props.flash.error }}
                     </div>
                     <div class="mt-4 overflow-hidden overflow-x-auto rounded-xl border border-[#e6e6e6]">
-                        <table class="w-full min-w-[760px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[760px]">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">No.</th>
@@ -158,13 +158,15 @@ const saveGrade = (submission: Submission) => {
                                     :key="submission.id"
                                     class="hover:bg-[#f6f5f4]/60"
                                 >
-                                    <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td data-label="No." class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
+                                    <td data-label="Mahasiswa" class="px-4 py-3 text-sm">
                                         <span class="font-medium text-black">{{ submission.mahasiswa?.user?.name ?? '-' }}</span
                                         ><span class="block text-[#615d59]">{{ submission.mahasiswa?.nim ?? '-' }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDate(submission.submitted_at) }}</td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td data-label="Dikumpulkan" class="px-4 py-3 text-sm text-[#31302e]">
+                                        {{ formatDate(submission.submitted_at) }}
+                                    </td>
+                                    <td data-label="Jawaban" class="px-4 py-3 text-sm">
                                         <ul class="space-y-1">
                                             <li v-for="(path, fileIndex) in files(submission.file_jawaban)" :key="path">
                                                 <a
@@ -177,7 +179,7 @@ const saveGrade = (submission: Submission) => {
                                             </li>
                                         </ul>
                                     </td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td data-label="Nilai" class="px-4 py-3 text-sm">
                                         <input
                                             v-if="editing === submission.id"
                                             v-model="grade"
@@ -187,7 +189,7 @@ const saveGrade = (submission: Submission) => {
                                             class="h-9 w-24 rounded-lg border border-[#e6e6e6] px-3"
                                         /><span v-else class="font-semibold">{{ submission.nilai ?? '-' }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-right">
+                                    <td data-label="Aksi" class="px-4 py-3 text-right">
                                         <template v-if="editing === submission.id"
                                             ><Button
                                                 size="sm"

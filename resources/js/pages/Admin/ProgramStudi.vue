@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import Pagination from '@/components/Pagination.vue';
+import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -76,7 +77,7 @@ const confirmDelete = () => {
                 </div>
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                         <div class="relative w-full sm:max-w-sm">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                             <Input
@@ -85,15 +86,10 @@ const confirmDelete = () => {
                                 class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
                             />
                         </div>
-                        <select
-                            v-model="fakultasId"
-                            class="h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm outline-none transition-colors hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:w-auto sm:min-w-[180px]"
-                            aria-label="Filter fakultas"
-                            @change="applyFilters"
-                        >
+                        <SelectFilter v-model="fakultasId" label="Filter fakultas" @change="applyFilters">
                             <option value="all">Semua Fakultas</option>
                             <option v-for="item in props.fakultas" :key="item.id" :value="item.id">{{ item.nama_fakultas }}</option>
-                        </select>
+                        </SelectFilter>
                     </div>
                     <p class="text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.programStudis.total }}</span> data<span v-if="props.search">
@@ -117,7 +113,7 @@ const confirmDelete = () => {
                     class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left">
+                        <table class="tabel-responsif w-full text-left">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -132,14 +128,22 @@ const confirmDelete = () => {
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.programStudis.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">{{ (props.programStudis.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_prodi }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.nama_prodi }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.fakultas?.nama_fakultas ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.jenjang }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.status_akreditasi }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ kaprodiName(item) }}</td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
+                                        {{ (props.programStudis.from ?? 0) + index }}
+                                    </td>
+                                    <td data-label="Kode" class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_prodi }}</td>
+                                    <td data-label="Nama Program Studi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.nama_prodi }}
+                                    </td>
+                                    <td data-label="Fakultas" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.fakultas?.nama_fakultas ?? '-' }}
+                                    </td>
+                                    <td data-label="Jenjang" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.jenjang }}</td>
+                                    <td data-label="Akreditasi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        {{ item.status_akreditasi }}
+                                    </td>
+                                    <td data-label="Kaprodi" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ kaprodiName(item) }}</td>
+                                    <td data-label="Aksi" class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route('admin.program-studi.show', item.id)" title="Detail" aria-label="Detail">
                                                 <Button

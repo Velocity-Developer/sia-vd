@@ -189,7 +189,7 @@ const area =
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Riwayat Pengajuan</h2>
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-[720px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[720px]">
                             <thead>
                                 <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800">
                                     <th class="w-16 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -207,23 +207,23 @@ const area =
                                     :key="pengajuan.id"
                                     class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"
                                 >
-                                    <td class="px-4 py-3 text-[15px] text-[#615d59] dark:text-gray-400">{{ index + 1 }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] text-[#615d59] dark:text-gray-400">{{ index + 1 }}</td>
+                                    <td data-label="Kelas Asal" class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
                                         {{ pengajuan.kelas_asal ?? '-'
                                         }}<span v-if="pengajuan.kelas_asal_matkul" class="block text-xs text-[#615d59] dark:text-gray-400">{{
                                             pengajuan.kelas_asal_matkul
                                         }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                    <td data-label="Kelas Tujuan" class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
                                         {{ pengajuan.kelas_tujuan ?? '-'
                                         }}<span v-if="pengajuan.kelas_tujuan_matkul" class="block text-xs text-[#615d59] dark:text-gray-400">{{
                                             pengajuan.kelas_tujuan_matkul
                                         }}</span>
                                     </td>
-                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                    <td data-label="Alasan" class="whitespace-pre-line px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
                                         {{ pengajuan.alasan }}
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="Status" class="px-4 py-3">
                                         <span
                                             class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
                                             :class="statusClass[pengajuan.status] ?? ''"
@@ -233,8 +233,10 @@ const area =
                                             formatDateTime(pengajuan.diproses_at)
                                         }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">{{ pengajuan.catatan_admin ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                    <td data-label="Catatan Admin" class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                        {{ pengajuan.catatan_admin ?? '-' }}
+                                    </td>
+                                    <td data-label="Tanggal" class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
                                         {{ formatDateTime(pengajuan.created_at) }}
                                     </td>
                                 </tr>

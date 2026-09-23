@@ -96,7 +96,7 @@ const tanggal = (value: string) => new Intl.DateTimeFormat('id-ID', { dateStyle:
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
                     <div class="overflow-x-auto">
-                        <table class="w-full min-w-[900px] text-left">
+                        <table class="tabel-responsif w-full text-left md:min-w-[900px]">
                             <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                 <tr>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
@@ -110,27 +110,29 @@ const tanggal = (value: string) => new Intl.DateTimeFormat('id-ID', { dateStyle:
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(item, index) in props.materis.data" :key="item.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.materis.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-black">
+                                    <td data-label="No." class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.materis.from ?? 0) + index }}</td>
+                                    <td data-label="Judul" class="px-4 py-3 text-[15px] text-black">
                                         <span class="block font-medium">{{ item.judul_materi }}</span>
                                         <span class="block text-xs text-[#a39e98]">Pertemuan {{ item.pertemuan_ke }} · {{ item.jenis }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td data-label="Kelas" class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block font-medium">{{ item.kelas_kuliah?.kode_kelas ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">
                                             {{ item.kelas_kuliah?.tahun_akademik?.tahun }} {{ item.kelas_kuliah?.tahun_akademik?.semester }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td data-label="Mata Kuliah" class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block">{{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.kelas_kuliah?.dosen?.user?.name }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-center text-[15px] text-[#31302e]">{{ jumlahBerkas(item.file) }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td data-label="Berkas" class="px-4 py-3 text-center text-[15px] text-[#31302e]">
+                                        {{ jumlahBerkas(item.file) }}
+                                    </td>
+                                    <td data-label="Diunggah" class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block">{{ tanggal(item.created_at) }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.uploader?.name }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td data-label="Aksi" class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-2">
                                             <Link
                                                 :href="rute('kelas-kuliah.show', item.kelas_kuliah?.id ?? 0)"

@@ -215,3 +215,55 @@ html {
         background-color: hsl(var(--muted-foreground));
     }
 }
+
+/*
+ * Tabel daftar (.tabel-responsif): mulai md tampil sebagai tabel biasa, di bawah md setiap baris
+ * ditumpuk menjadi kartu dengan judul kolom diambil dari atribut data-label, sehingga isi tabel
+ * terbaca di layar HP tanpa harus digeser ke samping.
+ */
+@media (max-width: 767px) {
+    .tabel-responsif thead {
+        display: none;
+    }
+
+    .tabel-responsif tbody tr {
+        display: block;
+        padding: 0.5rem 0;
+    }
+
+    .tabel-responsif tbody td {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.25rem 1rem;
+        max-width: none;
+        text-align: right;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .tabel-responsif tbody td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        padding-top: 0.15rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        line-height: 1.2;
+        text-align: left;
+        text-transform: uppercase;
+        color: #a39e98;
+    }
+
+    .tabel-responsif tbody td:not([data-label])::before,
+    .tabel-responsif tbody td[data-label='']::before {
+        content: none;
+    }
+
+    /* Baris keadaan kosong memakai colspan: biarkan melebar penuh seperti semula. */
+    .tabel-responsif tbody td[colspan] {
+        display: block;
+        text-align: center;
+    }
+}
