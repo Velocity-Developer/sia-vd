@@ -63,7 +63,7 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                                         <td class="px-4 py-2.5 text-[15px] text-black">
                                             <span class="block">{{ item.nama }}</span>
                                             <span v-if="item.cara_hitung === 'per_sks'" class="block text-xs text-[#a39e98]">
-                                                {{ item.jumlah }} SKS × {{ rupiah(item.nominal_satuan) }}
+                                                {{ item.jumlah }} SKS (kuota maksimal Anda) × {{ rupiah(item.nominal_satuan) }}
                                             </span>
                                         </td>
                                         <td class="px-4 py-2.5 text-[15px] text-[#31302e]">{{ rupiah(item.nominal_satuan) }}</td>

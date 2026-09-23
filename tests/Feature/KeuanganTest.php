@@ -2,7 +2,9 @@
 
 use App\Models\JenisBiaya;
 use App\Models\Krs;
+use App\Models\PengaturanAkademik;
 use App\Models\TagihanSemester;
+use App\Models\TahunAkademik;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 
@@ -85,7 +87,7 @@ it('memakai tarif yang paling khusus', function () {
         ->and($jenis->tarifUntuk(999, 2023)->nominal)->toBe(1_000_000);
 });
 
-it('menerbitkan tagihan dengan biaya tetap dan biaya per sks', function () {
+it('menerbitkan tagihan dengan biaya tetap dan biaya per kuota sks', function () {
     [$mahasiswa, $kelas] = keuanganSetup(sks: 4);
     jenisBiayaContoh($kelas->mataKuliah->prodi_id);
     $admin = User::factory()->admin()->create();
@@ -95,11 +97,24 @@ it('menerbitkan tagihan dengan biaya tetap dan biaya per sks', function () {
 
     $tagihan = TagihanSemester::query()->with('items')->firstOrFail();
 
-    // 2.000.000 tetap + (4 SKS x 100.000)
-    expect($tagihan->total)->toBe(2_400_000)
+    // Tagihan terbit sebelum KRS, jadi pengalinya kuota SKS (tanpa IPS = 20), bukan 4 SKS yang diambil.
+    // 2.000.000 tetap + (20 SKS x 100.000)
+    expect($tagihan->total)->toBe(4_000_000)
         ->and($tagihan->status)->toBe(TagihanSemester::BELUM_BAYAR)
         ->and($tagihan->mahasiswa_id)->toBe($mahasiswa->mahasiswaProfile->id)
-        ->and($tagihan->items->firstWhere('cara_hitung', JenisBiaya::PER_SKS)->jumlah)->toBe(4);
+        ->and($tagihan->items->firstWhere('cara_hitung', JenisBiaya::PER_SKS)->jumlah)->toBe(20);
+});
+
+it('mengikuti batas SKS yang diatur admin saat menghitung biaya per sks', function () {
+    [, $kelas] = keuanganSetup();
+    jenisBiayaContoh($kelas->mataKuliah->prodi_id);
+    PengaturanAkademik::current()->update(['maks_sks_tanpa_ips' => 12]);
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+
+    // 2.000.000 tetap + (12 SKS x 100.000)
+    expect(TagihanSemester::query()->value('total'))->toBe(3_200_000);
 });
 
 it('tidak mengubah tagihan yang sudah lunas saat diterbitkan ulang', function () {
@@ -219,7 +234,7 @@ it('menampilkan tagihan mahasiswa yang sedang masuk saja', function () {
 
     $this->actingAs($mahasiswa)->get(route('mahasiswa.info-biaya-kuliah'))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('semesterBerjalan.total', 2_400_000)->has('riwayat', 0));
+        ->assertInertia(fn ($page) => $page->where('semesterBerjalan.total', 4_000_000)->has('riwayat', 0));
 });
 
 it('menolak mahasiswa lain membuka halaman admin keuangan', function () {
@@ -237,4 +252,34 @@ it('menghitung sks hanya dari krs aktif pada tahun akademik itu', function () {
     Krs::query()->update(['status' => 'Batal']);
 
     expect(TagihanSemester::sksDiambil($profil->id, $kelas->tahun_akademik_id))->toBe(0);
+});
+
+it('memperingatkan admin bila nilai semester sebelumnya belum lengkap', function () {
+    [$mahasiswa, $kelas] = keuanganSetup();
+    jenisBiayaContoh($kelas->mataKuliah->prodi_id);
+    $admin = User::factory()->admin()->create();
+
+    // Semester sebelumnya dengan satu KRS yang nilainya masih kosong.
+    $tahunLalu = TahunAkademik::create([
+        'tahun' => '2024/2025',
+        'semester' => 'Ganjil',
+        // Harus benar-benar lebih awal dari tahun akademik berjalan pada data uji (2025-08-01).
+        'tanggal_mulai' => '2024-08-01',
+        'tanggal_akhir' => '2025-01-31',
+        'status' => false,
+    ]);
+    $kelasLalu = kelasLainDiProdi($kelas, 3, $tahunLalu, $kelas->mataKuliah->semester);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasLalu->id, 'status' => 'Aktif', 'nilai' => null]);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id])
+        ->assertSessionHas('tagihan_konfirmasi', fn (string $pesan): bool => str_contains($pesan, 'belum diisi'));
+
+    expect(TagihanSemester::count())->toBe(0);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), [
+        'tahun_akademik_id' => $kelas->tahun_akademik_id,
+        'paksa' => true,
+    ])->assertSessionHas('success');
+
+    expect(TagihanSemester::count())->toBe(1);
 });

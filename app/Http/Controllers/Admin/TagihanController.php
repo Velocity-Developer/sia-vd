@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\JenisBiaya;
+use App\Models\Krs;
 use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\ProgramStudi;
@@ -75,6 +76,15 @@ class TagihanController extends Controller
 
         if ($jenisBiaya->isEmpty()) {
             return back()->with('error', 'Belum ada jenis biaya aktif. Isi dulu di menu Jenis Biaya.');
+        }
+
+        // Biaya per SKS memakai kuota SKS, dan kuota itu ditentukan IPS semester sebelumnya.
+        // Menerbitkan tagihan sebelum nilai lengkap membuat sebagian mahasiswa memakai kuota
+        // "tanpa IPS" yang lebih kecil, jadi admin diperingatkan lebih dulu.
+        $nilaiBelumLengkap = $this->nilaiBelumLengkap($data['tahun_akademik_id']);
+
+        if ($nilaiBelumLengkap > 0 && ! $request->boolean('paksa')) {
+            return back()->with('tagihan_konfirmasi', "Masih ada {$nilaiBelumLengkap} nilai semester sebelumnya yang belum diisi. Kuota SKS sebagian mahasiswa akan memakai angka \"tanpa IPS\". Terbitkan sekarang, atau lengkapi nilainya dulu.");
         }
 
         $jumlah = 0;
@@ -154,6 +164,7 @@ class TagihanController extends Controller
             'tahunAkademik' => $tahunAkademik ? $tahunAkademik->tahun.' '.$tahunAkademik->semester : null,
             'tagihan' => $tagihan,
             'sks' => $tahunAkademik ? TagihanSemester::sksDiambil($mahasiswa->id, $tahunAkademik->id) : 0,
+            'kuota' => $tahunAkademik ? TagihanSemester::kuotaSks($mahasiswa, $tahunAkademik) : 0,
             'krsTersimpan' => $tahunAkademik !== null && KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id),
             'tahunAkademikId' => $tahunAkademik?->id,
         ]);
@@ -222,6 +233,34 @@ class TagihanController extends Controller
         });
 
         return back()->with('success', 'Rincian tagihan disimpan.');
+    }
+
+    /**
+     * Jumlah baris KRS tanpa nilai pada semester sebelum tahun akademik terpilih.
+     */
+    private function nilaiBelumLengkap(int $tahunAkademikId): int
+    {
+        $tahunAkademik = TahunAkademik::query()->find($tahunAkademikId);
+
+        if ($tahunAkademik?->tanggal_mulai === null) {
+            return 0;
+        }
+
+        $sebelumnya = TahunAkademik::query()
+            ->whereNotNull('tanggal_mulai')
+            ->where('tanggal_mulai', '<', $tahunAkademik->tanggal_mulai)
+            ->orderByDesc('tanggal_mulai')
+            ->first();
+
+        if ($sebelumnya === null) {
+            return 0;
+        }
+
+        return Krs::query()
+            ->whereNull('nilai')
+            ->whereHas('kelasKuliah', fn (Builder $query) => $query->where('tahun_akademik_id', $sebelumnya->id))
+            ->whereHas('mahasiswa', fn (Builder $query) => $query->where('status', 'Aktif'))
+            ->count();
     }
 
     private function tahunAkademikTerpilih(Request $request): ?TahunAkademik

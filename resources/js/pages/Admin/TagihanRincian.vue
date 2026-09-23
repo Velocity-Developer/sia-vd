@@ -17,6 +17,7 @@ const props = defineProps<{
     tahunAkademikId: number | null;
     tagihan: Tagihan | null;
     sks: number;
+    kuota: number;
     krsTersimpan: boolean;
 }>();
 
@@ -84,8 +85,8 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                     </div>
 
                     <p class="mt-3 text-sm text-[#615d59]">
-                        SKS diambil pada semester ini: {{ props.sks }} SKS · KRS
-                        {{ props.krsTersimpan ? 'sudah disimpan mahasiswa (terkunci)' : 'belum disimpan mahasiswa' }}.
+                        Kuota SKS (dasar biaya per SKS): <span class="font-medium text-black">{{ props.kuota }} SKS</span> · SKS yang sudah diambil:
+                        {{ props.sks }} SKS · KRS {{ props.krsTersimpan ? 'sudah disimpan mahasiswa (terkunci)' : 'belum disimpan mahasiswa' }}.
                     </p>
                 </div>
 

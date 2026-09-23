@@ -35,7 +35,7 @@ const props = defineProps<{
     adaJenisBiaya: boolean;
 }>();
 
-const page = usePage<{ flash?: { success?: string; error?: string } }>();
+const page = usePage<{ flash?: { success?: string; error?: string; tagihan_konfirmasi?: string } }>();
 
 const semua = 'all';
 const tahunAkademikId = ref<number | string>(props.filter.tahun_akademik_id ?? semua);
@@ -97,10 +97,25 @@ const bukaKunciKrs = (baris: Baris) => {
     });
 };
 
-const terbitkan = () => {
-    if (!confirm('Terbitkan tagihan untuk semua mahasiswa aktif pada semester ini? Tagihan yang sudah lunas tidak diubah.')) return;
+const terbitkan = (paksa = false) => {
+    if (!paksa && !confirm('Terbitkan tagihan untuk semua mahasiswa aktif pada semester ini? Tagihan yang sudah lunas tidak diubah.')) return;
 
-    router.post(route('admin.tagihan.terbitkan'), { tahun_akademik_id: tahunAkademikId.value }, { preserveScroll: true });
+    router.post(
+        route('admin.tagihan.terbitkan'),
+        { tahun_akademik_id: tahunAkademikId.value, paksa },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Nilai semester lalu belum lengkap: kuota SKS sebagian mahasiswa memakai angka
+                // "tanpa IPS", jadi admin memastikan dulu sebelum tagihan benar-benar terbit.
+                const peringatan = page.props.flash?.tagihan_konfirmasi;
+
+                if (peringatan && confirm(`${peringatan}\n\nTerbitkan sekarang?`)) {
+                    terbitkan(true);
+                }
+            },
+        },
+    );
 };
 
 const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nilai || 0);

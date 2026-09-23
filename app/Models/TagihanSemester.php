@@ -65,6 +65,17 @@ class TagihanSemester extends Model
     }
 
     /**
+     * Jumlah SKS yang dipakai menghitung biaya per SKS: kuota (batas) SKS mahasiswa pada semester itu.
+     *
+     * Tagihan terbit sebelum KRS diisi, jadi SKS yang benar-benar diambil belum ada. Yang dipakai
+     * adalah batas SKS menurut IPS semester sebelumnya (lihat Pengaturan Akademik).
+     */
+    public static function kuotaSks(MahasiswaProfile $mahasiswa, ?TahunAkademik $tahunAkademik): int
+    {
+        return PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null);
+    }
+
+    /**
      * Susun ulang rincian tagihan dari tarif yang berlaku. Nominalnya disalin ke rincian
      * (dibekukan), jadi perubahan tarif tidak mengubah tagihan yang sudah terbit kecuali
      * disusun ulang dari halaman admin.
@@ -73,7 +84,7 @@ class TagihanSemester extends Model
      */
     public function susunRincian(MahasiswaProfile $mahasiswa, Collection $jenisBiaya): void
     {
-        $sks = self::sksDiambil($mahasiswa->id, $this->tahun_akademik_id);
+        $kuota = self::kuotaSks($mahasiswa, $this->tahunAkademik ?? TahunAkademik::find($this->tahun_akademik_id));
         $total = 0;
 
         $this->items()->delete();
@@ -85,7 +96,7 @@ class TagihanSemester extends Model
                 continue;
             }
 
-            $jumlah = $jenis->cara_hitung === JenisBiaya::PER_SKS ? $sks : 1;
+            $jumlah = $jenis->cara_hitung === JenisBiaya::PER_SKS ? $kuota : 1;
 
             if ($jumlah <= 0) {
                 continue;

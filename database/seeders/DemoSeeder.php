@@ -736,7 +736,8 @@ class DemoSeeder extends Seeder
             'nama' => 'SPP Tetap',
             'cara_hitung' => JenisBiaya::TETAP,
             'keterangan' => 'Biaya tetap per semester.',
-            'aktif' => true,
+            // Tidak semua kampus memungut SPP tetap; komponennya disiapkan tetapi dimatikan.
+            'aktif' => false,
             'urutan' => 1,
         ]);
 
@@ -744,9 +745,8 @@ class DemoSeeder extends Seeder
             'kode' => 'SPP-SKS',
             'nama' => 'SPP per SKS',
             'cara_hitung' => JenisBiaya::PER_SKS,
-            'keterangan' => 'Dihitung dari jumlah SKS yang diambil.',
-            // Nonaktif: tagihan terbit sebelum KRS diisi, jadi jumlah SKS belum diketahui.
-            'aktif' => false,
+            'keterangan' => 'Tarif dikali kuota SKS mahasiswa pada semester itu.',
+            'aktif' => true,
             'urutan' => 2,
         ]);
 
