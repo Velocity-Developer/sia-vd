@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -27,22 +26,13 @@ class PasswordResetLinkController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'login' => ['required', 'string', 'max:255'],
-        ], attributes: ['login' => 'Username atau email']);
+        $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+        ], attributes: ['email' => 'Email']);
 
-        // Pengguna masuk memakai username (NIM/NIDN), banyak yang tidak hafal surelnya,
-        // jadi keduanya diterima lalu tautan tetap dikirim ke surel terdaftar.
-        $user = User::query()
-            ->where('username', $data['login'])
-            ->orWhere('email', $data['login'])
-            ->first();
+        Password::sendResetLink($request->only('email'));
 
-        if ($user?->email) {
-            Password::sendResetLink(['email' => $user->email]);
-        }
-
-        // Jawaban selalu sama agar tidak bisa dipakai menebak akun yang terdaftar.
-        return back()->with('status', 'Jika akun tersebut terdaftar, tautan atur ulang kata sandi sudah dikirim ke surelnya.');
+        // Jawaban selalu sama agar tidak bisa dipakai menebak surel yang terdaftar.
+        return back()->with('status', 'Jika email tersebut terdaftar, tautan atur ulang kata sandi sudah dikirim ke email itu.');
     }
 }

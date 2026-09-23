@@ -8,30 +8,29 @@ test('halaman lupa kata sandi bisa dibuka', function () {
     $this->get('/forgot-password')->assertStatus(200);
 });
 
-test('tautan atur ulang dikirim saat memasukkan email', function () {
+test('tautan atur ulang dikirim ke email terdaftar', function () {
     Notification::fake();
     $user = User::factory()->create();
 
-    $this->post('/forgot-password', ['login' => $user->email])->assertSessionHas('status');
+    $this->post('/forgot-password', ['email' => $user->email])->assertSessionHas('status');
 
     Notification::assertSentTo($user, AturUlangKataSandi::class);
 });
 
-test('tautan atur ulang dikirim saat memasukkan username', function () {
-    Notification::fake();
-    $user = User::factory()->create();
-
-    $this->post('/forgot-password', ['login' => $user->username])->assertSessionHas('status');
-
-    Notification::assertSentTo($user, AturUlangKataSandi::class);
-});
-
-test('akun yang tidak ada tetap dijawab sama tanpa mengirim surel', function () {
+test('email yang tidak terdaftar tetap dijawab sama tanpa mengirim surel', function () {
     Notification::fake();
 
-    $this->post('/forgot-password', ['login' => 'tidak-ada@example.com'])
+    $this->post('/forgot-password', ['email' => 'tidak-ada@example.com'])
         ->assertSessionHas('status')
         ->assertSessionHasNoErrors();
+
+    Notification::assertNothingSent();
+});
+
+test('isian email wajib berupa alamat email', function () {
+    Notification::fake();
+
+    $this->post('/forgot-password', ['email' => '33333'])->assertSessionHasErrors('email');
 
     Notification::assertNothingSent();
 });
@@ -40,7 +39,7 @@ test('halaman kata sandi baru bisa dibuka dari tautan surel', function () {
     Notification::fake();
     $user = User::factory()->create();
 
-    $this->post('/forgot-password', ['login' => $user->email]);
+    $this->post('/forgot-password', ['email' => $user->email]);
 
     Notification::assertSentTo($user, AturUlangKataSandi::class, function (AturUlangKataSandi $notification) use ($user) {
         $this->get('/reset-password/'.$notification->token.'?email='.urlencode($user->email))->assertStatus(200);
@@ -53,7 +52,7 @@ test('kata sandi bisa diatur ulang dan dipakai masuk', function () {
     Notification::fake();
     $user = User::factory()->create();
 
-    $this->post('/forgot-password', ['login' => $user->username]);
+    $this->post('/forgot-password', ['email' => $user->email]);
 
     Notification::assertSentTo($user, AturUlangKataSandi::class, function (AturUlangKataSandi $notification) use ($user) {
         $response = $this->post('/reset-password', [

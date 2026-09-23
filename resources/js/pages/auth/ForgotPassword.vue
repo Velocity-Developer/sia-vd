@@ -12,14 +12,14 @@ defineProps<{
 }>();
 
 const form = useForm({
-    login: '',
+    email: '',
 });
 
 const submit = () => form.post(route('password.email'));
 </script>
 
 <template>
-    <AuthBase title="Lupa Kata Sandi" description="Masukkan username atau email akun Anda. Tautan atur ulang akan dikirim ke email terdaftar.">
+    <AuthBase title="Lupa Kata Sandi" description="Masukkan email akun Anda. Tautan atur ulang kata sandi akan dikirim ke email tersebut.">
         <Head title="Lupa Kata Sandi" />
 
         <div v-if="status" class="mb-4 rounded-lg border border-[#c9ecd2] bg-[#f2fbf4] px-3 py-2 text-sm text-[#1aae39]">
@@ -28,18 +28,18 @@ const submit = () => form.post(route('password.email'));
 
         <form class="flex flex-col gap-4" @submit.prevent="submit">
             <div class="grid gap-1.5">
-                <Label for="login" class="text-sm font-medium text-[#31302e]">Username atau Email</Label>
+                <Label for="email" class="text-sm font-medium text-[#31302e]">Email</Label>
                 <Input
-                    id="login"
-                    v-model="form.login"
-                    type="text"
+                    id="email"
+                    v-model="form.email"
+                    type="email"
                     required
                     autofocus
-                    autocomplete="username"
-                    placeholder="NIM, NIDN, username, atau email"
+                    autocomplete="email"
+                    placeholder="nama@example.com"
                     class="h-10 rounded-lg border-[#d8d5d2] bg-white text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
                 />
-                <InputError :message="form.errors.login" />
+                <InputError :message="form.errors.email" />
             </div>
 
             <Button
