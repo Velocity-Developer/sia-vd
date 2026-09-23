@@ -27,6 +27,15 @@ export interface NavItem {
     items?: NavItem[];
 }
 
+/** Seksi menu di sidebar: kumpulan menu sejenis yang dibuka-tutup sebagai dropdown. */
+export interface NavGroup {
+    title: string;
+    icon?: LucideIcon;
+    items: NavItem[];
+}
+
+export type NavEntry = NavItem | NavGroup;
+
 export interface Institusi {
     nama_pt: string;
     singkatan: string | null;
