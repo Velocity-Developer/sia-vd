@@ -22,10 +22,12 @@ import {
     Inbox,
     LayoutGrid,
     Library,
+    Receipt,
     ShieldCheck,
     SlidersHorizontal,
     UserCog,
     Users,
+    Wallet,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
@@ -85,6 +87,14 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 ],
             },
             {
+                title: 'Keuangan',
+                icon: Wallet,
+                items: [
+                    { title: 'Jenis Biaya', routeName: 'admin.jenis-biaya.index', icon: Receipt, permission: 'admin.jenis-biaya' },
+                    { title: 'Tagihan Mahasiswa', routeName: 'admin.tagihan.index', icon: Wallet, permission: 'admin.tagihan' },
+                ],
+            },
+            {
                 title: 'Pengguna & Akses',
                 icon: Users,
                 items: [
@@ -140,6 +150,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 items: [
                     { title: 'Info Kuliah', routeName: 'mahasiswa.info-kuliah', icon: FileText, permission: 'mahasiswa.info-kuliah' },
                     { title: 'Pindah Kelas', routeName: 'mahasiswa.pindah-kelas', icon: ArrowLeftRight, permission: 'mahasiswa.pindah-kelas' },
+                    { title: 'Biaya Kuliah', routeName: 'mahasiswa.info-biaya-kuliah', icon: Wallet, permission: 'mahasiswa.info-biaya' },
                 ],
             },
             {

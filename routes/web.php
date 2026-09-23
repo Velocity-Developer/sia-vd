@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
+use App\Http\Controllers\Admin\JenisBiayaController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\PengaturanAkademikController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
 use App\Http\Controllers\Admin\ProgramStudiController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RuangController;
+use App\Http\Controllers\Admin\TagihanController;
 use App\Http\Controllers\Admin\TahunAkademikController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\Kelas\QuizPenilaianController;
 use App\Http\Controllers\Kelas\TugasController;
 use App\Http\Controllers\Mahasiswa\ContentController as MahasiswaContentController;
 use App\Http\Controllers\Mahasiswa\HasilStudiController;
+use App\Http\Controllers\Mahasiswa\InfoBiayaKuliahController;
 use App\Http\Controllers\Mahasiswa\InfoKuliahController as MahasiswaInfoKuliahController;
 use App\Http\Controllers\Mahasiswa\KrsController;
 use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
@@ -91,6 +94,22 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
         Route::get('pengaturan-akademik', [PengaturanAkademikController::class, 'index'])->name('admin.pengaturan-akademik.index');
         Route::put('pengaturan-akademik/batas-sks', [PengaturanAkademikController::class, 'updateBatasSks'])->name('admin.pengaturan-akademik.batas-sks');
         Route::put('pengaturan-akademik/skala-nilai', [PengaturanAkademikController::class, 'updateSkalaNilai'])->name('admin.pengaturan-akademik.skala-nilai');
+    });
+
+    Route::middleware('can:admin.jenis-biaya')->group(function (): void {
+        Route::get('jenis-biaya', [JenisBiayaController::class, 'index'])->name('admin.jenis-biaya.index');
+        Route::get('jenis-biaya/create', [JenisBiayaController::class, 'create'])->name('admin.jenis-biaya.create');
+        Route::post('jenis-biaya', [JenisBiayaController::class, 'store'])->name('admin.jenis-biaya.store');
+        Route::get('jenis-biaya/{jenisBiaya}/edit', [JenisBiayaController::class, 'edit'])->name('admin.jenis-biaya.edit');
+        Route::put('jenis-biaya/{jenisBiaya}', [JenisBiayaController::class, 'update'])->name('admin.jenis-biaya.update');
+        Route::delete('jenis-biaya/{jenisBiaya}', [JenisBiayaController::class, 'destroy'])->name('admin.jenis-biaya.destroy');
+    });
+
+    Route::middleware('can:admin.tagihan')->group(function (): void {
+        Route::get('tagihan', [TagihanController::class, 'index'])->name('admin.tagihan.index');
+        Route::get('tagihan/{mahasiswa}/rincian', [TagihanController::class, 'rincian'])->name('admin.tagihan.rincian');
+        Route::post('tagihan/terbitkan', [TagihanController::class, 'terbitkan'])->name('admin.tagihan.terbitkan');
+        Route::put('tagihan/status', [TagihanController::class, 'ubahStatus'])->name('admin.tagihan.status');
     });
 
     Route::middleware('can:admin.pindah-kelas')->group(function (): void {
@@ -219,11 +238,15 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
 
         foreach ([
             'profile' => 'Profile', 'info-perkuliahan' => 'Info Perkuliahan',
-            'pendaftaran-wisuda' => 'Pendaftaran Wisuda', 'info-biaya-kuliah' => 'Info Biaya Kuliah',
+            'pendaftaran-wisuda' => 'Pendaftaran Wisuda',
         ] as $path => $title) {
             Route::get($path, fn () => Inertia::render('MahasiswaPlaceholder', ['title' => $title]))
                 ->name('mahasiswa.'.$path);
         }
+    });
+
+    Route::middleware('can:mahasiswa.info-biaya')->group(function (): void {
+        Route::get('info-biaya-kuliah', [InfoBiayaKuliahController::class, 'index'])->name('mahasiswa.info-biaya-kuliah');
     });
 
     Route::middleware('can:mahasiswa.info-kuliah')->group(function (): void {

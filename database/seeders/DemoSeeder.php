@@ -7,6 +7,7 @@ use App\Models\DosenProfile;
 use App\Models\Fakultas;
 use App\Models\InfoKuliah;
 use App\Models\Jadwal;
+use App\Models\JenisBiaya;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
@@ -25,7 +26,10 @@ use App\Models\QuizAttempt;
 use App\Models\Role;
 use App\Models\Ruang;
 use App\Models\SkalaNilai;
+use App\Models\TagihanItem;
+use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
+use App\Models\TarifBiaya;
 use App\Models\Tugas;
 use App\Models\User;
 use App\PermissionCatalog;
@@ -98,6 +102,7 @@ class DemoSeeder extends Seeder
         $this->kontenKelas($tahunAkademik->last(), $mahasiswa);
         $this->pindahKelas($tahunAkademik->last(), $mahasiswa);
         $this->infoKuliah();
+        $this->keuangan($tahunAkademik, $mahasiswa);
     }
 
     private function bersihkan(): void
@@ -113,6 +118,10 @@ class DemoSeeder extends Seeder
         Materi::query()->delete();
         Jadwal::query()->delete();
         KelasKuliah::query()->delete();
+        TagihanItem::query()->delete();
+        TagihanSemester::query()->delete();
+        TarifBiaya::query()->delete();
+        JenisBiaya::query()->delete();
         TahunAkademik::query()->delete();
         InfoKuliah::query()->delete();
     }
@@ -711,6 +720,83 @@ class DemoSeeder extends Seeder
     /**
      * Tulis satu berkas PDF sederhana ke disk privat, agar tautan unduhan pada data demo benar-benar bisa dibuka.
      */
+    /**
+     * Biaya kuliah: dua komponen (SPP tetap per prodi dan SPP per SKS), lalu tagihan tiap semester.
+     * Semester lampau ditandai lunas, semester berjalan sebagian saja agar kedua status ada isinya.
+     *
+     * @param  Collection<int, TahunAkademik>  $tahunAkademik
+     * @param  Collection<int, MahasiswaProfile>  $mahasiswa
+     */
+    private function keuangan(Collection $tahunAkademik, Collection $mahasiswa): void
+    {
+        $sppTetap = JenisBiaya::query()->create([
+            'kode' => 'SPP-TETAP',
+            'nama' => 'SPP Tetap',
+            'cara_hitung' => JenisBiaya::TETAP,
+            'keterangan' => 'Biaya tetap per semester.',
+            'aktif' => true,
+            'urutan' => 1,
+        ]);
+
+        $sppSks = JenisBiaya::query()->create([
+            'kode' => 'SPP-SKS',
+            'nama' => 'SPP per SKS',
+            'cara_hitung' => JenisBiaya::PER_SKS,
+            'keterangan' => 'Dihitung dari jumlah SKS yang diambil.',
+            'aktif' => true,
+            'urutan' => 2,
+        ]);
+
+        // Tarif umum sebagai jaring pengaman, lalu tarif khusus per program studi.
+        $sppTetap->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => 3_000_000]);
+        $sppSks->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => 150_000]);
+
+        foreach (ProgramStudi::query()->orderBy('id')->get() as $urutan => $prodi) {
+            $sppTetap->tarif()->create([
+                'prodi_id' => $prodi->id,
+                'angkatan' => null,
+                'nominal' => 3_000_000 + ($urutan * 500_000),
+            ]);
+            $sppSks->tarif()->create([
+                'prodi_id' => $prodi->id,
+                'angkatan' => null,
+                'nominal' => 150_000 + ($urutan * 25_000),
+            ]);
+        }
+
+        $jenisBiaya = JenisBiaya::query()->with('tarif')->orderBy('urutan')->get();
+        $tahunAktif = $tahunAkademik->last();
+
+        foreach ($tahunAkademik as $tahun) {
+            foreach ($mahasiswa as $urutan => $profil) {
+                $tagihan = TagihanSemester::query()->create([
+                    'mahasiswa_id' => $profil->id,
+                    'tahun_akademik_id' => $tahun->id,
+                    'status' => TagihanSemester::BELUM_BAYAR,
+                ]);
+
+                $tagihan->susunRincian($profil, $jenisBiaya);
+
+                if ($tagihan->total === 0) {
+                    // Mahasiswa belum mengambil kelas pada tahun itu: tagihan kosong tidak perlu disimpan.
+                    $tagihan->delete();
+
+                    continue;
+                }
+
+                // Semester lampau dianggap sudah selesai dibayar; semester berjalan dua dari tiga mahasiswa.
+                $lunas = $tahun->id !== $tahunAktif->id || $urutan % 3 !== 0;
+
+                if ($lunas) {
+                    $tagihan->forceFill([
+                        'status' => TagihanSemester::LUNAS,
+                        'tanggal_lunas' => $tahun->tanggal_mulai,
+                    ])->save();
+                }
+            }
+        }
+    }
+
     private function berkasDemo(string $direktori, string $nama, string $isi): string
     {
         $path = $direktori.'/'.$nama.'-'.Str::lower(Str::random(6)).'.pdf';
