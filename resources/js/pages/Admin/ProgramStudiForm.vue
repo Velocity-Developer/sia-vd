@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, usePage, useForm } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import DatePicker from '@/components/DatePicker.vue';
 import InputError from '@/components/InputError.vue';
 import SearchSelect from '@/components/SearchSelect.vue';
-import DatePicker from '@/components/DatePicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -33,7 +33,8 @@ const form = useForm({
     tahun_berdiri: props.programStudi?.tahun_berdiri ?? '',
 });
 
-const submit = () => (props.programStudi ? form.put(route('admin.program-studi.update', props.programStudi.id)) : form.post(route('admin.program-studi.store')));
+const submit = () =>
+    props.programStudi ? form.put(route('admin.program-studi.update', props.programStudi.id)) : form.post(route('admin.program-studi.store'));
 
 const inp =
     'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
@@ -63,12 +64,18 @@ const sel =
                 >
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div
+                    v-if="page.props.flash?.error"
+                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                    role="alert"
+                >
                     {{ page.props.flash.error }}
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Program Studi</h2>
                         <div class="mt-4 grid gap-2">
                             <Label for="fakultas_id" class="text-sm font-medium text-black">Fakultas</Label>
@@ -111,12 +118,21 @@ const sel =
                         </div>
                         <div class="mt-4 grid gap-2">
                             <Label for="kaprodi" class="text-sm font-medium text-black">Kaprodi</Label>
-                            <SearchSelect id="kaprodi" v-model="form.kaprodi" :options="props.dosen" placeholder="Pilih kaprodi" search-placeholder="Cari kaprodi" required />
+                            <SearchSelect
+                                id="kaprodi"
+                                v-model="form.kaprodi"
+                                :options="props.dosen"
+                                placeholder="Pilih kaprodi"
+                                search-placeholder="Cari kaprodi"
+                                required
+                            />
                             <InputError :message="form.errors.kaprodi" />
                         </div>
                     </section>
 
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Akreditasi</h2>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
@@ -133,12 +149,22 @@ const sel =
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="tanggal_akreditasi_mulai" class="text-sm font-medium text-black">Tanggal Akreditasi Mulai</Label>
-                                <DatePicker id="tanggal_akreditasi_mulai" v-model="form.tanggal_akreditasi_mulai" placeholder="Pilih tanggal mulai" :required="false" />
+                                <DatePicker
+                                    id="tanggal_akreditasi_mulai"
+                                    v-model="form.tanggal_akreditasi_mulai"
+                                    placeholder="Pilih tanggal mulai"
+                                    :required="false"
+                                />
                                 <InputError :message="form.errors.tanggal_akreditasi_mulai" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="tanggal_akreditasi_akhir" class="text-sm font-medium text-black">Tanggal Akreditasi Akhir</Label>
-                                <DatePicker id="tanggal_akreditasi_akhir" v-model="form.tanggal_akreditasi_akhir" placeholder="Pilih tanggal akhir" :required="false" />
+                                <DatePicker
+                                    id="tanggal_akreditasi_akhir"
+                                    v-model="form.tanggal_akreditasi_akhir"
+                                    placeholder="Pilih tanggal akhir"
+                                    :required="false"
+                                />
                                 <InputError :message="form.errors.tanggal_akreditasi_akhir" />
                             </div>
                         </div>

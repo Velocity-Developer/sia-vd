@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Kelas;
 
+use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
 use App\Models\KelasKuliah;
@@ -19,12 +20,14 @@ use Throwable;
 
 class KelasKuliahController extends Controller
 {
+    use KontenKelas;
+
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
         $tahunAkademikId = $this->filterTahunAkademikId($request);
         $mataKuliahId = $request->integer('mata_kuliah_id') ?: null;
-        $dosenId = $request->integer('dosen_id') ?: null;
+        $dosenId = $this->peran() === 'dosen' ? $request->user()->dosenProfile?->id : ($request->integer('dosen_id') ?: null);
 
         $kelasKuliahs = KelasKuliah::with(['tahunAkademik:id,tahun,semester', 'dosen:id,user_id,nidn', 'dosen.user:id,name', 'mataKuliah:id,kode_matkul,nama_matkul,prodi_id', 'mataKuliah.prodi:id,nama_prodi', 'jadwals:id,kelas_id,hari,jam_mulai,jam_akhir,ruang_id', 'jadwals.ruang:id,kode_ruang,nama_ruang'])
             ->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId))
@@ -35,15 +38,16 @@ class KelasKuliahController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Admin/KelasKuliah', [
+        return Inertia::render('Kelas/KelasKuliahIndex', [
+            'peran' => $this->peran(),
             'kelasKuliahs' => $kelasKuliahs,
             'search' => $search,
             'tahunAkademiks' => $this->tahunAkademiks(),
             'tahunAkademikId' => $tahunAkademikId,
             'mataKuliahId' => $mataKuliahId,
-            'mataKuliahOptions' => $this->mataKuliahOptions($tahunAkademikId),
-            'dosenId' => $dosenId,
-            'dosenOptions' => $this->dosenOptions($tahunAkademikId),
+            'mataKuliahOptions' => $this->mataKuliahOptions($tahunAkademikId, $this->peran() === 'dosen' ? $dosenId : null),
+            'dosenId' => $this->peran() === 'admin' ? $dosenId : null,
+            'dosenOptions' => $this->peran() === 'admin' ? $this->dosenOptions($tahunAkademikId) : [],
         ]);
     }
 
@@ -59,10 +63,11 @@ class KelasKuliahController extends Controller
 
     public function show(KelasKuliah $kelasKuliah): Response
     {
+        $this->pastikanAksesKelas($kelasKuliah);
         $kelasKuliah->load(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi.fakultas', 'jadwals.ruang', 'materis.uploader:id,name', 'tugas.uploader:id,name', 'quizzes.uploader:id,name', 'krs.mahasiswa:id,user_id,nim,prodi_id', 'krs.mahasiswa.user:id,name', 'krs.mahasiswa.prodi:id,nama_prodi']);
 
         return Inertia::render('Kelas/KelasKuliahShow', [
-            'peran' => 'admin',
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             // Target duplikasi: kelas lain di tahun akademik yang sama, hanya kolom yang ditampilkan di modal.
             'otherClasses' => KelasKuliah::query()
@@ -73,13 +78,19 @@ class KelasKuliahController extends Controller
                 ->get(['id', 'kode_kelas', 'matkul_id'])
                 ->map(fn (KelasKuliah $kelas): array => ['id' => $kelas->id, 'kode_kelas' => $kelas->kode_kelas, 'nama_matkul' => $kelas->mataKuliah?->nama_matkul]),
             'skalaNilai' => SkalaNilai::huruf(),
-            'nilaiTerkunci' => false,
+            'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
         ]);
     }
 
     public function updateGrade(Request $request, KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse
     {
         abort_if($krs->kelas_id !== $kelasKuliah->id, 404);
+        $this->pastikanAksesKelas($kelasKuliah);
+
+        if ($this->nilaiTerkunci($kelasKuliah)) {
+            return back()->with('error', 'Nilai terkunci karena tahun akademik kelas ini sudah tidak aktif. Hubungi admin untuk perubahan nilai.');
+        }
+
         $krs->update($request->validate(['nilai' => ['nullable', Rule::in(SkalaNilai::huruf())]]));
 
         return back()->with('success', 'Nilai berhasil diperbarui.');
@@ -115,29 +126,29 @@ class KelasKuliahController extends Controller
     {
         $this->save($request, new KelasKuliah);
 
-        return to_route('admin.kelas-kuliah.index')->with('success', 'Kelas Kuliah berhasil ditambahkan.');
+        return to_route($this->rute('kelas-kuliah.index'))->with('success', 'Kelas Kuliah berhasil ditambahkan.');
     }
 
     public function update(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
         $this->save($request, $kelasKuliah);
 
-        return to_route('admin.kelas-kuliah.index')->with('success', 'Kelas Kuliah berhasil diperbarui.');
+        return to_route($this->rute('kelas-kuliah.index'))->with('success', 'Kelas Kuliah berhasil diperbarui.');
     }
 
     public function destroy(KelasKuliah $kelasKuliah): RedirectResponse
     {
         if ($kelasKuliah->krs()->exists()) {
-            return to_route('admin.kelas-kuliah.index')->with('error', 'Kelas Kuliah tidak dapat dihapus karena sudah memiliki KRS mahasiswa.');
+            return to_route($this->rute('kelas-kuliah.index'))->with('error', 'Kelas Kuliah tidak dapat dihapus karena sudah memiliki KRS mahasiswa.');
         }
 
         try {
             $kelasKuliah->delete();
         } catch (Throwable) {
-            return to_route('admin.kelas-kuliah.index')->with('error', 'Kelas Kuliah gagal dihapus.');
+            return to_route($this->rute('kelas-kuliah.index'))->with('error', 'Kelas Kuliah gagal dihapus.');
         }
 
-        return to_route('admin.kelas-kuliah.index')->with('success', 'Kelas Kuliah berhasil dihapus.');
+        return to_route($this->rute('kelas-kuliah.index'))->with('success', 'Kelas Kuliah berhasil dihapus.');
     }
 
     /**
@@ -167,9 +178,12 @@ class KelasKuliahController extends Controller
     /**
      * @return array<int, array{id: int, name: string}>
      */
-    private function mataKuliahOptions(?int $tahunAkademikId): array
+    private function mataKuliahOptions(?int $tahunAkademikId, ?int $dosenId = null): array
     {
-        return MataKuliah::whereHas('kelasKuliah', fn ($query) => $query->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)))
+        // Dosen hanya melihat mata kuliah dari kelas yang diampunya.
+        return MataKuliah::whereHas('kelasKuliah', fn ($query) => $query
+            ->when($tahunAkademikId !== null, fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId))
+            ->when($dosenId !== null, fn ($query) => $query->where('dosen_id', $dosenId)))
             ->orderBy('kode_matkul')
             ->get(['id', 'kode_matkul', 'nama_matkul'])
             ->map(fn (MataKuliah $mataKuliah): array => [
@@ -252,13 +266,6 @@ class KelasKuliahController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
-            'unique' => ':attribute sudah digunakan.',
-            'integer' => ':attribute harus berupa angka.',
-            'min' => ':attribute minimal :min.',
-            'max.string' => ':attribute maksimal :max karakter.',
-            'max.integer' => ':attribute maksimal :max.',
             'exists' => ':attribute tidak ditemukan.',
         ];
     }

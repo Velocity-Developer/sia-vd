@@ -39,7 +39,7 @@ it('defaults the admin class list to the active academic year', function () {
         ->get(route('admin.kelas-kuliah.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Admin/KelasKuliah')
+            ->component('Kelas/KelasKuliahIndex')
             ->where('tahunAkademikId', $aktif->id)
             ->where('mataKuliahId', null)
             ->has('mataKuliahOptions', 1)
@@ -101,7 +101,7 @@ it('defaults the dosen class list to the active academic year for own classes on
         ->get(route('dosen.kelas-kuliah.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Dosen/KelasKuliah')
+            ->component('Kelas/KelasKuliahIndex')
             ->where('tahunAkademikId', $aktif->id)
             ->where('mataKuliahId', null)
             ->has('mataKuliahOptions', 1)

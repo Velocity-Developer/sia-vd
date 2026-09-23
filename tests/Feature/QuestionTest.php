@@ -107,7 +107,7 @@ it('starts and submits a quiz attempt once', function () {
         ->assertSessionHas('error');
 });
 
-function createTimedQuizAttempt(array $quizAttributes, \DateTimeInterface $startedAt): array
+function createTimedQuizAttempt(array $quizAttributes, DateTimeInterface $startedAt): array
 {
     $mahasiswa = User::factory()->mahasiswa()->create();
     $kelas = createMateriKelasKuliah();

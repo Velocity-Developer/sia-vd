@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -47,12 +47,18 @@ const inp =
                 >
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div
+                    v-if="page.props.flash?.error"
+                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                    role="alert"
+                >
                     {{ page.props.flash.error }}
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Ruang</h2>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">

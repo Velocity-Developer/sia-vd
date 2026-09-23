@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import AlertModal from '@/components/AlertModal.vue';
-import { Input } from '@/components/ui/input';
+import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
-import { ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -61,7 +62,9 @@ const confirmDelete = () => {
                         />
                     </div>
                     <p class="text-sm text-[#615d59]">
-                        <span class="font-medium text-black">{{ props.ruangs.total }}</span> data<span v-if="props.search"> · hasil untuk "{{ props.search }}"</span>
+                        <span class="font-medium text-black">{{ props.ruangs.total }}</span> data<span v-if="props.search">
+                            · hasil untuk "{{ props.search }}"</span
+                        >
                     </p>
                 </div>
 
@@ -76,7 +79,9 @@ const confirmDelete = () => {
                     {{ page.props.flash.error }}
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <div
+                    class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
@@ -95,21 +100,35 @@ const confirmDelete = () => {
                                     <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_ruang }}</td>
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.nama_ruang }}</td>
                                     <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.kapasitas }}</td>
-                                    <td class="max-w-[320px] truncate px-4 py-3 text-[15px] leading-5 text-[#615d59]" :title="item.detail ?? ''">{{ item.detail ?? '-' }}</td>
+                                    <td class="max-w-[320px] truncate px-4 py-3 text-[15px] leading-5 text-[#615d59]" :title="item.detail ?? ''">
+                                        {{ item.detail ?? '-' }}
+                                    </td>
                                     <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
                                             <Link :href="route('admin.ruang.show', item.id)" title="Detail" aria-label="Detail">
-                                                <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
+                                                    aria-hidden="true"
                                                     ><Eye class="size-4"
                                                 /></Button>
                                             </Link>
                                             <Link :href="route('admin.ruang.edit', item.id)" title="Edit" aria-label="Edit">
-                                                <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                    aria-hidden="true"
                                                     ><Pencil class="size-4"
                                                 /></Button>
                                             </Link>
                                             <button type="button" title="Hapus" aria-label="Hapus" @click="remove(item)">
-                                                <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
+                                                    aria-hidden="true"
                                                     ><Trash2 class="size-4"
                                                 /></Button>
                                             </button>
@@ -120,7 +139,9 @@ const confirmDelete = () => {
                                     <td colspan="6" class="px-4 py-16 text-center">
                                         <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8">
                                             <p class="text-sm font-medium text-black">Belum ada data</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">Data ruang akan tampil di sini. Tambahkan ruang baru untuk memulai.</p>
+                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">
+                                                Data ruang akan tampil di sini. Tambahkan ruang baru untuk memulai.
+                                            </p>
                                         </div>
                                     </td>
                                 </tr>
@@ -139,24 +160,7 @@ const confirmDelete = () => {
                     @cancel="confirmOpen = false"
                 />
 
-                <nav v-if="props.ruangs.total > 0" class="flex flex-wrap items-center gap-2" aria-label="Pagination">
-                    <Link
-                        v-for="link in props.ruangs.links"
-                        :key="link.label"
-                        :href="link.url ?? '#'"
-                        preserve-scroll
-                        preserve-state
-                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-                        :class="
-                            link.active
-                                ? 'border-[#0075de] bg-[#0075de] text-white'
-                                : link.url
-                                  ? 'border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4]'
-                                  : 'pointer-events-none border-[#e6e6e6] bg-white opacity-40'
-                        "
-                        v-html="link.label"
-                    />
-                </nav>
+                <Pagination :links="props.ruangs.links" :total="props.ruangs.total" />
             </div>
         </div>
     </AppLayout>

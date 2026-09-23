@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import AlertModal from '@/components/AlertModal.vue';
-import { Input } from '@/components/ui/input';
+import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
-import { ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -23,11 +24,21 @@ type ProgramStudi = {
 const kaprodiName = (item: ProgramStudi): string => item.ketuaProgramStudi?.user?.name ?? (item as any).ketua_program_studi?.user?.name ?? '-';
 type Pagination = { data: ProgramStudi[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
 
-const props = defineProps<{ programStudis: Pagination; search?: string; fakultas: { id: number; nama_fakultas: string }[]; fakultasId: number | null }>();
+const props = defineProps<{
+    programStudis: Pagination;
+    search?: string;
+    fakultas: { id: number; nama_fakultas: string }[];
+    fakultasId: number | null;
+}>();
 
 const search = ref(props.search ?? '');
 const fakultasId = ref<number | string>(props.fakultasId ?? 'all');
-const applyFilters = () => router.get(route('admin.program-studi.index'), { search: search.value, fakultas_id: fakultasId.value }, { preserveState: true, preserveScroll: true, replace: true });
+const applyFilters = () =>
+    router.get(
+        route('admin.program-studi.index'),
+        { search: search.value, fakultas_id: fakultasId.value },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
 watch(search, applyFilters);
 
 const confirmOpen = ref(false);
@@ -71,16 +82,23 @@ const confirmDelete = () => {
                             <Input
                                 v-model="search"
                                 placeholder="Cari kode atau nama program studi"
-                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm transition-colors outline-none placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
+                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
                             />
                         </div>
-                        <select v-model="fakultasId" class="h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm transition-colors outline-none hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:min-w-[180px] sm:w-auto" aria-label="Filter fakultas" @change="applyFilters">
+                        <select
+                            v-model="fakultasId"
+                            class="h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm outline-none transition-colors hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:w-auto sm:min-w-[180px]"
+                            aria-label="Filter fakultas"
+                            @change="applyFilters"
+                        >
                             <option value="all">Semua Fakultas</option>
                             <option v-for="item in props.fakultas" :key="item.id" :value="item.id">{{ item.nama_fakultas }}</option>
                         </select>
                     </div>
                     <p class="text-sm text-[#615d59]">
-                        <span class="font-medium text-black">{{ props.programStudis.total }}</span> data<span v-if="props.search"> · hasil untuk "{{ props.search }}"</span>
+                        <span class="font-medium text-black">{{ props.programStudis.total }}</span> data<span v-if="props.search">
+                            · hasil untuk "{{ props.search }}"</span
+                        >
                     </p>
                 </div>
 
@@ -95,7 +113,9 @@ const confirmDelete = () => {
                     {{ page.props.flash.error }}
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <div
+                    class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
@@ -155,7 +175,9 @@ const confirmDelete = () => {
                                     <td colspan="8" class="px-4 py-16 text-center">
                                         <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8">
                                             <p class="text-sm font-medium text-black">Belum ada data</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">Data program studi akan tampil di sini. Tambahkan prodi baru untuk memulai.</p>
+                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">
+                                                Data program studi akan tampil di sini. Tambahkan prodi baru untuk memulai.
+                                            </p>
                                         </div>
                                     </td>
                                 </tr>
@@ -174,24 +196,7 @@ const confirmDelete = () => {
                     @cancel="confirmOpen = false"
                 />
 
-                <nav v-if="props.programStudis.total > 0" class="flex flex-wrap items-center gap-2" aria-label="Pagination">
-                    <Link
-                        v-for="link in props.programStudis.links"
-                        :key="link.label"
-                        :href="link.url ?? '#'"
-                        preserve-scroll
-                        preserve-state
-                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-                        :class="
-                            link.active
-                                ? 'border-[#0075de] bg-[#0075de] text-white'
-                                : link.url
-                                  ? 'border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4]'
-                                  : 'pointer-events-none border-[#e6e6e6] bg-white opacity-40'
-                        "
-                        v-html="link.label"
-                    />
-                </nav>
+                <Pagination :links="props.programStudis.links" :total="props.programStudis.total" />
             </div>
         </div>
     </AppLayout>

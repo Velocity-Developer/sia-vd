@@ -41,12 +41,15 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     <p class="text-sm text-[#615d59]">Batas SKS saat mengisi KRS dan skala nilai untuk KHS serta transkrip.</p>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
+                    {{ page.props.flash.success }}
+                </div>
 
                 <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="saveSks">
                     <h2 class="text-lg font-semibold text-black">Batas SKS per Semester</h2>
                     <p class="mt-1 text-sm text-[#615d59]">
-                        Ditentukan dari IPS semester terakhir mahasiswa yang sudah bernilai. Baris dengan IPS minimal tertinggi yang terpenuhi yang dipakai.
+                        Ditentukan dari IPS semester terakhir mahasiswa yang sudah bernilai. Baris dengan IPS minimal tertinggi yang terpenuhi yang
+                        dipakai.
                     </p>
 
                     <div class="mt-5 overflow-x-auto rounded-xl border border-[#e6e6e6]">
@@ -61,7 +64,15 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                             <tbody class="divide-y divide-[#e6e6e6]">
                                 <tr v-for="(row, index) in sksForm.batas_sks" :key="index">
                                     <td class="px-4 py-2">
-                                        <Input v-model="row.ips_minimal" type="number" min="0" max="4" step="0.01" :class="inp" aria-label="IPS minimal" />
+                                        <Input
+                                            v-model="row.ips_minimal"
+                                            type="number"
+                                            min="0"
+                                            max="4"
+                                            step="0.01"
+                                            :class="inp"
+                                            aria-label="IPS minimal"
+                                        />
                                         <InputError :message="errorOf(sksForm, `batas_sks.${index}.ips_minimal`)" />
                                     </td>
                                     <td class="px-4 py-2">
@@ -69,7 +80,14 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                                         <InputError :message="errorOf(sksForm, `batas_sks.${index}.maks_sks`)" />
                                     </td>
                                     <td class="px-4 py-2 text-right">
-                                        <Button type="button" variant="ghost" size="icon" aria-label="Hapus baris" :disabled="sksForm.batas_sks.length === 1" @click="sksForm.batas_sks.splice(index, 1)">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            aria-label="Hapus baris"
+                                            :disabled="sksForm.batas_sks.length === 1"
+                                            @click="sksForm.batas_sks.splice(index, 1)"
+                                        >
                                             <Trash2 class="size-4" />
                                         </Button>
                                     </td>
@@ -90,14 +108,17 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     </div>
 
                     <div class="mt-6 flex justify-end">
-                        <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="sksForm.processing">Simpan Batas SKS</Button>
+                        <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="sksForm.processing"
+                            >Simpan Batas SKS</Button
+                        >
                     </div>
                 </form>
 
                 <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="saveNilai">
                     <h2 class="text-lg font-semibold text-black">Skala Nilai</h2>
                     <p class="mt-1 text-sm text-[#615d59]">
-                        Dipakai untuk pilihan nilai di kelas, IP/IPK, KHS, dan transkrip. Mengubah bobot akan mengubah IP/IPK semua mahasiswa yang memiliki nilai tersebut.
+                        Dipakai untuk pilihan nilai di kelas, IP/IPK, KHS, dan transkrip. Mengubah bobot akan mengubah IP/IPK semua mahasiswa yang
+                        memiliki nilai tersebut.
                     </p>
 
                     <div class="mt-5 overflow-x-auto rounded-xl border border-[#e6e6e6]">
@@ -118,11 +139,28 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                                         <InputError :message="errorOf(nilaiForm, `skala_nilai.${index}.huruf`)" />
                                     </td>
                                     <td class="px-4 py-2">
-                                        <Input v-model="row.bobot" type="number" min="0" max="4" step="0.01" :class="[inp, 'w-28']" aria-label="Bobot" />
+                                        <Input
+                                            v-model="row.bobot"
+                                            type="number"
+                                            min="0"
+                                            max="4"
+                                            step="0.01"
+                                            :class="[inp, 'w-28']"
+                                            aria-label="Bobot"
+                                        />
                                         <InputError :message="errorOf(nilaiForm, `skala_nilai.${index}.bobot`)" />
                                     </td>
-                                    <td class="px-4 py-2 text-center"><input v-model="row.lulus" type="checkbox" class="size-4 accent-[#0075de]" aria-label="Lulus" /></td>
-                                    <td class="px-4 py-2 text-center"><input v-model="row.boleh_diulang" type="checkbox" class="size-4 accent-[#0075de]" aria-label="Boleh diulang" /></td>
+                                    <td class="px-4 py-2 text-center">
+                                        <input v-model="row.lulus" type="checkbox" class="size-4 accent-[#0075de]" aria-label="Lulus" />
+                                    </td>
+                                    <td class="px-4 py-2 text-center">
+                                        <input
+                                            v-model="row.boleh_diulang"
+                                            type="checkbox"
+                                            class="size-4 accent-[#0075de]"
+                                            aria-label="Boleh diulang"
+                                        />
+                                    </td>
                                     <td class="px-4 py-2 text-right">
                                         <Button
                                             type="button"
@@ -152,7 +190,9 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     </Button>
 
                     <div class="mt-6 flex justify-end">
-                        <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="nilaiForm.processing">Simpan Skala Nilai</Button>
+                        <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="nilaiForm.processing"
+                            >Simpan Skala Nilai</Button
+                        >
                     </div>
                 </form>
             </div>

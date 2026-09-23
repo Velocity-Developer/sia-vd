@@ -99,13 +99,8 @@ class ProgramStudiController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
-            'unique' => ':attribute sudah digunakan.',
             'date' => 'Format :attribute tidak valid.',
-            'integer' => ':attribute harus berupa angka.',
             'exists' => ':attribute tidak ditemukan.',
-            'max.string' => ':attribute maksimal :max karakter.',
         ];
     }
 

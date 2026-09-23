@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Download } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -167,9 +167,13 @@ const saveGrade = (submission: Submission) => {
                                     <td class="px-4 py-3 text-sm">
                                         <ul class="space-y-1">
                                             <li v-for="(path, fileIndex) in files(submission.file_jawaban)" :key="path">
-                                                <a :href="route('berkas.pengumpulan', [submission.id, fileIndex])" target="_blank" rel="noopener" class="text-[#0075de] hover:underline">{{
-                                                    fileName(path)
-                                                }}</a>
+                                                <a
+                                                    :href="route('berkas.pengumpulan', [submission.id, fileIndex])"
+                                                    target="_blank"
+                                                    rel="noopener"
+                                                    class="text-[#0075de] hover:underline"
+                                                    >{{ fileName(path) }}</a
+                                                >
                                             </li>
                                         </ul>
                                     </td>

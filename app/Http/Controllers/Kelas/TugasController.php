@@ -230,14 +230,8 @@ class TugasController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
-            'date' => ':attribute harus berupa tanggal yang valid.',
-            'file' => ':attribute harus berupa berkas.',
             'extensions' => AllowedUpload::message(),
             'mimes' => AllowedUpload::messageIsi(),
-            'max.string' => ':attribute maksimal :max karakter.',
-            'max.file' => ':attribute maksimal :max kilobita.',
         ];
     }
 

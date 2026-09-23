@@ -97,7 +97,6 @@ class QuizController extends Controller
             'questions.*.question_option.*.is_correct' => ['required', 'boolean'],
             'questions.*.points' => ['required', 'integer', 'min:0', 'max:1000'],
         ], [
-            'required' => ':attribute wajib diisi.',
             'questions.required' => 'Minimal satu question wajib diisi.',
             'questions.min' => 'Minimal satu question wajib diisi.',
             'questions.*.question_type.in' => 'Tipe pertanyaan tidak valid.',
@@ -288,13 +287,6 @@ class QuizController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
-            'integer' => ':attribute harus berupa angka.',
-            'date' => ':attribute harus berupa tanggal yang valid.',
-            'max.string' => ':attribute maksimal :max karakter.',
-            'min' => ':attribute minimal :min.',
-            'max.integer' => ':attribute maksimal :max.',
         ];
     }
 

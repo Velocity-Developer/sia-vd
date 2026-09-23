@@ -45,7 +45,7 @@ class InfoKuliahController extends Controller
         $data = $request->validate([
             'information' => ['required', 'string'],
             'file' => ['nullable', 'file', 'max:10240', ...AllowedUpload::rules()],
-        ], ['required' => ':attribute wajib diisi.', 'extensions' => AllowedUpload::message(), 'mimes' => AllowedUpload::messageIsi()], ['information' => 'informasi', 'file' => 'file']);
+        ], ['extensions' => AllowedUpload::message(), 'mimes' => AllowedUpload::messageIsi()], ['information' => 'informasi', 'file' => 'file']);
         if ($request->hasFile('file')) {
             Storage::disk(AllowedUpload::DISK)->delete($infoKuliah->file);
             $data['file'] = $this->storeFile($request->file('file'));
@@ -75,6 +75,6 @@ class InfoKuliahController extends Controller
         return $request->validate([
             'information' => ['required', 'string'],
             'file' => [$fileRequired ? 'required' : 'nullable', 'file', 'max:10240', ...AllowedUpload::rules()],
-        ], ['required' => ':attribute wajib diisi.', 'extensions' => AllowedUpload::message(), 'mimes' => AllowedUpload::messageIsi()], ['information' => 'informasi', 'file' => 'file']);
+        ], ['extensions' => AllowedUpload::message(), 'mimes' => AllowedUpload::messageIsi()], ['information' => 'informasi', 'file' => 'file']);
     }
 }

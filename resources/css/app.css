@@ -4,7 +4,8 @@
 
 body,
 html {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 @layer base {
@@ -133,31 +134,31 @@ html {
         background-color: hsl(var(--accent));
     }
 
-    .dark [class*="bg-white"],
-    .dark [class*="bg-[#f6f5f4]"],
-    .dark [class*="bg-[#fafafa]"],
-    .dark [class*="bg-[#FDFDFC]"] {
+    .dark [class*='bg-white'],
+    .dark [class*='bg-[#f6f5f4]'],
+    .dark [class*='bg-[#fafafa]'],
+    .dark [class*='bg-[#FDFDFC]'] {
         background-color: hsl(var(--card));
     }
 
-    .dark [class*="text-black"],
-    .dark [class*="text-[#1b1b18]"],
-    .dark [class*="text-[#31302e]"] {
+    .dark [class*='text-black'],
+    .dark [class*='text-[#1b1b18]'],
+    .dark [class*='text-[#31302e]'] {
         color: hsl(var(--foreground));
     }
 
-    .dark [class*="text-[#615d59]"],
-    .dark [class*="text-[#a39e98]"] {
+    .dark [class*='text-[#615d59]'],
+    .dark [class*='text-[#a39e98]'] {
         color: hsl(var(--muted-foreground));
     }
 
-    .dark [class*="border-[#e6e6e6]"],
-    .dark [class*="border-[#dddddd]"] {
+    .dark [class*='border-[#e6e6e6]'],
+    .dark [class*='border-[#dddddd]'] {
         border-color: hsl(var(--border));
     }
 
-    .dark [class*="hover:bg-[#f6f5f4]"]:hover,
-    .dark [class*="hover:bg-[#f8fbff]"]:hover {
+    .dark [class*='hover:bg-[#f6f5f4]']:hover,
+    .dark [class*='hover:bg-[#f8fbff]']:hover {
         background-color: hsl(var(--accent));
     }
 

@@ -1,19 +1,16 @@
 <script setup lang="ts">
-import { rutePeran, type Peran } from '@/lib/rutePeran';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import InputError from '@/components/InputError.vue';
 import DateTimePicker from '@/components/DateTimePicker.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { rutePeran, type Peran } from '@/lib/rutePeran';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
-const props = defineProps<{ peran: Peran;
-    kelasKuliah: Record<string, any>;
-    quiz: Record<string, any> | null;
-}>();
+const props = defineProps<{ peran: Peran; kelasKuliah: Record<string, any>; quiz: Record<string, any> | null }>();
 const rute = rutePeran(props.peran);
 
 const title = `${props.quiz ? 'Edit' : 'Tambah'} Quiz`;
@@ -70,22 +67,43 @@ const area =
                 >
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div
+                    v-if="page.props.flash?.error"
+                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                    role="alert"
+                >
                     {{ page.props.flash.error }}
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Quiz</h2>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="nama_quiz" class="text-sm font-medium text-black">Nama Quiz</Label>
-                                <Input id="nama_quiz" v-model="form.nama_quiz" type="text" placeholder="cth. Quiz 1 Basis Data" :class="inp" required />
+                                <Input
+                                    id="nama_quiz"
+                                    v-model="form.nama_quiz"
+                                    type="text"
+                                    placeholder="cth. Quiz 1 Basis Data"
+                                    :class="inp"
+                                    required
+                                />
                                 <InputError :message="form.errors.nama_quiz" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="waktu_pengerjaan" class="text-sm font-medium text-black">Waktu Pengerjaan (menit)</Label>
-                                <Input id="waktu_pengerjaan" v-model="form.waktu_pengerjaan" type="number" min="1" max="1440" placeholder="cth. 60" :class="inp" />
+                                <Input
+                                    id="waktu_pengerjaan"
+                                    v-model="form.waktu_pengerjaan"
+                                    type="number"
+                                    min="1"
+                                    max="1440"
+                                    placeholder="cth. 60"
+                                    :class="inp"
+                                />
                                 <InputError :message="form.errors.waktu_pengerjaan" />
                             </div>
                         </div>

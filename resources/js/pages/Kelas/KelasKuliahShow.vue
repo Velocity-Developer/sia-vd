@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { rutePeran, type Peran } from '@/lib/rutePeran';
 import AlertModal from '@/components/AlertModal.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Copy, Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -102,7 +102,13 @@ type KelasKuliahShowProps = {
 
 type OtherClass = { id: number; kode_kelas: string; nama_matkul?: string | null };
 
-const props = defineProps<{ peran: Peran; kelasKuliah: KelasKuliahShowProps; otherClasses: OtherClass[]; skalaNilai: string[]; nilaiTerkunci: boolean }>();
+const props = defineProps<{
+    peran: Peran;
+    kelasKuliah: KelasKuliahShowProps;
+    otherClasses: OtherClass[];
+    skalaNilai: string[];
+    nilaiTerkunci: boolean;
+}>();
 const rute = rutePeran(props.peran);
 // Kelola jadwal, edit kelas, data dosen pengampu, dan pembatalan KRS hanya untuk admin.
 const isAdmin = computed(() => props.peran === 'admin');
@@ -335,11 +341,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                         <div class="space-y-1">
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Tahun Ajaran</dt>
                             <dd class="break-words text-[15px] font-medium leading-5 text-black">
-                                {{
-                                    tahunAkademik()
-                                        ? `${tahunAkademik()?.tahun} ${tahunAkademik()?.semester}`
-                                        : '-'
-                                }}
+                                {{ tahunAkademik() ? `${tahunAkademik()?.tahun} ${tahunAkademik()?.semester}` : '-' }}
                             </dd>
                         </div>
                         <div class="space-y-1">
@@ -444,7 +446,12 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Hari</th>
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jam</th>
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Ruang</th>
-                                        <th v-if="isAdmin" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                        <th
+                                            v-if="isAdmin"
+                                            class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]"
+                                        >
+                                            Aksi
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">

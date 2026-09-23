@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import InputError from '@/components/InputError.vue';
+import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { AlertTriangle, Check, Search, X } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
-import { Input } from '@/components/ui/input';
 
 type Pengajuan = {
     id: number;
@@ -34,10 +35,21 @@ type Pagination = {
     from: number | null;
 };
 
-const props = defineProps<{ isActive: boolean; pengajuans: Pagination; search?: string; tahunAkademiks: { id: number; tahun: string; semester: string }[]; tahunAkademikId: number | null }>();
+const props = defineProps<{
+    isActive: boolean;
+    pengajuans: Pagination;
+    search?: string;
+    tahunAkademiks: { id: number; tahun: string; semester: string }[];
+    tahunAkademikId: number | null;
+}>();
 const search = ref(props.search ?? '');
 const tahunAkademikId = ref<number | string>(props.tahunAkademikId ?? 'all');
-const applyFilters = () => router.get(route('admin.pindah-kelas.index'), { search: search.value, tahun_akademik_id: tahunAkademikId.value }, { preserveState: true, preserveScroll: true, replace: true });
+const applyFilters = () =>
+    router.get(
+        route('admin.pindah-kelas.index'),
+        { search: search.value, tahun_akademik_id: tahunAkademikId.value },
+        { preserveState: true, preserveScroll: true, replace: true },
+    );
 watch(search, applyFilters);
 
 const page = usePage<{ flash?: { success?: string; error?: string; pindah_kelas_warning?: string } }>();
@@ -146,7 +158,11 @@ const cancelReject = () => {
 };
 
 const warningFlash = ref<string | null>(null);
-watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.value = value ?? null), { immediate: true });
+watch(
+    () => page.props.flash?.pindah_kelas_warning,
+    (value) => (warningFlash.value = value ?? null),
+    { immediate: true },
+);
 </script>
 
 <template>
@@ -156,16 +172,30 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
             <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div class="space-y-1">
                     <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black dark:text-white">Pindah Kelas</h1>
-                    <p class="text-sm leading-5 text-[#615d59] dark:text-gray-400">Kelola pengaturan form dan proses pengajuan pindah kelas mahasiswa.</p>
+                    <p class="text-sm leading-5 text-[#615d59] dark:text-gray-400">
+                        Kelola pengaturan form dan proses pengajuan pindah kelas mahasiswa.
+                    </p>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] dark:border-gray-800 dark:bg-gray-900" role="alert">
+                <div
+                    v-if="page.props.flash?.success"
+                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] dark:border-gray-800 dark:bg-gray-900"
+                    role="alert"
+                >
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900" role="alert">
+                <div
+                    v-if="page.props.flash?.error"
+                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900"
+                    role="alert"
+                >
                     {{ page.props.flash.error }}
                 </div>
-                <div v-if="warningFlash" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900" role="alert">
+                <div
+                    v-if="warningFlash"
+                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900"
+                    role="alert"
+                >
                     {{ warningFlash }}
                 </div>
 
@@ -174,7 +204,11 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pengaturan Form Pindah Kelas</h2>
                             <p class="text-sm leading-5 text-[#615d59] dark:text-gray-400">
-                                {{ settingForm.is_active ? 'Form pindah kelas sedang dibuka untuk mahasiswa.' : 'Form pindah kelas sedang ditutup untuk mahasiswa.' }}
+                                {{
+                                    settingForm.is_active
+                                        ? 'Form pindah kelas sedang dibuka untuk mahasiswa.'
+                                        : 'Form pindah kelas sedang ditutup untuk mahasiswa.'
+                                }}
                             </p>
                         </div>
                         <button
@@ -197,16 +231,29 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                 </section>
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="flex flex-col gap-3 border-b border-[#e6e6e6] px-6 py-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between">
+                    <div
+                        class="flex flex-col gap-3 border-b border-[#e6e6e6] px-6 py-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Daftar Pengajuan</h2>
                         <div class="flex flex-col gap-3 sm:flex-row">
                             <div class="relative w-full sm:max-w-sm">
                                 <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                                <Input v-model="search" placeholder="Cari nama atau NIM mahasiswa" class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]" />
+                                <Input
+                                    v-model="search"
+                                    placeholder="Cari nama atau NIM mahasiswa"
+                                    class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                                />
                             </div>
-                            <select v-model="tahunAkademikId" class="h-9 rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm" aria-label="Filter tahun akademik" @change="applyFilters">
+                            <select
+                                v-model="tahunAkademikId"
+                                class="h-9 rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm"
+                                aria-label="Filter tahun akademik"
+                                @change="applyFilters"
+                            >
                                 <option value="all">Semua Tahun Akademik</option>
-                                <option v-for="tahun in props.tahunAkademiks" :key="tahun.id" :value="tahun.id">{{ tahun.tahun }} {{ tahun.semester }}</option>
+                                <option v-for="tahun in props.tahunAkademiks" :key="tahun.id" :value="tahun.id">
+                                    {{ tahun.tahun }} {{ tahun.semester }}
+                                </option>
                             </select>
                         </div>
                     </div>
@@ -224,8 +271,14 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6] dark:divide-gray-800">
-                                <tr v-for="(pengajuan, index) in props.pengajuans.data" :key="pengajuan.id" class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800">
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">{{ (props.pengajuans.from ?? 1) + index }}</td>
+                                <tr
+                                    v-for="(pengajuan, index) in props.pengajuans.data"
+                                    :key="pengajuan.id"
+                                    class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"
+                                >
+                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
+                                        {{ (props.pengajuans.from ?? 1) + index }}
+                                    </td>
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block font-medium text-black dark:text-white">{{ pengajuan.mahasiswa ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.nim ?? '-' }} · {{ pengajuan.prodi ?? '-' }}</span>
@@ -233,7 +286,10 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
                                         <span class="block">{{ pengajuan.kelas_asal ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_asal_matkul ?? '' }}</span>
-                                        <span v-if="pengajuan.nilai_terisi" class="mt-1 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-0.5 text-xs font-semibold text-[#dd5b00] dark:bg-amber-950 dark:text-amber-400">
+                                        <span
+                                            v-if="pengajuan.nilai_terisi"
+                                            class="mt-1 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-0.5 text-xs font-semibold text-[#dd5b00] dark:bg-amber-950 dark:text-amber-400"
+                                        >
                                             <AlertTriangle class="size-3" /> Nilai: {{ pengajuan.nilai }}
                                         </span>
                                     </td>
@@ -241,14 +297,27 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                                         <span class="block">{{ pengajuan.kelas_tujuan ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_tujuan_matkul ?? '' }}</span>
                                     </td>
-                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">{{ pengajuan.alasan }}</td>
+                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                        {{ pengajuan.alasan }}
+                                    </td>
                                     <td class="px-4 py-3">
-                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="statusClass[pengajuan.status] ?? ''">
+                                        <span
+                                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                            :class="statusClass[pengajuan.status] ?? ''"
+                                        >
                                             {{ statusLabel[pengajuan.status] ?? pengajuan.status }}
                                         </span>
-                                        <span v-if="pengajuan.diproses_oleh" class="mt-1 block text-xs text-[#a39e98]">oleh {{ pengajuan.diproses_oleh }}</span>
-                                        <span v-if="pengajuan.diproses_at" class="block text-xs text-[#a39e98]">{{ formatDateTime(pengajuan.diproses_at) }}</span>
-                                        <span v-if="pengajuan.catatan_admin" class="mt-1 block whitespace-pre-line text-xs text-[#615d59] dark:text-gray-400">{{ pengajuan.catatan_admin }}</span>
+                                        <span v-if="pengajuan.diproses_oleh" class="mt-1 block text-xs text-[#a39e98]"
+                                            >oleh {{ pengajuan.diproses_oleh }}</span
+                                        >
+                                        <span v-if="pengajuan.diproses_at" class="block text-xs text-[#a39e98]">{{
+                                            formatDateTime(pengajuan.diproses_at)
+                                        }}</span>
+                                        <span
+                                            v-if="pengajuan.catatan_admin"
+                                            class="mt-1 block whitespace-pre-line text-xs text-[#615d59] dark:text-gray-400"
+                                            >{{ pengajuan.catatan_admin }}</span
+                                        >
                                     </td>
                                     <td class="px-4 py-3">
                                         <div v-if="pengajuan.status === 'pending'" class="flex justify-end gap-1.5">
@@ -280,9 +349,13 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                                 </tr>
                                 <tr v-if="!props.pengajuans.data.length">
                                     <td colspan="7" class="px-4 py-16 text-center">
-                                        <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8 dark:border-gray-700 dark:bg-gray-800">
+                                        <div
+                                            class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8 dark:border-gray-700 dark:bg-gray-800"
+                                        >
                                             <p class="text-sm font-medium text-black dark:text-white">Belum ada pengajuan</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59] dark:text-gray-400">Pengajuan pindah kelas dari mahasiswa akan tampil di sini.</p>
+                                            <p class="mt-1 text-sm leading-5 text-[#615d59] dark:text-gray-400">
+                                                Pengajuan pindah kelas dari mahasiswa akan tampil di sini.
+                                            </p>
                                         </div>
                                     </td>
                                 </tr>
@@ -291,24 +364,7 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                     </div>
                 </div>
 
-                <nav v-if="props.pengajuans.links?.length" class="flex flex-wrap items-center gap-2" aria-label="Pagination">
-                    <Link
-                        v-for="link in props.pengajuans.links"
-                        :key="link.label"
-                        :href="link.url ?? '#'"
-                        preserve-scroll
-                        preserve-state
-                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-                        :class="
-                            link.active
-                                ? 'border-[#0075de] bg-[#0075de] text-white'
-                                : link.url
-                                  ? 'border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4] dark:border-gray-700 dark:bg-gray-900 dark:text-white'
-                                  : 'pointer-events-none border-[#e6e6e6] bg-white opacity-40 dark:border-gray-700 dark:bg-gray-900'
-                        "
-                        v-html="link.label"
-                    />
-                </nav>
+                <Pagination :links="props.pengajuans.links" :total="props.pengajuans.data.length" />
 
                 <AlertModal
                     :open="approveTarget !== null"
@@ -333,9 +389,13 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                     >
                         <div v-if="rejectTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
                             <div class="absolute inset-0 bg-black/40 backdrop-blur-[1px]" @click="cancelReject" />
-                            <div class="relative w-full max-w-sm rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_8px_28px_rgba(0,0,0,0.08),0_23px_52px_rgba(0,0,0,0.08)] dark:border-gray-800 dark:bg-gray-900">
+                            <div
+                                class="relative w-full max-w-sm rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_8px_28px_rgba(0,0,0,0.08),0_23px_52px_rgba(0,0,0,0.08)] dark:border-gray-800 dark:bg-gray-900"
+                            >
                                 <h2 class="text-[15px] font-semibold leading-5 text-black dark:text-white">Tolak pengajuan?</h2>
-                                <p class="mt-2 text-sm leading-5 text-[#615d59] dark:text-gray-400">Data KRS mahasiswa tidak akan diubah. Berikan alasan penolakan untuk mahasiswa.</p>
+                                <p class="mt-2 text-sm leading-5 text-[#615d59] dark:text-gray-400">
+                                    Data KRS mahasiswa tidak akan diubah. Berikan alasan penolakan untuk mahasiswa.
+                                </p>
                                 <div class="mt-4 grid gap-2">
                                     <textarea
                                         v-model="rejectForm.catatan_admin"
@@ -346,7 +406,11 @@ watch(() => page.props.flash?.pindah_kelas_warning, (value) => (warningFlash.val
                                     <InputError :message="rejectForm.errors.catatan_admin" />
                                 </div>
                                 <div class="mt-6 flex justify-end gap-2">
-                                    <Button variant="outline" class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4] dark:border-gray-700 dark:bg-gray-900 dark:text-white" @click="cancelReject">
+                                    <Button
+                                        variant="outline"
+                                        class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4] dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                                        @click="cancelReject"
+                                    >
                                         Batal
                                     </Button>
                                     <Button

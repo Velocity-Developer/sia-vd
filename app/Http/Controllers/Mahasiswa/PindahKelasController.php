@@ -110,12 +110,10 @@ class PindahKelasController extends Controller
             ],
             'alasan' => ['required', 'string', 'max:1000'],
         ], [
-            'required' => ':attribute wajib diisi.',
             'different' => ':attribute tidak boleh sama dengan kelas asal.',
             'exists' => ':attribute tidak ditemukan.',
             'unique' => 'Anda masih memiliki pengajuan yang menunggu persetujuan untuk kelas asal ini.',
             'integer' => ':attribute tidak valid.',
-            'max' => ':attribute maksimal :max karakter.',
         ], [
             'kelas_asal_id' => 'kelas asal',
             'kelas_tujuan_id' => 'kelas tujuan',

@@ -346,18 +346,12 @@ class UserController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
             'email' => 'Format :attribute tidak valid.',
-            'unique' => ':attribute sudah digunakan.',
-            'confirmed' => 'Konfirmasi :attribute tidak cocok.',
-            'integer' => ':attribute harus berupa angka.',
             'date' => 'Format :attribute tidak valid.',
             'in' => 'Pilihan :attribute tidak valid.',
             'exists' => ':attribute tidak ditemukan.',
             'different' => ':attribute tidak boleh sama dengan :other.',
             'email_alternatif.different' => 'Email Alternatif tidak boleh sama dengan Email utama.',
-            'max.string' => ':attribute maksimal :max karakter.',
             'min.string' => ':attribute minimal :min karakter.',
         ];
     }

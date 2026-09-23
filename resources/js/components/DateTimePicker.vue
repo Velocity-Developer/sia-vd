@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { CalendarIcon } from 'lucide-vue-next';
 import DatePicker from '@/components/DatePicker.vue';
 import TimePicker from '@/components/TimePicker.vue';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
-const props = withDefaults(defineProps<{ modelValue: string; placeholder?: string; minDate?: string }>(), { placeholder: 'Pilih tanggal', minDate: '' });
+const props = withDefaults(defineProps<{ modelValue: string; placeholder?: string; minDate?: string }>(), {
+    placeholder: 'Pilih tanggal',
+    minDate: '',
+});
 const emit = defineEmits<{ (event: 'update:modelValue', value: string): void }>();
 const open = ref(false);
 const date = computed(() => props.modelValue.slice(0, 10));
@@ -29,12 +32,22 @@ const update = (nextDate = date.value, nextTime = time.value) => emit('update:mo
 <template>
     <Popover v-model:open="open">
         <PopoverTrigger as-child>
-            <Button type="button" variant="outline" class="h-10 w-full justify-start gap-2 rounded-[4px] border-[#dddddd] bg-white text-left font-normal text-black">
+            <Button
+                type="button"
+                variant="outline"
+                class="h-10 w-full justify-start gap-2 rounded-[4px] border-[#dddddd] bg-white text-left font-normal text-black"
+            >
                 <CalendarIcon class="size-4" />{{ display }}
             </Button>
         </PopoverTrigger>
         <PopoverContent class="w-auto p-3" align="start">
-            <DatePicker :model-value="date" :min-value="props.minDate" :placeholder="props.placeholder" :required="false" @update:model-value="(value) => update(value)" />
+            <DatePicker
+                :model-value="date"
+                :min-value="props.minDate"
+                :placeholder="props.placeholder"
+                :required="false"
+                @update:model-value="(value) => update(value)"
+            />
             <TimePicker :model-value="time" class="mt-3 h-10" @update:model-value="(value) => update(date, String(value))" />
             <Button type="button" class="mt-3 w-full" @click="open = false">Selesai</Button>
         </PopoverContent>

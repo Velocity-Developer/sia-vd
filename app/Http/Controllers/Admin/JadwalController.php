@@ -147,7 +147,6 @@ class JadwalController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
             'in' => ':attribute tidak valid.',
             'date_format' => ':attribute harus berformat jam:menit (mis. 07:00).',
             'after' => ':attribute harus lebih besar dari Jam Mulai.',

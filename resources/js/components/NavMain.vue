@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from '@/components/ui/sidebar';
+import {
+    SidebarGroup,
+    SidebarGroupLabel,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubButton,
+    SidebarMenuSubItem,
+} from '@/components/ui/sidebar';
 import { type NavItem, type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 
@@ -36,14 +45,20 @@ const isItemActive = (item: NavItem) => {
             <SidebarMenuItem v-for="item in items" :key="item.href + item.title">
                 <SidebarMenuButton as-child :is-active="isItemActive(item)">
                     <Link :href="item.href">
-                        <component v-if="item.icon" :is="item.icon" class="text-muted-foreground transition-colors group-data-[active=true]/menu-button:text-sidebar-primary" />
+                        <component
+                            v-if="item.icon"
+                            :is="item.icon"
+                            class="text-muted-foreground transition-colors group-data-[active=true]/menu-button:text-sidebar-primary"
+                        />
                         <span>{{ item.title }}</span>
                     </Link>
                 </SidebarMenuButton>
                 <SidebarMenuSub v-if="item.items" class="ml-3.5 border-l border-[#e6e6e6] pl-2">
                     <SidebarMenuSubItem v-for="subItem in item.items" :key="subItem.href">
                         <SidebarMenuSubButton as-child :is-active="isActive(subItem.href)" class="rounded-[5px] text-[14px] leading-5">
-                            <Link :href="subItem.href"><span>{{ subItem.title }}</span></Link>
+                            <Link :href="subItem.href"
+                                ><span>{{ subItem.title }}</span></Link
+                            >
                         </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                 </SidebarMenuSub>

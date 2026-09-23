@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import AlertModal from '@/components/AlertModal.vue';
-import { Input } from '@/components/ui/input';
+import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
-import { ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { rutePeran, type Peran } from '@/lib/rutePeran';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -36,9 +38,13 @@ const props = defineProps<{
     tahunAkademikId: number | null;
     mataKuliahId: number | null;
     mataKuliahOptions: { id: number; name: string }[];
-    dosenId: number | null;
-    dosenOptions: { id: number; name: string }[];
+    dosenId?: number | null;
+    dosenOptions?: { id: number; name: string }[];
+    peran: Peran;
 }>();
+const rute = rutePeran(props.peran);
+// Filter dosen, tombol tambah/edit/hapus, dan kolom dosen hanya untuk admin.
+const isAdmin = computed(() => props.peran === 'admin');
 
 const search = ref(props.search ?? '');
 const tahunAkademikId = ref<number | string>(props.tahunAkademikId ?? 'all');
@@ -50,7 +56,7 @@ const sel =
 
 const applyFilters = () =>
     router.get(
-        route('admin.kelas-kuliah.index'),
+        rute('kelas-kuliah.index'),
         { search: search.value, tahun_akademik_id: tahunAkademikId.value, mata_kuliah_id: mataKuliahId.value, dosen_id: dosenId.value },
         { preserveState: true, preserveScroll: true, replace: true },
     );
@@ -73,7 +79,7 @@ const remove = (item: KelasKuliah) => {
 
 const confirmDelete = () => {
     if (!pendingItem.value) return;
-    router.delete(route('admin.kelas-kuliah.destroy', pendingItem.value.id), {
+    router.delete(rute('kelas-kuliah.destroy', pendingItem.value.id), {
         onFinish: () => {
             confirmOpen.value = false;
             pendingItem.value = null;
@@ -101,7 +107,7 @@ const ruangText = (item: KelasKuliah) => {
 
 <template>
     <Head title="Kelas Kuliah" />
-    <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: route('admin.kelas-kuliah.index') }]">
+    <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') }]">
         <div class="min-h-full bg-[#f6f5f4]">
             <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div class="flex flex-wrap items-start justify-between gap-4">
@@ -109,7 +115,7 @@ const ruangText = (item: KelasKuliah) => {
                         <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Kelas Kuliah</h1>
                         <p class="text-sm leading-5 text-[#615d59]">Kelola kelas kuliah, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
                     </div>
-                    <Link :href="route('admin.kelas-kuliah.create')">
+                    <Link v-if="isAdmin" :href="rute('kelas-kuliah.create')">
                         <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Tambah Kelas Kuliah</Button>
                     </Link>
                 </div>
@@ -130,15 +136,19 @@ const ruangText = (item: KelasKuliah) => {
                         </select>
                         <select v-model="mataKuliahId" :class="sel" aria-label="Filter mata kuliah" @change="applyFilters">
                             <option value="all">Semua Mata Kuliah</option>
-                            <option v-for="mataKuliah in props.mataKuliahOptions" :key="mataKuliah.id" :value="mataKuliah.id">{{ mataKuliah.name }}</option>
+                            <option v-for="mataKuliah in props.mataKuliahOptions" :key="mataKuliah.id" :value="mataKuliah.id">
+                                {{ mataKuliah.name }}
+                            </option>
                         </select>
-                        <select v-model="dosenId" :class="sel" aria-label="Filter dosen" @change="applyFilters">
+                        <select v-if="isAdmin" v-model="dosenId" :class="sel" aria-label="Filter dosen" @change="applyFilters">
                             <option value="all">Semua Dosen</option>
-                            <option v-for="dosen in props.dosenOptions" :key="dosen.id" :value="dosen.id">{{ dosen.name }}</option>
+                            <option v-for="dosen in props.dosenOptions ?? []" :key="dosen.id" :value="dosen.id">{{ dosen.name }}</option>
                         </select>
                     </div>
                     <p class="text-sm text-[#615d59]">
-                        <span class="font-medium text-black">{{ props.kelasKuliahs.total }}</span> data<span v-if="props.search"> · hasil untuk "{{ props.search }}"</span>
+                        <span class="font-medium text-black">{{ props.kelasKuliahs.total }}</span> data<span v-if="props.search">
+                            · hasil untuk "{{ props.search }}"</span
+                        >
                     </p>
                 </div>
 
@@ -153,7 +163,9 @@ const ruangText = (item: KelasKuliah) => {
                     {{ page.props.flash.error }}
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <div
+                    class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
@@ -162,7 +174,7 @@ const ruangText = (item: KelasKuliah) => {
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kode Kelas</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tahun Ajaran</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kapasitas</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Dosen</th>
+                                    <th v-if="isAdmin" class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Dosen</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</th>
                                     <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal</th>
                                     <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
@@ -172,9 +184,11 @@ const ruangText = (item: KelasKuliah) => {
                                 <tr v-for="(item, index) in props.kelasKuliahs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">{{ (props.kelasKuliahs.from ?? 0) + index }}</td>
                                     <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_kelas }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ tahunAkademik(item) ? `${tahunAkademik(item)?.tahun} ${tahunAkademik(item)?.semester}` : '-' }}</td>
-                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.kapasitas }}</td>
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        {{ tahunAkademik(item) ? `${tahunAkademik(item)?.tahun} ${tahunAkademik(item)?.semester}` : '-' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.kapasitas }}</td>
+                                    <td v-if="isAdmin" class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ dosenName(item) }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ dosenNidn(item) }}</span>
                                     </td>
@@ -188,18 +202,30 @@ const ruangText = (item: KelasKuliah) => {
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex justify-end gap-1.5">
-                                            <Link :href="route('admin.kelas-kuliah.show', item.id)" title="Detail" aria-label="Detail">
-                                                <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                            <Link :href="rute('kelas-kuliah.show', item.id)" title="Detail" aria-label="Detail">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
+                                                    aria-hidden="true"
                                                     ><Eye class="size-4"
                                                 /></Button>
                                             </Link>
-                                            <Link :href="route('admin.kelas-kuliah.edit', item.id)" title="Edit" aria-label="Edit">
-                                                <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                            <Link v-if="isAdmin" :href="rute('kelas-kuliah.edit', item.id)" title="Edit" aria-label="Edit">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
+                                                    aria-hidden="true"
                                                     ><Pencil class="size-4"
                                                 /></Button>
                                             </Link>
-                                            <button type="button" title="Hapus" aria-label="Hapus" @click="remove(item)">
-                                                <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]" aria-hidden="true"
+                                            <button v-if="isAdmin" type="button" title="Hapus" aria-label="Hapus" @click="remove(item)">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
+                                                    aria-hidden="true"
                                                     ><Trash2 class="size-4"
                                                 /></Button>
                                             </button>
@@ -210,7 +236,9 @@ const ruangText = (item: KelasKuliah) => {
                                     <td colspan="8" class="px-4 py-16 text-center">
                                         <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8">
                                             <p class="text-sm font-medium text-black">Belum ada data</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">Data kelas kuliah akan tampil di sini. Tambahkan kelas baru untuk memulai.</p>
+                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">
+                                                Data kelas kuliah akan tampil di sini. Tambahkan kelas baru untuk memulai.
+                                            </p>
                                         </div>
                                     </td>
                                 </tr>
@@ -229,24 +257,7 @@ const ruangText = (item: KelasKuliah) => {
                     @cancel="confirmOpen = false"
                 />
 
-                <nav v-if="props.kelasKuliahs.total > 0" class="flex flex-wrap items-center gap-2" aria-label="Pagination">
-                    <Link
-                        v-for="link in props.kelasKuliahs.links"
-                        :key="link.label"
-                        :href="link.url ?? '#'"
-                        preserve-scroll
-                        preserve-state
-                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-                        :class="
-                            link.active
-                                ? 'border-[#0075de] bg-[#0075de] text-white'
-                                : link.url
-                                  ? 'border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4]'
-                                  : 'pointer-events-none border-[#e6e6e6] bg-white opacity-40'
-                        "
-                        v-html="link.label"
-                    />
-                </nav>
+                <Pagination :links="props.kelasKuliahs.links" :total="props.kelasKuliahs.total" />
             </div>
         </div>
     </AppLayout>

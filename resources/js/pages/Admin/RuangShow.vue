@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
 
 type RuangShowProps = {
     id: number;
@@ -30,12 +30,18 @@ const v = (val: unknown): string => {
                         <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan informasi ruang dan kapasitas.</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route('admin.ruang.index')"><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link>
-                        <Link :href="route('admin.ruang.edit', props.ruang.id)"><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link>
+                        <Link :href="route('admin.ruang.index')"
+                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
+                        >
+                        <Link :href="route('admin.ruang.edit', props.ruang.id)"
+                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
+                        >
                     </div>
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Ruang</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
@@ -52,7 +58,7 @@ const v = (val: unknown): string => {
                         </div>
                         <div class="space-y-1 sm:col-span-2 lg:col-span-3">
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Detail</dt>
-                            <dd class="break-words whitespace-pre-wrap text-[15px] leading-5 text-black">{{ v(props.ruang.detail) }}</dd>
+                            <dd class="whitespace-pre-wrap break-words text-[15px] leading-5 text-black">{{ v(props.ruang.detail) }}</dd>
                         </div>
                     </dl>
                 </section>

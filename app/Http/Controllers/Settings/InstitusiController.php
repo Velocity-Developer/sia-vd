@@ -38,15 +38,10 @@ class InstitusiController extends Controller
             'website' => ['nullable', 'url', 'max:255'],
             'tahun_berdiri' => ['nullable', 'integer', 'min:1000', 'max:'.date('Y')],
         ], [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
-            'max.string' => ':attribute maksimal :max karakter.',
             'image' => ':attribute harus berupa gambar.',
             'mimes' => ':attribute harus berformat jpg, jpeg, png, atau webp.',
             'email' => ':attribute harus berupa alamat email yang valid.',
             'url' => ':attribute harus berupa URL yang valid.',
-            'integer' => ':attribute harus berupa angka.',
-            'min' => ':attribute minimal :min.',
             'max.numeric' => ':attribute maksimal :max.',
         ], [
             'nama_pt' => 'Nama Perguruan Tinggi',

@@ -8,9 +8,10 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
-    BookOpen,
     BookMarked,
+    BookOpen,
     CalendarDays,
+    CalendarRange,
     ClipboardList,
     DoorOpen,
     FileText,
@@ -20,7 +21,6 @@ import {
     ShieldCheck,
     SlidersHorizontal,
     Users,
-    CalendarRange,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
@@ -46,7 +46,12 @@ const navigationSections: { label: string; items: MenuItem[] }[] = [
             { title: 'Ruang', routeName: 'admin.ruang.index', icon: DoorOpen, permission: 'admin.ruang' },
             { title: 'Kelas Kuliah', routeName: 'admin.kelas-kuliah.index', icon: ClipboardList, permission: 'admin.kelas-kuliah' },
             { title: 'Pindah Kelas', routeName: 'admin.pindah-kelas.index', icon: ArrowLeftRight, permission: 'admin.pindah-kelas' },
-            { title: 'Pengaturan Akademik', routeName: 'admin.pengaturan-akademik.index', icon: SlidersHorizontal, permission: 'admin.pengaturan-akademik' },
+            {
+                title: 'Pengaturan Akademik',
+                routeName: 'admin.pengaturan-akademik.index',
+                icon: SlidersHorizontal,
+                permission: 'admin.pengaturan-akademik',
+            },
             {
                 title: 'Manage User',
                 href: '/admin/users/dosen',

@@ -207,15 +207,8 @@ class MateriController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
-            'integer' => ':attribute harus berupa angka.',
-            'file' => ':attribute harus berupa berkas.',
             'extensions' => AllowedUpload::message(),
             'mimes' => AllowedUpload::messageIsi(),
-            'max.string' => ':attribute maksimal :max karakter.',
-            'max.file' => ':attribute maksimal :max kilobita.',
-            'min' => ':attribute minimal :min.',
         ];
     }
 

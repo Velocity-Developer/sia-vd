@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import AlertModal from '@/components/AlertModal.vue';
-import { Input } from '@/components/ui/input';
+import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
-import { ref, watch } from 'vue';
+import { Input } from '@/components/ui/input';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -187,24 +188,7 @@ const confirmDelete = () => {
                     @cancel="confirmOpen = false"
                 />
 
-                <nav v-if="props.roles.total > 0" class="flex flex-wrap items-center gap-2" aria-label="Pagination">
-                    <Link
-                        v-for="link in props.roles.links"
-                        :key="link.label"
-                        :href="link.url ?? '#'"
-                        preserve-scroll
-                        preserve-state
-                        class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
-                        :class="
-                            link.active
-                                ? 'border-[#0075de] bg-[#0075de] text-white'
-                                : link.url
-                                  ? 'border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4]'
-                                  : 'pointer-events-none border-[#e6e6e6] bg-white opacity-40'
-                        "
-                        v-html="link.label"
-                    />
-                </nav>
+                <Pagination :links="props.roles.links" :total="props.roles.total" />
             </div>
         </div>
     </AppLayout>

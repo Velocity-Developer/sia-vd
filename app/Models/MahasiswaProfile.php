@@ -65,10 +65,10 @@ class MahasiswaProfile extends Model
                 || ($item->kelasKuliah?->tahunAkademik?->tanggal_mulai !== null
                     && $item->kelasKuliah->tahunAkademik->tanggal_mulai < $tahunAkademik->tanggal_mulai))
             : $this->krs()
-            ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query
-                ->when($tahunAkademik?->tanggal_mulai, fn ($query, $mulai) => $query->where('tanggal_mulai', '<', $mulai)))
-            ->with('kelasKuliah.tahunAkademik', 'kelasKuliah.mataKuliah:id,sks')
-            ->get();
+                ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query
+                    ->when($tahunAkademik?->tanggal_mulai, fn ($query, $mulai) => $query->where('tanggal_mulai', '<', $mulai)))
+                ->with('kelasKuliah.tahunAkademik', 'kelasKuliah.mataKuliah:id,sks')
+                ->get();
 
         $krs = $krs->filter(fn (Krs $item): bool => $item->kelasKuliah?->tahunAkademik !== null);
 

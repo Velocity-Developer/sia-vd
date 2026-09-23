@@ -11,7 +11,7 @@ it('lists only classes taught by the authenticated dosen', function () {
         ->get(route('dosen.kelas-kuliah.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('Dosen/KelasKuliah')
+            ->component('Kelas/KelasKuliahIndex')
             ->where('kelasKuliahs.total', 1)
             ->where('kelasKuliahs.data.0.id', $kelasMilikDosen->id));
 

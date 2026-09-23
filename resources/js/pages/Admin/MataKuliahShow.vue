@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
 
 type MataKuliahShowProps = {
     id: number;
@@ -10,7 +10,13 @@ type MataKuliahShowProps = {
     sks: number;
     semester: number;
     jenis: string;
-    prodi?: { id: number; kode_prodi: string; nama_prodi: string; jenjang: string; fakultas?: { kode_fakultas: string; nama_fakultas: string } | null } | null;
+    prodi?: {
+        id: number;
+        kode_prodi: string;
+        nama_prodi: string;
+        jenjang: string;
+        fakultas?: { kode_fakultas: string; nama_fakultas: string } | null;
+    } | null;
 };
 
 const props = defineProps<{ mataKuliah: MataKuliahShowProps }>();
@@ -38,12 +44,18 @@ const prodi = () => (props.mataKuliah as any).prodi ?? null;
                         <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan informasi mata kuliah, program studi, dan fakultas induk.</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route('admin.mata-kuliah.index')"><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link>
-                        <Link :href="route('admin.mata-kuliah.edit', props.mataKuliah.id)"><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link>
+                        <Link :href="route('admin.mata-kuliah.index')"
+                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
+                        >
+                        <Link :href="route('admin.mata-kuliah.edit', props.mataKuliah.id)"
+                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
+                        >
                     </div>
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Mata Kuliah</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
@@ -69,7 +81,9 @@ const prodi = () => (props.mataKuliah as any).prodi ?? null;
                     </dl>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Program Studi & Fakultas</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">

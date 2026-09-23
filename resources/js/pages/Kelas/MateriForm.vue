@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import { rutePeran, type Peran } from '@/lib/rutePeran';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Attachment,
     AttachmentAction,
@@ -15,15 +9,18 @@ import {
     AttachmentMedia,
     AttachmentTitle,
 } from '@/components/ui/attachment';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { rutePeran, type Peran } from '@/lib/rutePeran';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { FileText, Upload, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
-const props = defineProps<{ peran: Peran;
-    kelasKuliah: Record<string, any>;
-    materi: Record<string, any> | null;
-}>();
+const props = defineProps<{ peran: Peran; kelasKuliah: Record<string, any>; materi: Record<string, any> | null }>();
 const rute = rutePeran(props.peran);
 
 const title = `${props.materi ? 'Edit' : 'Tambah'} Materi`;
@@ -107,10 +104,9 @@ const fileCount = computed(() => form.kept_files.length + form.file.length);
 
 const submit = () => {
     if (props.materi) {
-        form.transform((data) => ({ ...data, _method: 'PUT' })).post(
-            rute('kelas-kuliah.materi.update', [props.kelasKuliah.id, props.materi.id]),
-            { forceFormData: true },
-        );
+        form.transform((data) => ({ ...data, _method: 'PUT' })).post(rute('kelas-kuliah.materi.update', [props.kelasKuliah.id, props.materi.id]), {
+            forceFormData: true,
+        });
     } else {
         form.post(rute('kelas-kuliah.materi.store', props.kelasKuliah.id), { forceFormData: true });
     }
@@ -148,22 +144,44 @@ const sel =
                 >
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div
+                    v-if="page.props.flash?.error"
+                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                    role="alert"
+                >
                     {{ page.props.flash.error }}
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Materi</h2>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="judul_materi" class="text-sm font-medium text-black">Judul Materi</Label>
-                                <Input id="judul_materi" v-model="form.judul_materi" type="text" placeholder="cth. Pengantar Basis Data" :class="inp" required />
+                                <Input
+                                    id="judul_materi"
+                                    v-model="form.judul_materi"
+                                    type="text"
+                                    placeholder="cth. Pengantar Basis Data"
+                                    :class="inp"
+                                    required
+                                />
                                 <InputError :message="form.errors.judul_materi" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="pertemuan_ke" class="text-sm font-medium text-black">Pertemuan Ke</Label>
-                                <Input id="pertemuan_ke" v-model="form.pertemuan_ke" type="number" min="1" max="32" placeholder="cth. 1" :class="inp" required />
+                                <Input
+                                    id="pertemuan_ke"
+                                    v-model="form.pertemuan_ke"
+                                    type="number"
+                                    min="1"
+                                    max="32"
+                                    placeholder="cth. 1"
+                                    :class="inp"
+                                    required
+                                />
                                 <InputError :message="form.errors.pertemuan_ke" />
                             </div>
                             <div class="grid gap-2">
@@ -176,13 +194,11 @@ const sel =
                             </div>
                         </div>
                         <div class="mt-4 grid gap-2">
-                            <Label for="file" class="text-sm font-medium text-black"
-                                >File </Label
-                            >
+                            <Label for="file" class="text-sm font-medium text-black">File </Label>
                             <input id="file" ref="fileInput" type="file" multiple class="hidden" @change="onFiles" />
                             <Attachment
                                 state="idle"
-                                class="w-full h-16 cursor-pointer border-2 rounded-md border-dashed border-[#dddddd] bg-[#fafafa] transition-colors hover:border-[#b8cde3] hover:bg-white"
+                                class="h-16 w-full cursor-pointer rounded-md border-2 border-dashed border-[#dddddd] bg-[#fafafa] transition-colors hover:border-[#b8cde3] hover:bg-white"
                                 :class="isDragging ? 'border-[#0075de] bg-white' : ''"
                                 @click="pickFiles"
                                 @dragover.prevent="isDragging = true"

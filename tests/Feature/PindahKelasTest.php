@@ -6,6 +6,7 @@ use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanPindahKelas;
+use App\Models\TahunAkademik;
 use App\Models\User;
 
 function createPindahKelasMahasiswa(): array
@@ -264,7 +265,7 @@ it('removes pengajuan rows when the mahasiswa profile is deleted', function () {
 it('rejects moving to a class of the same course in another tahun akademik', function () {
     PengaturanPindahKelas::current()->update(['is_active' => true]);
     [$mahasiswa, , $kelasAsal] = createPindahKelasMahasiswa();
-    $lalu = \App\Models\TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
+    $lalu = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
     $kelasLalu = KelasKuliah::create(['kode_kelas' => 'LALU-A', 'tahun_akademik_id' => $lalu->id, 'kapasitas' => 30, 'dosen_id' => $kelasAsal->dosen_id, 'matkul_id' => $kelasAsal->matkul_id]);
 
     $this->actingAs($mahasiswa)->get(route('mahasiswa.pindah-kelas'))

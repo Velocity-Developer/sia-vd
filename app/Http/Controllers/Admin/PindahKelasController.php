@@ -72,7 +72,7 @@ class PindahKelasController extends Controller
     {
         $data = $request->validate([
             'is_active' => ['required', 'boolean'],
-        ], ['required' => ':attribute wajib diisi.', 'boolean' => ':attribute tidak valid.'], [
+        ], ['boolean' => ':attribute tidak valid.'], [
             'is_active' => 'status form pindah kelas',
         ]);
 
@@ -160,10 +160,7 @@ class PindahKelasController extends Controller
 
         $data = $request->validate([
             'catatan_admin' => ['required', 'string', 'max:1000'],
-        ], [
-            'required' => ':attribute wajib diisi.',
-            'max' => ':attribute maksimal :max karakter.',
-        ], [
+        ], [], [
             'catatan_admin' => 'catatan alasan penolakan',
         ]);
 

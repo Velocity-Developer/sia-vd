@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import InputError from '@/components/InputError.vue';
 import SearchSelect from '@/components/SearchSelect.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -18,8 +18,6 @@ const props = defineProps<{
 
 const title = `${props.kelasKuliah ? 'Edit' : 'Tambah'} Kelas Kuliah`;
 
-const tahunAjaranOptions = ['2024/2025 Ganjil', '2024/2025 Genap', '2025/2026 Ganjil', '2025/2026 Genap'];
-
 const form = useForm({
     kode_kelas: props.kelasKuliah?.kode_kelas ?? '',
     tahun_ajaran: props.kelasKuliah?.tahun_ajaran ?? '',
@@ -29,7 +27,8 @@ const form = useForm({
     tahun_akademik_id: props.kelasKuliah?.tahun_akademik_id ?? '',
 });
 
-const submit = () => (props.kelasKuliah ? form.put(route('admin.kelas-kuliah.update', props.kelasKuliah.id)) : form.post(route('admin.kelas-kuliah.store')));
+const submit = () =>
+    props.kelasKuliah ? form.put(route('admin.kelas-kuliah.update', props.kelasKuliah.id)) : form.post(route('admin.kelas-kuliah.store'));
 
 const inp =
     'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
@@ -45,7 +44,9 @@ const sel =
                 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
                     <div class="space-y-1">
                         <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">{{ title }}</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">Lengkapi kode kelas, tahun ajaran, kapasitas, dosen pengampu, dan mata kuliah.</p>
+                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">
+                            Lengkapi kode kelas, tahun ajaran, kapasitas, dosen pengampu, dan mata kuliah.
+                        </p>
                     </div>
                     <Link :href="route('admin.kelas-kuliah.index')"
                         ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
@@ -59,12 +60,18 @@ const sel =
                 >
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div
+                    v-if="page.props.flash?.error"
+                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
+                    role="alert"
+                >
                     {{ page.props.flash.error }}
                 </div>
 
                 <form @submit.prevent="submit" class="space-y-4">
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Kelas Kuliah</h2>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">

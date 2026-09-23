@@ -111,7 +111,7 @@ const confirmDelete = () => {
                                     </td>
                                     <td class="px-4 py-4">
                                         <span
-                                            class="rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap"
+                                            class="whitespace-nowrap rounded-full px-3 py-1 text-xs font-semibold"
                                             :class="item.status ? 'bg-[#eaf8ed] text-[#16852b]' : 'bg-[#f1f1f1] text-[#77736f]'"
                                             >{{ item.status ? 'Aktif' : 'Tidak Aktif' }}</span
                                         >

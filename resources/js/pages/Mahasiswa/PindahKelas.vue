@@ -59,9 +59,12 @@ const kelasTujuanTersedia = computed(() => {
     return props.kelasTujuan.filter((item) => item.matkul_id === kelas.matkul_id);
 });
 
-watch(() => form.kelas_asal_id, () => {
-    form.kelas_tujuan_id = null;
-});
+watch(
+    () => form.kelas_asal_id,
+    () => {
+        form.kelas_tujuan_id = null;
+    },
+);
 
 const submit = () => {
     form.post(route('mahasiswa.pindah-kelas.store'), {
@@ -87,9 +90,7 @@ const formatDateTime = (value: string | null): string => {
 
     const date = new Date(value);
 
-    return Number.isNaN(date.getTime())
-        ? value
-        : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 };
 
 const flashMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -118,14 +119,28 @@ const area =
             <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div class="space-y-1">
                     <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black dark:text-white">Pindah Kelas</h1>
-                    <p class="text-sm leading-5 text-[#615d59] dark:text-gray-400">Ajukan perpindahan kelas pada mata kuliah yang sedang Anda ambil.</p>
+                    <p class="text-sm leading-5 text-[#615d59] dark:text-gray-400">
+                        Ajukan perpindahan kelas pada mata kuliah yang sedang Anda ambil.
+                    </p>
                 </div>
 
-                <div v-if="flashMessage" role="alert" class="rounded-xl border px-4 py-3 text-sm shadow-sm" :class="flashMessage.type === 'success' ? 'border-[#e6e6e6] bg-white text-[#1aae39] dark:border-gray-800 dark:bg-gray-900' : 'border-[#e6e6e6] bg-white text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900'">
+                <div
+                    v-if="flashMessage"
+                    role="alert"
+                    class="rounded-xl border px-4 py-3 text-sm shadow-sm"
+                    :class="
+                        flashMessage.type === 'success'
+                            ? 'border-[#e6e6e6] bg-white text-[#1aae39] dark:border-gray-800 dark:bg-gray-900'
+                            : 'border-[#e6e6e6] bg-white text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900'
+                    "
+                >
                     {{ flashMessage.text }}
                 </div>
 
-                <section v-if="isActive" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)] dark:border-gray-800 dark:bg-gray-900">
+                <section
+                    v-if="isActive"
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)] dark:border-gray-800 dark:bg-gray-900"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Form Pindah Kelas</h2>
                     <form class="mt-4 space-y-4" @submit.prevent="submit">
                         <div class="grid gap-4 sm:grid-cols-2">
@@ -156,13 +171,17 @@ const area =
                             <InputError :message="form.errors.alasan" />
                         </div>
                         <div class="flex justify-end">
-                            <Button type="submit" :disabled="form.processing" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">Kirim Pengajuan</Button>
+                            <Button type="submit" :disabled="form.processing" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]"
+                                >Kirim Pengajuan</Button
+                            >
                         </div>
                     </form>
                 </section>
 
                 <section v-else class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <p class="text-sm text-[#615d59] dark:text-gray-400">Form pindah kelas sedang ditutup. Silakan hubungi admin akademik untuk informasi lebih lanjut.</p>
+                    <p class="text-sm text-[#615d59] dark:text-gray-400">
+                        Form pindah kelas sedang ditutup. Silakan hubungi admin akademik untuk informasi lebih lanjut.
+                    </p>
                 </section>
 
                 <section class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -183,20 +202,46 @@ const area =
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-[#e6e6e6] dark:divide-gray-800">
-                                <tr v-for="(pengajuan, index) in props.pengajuans" :key="pengajuan.id" class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800">
+                                <tr
+                                    v-for="(pengajuan, index) in props.pengajuans"
+                                    :key="pengajuan.id"
+                                    class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"
+                                >
                                     <td class="px-4 py-3 text-[15px] text-[#615d59] dark:text-gray-400">{{ index + 1 }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">{{ pengajuan.kelas_asal ?? '-' }}<span v-if="pengajuan.kelas_asal_matkul" class="block text-xs text-[#615d59] dark:text-gray-400">{{ pengajuan.kelas_asal_matkul }}</span></td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">{{ pengajuan.kelas_tujuan ?? '-' }}<span v-if="pengajuan.kelas_tujuan_matkul" class="block text-xs text-[#615d59] dark:text-gray-400">{{ pengajuan.kelas_tujuan_matkul }}</span></td>
-                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">{{ pengajuan.alasan }}</td>
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                        {{ pengajuan.kelas_asal ?? '-'
+                                        }}<span v-if="pengajuan.kelas_asal_matkul" class="block text-xs text-[#615d59] dark:text-gray-400">{{
+                                            pengajuan.kelas_asal_matkul
+                                        }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                        {{ pengajuan.kelas_tujuan ?? '-'
+                                        }}<span v-if="pengajuan.kelas_tujuan_matkul" class="block text-xs text-[#615d59] dark:text-gray-400">{{
+                                            pengajuan.kelas_tujuan_matkul
+                                        }}</span>
+                                    </td>
+                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                        {{ pengajuan.alasan }}
+                                    </td>
                                     <td class="px-4 py-3">
-                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" :class="statusClass[pengajuan.status] ?? ''">{{ statusLabel[pengajuan.status] ?? pengajuan.status }}</span>
-                                        <span v-if="pengajuan.diproses_at" class="mt-1 block text-xs text-[#615d59] dark:text-gray-400">{{ formatDateTime(pengajuan.diproses_at) }}</span>
+                                        <span
+                                            class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
+                                            :class="statusClass[pengajuan.status] ?? ''"
+                                            >{{ statusLabel[pengajuan.status] ?? pengajuan.status }}</span
+                                        >
+                                        <span v-if="pengajuan.diproses_at" class="mt-1 block text-xs text-[#615d59] dark:text-gray-400">{{
+                                            formatDateTime(pengajuan.diproses_at)
+                                        }}</span>
                                     </td>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">{{ pengajuan.catatan_admin ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">{{ formatDateTime(pengajuan.created_at) }}</td>
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e] dark:text-gray-200">
+                                        {{ formatDateTime(pengajuan.created_at) }}
+                                    </td>
                                 </tr>
                                 <tr v-if="!props.pengajuans.length">
-                                    <td colspan="7" class="px-4 py-16 text-center text-sm text-[#615d59] dark:text-gray-400">Belum ada pengajuan pindah kelas.</td>
+                                    <td colspan="7" class="px-4 py-16 text-center text-sm text-[#615d59] dark:text-gray-400">
+                                        Belum ada pengajuan pindah kelas.
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

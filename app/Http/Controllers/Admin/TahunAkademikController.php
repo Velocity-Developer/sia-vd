@@ -74,11 +74,7 @@ class TahunAkademikController extends Controller
                 'status' => ['boolean'],
             ],
             [
-                'required' => ':attribute wajib diisi.',
-                'date' => ':attribute harus berupa tanggal yang valid.',
                 'after_or_equal' => ':attribute harus sama atau setelah :date.',
-                'string' => ':attribute harus berupa teks.',
-                'max' => ':attribute maksimal :max karakter.',
                 'tahun.unique' => 'Tahun akademik dengan tahun dan semester ini sudah ada.',
             ],
             [

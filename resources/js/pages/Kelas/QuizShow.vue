@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { rutePeran, type Peran } from '@/lib/rutePeran';
 import AlertModal from '@/components/AlertModal.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { ChevronDown, Plus, Save, Trash2, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -62,10 +62,7 @@ type KelasKuliahDetail = {
     tahun_ajaran?: string | null;
 };
 
-const props = defineProps<{ peran: Peran;
-    kelasKuliah: KelasKuliahDetail;
-    quiz: QuizDetail;
-}>();
+const props = defineProps<{ peran: Peran; kelasKuliah: KelasKuliahDetail; quiz: QuizDetail }>();
 const rute = rutePeran(props.peran);
 
 const page = usePage<{
@@ -88,13 +85,6 @@ const QUESTION_TYPES = [
     { value: 'true_false', label: 'True or False' },
     { value: 'essay', label: 'Essay' },
 ] as const;
-
-const TYPE_LABELS: Record<string, string> = {
-    single_choice: 'Single Choice',
-    multiple_choice: 'Multiple Choice',
-    true_false: 'True or False',
-    essay: 'Essay',
-};
 
 let draftSeq = 1;
 let optionSeq = 1;
@@ -307,8 +297,6 @@ const duration = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return '-';
     return `${value} menit`;
 };
-
-const typeLabel = (value: string): string => TYPE_LABELS[value] ?? value;
 
 const optionList = (value: QuestionDetail['question_option']): QuestionOption[] => {
     if (value === null || value === undefined || value === '') return [];
@@ -740,7 +728,14 @@ const sel =
                                     </td>
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.started_at) }}</td>
                                     <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.submitted_at) }}</td>
-                                    <td class="px-4 py-3 text-sm font-semibold text-black">{{ attempt.score ?? '-' }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]">Ditutup otomatis (waktu habis)</span><span v-if="attempt.essay_belum_dinilai" class="mt-0.5 block text-xs font-normal text-[#dd5b00]">Esai belum dinilai</span></td>
+                                    <td class="px-4 py-3 text-sm font-semibold text-black">
+                                        {{ attempt.score ?? '-'
+                                        }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]"
+                                            >Ditutup otomatis (waktu habis)</span
+                                        ><span v-if="attempt.essay_belum_dinilai" class="mt-0.5 block text-xs font-normal text-[#dd5b00]"
+                                            >Esai belum dinilai</span
+                                        >
+                                    </td>
                                     <td class="px-4 py-3 text-right">
                                         <Link
                                             v-if="attempt.submitted_at"

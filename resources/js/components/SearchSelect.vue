@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { ChevronDown } from 'lucide-vue-next';
 import { Input } from '@/components/ui/input';
+import { ChevronDown } from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
     id: string;
@@ -20,7 +20,9 @@ const search = ref('');
 const rootRef = ref<HTMLElement | null>(null);
 
 const allOptions = computed(() => (props.groups ? props.groups.flatMap((g) => g.options) : (props.options ?? [])));
-const filtered = computed(() => (props.groups ? [] : (props.options ?? []).filter((option) => option.name.toLowerCase().includes(search.value.toLowerCase()))));
+const filtered = computed(() =>
+    props.groups ? [] : (props.options ?? []).filter((option) => option.name.toLowerCase().includes(search.value.toLowerCase())),
+);
 const filteredGroups = computed(() => {
     if (!props.groups) return [];
     const q = search.value.toLowerCase();
@@ -63,7 +65,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside));
         <button
             :id="id"
             type="button"
-            class="flex h-10 w-full items-center justify-between rounded-[4px] border border-[#dddddd] bg-white px-3 text-left text-[15px] text-black dark:border-border dark:bg-card dark:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
+            class="flex h-10 w-full items-center justify-between rounded-[4px] border border-[#dddddd] bg-white px-3 text-left text-[15px] text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de] dark:border-border dark:bg-card dark:text-foreground"
             role="combobox"
             :aria-expanded="open"
             :aria-controls="`${id}-options`"
@@ -73,12 +75,17 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside));
             <span :class="{ 'text-[#a39e98]': !selected }">{{ selected?.name ?? placeholder ?? 'Pilih' }}</span>
             <ChevronDown class="size-4 shrink-0 text-[#a39e98] transition-transform" :class="open ? 'rotate-180' : ''" />
         </button>
-        <div v-if="open" :id="`${id}-options`" class="absolute z-10 mt-1 w-full rounded-xl border border-[#e6e6e6] bg-white p-2 text-black shadow-[0_4px_18px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)] dark:border-border dark:bg-popover dark:text-popover-foreground" role="listbox">
+        <div
+            v-if="open"
+            :id="`${id}-options`"
+            class="absolute z-10 mt-1 w-full rounded-xl border border-[#e6e6e6] bg-white p-2 text-black shadow-[0_4px_18px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)] dark:border-border dark:bg-popover dark:text-popover-foreground"
+            role="listbox"
+        >
             <Input
                 v-model="search"
                 :placeholder="searchPlaceholder ?? 'Cari'"
                 :aria-label="searchPlaceholder ?? 'Cari'"
-                class="h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] placeholder:text-[#a39e98] dark:border-border dark:bg-background dark:text-foreground dark:placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0"
+                class="h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0 dark:border-border dark:bg-background dark:text-foreground dark:placeholder:text-muted-foreground"
                 autofocus
             />
             <div class="mt-1 max-h-48 overflow-y-auto">

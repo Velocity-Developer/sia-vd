@@ -106,13 +106,6 @@ class MataKuliahController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
-            'string' => ':attribute harus berupa teks.',
-            'unique' => ':attribute sudah digunakan.',
-            'integer' => ':attribute harus berupa angka.',
-            'min' => ':attribute minimal :min.',
-            'max.string' => ':attribute maksimal :max karakter.',
-            'max.integer' => ':attribute maksimal :max.',
             'in' => ':attribute tidak valid.',
             'exists' => ':attribute tidak ditemukan.',
         ];

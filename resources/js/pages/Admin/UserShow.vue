@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
 
 const props = defineProps<{
     title: string;
@@ -21,7 +21,6 @@ const v = (val: unknown): string => {
 
 const isMahasiswa = props.type === 'mahasiswa';
 const isDosen = props.type === 'dosen';
-const isKaryawan = props.type === 'karyawan';
 
 const detailTitle = isMahasiswa ? 'Detail Mahasiswa' : isDosen ? 'Detail Dosen' : 'Detail Karyawan';
 const detailSubtitle = isMahasiswa
@@ -110,13 +109,19 @@ const ibu = [
                         <p class="max-w-xl text-sm leading-5 text-[#615d59]">{{ detailSubtitle }}</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route(`admin.users.${props.type}`)"><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link>
-                        <Link :href="route(`admin.users.${props.type}.edit`, props.user.id)"><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link>
+                        <Link :href="route(`admin.users.${props.type}`)"
+                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
+                        >
+                        <Link :href="route(`admin.users.${props.type}.edit`, props.user.id)"
+                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
+                        >
                     </div>
                 </div>
 
                 <!-- Akun — feature-card on paper -->
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Akun</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div v-for="f in akun" :key="f.key" class="space-y-1">
@@ -127,7 +132,9 @@ const ibu = [
                 </section>
 
                 <!-- Data Pribadi -->
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Pribadi</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div v-for="f in pribadi" :key="f.key" class="space-y-1">
@@ -139,7 +146,9 @@ const ibu = [
 
                 <template v-if="isMahasiswa">
                     <!-- Data Akademik -->
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Akademik</h2>
                         <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div v-for="f in akademik" :key="f.key" class="space-y-1">
@@ -151,7 +160,9 @@ const ibu = [
 
                     <!-- Ayah & Ibu — 2-up on desktop -->
                     <div class="grid gap-4 lg:grid-cols-2">
-                        <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                        <section
+                            class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                        >
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Ayah</h2>
                             <dl class="mt-4 grid gap-4">
                                 <div v-for="f in ayah" :key="f.key" class="space-y-1">
@@ -160,7 +171,9 @@ const ibu = [
                                 </div>
                             </dl>
                         </section>
-                        <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                        <section
+                            class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                        >
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Ibu</h2>
                             <dl class="mt-4 grid gap-4">
                                 <div v-for="f in ibu" :key="f.key" class="space-y-1">
@@ -173,7 +186,9 @@ const ibu = [
                 </template>
 
                 <template v-else-if="isDosen">
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Akademik Dosen</h2>
                         <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div v-for="f in akademikDosen" :key="f.key" class="space-y-1">
@@ -185,7 +200,9 @@ const ibu = [
                 </template>
 
                 <template v-else>
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Identitas Karyawan</h2>
                         <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div v-for="f in identitasKaryawan" :key="f.key" class="space-y-1">

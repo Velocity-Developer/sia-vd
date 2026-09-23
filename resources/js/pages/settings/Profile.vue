@@ -52,8 +52,18 @@ const submit = () => {
                 <form @submit.prevent="submit" class="space-y-6">
                     <div class="grid gap-2">
                         <Label for="name">Name</Label>
-                        <Input id="name" class="mt-1 block w-full" v-model="form.name" required autocomplete="name" placeholder="Full name" :disabled="props.namaTerkunci" />
-                        <p v-if="props.namaTerkunci" class="mt-1 text-xs text-muted-foreground">Nama mengikuti data akademik. Hubungi bagian akademik untuk mengubahnya.</p>
+                        <Input
+                            id="name"
+                            class="mt-1 block w-full"
+                            v-model="form.name"
+                            required
+                            autocomplete="name"
+                            placeholder="Full name"
+                            :disabled="props.namaTerkunci"
+                        />
+                        <p v-if="props.namaTerkunci" class="mt-1 text-xs text-muted-foreground">
+                            Nama mengikuti data akademik. Hubungi bagian akademik untuk mengubahnya.
+                        </p>
                         <InputError class="mt-2" :message="form.errors.name" />
                     </div>
 
@@ -92,7 +102,12 @@ const submit = () => {
                     <div class="flex items-center gap-4">
                         <Button :disabled="form.processing">Save</Button>
 
-                        <Transition enter-active-class="transition ease-in-out" enter-from-class="opacity-0" leave-active-class="transition ease-in-out" leave-to-class="opacity-0">
+                        <Transition
+                            enter-active-class="transition ease-in-out"
+                            enter-from-class="opacity-0"
+                            leave-active-class="transition ease-in-out"
+                            leave-to-class="opacity-0"
+                        >
                             <p v-if="form.recentlySuccessful" class="text-sm text-neutral-600">Saved.</p>
                         </Transition>
                     </div>

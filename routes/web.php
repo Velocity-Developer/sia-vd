@@ -3,7 +3,6 @@
 use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JadwalController;
-use App\Http\Controllers\Admin\KelasKuliahController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\PengaturanAkademikController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
@@ -13,8 +12,8 @@ use App\Http\Controllers\Admin\RuangController;
 use App\Http\Controllers\Admin\TahunAkademikController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
-use App\Http\Controllers\Dosen\KelasKuliahController as DosenKelasKuliahController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
+use App\Http\Controllers\Kelas\KelasKuliahController;
 use App\Http\Controllers\Kelas\MateriController;
 use App\Http\Controllers\Kelas\QuizController;
 use App\Http\Controllers\Kelas\QuizPenilaianController;
@@ -166,9 +165,9 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware('can:dosen.kelas-kuliah')->group(function (): void {
-        Route::get('kelas-kuliah', [DosenKelasKuliahController::class, 'index'])->name('dosen.kelas-kuliah.index');
-        Route::get('kelas-kuliah/{kelasKuliah}', [DosenKelasKuliahController::class, 'show'])->name('dosen.kelas-kuliah.show');
-        Route::put('kelas-kuliah/{kelasKuliah}/krs/{krs}/nilai', [DosenKelasKuliahController::class, 'updateGrade'])->name('dosen.kelas-kuliah.krs.nilai');
+        Route::get('kelas-kuliah', [KelasKuliahController::class, 'index'])->name('dosen.kelas-kuliah.index');
+        Route::get('kelas-kuliah/{kelasKuliah}', [KelasKuliahController::class, 'show'])->name('dosen.kelas-kuliah.show');
+        Route::put('kelas-kuliah/{kelasKuliah}/krs/{krs}/nilai', [KelasKuliahController::class, 'updateGrade'])->name('dosen.kelas-kuliah.krs.nilai');
         Route::get('kelas-kuliah/{kelasKuliah}/materi/create', [MateriController::class, 'create'])->name('dosen.kelas-kuliah.materi.create');
         Route::post('kelas-kuliah/{kelasKuliah}/materi', [MateriController::class, 'store'])->name('dosen.kelas-kuliah.materi.store');
         Route::get('kelas-kuliah/{kelasKuliah}/materi/{materi}/edit', [MateriController::class, 'edit'])->name('dosen.kelas-kuliah.materi.edit');

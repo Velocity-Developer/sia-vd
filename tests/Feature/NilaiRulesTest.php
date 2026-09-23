@@ -2,7 +2,10 @@
 
 use App\Models\KelasKuliah;
 use App\Models\Krs;
+use App\Models\PengumpulanTugas;
+use App\Models\QuizAttempt;
 use App\Models\TahunAkademik;
+use App\Models\Tugas;
 use App\Models\User;
 
 it('lets a grade be cleared', function () {
@@ -63,10 +66,10 @@ it('locks essay grading, tugas grading, and question edits once the tahun akadem
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
     $quiz = $kelas->quizzes()->create(['nama_quiz' => 'Quiz', 'uploaded_by' => $kelas->dosen->user_id]);
     $soal = $quiz->questions()->create(['question_text' => 'Jelaskan', 'question_type' => 'essay', 'points' => 20]);
-    $attempt = \App\Models\QuizAttempt::create(['quiz_id' => $quiz->id, 'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'started_at' => now()]);
+    $attempt = QuizAttempt::create(['quiz_id' => $quiz->id, 'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'started_at' => now()]);
     $attempt->setRelation('quiz', $quiz)->finalize([$soal->id => 'Jawaban']);
-    $tugas = \App\Models\Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $kelas->dosen->user_id, 'judul_tugas' => 'Tugas']);
-    $pengumpulan = \App\Models\PengumpulanTugas::create(['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'file_jawaban' => ['pengumpulan-tugas/a.pdf'], 'submitted_at' => now()]);
+    $tugas = Tugas::create(['kelas_id' => $kelas->id, 'uploaded_by' => $kelas->dosen->user_id, 'judul_tugas' => 'Tugas']);
+    $pengumpulan = PengumpulanTugas::create(['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'file_jawaban' => ['pengumpulan-tugas/a.pdf'], 'submitted_at' => now()]);
     $kelas->tahunAkademik->update(['status' => false]);
     $dosen = $kelas->dosen->user;
 

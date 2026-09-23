@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\User;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Hash;
 
 it('keeps a student name locked while other profile fields still update', function () {
     $mahasiswa = User::factory()->mahasiswa()->create(['name' => 'Nama Resmi']);
@@ -39,7 +41,7 @@ it('refuses to run the demo seeder in production', function () {
     app()->detectEnvironment(fn () => 'production');
 
     try {
-        expect(fn () => (new \Database\Seeders\DemoSeeder)->run())->toThrow(RuntimeException::class);
+        expect(fn () => (new DemoSeeder)->run())->toThrow(RuntimeException::class);
     } finally {
         app()->detectEnvironment(fn () => 'testing');
     }
@@ -52,5 +54,5 @@ it('does not reset a demo account password that was already changed', function (
 
     $this->seed();
 
-    expect(\Illuminate\Support\Facades\Hash::check('kata-sandi-baru', $admin->fresh()->password))->toBeTrue();
+    expect(Hash::check('kata-sandi-baru', $admin->fresh()->password))->toBeTrue();
 });

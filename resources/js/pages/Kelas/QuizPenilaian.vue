@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
 import InputError from '@/components/InputError.vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 type Option = { text: string; is_correct?: boolean | number | string };
@@ -80,25 +80,47 @@ const submit = () => {
                             {{ props.kelasKuliah.nama_matkul ? `(${props.kelasKuliah.nama_matkul})` : '' }}
                         </p>
                     </div>
-                    <Link :href="props.urls.back" class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black">Kembali</Link>
+                    <Link :href="props.urls.back" class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black"
+                        >Kembali</Link
+                    >
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
+                    {{ page.props.flash.success }}
+                </div>
 
                 <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
                     <dl class="grid gap-4 sm:grid-cols-4">
-                        <div><dt class="text-xs text-[#a39e98]">Mulai</dt><dd class="font-medium">{{ formatDateTime(props.attempt.started_at) }}</dd></div>
-                        <div><dt class="text-xs text-[#a39e98]">Selesai</dt><dd class="font-medium">{{ formatDateTime(props.attempt.submitted_at) }}</dd></div>
-                        <div><dt class="text-xs text-[#a39e98]">Score</dt><dd class="text-xl font-bold text-black">{{ props.attempt.score ?? '-' }}</dd></div>
-                        <div v-if="props.attempt.auto_closed"><dt class="text-xs text-[#a39e98]">Keterangan</dt><dd class="text-sm text-[#dd5b00]">Ditutup otomatis (waktu habis)</dd></div>
+                        <div>
+                            <dt class="text-xs text-[#a39e98]">Mulai</dt>
+                            <dd class="font-medium">{{ formatDateTime(props.attempt.started_at) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-[#a39e98]">Selesai</dt>
+                            <dd class="font-medium">{{ formatDateTime(props.attempt.submitted_at) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs text-[#a39e98]">Score</dt>
+                            <dd class="text-xl font-bold text-black">{{ props.attempt.score ?? '-' }}</dd>
+                        </div>
+                        <div v-if="props.attempt.auto_closed">
+                            <dt class="text-xs text-[#a39e98]">Keterangan</dt>
+                            <dd class="text-sm text-[#dd5b00]">Ditutup otomatis (waktu habis)</dd>
+                        </div>
                     </dl>
                 </section>
 
                 <form class="flex flex-col gap-4" @submit.prevent="submit">
-                    <article v-for="(item, index) in props.items" :key="item.question_id" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
+                    <article
+                        v-for="(item, index) in props.items"
+                        :key="item.question_id"
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm"
+                    >
                         <div class="flex flex-wrap items-start justify-between gap-2">
                             <h2 class="font-medium text-black">{{ index + 1 }}. {{ item.question_text }}</h2>
-                            <span class="text-xs text-[#a39e98]">{{ typeLabel[item.question_type] ?? item.question_type }} · {{ item.points }} poin</span>
+                            <span class="text-xs text-[#a39e98]"
+                                >{{ typeLabel[item.question_type] ?? item.question_type }} · {{ item.points }} poin</span
+                            >
                         </div>
 
                         <template v-if="item.question_type === 'essay'">
@@ -128,7 +150,13 @@ const submit = () => {
                                     v-for="option in item.options"
                                     :key="option.text"
                                     class="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm"
-                                    :class="chosen(item, option) ? (isCorrect(option) ? 'bg-[#e8f6ec] text-[#1a7f37]' : 'bg-[#fdecea] text-[#b42318]') : 'text-[#31302e]'"
+                                    :class="
+                                        chosen(item, option)
+                                            ? isCorrect(option)
+                                                ? 'bg-[#e8f6ec] text-[#1a7f37]'
+                                                : 'bg-[#fdecea] text-[#b42318]'
+                                            : 'text-[#31302e]'
+                                    "
                                 >
                                     <span class="w-4 text-center">{{ chosen(item, option) ? '●' : '○' }}</span>
                                     {{ option.text }}
@@ -143,7 +171,11 @@ const submit = () => {
                     </article>
 
                     <div v-if="essays.length" class="sticky bottom-4 flex justify-end">
-                        <Button type="submit" class="rounded-lg bg-[#0075de] text-white shadow-md hover:bg-[#005bab]" :disabled="form.processing || !props.attempt.submitted_at">
+                        <Button
+                            type="submit"
+                            class="rounded-lg bg-[#0075de] text-white shadow-md hover:bg-[#005bab]"
+                            :disabled="form.processing || !props.attempt.submitted_at"
+                        >
                             Simpan Nilai Esai
                         </Button>
                     </div>

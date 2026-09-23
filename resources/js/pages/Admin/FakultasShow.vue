@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
-import { Button } from '@/components/ui/button';
 
-type ProdiRow = { id: number; kode_prodi: string; nama_prodi: string; jenjang: string; status_akreditasi: string; ketuaProgramStudi?: { user?: { name?: string } } | null; ketua_program_studi?: { user?: { name?: string } } | null };
+type ProdiRow = {
+    id: number;
+    kode_prodi: string;
+    nama_prodi: string;
+    jenjang: string;
+    status_akreditasi: string;
+    ketuaProgramStudi?: { user?: { name?: string } } | null;
+    ketua_program_studi?: { user?: { name?: string } } | null;
+};
 
 const props = defineProps<{
     fakultas: {
@@ -51,12 +59,18 @@ const info = [
                         <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan informasi fakultas, dekan, dan program studi di bawahnya.</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route('admin.fakultas.index')"><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link>
-                        <Link :href="route('admin.fakultas.edit', props.fakultas.id)"><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link>
+                        <Link :href="route('admin.fakultas.index')"
+                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
+                        >
+                        <Link :href="route('admin.fakultas.edit', props.fakultas.id)"
+                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
+                        >
                     </div>
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Fakultas</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div v-for="f in info" :key="f.key" class="space-y-1">
@@ -70,10 +84,16 @@ const info = [
                     </dl>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]">
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
                     <div class="flex items-center justify-between gap-2">
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Program Studi ({{ prodiList().length }})</h2>
-                        <Link :href="route('admin.program-studi.index')"><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kelola Prodi</Button></Link>
+                        <Link :href="route('admin.program-studi.index')"
+                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white"
+                                >Kelola Prodi</Button
+                            ></Link
+                        >
                     </div>
                     <div v-if="prodiList().length > 0" class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
                         <div class="overflow-x-auto">

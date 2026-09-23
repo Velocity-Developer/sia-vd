@@ -61,9 +61,7 @@ const kelas = () => props.materi.kelasKuliah ?? props.materi.kelas_kuliah;
         :breadcrumbs="[
             {
                 title: 'Detail Kelas',
-                href: kelas()
-                    ? route('mahasiswa.jadwal-kuliah.show', kelas()!.id)
-                    : route('mahasiswa.jadwal-kuliah'),
+                href: kelas() ? route('mahasiswa.jadwal-kuliah.show', kelas()!.id) : route('mahasiswa.jadwal-kuliah'),
             },
             { title: props.materi.judul_materi, href: '#' },
         ]"
@@ -78,11 +76,7 @@ const kelas = () => props.materi.kelasKuliah ?? props.materi.kelas_kuliah;
                         <p class="text-sm text-[#615d59]">Detail materi perkuliahan.</p>
                     </div>
                     <Link
-                        :href="
-                            kelas()
-                                ? route('mahasiswa.jadwal-kuliah.show', kelas()!.id)
-                                : route('mahasiswa.jadwal-kuliah')
-                        "
+                        :href="kelas() ? route('mahasiswa.jadwal-kuliah.show', kelas()!.id) : route('mahasiswa.jadwal-kuliah')"
                         class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black"
                     >
                         Kembali

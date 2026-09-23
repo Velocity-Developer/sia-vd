@@ -118,12 +118,19 @@ const inp =
                         <Label for="logo">Logo</Label>
                         <input id="logo" ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFile" />
                         <div class="flex items-center gap-4">
-                            <div class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-[#e6e6e6] bg-[#f6f5f4]">
+                            <div
+                                class="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-[8px] border border-[#e6e6e6] bg-[#f6f5f4]"
+                            >
                                 <img v-if="preview" :src="preview" alt="Logo institusi" class="size-full object-contain" />
                                 <span v-else class="text-[11px] font-medium text-[#a39e98]">Belum ada</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <Button type="button" variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white" @click="pickFile">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white"
+                                    @click="pickFile"
+                                >
                                     <Upload class="mr-2 size-4" /> Pilih Logo
                                 </Button>
                                 <Button

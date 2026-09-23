@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
 import {
     Attachment,
     AttachmentAction,
@@ -12,6 +9,9 @@ import {
     AttachmentMedia,
     AttachmentTitle,
 } from '@/components/ui/attachment';
+import { Button } from '@/components/ui/button';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { FileText, Upload, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
@@ -49,8 +49,7 @@ const page = usePage<{ flash?: { success?: string; error?: string } }>();
 
 const kelas = (): Kelas | null => props.tugas.kelasKuliah ?? props.tugas.kelas_kuliah ?? null;
 
-const kembaliHref = (): string =>
-    kelas() ? route('mahasiswa.jadwal-kuliah.show', kelas()!.id) : route('mahasiswa.jadwal-kuliah');
+const kembaliHref = (): string => (kelas() ? route('mahasiswa.jadwal-kuliah.show', kelas()!.id) : route('mahasiswa.jadwal-kuliah'));
 
 const files = (value?: string[] | string | null): string[] => {
     if (Array.isArray(value)) {
@@ -170,10 +169,7 @@ const submit = () => {
                         <h1 class="text-[26px] font-bold text-black">{{ props.tugas.judul_tugas }}</h1>
                         <p class="text-sm text-[#615d59]">Detail tugas perkuliahan.</p>
                     </div>
-                    <Link
-                        :href="kembaliHref()"
-                        class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black"
-                    >
+                    <Link :href="kembaliHref()" class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black">
                         Kembali
                     </Link>
                 </div>
@@ -275,9 +271,7 @@ const submit = () => {
                                 <Upload class="size-4" />
                             </AttachmentMedia>
                             <AttachmentContent>
-                                <AttachmentTitle>{{
-                                    isDragging ? 'Lepaskan file di sini' : 'Klik atau seret file jawaban ke sini'
-                                }}</AttachmentTitle>
+                                <AttachmentTitle>{{ isDragging ? 'Lepaskan file di sini' : 'Klik atau seret file jawaban ke sini' }}</AttachmentTitle>
                                 <AttachmentDescription>
                                     bisa pilih lebih dari 1 file, maks. 10 MB per file
                                     <span v-if="form.file_jawaban.length"> — {{ form.file_jawaban.length }} file dipilih</span>

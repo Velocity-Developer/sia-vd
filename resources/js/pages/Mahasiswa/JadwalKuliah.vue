@@ -37,7 +37,7 @@ const jadwalGroups = computed<JadwalGroup[]>(() => {
         }));
 });
 const hariIni = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(new Date());
-const hariAktif = ref(jadwalGroups.value.some((group) => group.hari === hariIni) ? hariIni : jadwalGroups.value[0]?.hari ?? '');
+const hariAktif = ref(jadwalGroups.value.some((group) => group.hari === hariIni) ? hariIni : (jadwalGroups.value[0]?.hari ?? ''));
 const jadwalHariAktif = computed(() => jadwalGroups.value.find((group) => group.hari === hariAktif.value)?.entries ?? []);
 </script>
 
@@ -60,7 +60,11 @@ const jadwalHariAktif = computed(() => jadwalGroups.value.find((group) => group.
                                 role="tab"
                                 :aria-selected="hariAktif === group.hari"
                                 class="min-w-[92px] rounded-lg px-4 py-3 text-left transition"
-                                :class="hariAktif === group.hari ? 'bg-[#0075de] text-white shadow-sm' : 'text-[#615d59] hover:bg-[#f6f5f4] hover:text-black'"
+                                :class="
+                                    hariAktif === group.hari
+                                        ? 'bg-[#0075de] text-white shadow-sm'
+                                        : 'text-[#615d59] hover:bg-[#f6f5f4] hover:text-black'
+                                "
                                 @click="hariAktif = group.hari"
                             >
                                 <span class="block text-sm font-semibold">{{ group.hari }}</span>
@@ -96,15 +100,21 @@ const jadwalHariAktif = computed(() => jadwalGroups.value.find((group) => group.
                                                 <p class="text-[11px]">{{ jam(entry.item.jam_akhir) }}</p>
                                             </div>
                                             <div class="space-y-1">
-                                                <h3 class="font-semibold text-black group-hover:text-[#0075de]">{{ matkul(entry.kelas)?.nama_matkul ?? '-' }}</h3>
-                                                <p class="text-sm text-[#615d59]">Kelas {{ entry.kelas.kode_kelas }} · {{ matkul(entry.kelas)?.sks ?? '-' }} SKS</p>
+                                                <h3 class="font-semibold text-black group-hover:text-[#0075de]">
+                                                    {{ matkul(entry.kelas)?.nama_matkul ?? '-' }}
+                                                </h3>
+                                                <p class="text-sm text-[#615d59]">
+                                                    Kelas {{ entry.kelas.kode_kelas }} · {{ matkul(entry.kelas)?.sks ?? '-' }} SKS
+                                                </p>
                                             </div>
                                         </div>
                                         <p class="text-sm text-[#615d59] sm:text-right">Ruang {{ entry.item.ruang?.kode_ruang ?? '-' }}</p>
                                     </div>
                                 </article>
                             </Link>
-                            <p v-if="!jadwalHariAktif.length" class="px-2 py-10 text-center text-sm text-[#615d59]">Tidak ada jadwal pada hari ini.</p>
+                            <p v-if="!jadwalHariAktif.length" class="px-2 py-10 text-center text-sm text-[#615d59]">
+                                Tidak ada jadwal pada hari ini.
+                            </p>
                         </div>
                     </section>
                 </div>

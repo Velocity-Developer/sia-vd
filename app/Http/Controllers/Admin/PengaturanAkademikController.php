@@ -36,9 +36,7 @@ class PengaturanAkademikController extends Controller
             'batas_sks.*.ips_minimal' => ['required', 'numeric', 'min:0', 'max:4', 'distinct'],
             'batas_sks.*.maks_sks' => ['required', 'integer', 'min:1', 'max:40'],
         ], [
-            'required' => ':attribute wajib diisi.',
             'distinct' => 'IPS minimal tidak boleh sama di dua baris.',
-            'min' => ':attribute minimal :min.',
             'max' => ':attribute maksimal :max.',
         ], [
             'maks_sks_tanpa_ips' => 'Maks SKS tanpa IPS',
@@ -79,10 +77,8 @@ class PengaturanAkademikController extends Controller
             'skala_nilai.*.lulus' => ['required', 'boolean'],
             'skala_nilai.*.boleh_diulang' => ['required', 'boolean'],
         ], [
-            'required' => ':attribute wajib diisi.',
             'distinct' => 'Huruf nilai tidak boleh sama di dua baris.',
             'regex' => 'Huruf nilai berupa satu huruf, boleh diikuti + atau - (mis. A, B+, A-).',
-            'min' => ':attribute minimal :min.',
             'max' => ':attribute maksimal :max.',
         ], [
             'skala_nilai.*.huruf' => 'Huruf',

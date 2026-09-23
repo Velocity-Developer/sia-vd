@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\AllowedUpload;
+use App\Models\DosenProfile;
 use App\Models\Fakultas;
 use App\Models\InfoKuliah;
 use App\Models\Jadwal;
@@ -120,7 +121,7 @@ class DemoSeeder extends Seeder
      * Buang data demo dari seeder versi sebelumnya (dosen/mahasiswa, mata kuliah, prodi, dan ruang yang
      * tidak lagi dipakai) agar isi database persis seperti rancangan data demo saat ini.
      *
-     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @param  Collection<int, DosenProfile>  $dosen
      * @param  Collection<int, MahasiswaProfile>  $mahasiswa
      * @param  Collection<int, ProgramStudi>  $prodi
      * @param  Collection<int, MataKuliah>  $mataKuliah
@@ -155,7 +156,7 @@ class DemoSeeder extends Seeder
      * Admin dan 16 dosen; empat dosen untuk tiap program studi agar setiap kelas punya pengampu
      * tanpa membuat jadwal dosen bentrok.
      *
-     * @return Collection<int, \App\Models\DosenProfile>
+     * @return Collection<int, DosenProfile>
      */
     private function dosen(): Collection
     {
@@ -189,7 +190,7 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @param  Collection<int, DosenProfile>  $dosen
      * @return Collection<int, ProgramStudi>
      */
     private function fakultasDanProdi(Collection $dosen): Collection
@@ -330,7 +331,7 @@ class DemoSeeder extends Seeder
      * sebelumnya sehingga kini di semester 5; angkatan terbaru baru masuk semester 1.
      *
      * @param  Collection<int, ProgramStudi>  $prodi
-     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @param  Collection<int, DosenProfile>  $dosen
      * @return Collection<int, MahasiswaProfile>
      */
     private function mahasiswa(Collection $prodi, Collection $dosen, TahunAkademik $tahunAktif): Collection
@@ -395,7 +396,7 @@ class DemoSeeder extends Seeder
      * @param  Collection<int, TahunAkademik>  $tahunAkademik
      * @param  Collection<int, ProgramStudi>  $prodi
      * @param  Collection<int, MataKuliah>  $mataKuliah
-     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @param  Collection<int, DosenProfile>  $dosen
      * @param  Collection<int, Ruang>  $ruang
      */
     private function kelasDanJadwal(Collection $tahunAkademik, Collection $prodi, Collection $mataKuliah, Collection $dosen, Collection $ruang): void

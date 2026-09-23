@@ -109,11 +109,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                         <div>
                             <dt class="text-xs text-[#a39e98]">Tahun Ajaran</dt>
                             <dd class="font-medium">
-                                {{
-                                    tahunAkademik()
-                                    ? `${tahunAkademik()?.tahun} ${tahunAkademik()?.semester}`
-                                        : '-'
-                                }}
+                                {{ tahunAkademik() ? `${tahunAkademik()?.tahun} ${tahunAkademik()?.semester}` : '-' }}
                             </dd>
                         </div>
                     </dl>
@@ -166,11 +162,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                             >
                                 {{ item.judul_tugas }}
                             </Link>
-                            <Link
-                                v-else
-                                :href="route('mahasiswa.quiz.show', item.id)"
-                                class="font-medium text-[#0075de] hover:underline"
-                            >
+                            <Link v-else :href="route('mahasiswa.quiz.show', item.id)" class="font-medium text-[#0075de] hover:underline">
                                 {{ item.nama_quiz }}
                             </Link>
                             <div

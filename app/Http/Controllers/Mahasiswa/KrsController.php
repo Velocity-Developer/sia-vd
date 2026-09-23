@@ -92,8 +92,8 @@ class KrsController extends Controller
             MahasiswaProfile::query()->whereKey($mahasiswa->id)->lockForUpdate()->first();
             $kelas = KelasKuliah::query()->whereKey($kelasKuliah->id)->lockForUpdate()->first();
             // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk riwayat, IPS, dan ringkasan SKS.
-        $semuaKrs = $this->semuaKrs($mahasiswa);
-        $riwayat = $this->riwayatMatkul($mahasiswa, $semuaKrs);
+            $semuaKrs = $this->semuaKrs($mahasiswa);
+            $riwayat = $this->riwayatMatkul($mahasiswa, $semuaKrs);
             $alasan = $this->alasanTidakBolehAmbil($riwayat, $kelas->matkul_id, $kelasKuliah->tahunAkademik);
 
             if ($alasan !== null) {

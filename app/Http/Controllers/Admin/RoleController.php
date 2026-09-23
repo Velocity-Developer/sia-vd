@@ -244,16 +244,12 @@ class RoleController extends Controller
     private function messages(): array
     {
         return [
-            'required' => ':attribute wajib diisi.',
             'present' => ':attribute wajib dikirim.',
-            'string' => ':attribute harus berupa teks.',
             'array' => ':attribute tidak valid.',
             'integer' => ':attribute tidak valid.',
             'distinct' => ':attribute tidak boleh duplikat.',
-            'unique' => ':attribute sudah digunakan.',
             'exists' => ':attribute tidak ditemukan.',
             'enum' => 'Pilihan :attribute tidak valid.',
-            'max.string' => ':attribute maksimal :max karakter.',
         ];
     }
 
