@@ -23,10 +23,11 @@ test('users can authenticate using the login screen', function () {
 test('users can not authenticate with invalid password', function () {
     $user = User::factory()->create();
 
+    // Pesannya harus berbahasa Indonesia, bukan kunci mentah "auth.failed".
     $this->post('/login', [
         'username' => $user->username,
         'password' => 'wrong-password',
-    ]);
+    ])->assertSessionHasErrors(['username' => 'Username atau kata sandi tidak cocok.']);
 
     $this->assertGuest();
 });
