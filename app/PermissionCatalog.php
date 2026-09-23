@@ -42,6 +42,7 @@ class PermissionCatalog
             ['key' => 'admin.users.karyawan', 'name' => 'Manage User Karyawan', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengelola akun dan profil karyawan.', 'defaults' => $admin],
             ['key' => 'admin.roles', 'name' => 'Kelola Role', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Menambah, mengubah, menghapus role dan mengatur hak aksesnya.', 'defaults' => $admin],
             ['key' => 'admin.institusi', 'name' => 'Pengaturan Institusi', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengubah identitas dan logo institusi.', 'defaults' => $admin],
+            ['key' => 'admin.pengaturan-email', 'name' => 'Pengaturan Email', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengatur pengiriman surel (SMTP) dan mengirim surel uji.', 'defaults' => $admin],
 
             ['key' => 'dosen.dashboard', 'name' => 'Beranda Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Membuka beranda dan profil dosen.', 'defaults' => [UserType::Dosen]],
             ['key' => 'dosen.kelas-kuliah', 'name' => 'Kelas Kuliah Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola kelas yang diampu beserta materi, tugas, quiz, dan nilai.', 'defaults' => [UserType::Dosen]],

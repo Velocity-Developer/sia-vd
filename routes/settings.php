@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\EmailController;
 use App\Http\Controllers\Settings\InstitusiController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -17,5 +18,13 @@ Route::middleware('auth')->group(function () {
     Route::middleware('can:admin.institusi')->group(function (): void {
         Route::get('settings/institusi', [InstitusiController::class, 'edit'])->name('institusi.edit');
         Route::put('settings/institusi', [InstitusiController::class, 'update'])->name('institusi.update');
+    });
+
+    Route::middleware('can:admin.pengaturan-email')->group(function (): void {
+        Route::get('settings/email', [EmailController::class, 'edit'])->name('pengaturan-email.edit');
+        Route::put('settings/email', [EmailController::class, 'update'])->name('pengaturan-email.update');
+        Route::post('settings/email/uji', [EmailController::class, 'uji'])
+            ->middleware('throttle:6,1')
+            ->name('pengaturan-email.uji');
     });
 });

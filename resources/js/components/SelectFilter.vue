@@ -2,15 +2,16 @@
 import { ChevronDown } from 'lucide-vue-next';
 
 /**
- * Select untuk bilah filter. Panah bawaan browser diganti ikon sendiri karena panah bawaan menempel
+ * Select untuk bilah filter, atau isian form bila `penuh` diisi (lebar mengikuti kolomnya).
+ * Panah bawaan browser diganti ikon sendiri karena panah bawaan menempel
  * ke tepi kanan; ruang di kanan disediakan lewat padding agar teks panjang tidak menabrak panah.
  */
-defineProps<{ label: string }>();
+const props = withDefaults(defineProps<{ label: string; penuh?: boolean }>(), { penuh: false });
 const model = defineModel<number | string | null>({ required: true });
 </script>
 
 <template>
-    <div class="relative w-full lg:min-w-[170px] lg:max-w-[220px] lg:flex-1">
+    <div class="relative w-full" :class="props.penuh ? '' : 'lg:min-w-[170px] lg:max-w-[220px] lg:flex-1'">
         <select
             v-model="model"
             :aria-label="label"
