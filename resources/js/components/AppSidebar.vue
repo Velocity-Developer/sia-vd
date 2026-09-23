@@ -45,6 +45,10 @@ const navigationSections: { label: string; items: MenuItem[] }[] = [
             { title: 'Mata Kuliah', routeName: 'admin.mata-kuliah.index', icon: Library, permission: 'admin.mata-kuliah' },
             { title: 'Ruang', routeName: 'admin.ruang.index', icon: DoorOpen, permission: 'admin.ruang' },
             { title: 'Kelas Kuliah', routeName: 'admin.kelas-kuliah.index', icon: ClipboardList, permission: 'admin.kelas-kuliah' },
+            { title: 'Jadwal Kelas', routeName: 'admin.jadwal.index', icon: CalendarDays, permission: 'admin.jadwal' },
+            { title: 'Materi', routeName: 'admin.materi.index', icon: BookMarked, permission: 'admin.materi' },
+            { title: 'Tugas', routeName: 'admin.tugas.index', icon: ClipboardList, permission: 'admin.tugas' },
+            { title: 'Quiz', routeName: 'admin.quiz.index', icon: FileText, permission: 'admin.quiz' },
             { title: 'Pindah Kelas', routeName: 'admin.pindah-kelas.index', icon: ArrowLeftRight, permission: 'admin.pindah-kelas' },
             {
                 title: 'Pengaturan Akademik',
@@ -70,6 +74,10 @@ const navigationSections: { label: string; items: MenuItem[] }[] = [
         items: [
             { title: 'Beranda', href: '/dosen', icon: LayoutGrid, permission: 'dosen.dashboard' },
             { title: 'Kelas Kuliah', href: '/dosen/kelas-kuliah', icon: CalendarDays, permission: 'dosen.kelas-kuliah' },
+            { title: 'Jadwal Mengajar', routeName: 'dosen.jadwal.index', icon: CalendarDays, permission: 'dosen.jadwal' },
+            { title: 'Materi', routeName: 'dosen.materi.index', icon: BookMarked, permission: 'dosen.materi' },
+            { title: 'Tugas', routeName: 'dosen.tugas.index', icon: ClipboardList, permission: 'dosen.tugas' },
+            { title: 'Quiz', routeName: 'dosen.quiz.index', icon: FileText, permission: 'dosen.quiz' },
             { title: 'Mahasiswa Kelas', href: '/dosen/mahasiswa-kelas', icon: Users, permission: 'dosen.mahasiswa-kelas' },
         ],
     },

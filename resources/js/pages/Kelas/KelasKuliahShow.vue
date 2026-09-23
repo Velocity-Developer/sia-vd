@@ -416,6 +416,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal</h2>
+                            <Link
+                                :href="rute('jadwal.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Jadwal Kelas →</Link
+                            >
                             <p class="text-sm leading-5 text-[#615d59]">Hari, jam, dan ruang untuk kelas ini.</p>
                         </div>
                         <Link v-if="isAdmin" :href="rute('kelas-kuliah.jadwal.create', props.kelasKuliah.id)">
@@ -514,6 +519,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Materi</h2>
+                            <Link
+                                :href="rute('materi.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Materi →</Link
+                            >
                             <p class="text-sm leading-5 text-[#615d59]">Bahan ajar per pertemuan untuk kelas ini.</p>
                         </div>
                         <Link :href="rute('kelas-kuliah.materi.create', props.kelasKuliah.id)">
@@ -643,6 +653,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tugas</h2>
+                            <Link
+                                :href="rute('tugas.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Tugas →</Link
+                            >
                             <p class="text-sm leading-5 text-[#615d59]">Daftar tugas beserta tenggat waktu untuk kelas ini.</p>
                         </div>
                         <Link :href="rute('kelas-kuliah.tugas.create', props.kelasKuliah.id)">
@@ -780,6 +795,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Quiz</h2>
+                            <Link
+                                :href="rute('quiz.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Quiz →</Link
+                            >
                             <p class="text-sm leading-5 text-[#615d59]">Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini.</p>
                         </div>
                         <Link :href="rute('kelas-kuliah.quiz.create', props.kelasKuliah.id)">

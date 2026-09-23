@@ -31,6 +31,10 @@ class PermissionCatalog
             ['key' => 'admin.mata-kuliah', 'name' => 'Mata Kuliah', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola data mata kuliah.', 'defaults' => $admin],
             ['key' => 'admin.ruang', 'name' => 'Ruang', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola data ruang.', 'defaults' => $admin],
             ['key' => 'admin.kelas-kuliah', 'name' => 'Kelas Kuliah', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola kelas kuliah beserta jadwal, materi, tugas, quiz, dan nilai.', 'defaults' => $admin],
+            ['key' => 'admin.jadwal', 'name' => 'Jadwal Kelas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola jadwal seluruh kelas kuliah.', 'defaults' => $admin],
+            ['key' => 'admin.materi', 'name' => 'Materi', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola materi seluruh kelas kuliah.', 'defaults' => $admin],
+            ['key' => 'admin.tugas', 'name' => 'Tugas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola tugas seluruh kelas kuliah.', 'defaults' => $admin],
+            ['key' => 'admin.quiz', 'name' => 'Quiz', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola quiz seluruh kelas kuliah.', 'defaults' => $admin],
             ['key' => 'admin.pindah-kelas', 'name' => 'Pindah Kelas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Memproses pengajuan dan pengaturan pindah kelas.', 'defaults' => $admin],
             ['key' => 'admin.pengaturan-akademik', 'name' => 'Pengaturan Akademik', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengatur batas SKS per semester dan skala nilai.', 'defaults' => $admin],
             ['key' => 'admin.users.dosen', 'name' => 'Manage User Dosen', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengelola akun dan profil dosen.', 'defaults' => $admin],
@@ -41,6 +45,10 @@ class PermissionCatalog
 
             ['key' => 'dosen.dashboard', 'name' => 'Beranda Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Membuka beranda dan profil dosen.', 'defaults' => [UserType::Dosen]],
             ['key' => 'dosen.kelas-kuliah', 'name' => 'Kelas Kuliah Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola kelas yang diampu beserta materi, tugas, quiz, dan nilai.', 'defaults' => [UserType::Dosen]],
+            ['key' => 'dosen.jadwal', 'name' => 'Jadwal Mengajar', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Melihat jadwal mengajar dari kelas yang diampu.', 'defaults' => [UserType::Dosen]],
+            ['key' => 'dosen.materi', 'name' => 'Materi Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola materi dari kelas yang diampu.', 'defaults' => [UserType::Dosen]],
+            ['key' => 'dosen.tugas', 'name' => 'Tugas Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola tugas dari kelas yang diampu.', 'defaults' => [UserType::Dosen]],
+            ['key' => 'dosen.quiz', 'name' => 'Quiz Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola quiz dari kelas yang diampu.', 'defaults' => [UserType::Dosen]],
             ['key' => 'dosen.mahasiswa-kelas', 'name' => 'Mahasiswa Kelas', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Melihat daftar mahasiswa di kelas yang diampu.', 'defaults' => [UserType::Dosen]],
 
             ['key' => 'mahasiswa.dashboard', 'name' => 'Beranda Mahasiswa', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Membuka beranda, profil, dan halaman informasi mahasiswa.', 'defaults' => [UserType::Mahasiswa]],

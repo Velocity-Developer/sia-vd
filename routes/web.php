@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
-use App\Http\Controllers\Admin\JadwalController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\PengaturanAkademikController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
@@ -13,6 +12,7 @@ use App\Http\Controllers\Admin\TahunAkademikController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
+use App\Http\Controllers\Kelas\JadwalController;
 use App\Http\Controllers\Kelas\KelasKuliahController;
 use App\Http\Controllers\Kelas\MateriController;
 use App\Http\Controllers\Kelas\QuizController;
@@ -120,6 +120,12 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
         Route::resource('tahun-akademik', TahunAkademikController::class)->except('show')->parameters(['tahun-akademik' => 'tahunAkademik'])->names('admin.tahun-akademik');
     });
 
+    // Menu tersendiri untuk konten kelas, dengan filter lintas kelas.
+    Route::middleware('can:admin.jadwal')->group(fn () => Route::get('jadwal', [JadwalController::class, 'index'])->name('admin.jadwal.index'));
+    Route::middleware('can:admin.materi')->group(fn () => Route::get('materi', [MateriController::class, 'index'])->name('admin.materi.index'));
+    Route::middleware('can:admin.tugas')->group(fn () => Route::get('tugas', [TugasController::class, 'index'])->name('admin.tugas.index'));
+    Route::middleware('can:admin.quiz')->group(fn () => Route::get('quiz', [QuizController::class, 'index'])->name('admin.quiz.index'));
+
     Route::middleware('can:admin.kelas-kuliah')->group(function (): void {
         Route::resource('kelas-kuliah', KelasKuliahController::class)->parameters(['kelas_kuliah' => 'kelasKuliah'])->names('admin.kelas-kuliah');
         Route::put('kelas-kuliah/{kelasKuliah}/krs/{krs}/nilai', [KelasKuliahController::class, 'updateGrade'])->name('admin.kelas-kuliah.krs.nilai');
@@ -163,6 +169,11 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () {
         Route::get('/', fn () => Inertia::render('Dashboard'))->name('dosen.dashboard');
         Route::get('profile', fn () => Inertia::render('DosenPlaceholder', ['title' => 'Profile']))->name('dosen.profile');
     });
+
+    Route::middleware('can:dosen.jadwal')->group(fn () => Route::get('jadwal', [JadwalController::class, 'index'])->name('dosen.jadwal.index'));
+    Route::middleware('can:dosen.materi')->group(fn () => Route::get('materi', [MateriController::class, 'index'])->name('dosen.materi.index'));
+    Route::middleware('can:dosen.tugas')->group(fn () => Route::get('tugas', [TugasController::class, 'index'])->name('dosen.tugas.index'));
+    Route::middleware('can:dosen.quiz')->group(fn () => Route::get('quiz', [QuizController::class, 'index'])->name('dosen.quiz.index'));
 
     Route::middleware('can:dosen.kelas-kuliah')->group(function (): void {
         Route::get('kelas-kuliah', [KelasKuliahController::class, 'index'])->name('dosen.kelas-kuliah.index');

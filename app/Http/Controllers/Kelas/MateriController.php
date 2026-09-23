@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Kelas;
 
 use App\AllowedUpload;
+use App\Http\Controllers\Concerns\FilterKelasKuliah;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
@@ -18,7 +19,32 @@ use Throwable;
 
 class MateriController extends Controller
 {
-    use KontenKelas;
+    use FilterKelasKuliah, KontenKelas;
+
+    /**
+     * Daftar materi lintas kelas dengan filter; dosen hanya melihat kelas yang diampunya.
+     */
+    public function index(Request $request): Response
+    {
+        $filter = $this->filterKelas($request);
+
+        $materis = Materi::query()
+            ->with(['kelasKuliah:id,kode_kelas,matkul_id,dosen_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul', 'kelasKuliah.dosen:id,user_id', 'kelasKuliah.dosen.user:id,name', 'kelasKuliah.tahunAkademik:id,tahun,semester', 'uploader:id,name'])
+            ->tap(fn ($query) => $this->terapkanFilterKelas($query, $filter))
+            ->when($filter['search'] !== '', fn ($query) => $query->where(fn ($q) => $q
+                ->where('judul_materi', 'like', "%{$filter['search']}%")
+                ->orWhereHas('kelasKuliah', fn ($kelas) => $kelas->where('kode_kelas', 'like', "%{$filter['search']}%"))))
+            ->when($request->string('jenis')->trim()->toString() !== '', fn ($query) => $query->where('jenis', $request->string('jenis')->trim()->toString()))
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('Kelas/MateriIndex', [
+            'materis' => $materis,
+            'jenis' => $request->string('jenis')->trim()->toString(),
+            ...$this->propsFilterKelas($filter),
+        ]);
+    }
 
     public function create(KelasKuliah $kelasKuliah): Response
     {

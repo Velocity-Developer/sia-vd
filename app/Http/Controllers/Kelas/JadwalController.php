@@ -1,7 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Kelas;
 
+use App\Http\Controllers\Concerns\FilterKelasKuliah;
+use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\Jadwal;
 use App\Models\KelasKuliah;
@@ -15,6 +17,34 @@ use Throwable;
 
 class JadwalController extends Controller
 {
+    use FilterKelasKuliah, KontenKelas;
+
+    /**
+     * Daftar jadwal lintas kelas dengan filter; admin bisa mengelola, dosen melihat jadwal mengajarnya.
+     */
+    public function index(Request $request): Response
+    {
+        $filter = $this->filterKelas($request);
+
+        $jadwals = Jadwal::query()
+            ->with(['kelasKuliah:id,kode_kelas,matkul_id,dosen_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul', 'kelasKuliah.dosen:id,user_id', 'kelasKuliah.dosen.user:id,name', 'kelasKuliah.tahunAkademik:id,tahun,semester', 'ruang:id,kode_ruang,nama_ruang'])
+            ->tap(fn ($query) => $this->terapkanFilterKelas($query, $filter))
+            ->when($filter['search'] !== '', fn ($query) => $query->where(fn ($q) => $q
+                ->where('hari', 'like', "%{$filter['search']}%")
+                ->orWhereHas('ruang', fn ($ruang) => $ruang->where('kode_ruang', 'like', "%{$filter['search']}%")->orWhere('nama_ruang', 'like', "%{$filter['search']}%"))
+                ->orWhereHas('kelasKuliah', fn ($kelas) => $kelas->where('kode_kelas', 'like', "%{$filter['search']}%"))))
+            // Urutan hari dituliskan manual agar sama di MySQL maupun SQLite.
+            ->orderByRaw("CASE hari WHEN 'Senin' THEN 1 WHEN 'Selasa' THEN 2 WHEN 'Rabu' THEN 3 WHEN 'Kamis' THEN 4 WHEN 'Jumat' THEN 5 ELSE 6 END")
+            ->orderBy('jam_mulai')
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('Kelas/JadwalIndex', [
+            'jadwals' => $jadwals,
+            ...$this->propsFilterKelas($filter),
+        ]);
+    }
+
     public function create(KelasKuliah $kelasKuliah): Response
     {
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
@@ -33,7 +63,7 @@ class JadwalController extends Controller
         $data['kelas_id'] = $kelasKuliah->id;
         Jadwal::create($data);
 
-        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('jadwal_success', 'Jadwal berhasil ditambahkan.');
+        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil ditambahkan.');
     }
 
     public function edit(KelasKuliah $kelasKuliah, Jadwal $jadwal): Response
@@ -55,7 +85,7 @@ class JadwalController extends Controller
         $this->ensureNoConflict($kelasKuliah, $data, $jadwal);
         $jadwal->update($data);
 
-        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('jadwal_success', 'Jadwal berhasil diperbarui.');
+        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil diperbarui.');
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Jadwal $jadwal): RedirectResponse
@@ -64,10 +94,10 @@ class JadwalController extends Controller
         try {
             $jadwal->delete();
         } catch (Throwable) {
-            return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('jadwal_error', 'Jadwal gagal dihapus.');
+            return $this->keKelas($kelasKuliah)->with('jadwal_error', 'Jadwal gagal dihapus.');
         }
 
-        return to_route('admin.kelas-kuliah.show', $kelasKuliah)->with('jadwal_success', 'Jadwal berhasil dihapus.');
+        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil dihapus.');
     }
 
     /**
