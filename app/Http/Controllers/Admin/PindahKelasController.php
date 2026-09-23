@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanPindahKelas;
@@ -119,6 +120,12 @@ class PindahKelasController extends Controller
 
         if ($pengajuan->kelasTujuan?->tahun_akademik_id !== $pengajuan->kelasAsal?->tahun_akademik_id) {
             return back()->with('error', 'Kelas tujuan berada di tahun akademik yang berbeda dengan kelas asal, pengajuan tidak dapat disetujui.');
+        }
+
+        $bentrok = Jadwal::bentrokUntukMahasiswa($pengajuan->kelasTujuan, $pengajuan->mahasiswa_id, [$pengajuan->kelas_asal_id]);
+
+        if ($bentrok !== null && ! $request->boolean('force')) {
+            return back()->with('pindah_kelas_warning', 'Jadwal kelas tujuan bentrok dengan kelas '.$bentrok->keterangan().'. Setujui lagi untuk tetap memindahkan.');
         }
 
         // Kunci pengajuan agar tidak disetujui dua kali. Kapasitas kelas tujuan sengaja tidak dicek (admin boleh melebihi).

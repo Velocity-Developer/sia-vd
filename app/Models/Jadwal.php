@@ -46,4 +46,37 @@ class Jadwal extends Model
     {
         $query->whereHas('kelasKuliah', fn (Builder $kelas) => $kelas->where('tahun_akademik_id', $tahunAkademikId));
     }
+
+    /**
+     * Jadwal kelas lain di KRS mahasiswa (tahun akademik yang sama) yang beririsan dengan jadwal kelas ini.
+     *
+     * @param  list<int>  $kecualiKelasIds  kelas yang diabaikan, mis. kelas asal saat pindah kelas
+     */
+    public static function bentrokUntukMahasiswa(KelasKuliah $kelasKuliah, int $mahasiswaId, array $kecualiKelasIds = []): ?self
+    {
+        foreach ($kelasKuliah->jadwals()->get() as $jadwal) {
+            $bentrok = static::query()
+                ->overlapping($jadwal->hari, $jadwal->jam_mulai, $jadwal->jam_akhir)
+                ->inTahunAkademik($kelasKuliah->tahun_akademik_id)
+                ->whereIn('kelas_id', Krs::query()->where('mahasiswa_id', $mahasiswaId)->select('kelas_id'))
+                ->whereNotIn('kelas_id', [...$kecualiKelasIds, $kelasKuliah->id])
+                ->with('kelasKuliah:id,kode_kelas,matkul_id', 'kelasKuliah.mataKuliah:id,nama_matkul')
+                ->first();
+
+            if ($bentrok !== null) {
+                return $bentrok;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Keterangan singkat untuk pesan error, mis. "IF101-A (Algoritma) pada Senin, 08:00–10:00".
+     */
+    public function keterangan(): string
+    {
+        return $this->kelasKuliah?->kode_kelas.' ('.$this->kelasKuliah?->mataKuliah?->nama_matkul.') pada '
+            .$this->hari.', '.substr($this->jam_mulai, 0, 5).'–'.substr($this->jam_akhir, 0, 5);
+    }
 }

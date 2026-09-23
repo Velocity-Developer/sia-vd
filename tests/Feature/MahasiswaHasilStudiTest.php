@@ -13,7 +13,8 @@ it('shows student study results filtered by selected academic year', function ()
 
     $mahasiswa = User::ofType(UserType::Mahasiswa)->first();
     $profil = $mahasiswa->mahasiswaProfile;
-    $tahunAkademik = TahunAkademik::where('tahun', '2023/2024')->where('semester', 'Ganjil')->first();
+    // Tahun akademik pada data demo relatif terhadap hari ini, jadi diambil yang paling lama.
+    $tahunAkademik = TahunAkademik::orderBy('tanggal_mulai')->first();
     $expectedCount = Krs::where('mahasiswa_id', $profil->id)->whereHas('kelasKuliah', fn ($query) => $query->where('tahun_akademik_id', $tahunAkademik->id))->count();
 
     $this->actingAs($mahasiswa)
@@ -23,7 +24,7 @@ it('shows student study results filtered by selected academic year', function ()
             ->component('Mahasiswa/HasilStudi')
             ->where('tahunAkademikTerpilih', $tahunAkademik->id)
             ->has('krs', $expectedCount)
-            ->has('tahunAkademiks', 5)
+            ->has('tahunAkademiks', TahunAkademik::count())
         );
 });
 
@@ -42,7 +43,8 @@ it('downloads study result card as pdf for the selected academic year', function
     $this->seed();
 
     $mahasiswa = User::ofType(UserType::Mahasiswa)->first();
-    $tahunAkademik = TahunAkademik::where('tahun', '2023/2024')->where('semester', 'Ganjil')->first();
+    // Tahun akademik pada data demo relatif terhadap hari ini, jadi diambil yang paling lama.
+    $tahunAkademik = TahunAkademik::orderBy('tanggal_mulai')->first();
 
     $response = $this->actingAs($mahasiswa)
         ->get(route('mahasiswa.hasil-studi.download', ['tahun_akademik_id' => $tahunAkademik->id]))
@@ -51,7 +53,7 @@ it('downloads study result card as pdf for the selected academic year', function
 
     expect($response->headers->get('content-disposition'))
         ->toContain('attachment')
-        ->toContain("khs-{$mahasiswa->mahasiswaProfile->nim}-2023-2024-Ganjil.pdf");
+        ->toContain("khs-{$mahasiswa->mahasiswaProfile->nim}-".str_replace('/', '-', $tahunAkademik->tahun)."-{$tahunAkademik->semester}.pdf");
 });
 
 it('downloads the study result card with the institution logo', function () {

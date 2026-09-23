@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Question;
 use App\Models\Quiz;
+use App\Models\QuizAnswer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -204,7 +205,14 @@ class QuizController extends Controller
                 ->all();
         }
 
+        $jadiEsai = $data['question_type'] === 'essay' && $question->question_type !== 'essay';
         $question->update($data);
+
+        // Soal yang berubah menjadi esai harus dikoreksi dosen; poin otomatis dari jenis soal lama dibuang.
+        if ($jadiEsai) {
+            QuizAnswer::query()->where('question_id', $question->id)->update(['point' => null]);
+        }
+
         $quiz->regradeAttempts();
 
         return to_route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz])->with('question_success', 'Pertanyaan berhasil diperbarui.');

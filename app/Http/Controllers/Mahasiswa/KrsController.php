@@ -104,10 +104,10 @@ class KrsController extends Controller
                 return 'Mata kuliah ini bukan untuk semester Anda.';
             }
 
-            $bentrok = $this->jadwalBentrok($mahasiswa, $kelas);
+            $bentrok = Jadwal::bentrokUntukMahasiswa($kelas, $mahasiswa->id);
 
             if ($bentrok !== null) {
-                return 'Jadwal kelas ini bentrok dengan kelas '.$bentrok->kelasKuliah?->kode_kelas.' ('.$bentrok->kelasKuliah?->mataKuliah?->nama_matkul.') pada '.$bentrok->hari.', '.substr($bentrok->jam_mulai, 0, 5).'–'.substr($bentrok->jam_akhir, 0, 5).'.';
+                return 'Jadwal kelas ini bentrok dengan kelas '.$bentrok->keterangan().'.';
             }
 
             if ($kelas->krs()->count() >= $kelas->kapasitas) {
@@ -227,27 +227,6 @@ class KrsController extends Controller
 
             if (! SkalaNilai::bolehDiulang($krs->nilai)) {
                 return "Anda sudah lulus mata kuliah ini dengan nilai {$krs->nilai}.";
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Jadwal kelas lain di KRS mahasiswa (tahun akademik yang sama) yang beririsan dengan jadwal kelas ini.
-     */
-    private function jadwalBentrok(MahasiswaProfile $mahasiswa, KelasKuliah $kelasKuliah): ?Jadwal
-    {
-        foreach ($kelasKuliah->jadwals()->get() as $jadwal) {
-            $bentrok = Jadwal::query()
-                ->overlapping($jadwal->hari, $jadwal->jam_mulai, $jadwal->jam_akhir)
-                ->inTahunAkademik($kelasKuliah->tahun_akademik_id)
-                ->whereIn('kelas_id', $mahasiswa->krs()->select('kelas_id'))
-                ->with('kelasKuliah:id,kode_kelas,matkul_id', 'kelasKuliah.mataKuliah:id,nama_matkul')
-                ->first();
-
-            if ($bentrok !== null) {
-                return $bentrok;
             }
         }
 

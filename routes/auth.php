@@ -11,7 +11,9 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    // Selain batas 5 percobaan per username (LoginRequest), dibatasi juga per IP agar percobaan
+    // ke banyak username sekaligus ikut tertahan.
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:20,1');
 });
 
 Route::middleware('auth')->group(function () {

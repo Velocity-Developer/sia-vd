@@ -93,3 +93,16 @@ it('stores a quiz score of 1000 points or more', function () {
 
     expect((float) QuizAttempt::where('quiz_id', $quiz->id)->value('score'))->toBe(1000.0);
 });
+
+it('clears the auto score when a question becomes an essay', function () {
+    [$kelas, , $quiz, $pilihan, , $attempt] = submittedEssayAttempt();
+    expect((float) QuizAnswer::where('attempt_id', $attempt->id)->where('question_id', $pilihan->id)->value('point'))->toBe(10.0);
+
+    $this->actingAs($kelas->dosen->user)
+        ->put(route('dosen.kelas-kuliah.quiz.questions.update', [$kelas, $quiz, $pilihan]), [
+            'question_text' => 'Jelaskan alasannya', 'question_type' => 'essay', 'points' => 10,
+        ])->assertSessionHasNoErrors();
+
+    expect(QuizAnswer::where('attempt_id', $attempt->id)->where('question_id', $pilihan->id)->value('point'))->toBeNull()
+        ->and($attempt->fresh()->hasUngradedEssay())->toBeTrue();
+});

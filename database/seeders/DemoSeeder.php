@@ -2,13 +2,19 @@
 
 namespace Database\Seeders;
 
+use App\AllowedUpload;
 use App\Models\Fakultas;
+use App\Models\InfoKuliah;
 use App\Models\Jadwal;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
+use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\Materi;
+use App\Models\PengajuanPindahKelas;
+use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
+use App\Models\PengaturanPindahKelas;
 use App\Models\PengumpulanTugas;
 use App\Models\ProgramStudi;
 use App\Models\Question;
@@ -17,42 +23,88 @@ use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\Role;
 use App\Models\Ruang;
+use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use App\Models\Tugas;
 use App\Models\User;
 use App\PermissionCatalog;
 use App\UserType;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Data demo (fakultas, prodi, dosen, mahasiswa, kelas, KRS, nilai, quiz, dst.).
+ * Data demo yang mengikuti aturan sistem: satu tahun akademik aktif dengan periode KRS berjalan,
+ * mahasiswa per angkatan mengambil paket mata kuliah semesternya (dibatasi SKS sesuai IPS semester
+ * sebelumnya), jadwal tanpa bentrok ruang/dosen/mahasiswa, nilai memakai skala yang terdaftar, serta
+ * quiz dan tugas yang tersimpan dalam format yang sama dengan hasil pemakaian aplikasi.
  *
- * MENGHAPUS seluruh data akademik (KRS, nilai, kelas, jadwal, materi, tugas, quiz) lalu mengisinya ulang,
- * jadi hanya untuk lingkungan pengembangan. Akun yang sudah ada tidak diganti kata sandinya.
+ * MENGHAPUS seluruh data akademik lalu mengisinya ulang, jadi hanya untuk lingkungan pengembangan.
+ * Akun yang sudah ada tidak diganti kata sandinya.
  */
 class DemoSeeder extends Seeder
 {
+    /** Jumlah mahasiswa per angkatan pada tiap program studi. */
+    private const MAHASISWA_PER_ANGKATAN = 5;
+
+    /** Mata kuliah yang ditawarkan per semester pada tiap program studi. */
+    private const MATKUL_PER_SEMESTER = 4;
+
+    private const KOTA = ['Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Semarang', 'Malang', 'Bogor', 'Depok', 'Tangerang', 'Makassar'];
+
+    private const AGAMA = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu'];
+
+    private const PEKERJAAN = ['Karyawan Swasta', 'Pegawai Negeri Sipil (PNS)', 'Wiraswasta / Pengusaha', 'Guru / Dosen', 'Pedagang', 'Ibu Rumah Tangga'];
+
+    private const PENGHASILAN = ['Rp3.000.000 – Rp4.999.999', 'Rp5.000.000 – Rp7.499.999', 'Rp7.500.000 – Rp9.999.999', 'Rp10.000.000 – Rp14.999.999'];
+
+    private const HARI = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+
+    private const SLOT = [['07:30:00', '09:10:00'], ['09:20:00', '11:00:00'], ['13:00:00', '14:40:00'], ['14:50:00', '16:30:00']];
+
     public function run(): void
     {
         if (app()->isProduction()) {
             throw new RuntimeException('DemoSeeder menghapus data akademik dan tidak boleh dijalankan di production.');
         }
 
+        // APP_ENV=local pun bisa berisi data nyata, jadi penghapusan selalu dikonfirmasi lebih dulu.
+        // Tanpa konfirmasi (mis. dijalankan dari skrip) seeder berhenti tanpa menyentuh data.
+        if (! app()->runningUnitTests() && Krs::query()->exists() && $this->command?->confirm('Seluruh KRS, nilai, kelas, dan konten kelas akan DIHAPUS lalu diganti data demo. Lanjutkan?', false) !== true) {
+            $this->command?->warn('Data demo dilewati; data yang ada dibiarkan.');
+
+            return;
+        }
+
         PermissionCatalog::sync();
-        $adminRoleId = Role::system(UserType::Admin)->id;
-        $dosenRoleId = Role::system(UserType::Dosen)->id;
-        $mahasiswaRoleId = Role::system(UserType::Mahasiswa)->id;
+        $this->bersihkan();
+        $this->pengaturan();
 
-        PengaturanInstitusi::firstOrCreate(
-            ['id' => PengaturanInstitusi::SINGLETON_ID],
-            ['nama_pt' => 'SIA VD', 'singkatan' => 'SIA VD'],
-        );
+        $dosen = $this->dosen();
+        $prodi = $this->fakultasDanProdi($dosen);
+        $mataKuliah = $this->mataKuliah($prodi);
+        $ruang = $this->ruang();
+        $tahunAkademik = $this->tahunAkademik();
+        $mahasiswa = $this->mahasiswa($prodi, $dosen, $tahunAkademik->last());
 
+        $this->bersihkanSisaDemoLama($dosen, $mahasiswa, $prodi, $mataKuliah, $ruang);
+        $this->kelasDanJadwal($tahunAkademik, $prodi, $mataKuliah, $dosen, $ruang);
+        $this->krsDanNilai($tahunAkademik, $mahasiswa);
+        $this->kontenKelas($tahunAkademik->last(), $mahasiswa);
+        $this->pindahKelas($tahunAkademik->last(), $mahasiswa);
+        $this->infoKuliah();
+    }
+
+    private function bersihkan(): void
+    {
         QuizAnswer::query()->delete();
         QuizAttempt::query()->delete();
         PengumpulanTugas::query()->delete();
+        PengajuanPindahKelas::query()->delete();
         Krs::query()->delete();
         Question::query()->delete();
         Quiz::query()->delete();
@@ -61,264 +113,650 @@ class DemoSeeder extends Seeder
         Jadwal::query()->delete();
         KelasKuliah::query()->delete();
         TahunAkademik::query()->delete();
+        InfoKuliah::query()->delete();
+    }
 
-        $kota = ['Jakarta', 'Bandung', 'Surabaya', 'Yogyakarta', 'Semarang', 'Malang', 'Bogor', 'Depok', 'Tangerang', 'Makassar'];
-        $agama = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu'];
-        $jenisKelamin = ['Laki-laki', 'Perempuan'];
-        $sekolah = ['SMA Negeri 1 Bandung', 'SMA Negeri 3 Jakarta', 'SMK Negeri 2 Yogyakarta', 'SMA Negeri 5 Surabaya'];
-        $pendidikan = ['SD', 'SMP', 'SMA/SMK', 'D3', 'S1', 'S2', 'S3'];
-        $pekerjaan = ['Tidak Bekerja', 'Karyawan Swasta', 'Pegawai Negeri Sipil (PNS)', 'TNI / Polri', 'Wiraswasta / Pengusaha', 'Profesional', 'Guru / Dosen', 'Tenaga Kesehatan', 'Petani', 'Peternak', 'Nelayan', 'Pedagang', 'Ibu Rumah Tangga', 'Freelancer', 'Pensiunan', 'Sudah Meninggal', 'Lainnya'];
-        $penghasilan = ['Kurang dari Rp1.000.000', 'Rp1.000.000 – Rp2.999.999', 'Rp3.000.000 – Rp4.999.999', 'Rp5.000.000 – Rp7.499.999', 'Rp7.500.000 – Rp9.999.999', 'Rp10.000.000 – Rp14.999.999', 'Rp15.000.000 atau lebih', 'Tidak Berpenghasilan'];
+    /**
+     * Buang data demo dari seeder versi sebelumnya (dosen/mahasiswa, mata kuliah, prodi, dan ruang yang
+     * tidak lagi dipakai) agar isi database persis seperti rancangan data demo saat ini.
+     *
+     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @param  Collection<int, MahasiswaProfile>  $mahasiswa
+     * @param  Collection<int, ProgramStudi>  $prodi
+     * @param  Collection<int, MataKuliah>  $mataKuliah
+     * @param  Collection<int, Ruang>  $ruang
+     */
+    private function bersihkanSisaDemoLama(Collection $dosen, Collection $mahasiswa, Collection $prodi, Collection $mataKuliah, Collection $ruang): void
+    {
+        // Urutannya mengikuti aturan foreign key: mata kuliah dulu, lalu prodi/fakultas, baru akunnya.
+        MataKuliah::query()->whereNotIn('id', $mataKuliah->pluck('id'))->delete();
+        ProgramStudi::query()->whereNotIn('id', $prodi->pluck('id'))->delete();
+        Fakultas::query()->whereNotIn('id', $prodi->pluck('fakultas_id')->unique())->delete();
+        Ruang::query()->whereNotIn('id', $ruang->pluck('id'))->delete();
 
-        $admin = $this->demoUser(['username' => 'admin'], [
-            'name' => 'Administrator',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('11111'),
-            'role_id' => $adminRoleId,
-        ]);
+        User::query()
+            ->whereNot(fn ($query) => $query->whereIn('id', $dosen->pluck('user_id'))->orWhereIn('id', $mahasiswa->pluck('user_id')))
+            ->whereHas('role', fn ($query) => $query->whereIn('user_type', [UserType::Dosen, UserType::Mahasiswa]))
+            ->get()
+            ->each(fn (User $user) => $user->delete());
+    }
+
+    private function pengaturan(): void
+    {
+        PengaturanInstitusi::firstOrCreate(
+            ['id' => PengaturanInstitusi::SINGLETON_ID],
+            ['nama_pt' => 'SIA VD', 'singkatan' => 'SIA VD'],
+        );
+        PengaturanPindahKelas::current()->update(['is_active' => true]);
+        PengaturanAkademik::current();
+    }
+
+    /**
+     * Admin dan 16 dosen; empat dosen untuk tiap program studi agar setiap kelas punya pengampu
+     * tanpa membuat jadwal dosen bentrok.
+     *
+     * @return Collection<int, \App\Models\DosenProfile>
+     */
+    private function dosen(): Collection
+    {
+        $admin = $this->akun('admin', 'Administrator', 'admin@example.com', UserType::Admin, '11111');
         $admin->adminProfile()->updateOrCreate([], [
-            'nomor_induk' => 'A'.fake()->unique()->numerify('#####'), 'tempat_lahir' => 'Jakarta', 'tanggal_lahir' => '1985-01-10', 'jenis_kelamin' => 'Laki-laki',
-            'agama' => 'Islam', 'no_telepon' => '081234567890', 'alamat' => 'Jl. Merdeka No. 1, Jakarta', 'kewarganegaraan' => 'Indonesia',
+            'nomor_induk' => 'A00001',
+            ...$this->profilUmum(0, 1985),
         ]);
 
-        $dosenProfiles = [];
+        $nama = [
+            'Budi Santoso', 'Sri Wahyuni', 'Agus Firmansyah', 'Dewi Lestari',
+            'Rizky Ramadhan', 'Nurul Hidayah', 'Bayu Pratama', 'Ratna Kusuma',
+            'Hendra Wijaya', 'Maya Anggraini', 'Fajar Nugroho', 'Intan Permata',
+            'Doni Saputra', 'Wulan Safitri', 'Eko Prasetyo', 'Lina Marlina',
+        ];
+        $jabatan = ['Asisten Ahli', 'Lektor', 'Lektor Kepala', 'Guru Besar'];
 
-        $dosen = $this->demoUser(['username' => '22222'], ['name' => 'Budi Santoso', 'email' => '22222@example.com', 'password' => Hash::make('22222'), 'role_id' => $dosenRoleId]);
-        $dosenProfiles[] = $dosen->dosenProfile()->updateOrCreate([], ['nidn' => 'D22222', 'tempat_lahir' => 'Bandung', 'tanggal_lahir' => '1980-02-22', 'jenis_kelamin' => 'Laki-laki', 'agama' => 'Islam', 'no_telepon' => '081222222222', 'alamat' => 'Jl. Dosen No. 22, Bandung', 'kewarganegaraan' => 'Indonesia', 'jabatan_fungsional' => 'Lektor', 'pendidikan_terakhir' => 'S3', 'status_kepegawaian' => 'Tetap']);
+        return collect($nama)->map(function (string $nama, int $index) use ($jabatan) {
+            // Dosen pertama memakai username 22222, akun contoh yang dipakai tim.
+            $username = $index === 0 ? '22222' : 'dosen'.$index;
+            $user = $this->akun($username, $nama, $username.'@example.com', UserType::Dosen, $username);
 
-        for ($index = 1; $index <= 50; $index++) {
-            $username = 'dosen'.$index;
-            $user = $this->demoUser(['username' => $username], ['name' => ['Andi', 'Siti', 'Rizky', 'Dewi', 'Agus'][$index % 5].' '.['Pratama', 'Lestari', 'Wijaya', 'Permata', 'Hidayat'][$index % 5], 'email' => $username.'@example.com', 'password' => Hash::make($username), 'role_id' => $dosenRoleId]);
-            $dosenProfiles[] = $user->dosenProfile()->updateOrCreate([], ['nidn' => 'D'.str_pad((string) $index, 5, '0', STR_PAD_LEFT), 'tempat_lahir' => $kota[$index % count($kota)], 'tanggal_lahir' => '198'.($index % 10).'-'.str_pad((string) (($index - 1) % 12 + 1), 2, '0', STR_PAD_LEFT).'-15', 'jenis_kelamin' => $jenisKelamin[$index % 2], 'agama' => $agama[$index % count($agama)], 'no_telepon' => '0812'.str_pad((string) $index, 8, '0', STR_PAD_LEFT), 'alamat' => 'Jl. Pendidikan No. '.$index.', '.$kota[$index % count($kota)], 'kewarganegaraan' => 'Indonesia', 'jabatan_fungsional' => 'Asisten Ahli', 'pendidikan_terakhir' => $index % 2 ? 'S2' : 'S3', 'status_kepegawaian' => 'Tetap']);
-        }
+            return $user->dosenProfile()->updateOrCreate([], [
+                'nidn' => 'D'.str_pad((string) ($index + 1), 8, '0', STR_PAD_LEFT),
+                'jabatan_fungsional' => $jabatan[$index % count($jabatan)],
+                'pendidikan_terakhir' => $index % 4 === 3 ? 'S3' : 'S2',
+                'status_kepegawaian' => $index % 5 === 4 ? 'Tidak Tetap' : 'Tetap',
+                ...$this->profilUmum($index, 1975 + ($index % 12)),
+            ]);
+        });
+    }
 
-        $fakultasData = [
-            ['kode_fakultas' => 'FTI', 'nama_fakultas' => 'Fakultas Teknologi Informasi', 'dekan' => 0, 'tanggal_berdiri' => '2001-08-17', 'no_telp' => '021-5551001', 'email' => 'fti@example.ac.id', 'program_studis' => [
-                ['kode_prodi' => 'TI-S1', 'nama_prodi' => 'Teknik Informatika', 'jenjang' => 'S1', 'status_akreditasi' => 'Unggul', 'no_sk_akreditasi' => '123/SK/BAN-PT/2022', 'tanggal_akreditasi_mulai' => '2022-06-01', 'tanggal_akreditasi_akhir' => '2027-06-01', 'kaprodi' => 1, 'tahun_berdiri' => 2001],
-                ['kode_prodi' => 'SI-S1', 'nama_prodi' => 'Sistem Informasi', 'jenjang' => 'S1', 'status_akreditasi' => 'Baik Sekali', 'no_sk_akreditasi' => '124/SK/BAN-PT/2023', 'tanggal_akreditasi_mulai' => '2023-07-01', 'tanggal_akreditasi_akhir' => '2028-07-01', 'kaprodi' => 2, 'tahun_berdiri' => 2003],
+    /**
+     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @return Collection<int, ProgramStudi>
+     */
+    private function fakultasDanProdi(Collection $dosen): Collection
+    {
+        $data = [
+            ['FTI', 'Fakultas Teknologi Informasi', [
+                ['TI-S1', 'Teknik Informatika', 'S1'],
+                ['SI-S1', 'Sistem Informasi', 'S1'],
             ]],
-            ['kode_fakultas' => 'FEB', 'nama_fakultas' => 'Fakultas Ekonomi dan Bisnis', 'dekan' => 3, 'tanggal_berdiri' => '1998-03-20', 'no_telp' => '021-5551002', 'email' => 'feb@example.ac.id', 'program_studis' => [
-                ['kode_prodi' => 'MNJ-S1', 'nama_prodi' => 'Manajemen', 'jenjang' => 'S1', 'status_akreditasi' => 'Unggul', 'no_sk_akreditasi' => '125/SK/BAN-PT/2022', 'tanggal_akreditasi_mulai' => '2022-08-01', 'tanggal_akreditasi_akhir' => '2027-08-01', 'kaprodi' => 4, 'tahun_berdiri' => 1998],
-                ['kode_prodi' => 'AK-S1', 'nama_prodi' => 'Akuntansi', 'jenjang' => 'S1', 'status_akreditasi' => 'Baik Sekali', 'no_sk_akreditasi' => '126/SK/BAN-PT/2023', 'tanggal_akreditasi_mulai' => '2023-09-01', 'tanggal_akreditasi_akhir' => '2028-09-01', 'kaprodi' => 5, 'tahun_berdiri' => 2000],
+            ['FEB', 'Fakultas Ekonomi dan Bisnis', [
+                ['AK-S1', 'Akuntansi', 'S1'],
+                ['MJ-S1', 'Manajemen', 'S1'],
             ]],
         ];
 
-        foreach ($fakultasData as $fakultasItem) {
-            $programStudis = $fakultasItem['program_studis'];
-            unset($fakultasItem['program_studis']);
-            $dekanIndex = $fakultasItem['dekan'];
-            unset($fakultasItem['dekan']);
-            $fakultas = Fakultas::updateOrCreate(['kode_fakultas' => $fakultasItem['kode_fakultas']], [...$fakultasItem, 'dekan_id' => $dosenProfiles[$dekanIndex]->id]);
+        $prodi = collect();
+        $urutanProdi = 0;
 
-            foreach ($programStudis as $programStudi) {
-                $kaprodiIndex = $programStudi['kaprodi'];
-                unset($programStudi['kaprodi']);
-                ProgramStudi::updateOrCreate(['kode_prodi' => $programStudi['kode_prodi']], [...$programStudi, 'fakultas_id' => $fakultas->id, 'kaprodi' => $dosenProfiles[$kaprodiIndex]->id]);
+        foreach ($data as $indexFakultas => [$kode, $namaFakultas, $daftarProdi]) {
+            $fakultas = Fakultas::updateOrCreate(['kode_fakultas' => $kode], [
+                'nama_fakultas' => $namaFakultas,
+                'dekan_id' => $dosen[$indexFakultas * 8]->id,
+                'tanggal_berdiri' => '2001-08-17',
+                'no_telp' => '021-555'.str_pad((string) ($indexFakultas + 1), 4, '0', STR_PAD_LEFT),
+                'email' => strtolower($kode).'@example.ac.id',
+            ]);
+
+            foreach ($daftarProdi as $indexProdi => [$kodeProdi, $namaProdi, $jenjang]) {
+                $prodi->push(ProgramStudi::updateOrCreate(['kode_prodi' => $kodeProdi], [
+                    'fakultas_id' => $fakultas->id,
+                    'nama_prodi' => $namaProdi,
+                    'jenjang' => $jenjang,
+                    'status_akreditasi' => ['Unggul', 'Baik Sekali'][$indexProdi % 2],
+                    'no_sk_akreditasi' => '00'.($indexFakultas + 1).($indexProdi + 1).'/SK/BAN-PT/2022',
+                    'tanggal_akreditasi_mulai' => '2022-06-01',
+                    'tanggal_akreditasi_akhir' => '2027-06-01',
+                    'kaprodi' => $dosen[$urutanProdi * 4]->id,
+                    'tahun_berdiri' => 2001 + $urutanProdi,
+                ]));
+                $urutanProdi++;
             }
         }
 
-        $programStudiIds = ProgramStudi::pluck('id')->all();
+        // Setiap dosen mengajar di satu program studi: empat dosen berurutan per prodi.
+        $dosen->each(fn ($profil, int $index) => $profil->update(['prodi_id' => $prodi[intdiv($index, 4)]->id]));
 
-        foreach ($dosenProfiles as $index => $profile) {
-            $profile->update(['prodi_id' => $programStudiIds[$index % count($programStudiIds)]]);
-        }
+        return $prodi;
+    }
 
-        $mahasiswa = $this->demoUser(['username' => '33333'], ['name' => 'Citra Maharani', 'email' => '33333@example.com', 'password' => Hash::make('33333'), 'role_id' => $mahasiswaRoleId]);
-        $mahasiswa->mahasiswaProfile()->updateOrCreate([], ['nim' => '33333', 'angkatan' => 2023, 'semester' => 6, 'status' => 'Aktif', 'tempat_lahir' => 'Jakarta', 'tanggal_lahir' => '2003-03-03', 'jenis_kelamin' => 'Perempuan', 'agama' => 'Islam', 'no_telepon' => '081333333333', 'alamat' => 'Jl. Mahasiswa No. 33, Jakarta', 'kewarganegaraan' => 'Indonesia', 'dosen_wali_id' => $dosenProfiles[0]->id, 'prodi_id' => $programStudiIds[0], 'sekolah_asal' => $sekolah[0], 'nisn' => '0033333333', 'email_alternatif' => 'citra@gmail.com', 'nama_ayah_kandung' => 'Hendra Maharani', 'nama_ibu_kandung' => 'Lina Maharani', 'tanggal_lahir_ayah' => '1975-05-20', 'tanggal_lahir_ibu' => '1978-08-15', 'pendidikan_terakhir_ayah' => 'S1', 'pendidikan_terakhir_ibu' => 'S1', 'pekerjaan_ayah' => 'Pegawai Negeri Sipil (PNS)', 'pekerjaan_ibu' => 'Guru / Dosen', 'penghasilan_ayah' => 'Rp5.000.000 – Rp7.499.999', 'penghasilan_ibu' => 'Rp3.000.000 – Rp4.999.999', 'no_telepon_ayah' => '081333333334', 'no_telepon_ibu' => '081333333335', 'email_ayah' => 'hendra.maharani@example.com', 'email_ibu' => 'lina.maharani@example.com', 'alamat_ayah' => 'Jl. Melati No. 10, Jakarta', 'alamat_ibu' => 'Jl. Melati No. 10, Jakarta']);
-
-        for ($index = 1; $index <= 100; $index++) {
-            $username = 'mahasiswa'.$index;
-            $user = $this->demoUser(['username' => $username], ['name' => ['Fajar', 'Nabila', 'Dimas', 'Putri', 'Bagas'][$index % 5].' '.['Saputra', 'Anggraini', 'Kurniawan', 'Salsabila', 'Ramadhan'][$index % 5], 'email' => $username.'@example.com', 'password' => Hash::make($username), 'role_id' => $mahasiswaRoleId]);
-            $user->mahasiswaProfile()->updateOrCreate([], ['nim' => 'M'.str_pad((string) $index, 5, '0', STR_PAD_LEFT), 'angkatan' => 2022 + ($index % 3), 'semester' => 2 + ($index % 8), 'status' => 'Aktif', 'tempat_lahir' => $kota[$index % count($kota)], 'tanggal_lahir' => '200'.($index % 6).'-'.str_pad((string) (($index - 1) % 12 + 1), 2, '0', STR_PAD_LEFT).'-'.str_pad((string) (($index - 1) % 25 + 1), 2, '0', STR_PAD_LEFT), 'jenis_kelamin' => $jenisKelamin[$index % 2], 'agama' => $agama[$index % count($agama)], 'no_telepon' => '0821'.str_pad((string) $index, 8, '0', STR_PAD_LEFT), 'alamat' => 'Jl. Pelajar No. '.$index.', '.$kota[$index % count($kota)], 'kewarganegaraan' => 'Indonesia', 'dosen_wali_id' => $dosenProfiles[$index % count($dosenProfiles)]->id, 'prodi_id' => $programStudiIds[$index % count($programStudiIds)], 'sekolah_asal' => $sekolah[$index % count($sekolah)], 'nisn' => '00'.str_pad((string) $index, 8, '0', STR_PAD_LEFT), 'email_alternatif' => $username.'@mail.com', 'nama_ayah_kandung' => 'Joko '.$user->name, 'nama_ibu_kandung' => 'Sari '.$user->name, 'tanggal_lahir_ayah' => '197'.($index % 10).'-'.str_pad((string) (($index - 1) % 12 + 1), 2, '0', STR_PAD_LEFT).'-'.str_pad((string) (($index - 1) % 25 + 1), 2, '0', STR_PAD_LEFT), 'tanggal_lahir_ibu' => '197'.(($index + 3) % 10).'-'.str_pad((string) (($index - 1) % 12 + 1), 2, '0', STR_PAD_LEFT).'-'.str_pad((string) (($index - 1) % 25 + 1), 2, '0', STR_PAD_LEFT), 'pendidikan_terakhir_ayah' => $pendidikan[$index % count($pendidikan)], 'pendidikan_terakhir_ibu' => $pendidikan[($index + 1) % count($pendidikan)], 'pekerjaan_ayah' => $pekerjaan[$index % count($pekerjaan)], 'pekerjaan_ibu' => $pekerjaan[($index + 1) % count($pekerjaan)], 'penghasilan_ayah' => $penghasilan[$index % count($penghasilan)], 'penghasilan_ibu' => $penghasilan[($index + 1) % count($penghasilan)], 'no_telepon_ayah' => '0813'.str_pad((string) $index, 8, '0', STR_PAD_LEFT), 'no_telepon_ibu' => '0814'.str_pad((string) $index, 8, '0', STR_PAD_LEFT), 'email_ayah' => 'ayah'.$index.'@example.com', 'email_ibu' => 'ibu'.$index.'@example.com', 'alamat_ayah' => 'Jl. Keluarga No. '.$index.', '.$kota[$index % count($kota)], 'alamat_ibu' => 'Jl. Keluarga No. '.$index.', '.$kota[$index % count($kota)]]);
-        }
-
-        // Mata kuliah per prodi
-        $mataKuliahSeed = [
-            'TI-S1' => [
-                ['IF101', 'Algoritma dan Pemrograman', 3, 1, 'Wajib'], ['IF102', 'Matematika Diskrit', 3, 1, 'Wajib'], ['IF201', 'Struktur Data', 3, 2, 'Wajib'], ['IF202', 'Basis Data', 3, 2, 'Wajib'], ['IF301', 'Pemrograman Web', 3, 3, 'Wajib'], ['IF302', 'Jaringan Komputer', 3, 3, 'Wajib'], ['IF401', 'Kecerdasan Buatan', 3, 5, 'Pilihan'],
-                ['IF402', 'Keamanan Siber', 3, 6, 'Pilihan'],
-                ['IF403', 'Pemrograman Mobile', 3, 6, 'Pilihan'],
-                ['IF404', 'Cloud Computing', 3, 6, 'Pilihan'],
-                ['IF405', 'Analisis Data', 3, 6, 'Pilihan'],
-            ],
-            'SI-S1' => [
-                ['SI101', 'Pengantar Sistem Informasi', 3, 1, 'Wajib'], ['SI102', 'Algoritma dan Pemrograman', 3, 1, 'Wajib'], ['SI201', 'Analisis dan Perancangan Sistem', 3, 2, 'Wajib'], ['SI202', 'Basis Data Lanjut', 3, 3, 'Wajib'], ['SI301', 'Manajemen Proyek TI', 3, 4, 'Wajib'], ['SI302', 'E-Bisnis', 3, 5, 'Pilihan'],
-            ],
-            'MNJ-S1' => [
-                ['MN101', 'Pengantar Manajemen', 3, 1, 'Wajib'], ['MN102', 'Ekonomi Mikro', 3, 1, 'Wajib'], ['MN201', 'Manajemen Pemasaran', 3, 3, 'Wajib'], ['MN202', 'Manajemen Keuangan', 3, 4, 'Wajib'], ['MN301', 'Kewirausahaan', 2, 5, 'Pilihan'],
-            ],
-            'AK-S1' => [
-                ['AK101', 'Pengantar Akuntansi', 3, 1, 'Wajib'], ['AK102', 'Matematika Ekonomi', 3, 1, 'Wajib'], ['AK201', 'Akuntansi Keuangan Menengah', 3, 3, 'Wajib'], ['AK202', 'Pajak dan Perpajakan', 3, 4, 'Wajib'], ['AK301', 'Audit Internal', 2, 6, 'Pilihan'],
-            ],
+    /**
+     * Paket mata kuliah semester 1–6 tiap program studi; satu semester berisi 4 mata kuliah (16 SKS),
+     * masih di bawah batas SKS terendah pada Pengaturan Akademik.
+     *
+     * @param  Collection<int, ProgramStudi>  $prodi
+     * @return Collection<int, MataKuliah>
+     */
+    private function mataKuliah(Collection $prodi): Collection
+    {
+        $namaPerProdi = [
+            'TI-S1' => ['Algoritma dan Pemrograman', 'Struktur Data', 'Matematika Diskret', 'Pengantar Teknologi Informasi', 'Basis Data', 'Pemrograman Berorientasi Objek', 'Sistem Operasi', 'Statistika', 'Jaringan Komputer', 'Rekayasa Perangkat Lunak', 'Pemrograman Web', 'Analisis Algoritma', 'Kecerdasan Buatan', 'Sistem Terdistribusi', 'Keamanan Informasi', 'Interaksi Manusia dan Komputer', 'Pembelajaran Mesin', 'Komputasi Awan', 'Pemrograman Mobile', 'Manajemen Proyek TI', 'Data Mining', 'Pengolahan Citra', 'Metodologi Penelitian', 'Etika Profesi'],
+            'SI-S1' => ['Konsep Sistem Informasi', 'Pemrograman Dasar', 'Matematika Bisnis', 'Pengantar Manajemen', 'Basis Data Bisnis', 'Analisis Proses Bisnis', 'Statistika Bisnis', 'Akuntansi Dasar', 'Perancangan Sistem Informasi', 'Sistem Informasi Manajemen', 'Pemrograman Aplikasi Bisnis', 'Manajemen Basis Data', 'E-Business', 'Analitik Bisnis', 'Tata Kelola Teknologi Informasi', 'Sistem Pendukung Keputusan', 'Enterprise Resource Planning', 'Audit Sistem Informasi', 'Keamanan Sistem Informasi', 'Manajemen Proyek Sistem Informasi', 'Integrasi Sistem', 'Inovasi Digital', 'Metodologi Penelitian', 'Kewirausahaan Digital'],
+            'AK-S1' => ['Pengantar Akuntansi', 'Pengantar Ekonomi', 'Matematika Ekonomi', 'Pengantar Bisnis', 'Akuntansi Keuangan Menengah', 'Akuntansi Biaya', 'Statistika Ekonomi', 'Hukum Bisnis', 'Akuntansi Manajemen', 'Perpajakan', 'Sistem Informasi Akuntansi', 'Manajemen Keuangan', 'Auditing', 'Akuntansi Keuangan Lanjutan', 'Analisis Laporan Keuangan', 'Akuntansi Sektor Publik', 'Audit Internal', 'Teori Akuntansi', 'Perpajakan Lanjutan', 'Akuntansi Syariah', 'Akuntansi Forensik', 'Sistem Pengendalian Manajemen', 'Metodologi Penelitian', 'Etika Bisnis dan Profesi'],
+            'MJ-S1' => ['Pengantar Manajemen', 'Pengantar Bisnis', 'Matematika Bisnis', 'Pengantar Ekonomi', 'Manajemen Pemasaran', 'Manajemen Keuangan', 'Statistika Bisnis', 'Perilaku Organisasi', 'Manajemen Operasional', 'Manajemen Sumber Daya Manusia', 'Riset Pemasaran', 'Komunikasi Bisnis', 'Manajemen Strategik', 'Manajemen Risiko', 'Kepemimpinan', 'Bisnis Internasional', 'Manajemen Investasi', 'Pemasaran Digital', 'Manajemen Inovasi', 'Manajemen Kinerja', 'Studi Kelayakan Bisnis', 'Manajemen Perubahan', 'Metodologi Penelitian', 'Kewirausahaan'],
         ];
 
-        $mataKuliahIds = [];
-        foreach ($mataKuliahSeed as $kodeProdi => $items) {
-            $prodi = ProgramStudi::where('kode_prodi', $kodeProdi)->first();
-            if (! $prodi) {
-                continue;
-            }
+        $mataKuliah = collect();
 
-            foreach ($items as [$kode, $nama, $sks, $semester, $jenis]) {
-                $mk = MataKuliah::updateOrCreate(['kode_matkul' => $kode], ['nama_matkul' => $nama, 'sks' => $sks, 'semester' => $semester, 'jenis' => $jenis, 'prodi_id' => $prodi->id]);
-                $mataKuliahIds[] = $mk->id;
+        foreach ($prodi as $item) {
+            foreach ($namaPerProdi[$item->kode_prodi] as $index => $nama) {
+                $semester = intdiv($index, self::MATKUL_PER_SEMESTER) + 1;
+                $urut = $index % self::MATKUL_PER_SEMESTER;
+
+                $mataKuliah->push(MataKuliah::updateOrCreate(
+                    ['kode_matkul' => substr($item->kode_prodi, 0, 2).$semester.str_pad((string) ($urut + 1), 2, '0', STR_PAD_LEFT)],
+                    [
+                        'nama_matkul' => $nama,
+                        'sks' => 4,
+                        'semester' => $semester,
+                        'jenis' => $urut === 3 ? 'Pilihan' : 'Wajib',
+                        'prodi_id' => $item->id,
+                    ],
+                ));
             }
         }
 
-        // Ruang
-        $ruangSeed = [
-            ['R101', 'Ruang Kuliah 101', 40, 'Gedung A Lt.1 - Proyektor & AC'],
-            ['R102', 'Ruang Kuliah 102', 40, 'Gedung A Lt.1 - Proyektor & AC'],
-            ['R201', 'Ruang Kuliah 201', 60, 'Gedung A Lt.2 - Proyektor & AC'],
-            ['LAB1', 'Lab Komputer 1', 30, 'Gedung B Lt.1 - 30 PC'],
-            ['LAB2', 'Lab Komputer 2', 30, 'Gedung B Lt.2 - 30 PC'],
-            ['AUD', 'Aula Utama', 200, 'Gedung C - Sound & Multimedia'],
+        return $mataKuliah;
+    }
+
+    /**
+     * @return Collection<int, Ruang>
+     */
+    private function ruang(): Collection
+    {
+        return collect([
+            ['R-101', 'Ruang Kuliah 101', 40, 'Gedung A lantai 1'],
+            ['R-102', 'Ruang Kuliah 102', 40, 'Gedung A lantai 1'],
+            ['R-201', 'Ruang Kuliah 201', 35, 'Gedung A lantai 2'],
+            ['R-202', 'Ruang Kuliah 202', 35, 'Gedung A lantai 2'],
+            ['LAB-1', 'Laboratorium Komputer 1', 30, 'Gedung B lantai 1'],
+            ['LAB-2', 'Laboratorium Komputer 2', 30, 'Gedung B lantai 2'],
+        ])->map(fn (array $item): Ruang => Ruang::updateOrCreate(['kode_ruang' => $item[0]], [
+            'nama_ruang' => $item[1],
+            'kapasitas' => $item[2],
+            'detail' => $item[3],
+        ]));
+    }
+
+    /**
+     * Tiga tahun akademik berurutan; hanya yang terakhir aktif, dengan periode KRS yang sedang berjalan
+     * sehingga mahasiswa bisa langsung mencoba pengisian KRS.
+     *
+     * @return Collection<int, TahunAkademik>
+     */
+    private function tahunAkademik(): Collection
+    {
+        $mulaiAktif = Carbon::today()->subWeek();
+        $tahunAktif = (int) $mulaiAktif->year;
+
+        $periode = [
+            [($tahunAktif - 1).'/'.$tahunAktif, 'Ganjil', $mulaiAktif->copy()->subMonths(12)],
+            [($tahunAktif - 1).'/'.$tahunAktif, 'Genap', $mulaiAktif->copy()->subMonths(6)],
+            [$tahunAktif.'/'.($tahunAktif + 1), 'Ganjil', $mulaiAktif],
         ];
 
-        $ruangIds = [];
-        foreach ($ruangSeed as [$kode, $nama, $kapasitas, $detail]) {
-            $ruang = Ruang::updateOrCreate(['kode_ruang' => $kode], ['nama_ruang' => $nama, 'kapasitas' => $kapasitas, 'detail' => $detail]);
-            $ruangIds[] = $ruang->id;
-        }
+        return collect($periode)->map(fn (array $item, int $index): TahunAkademik => TahunAkademik::create([
+            'tahun' => $item[0],
+            'semester' => $item[1],
+            'tanggal_mulai' => $item[2],
+            'tanggal_akhir' => $item[2]->copy()->addMonths(5),
+            'tanggal_krs_awal' => $item[2]->copy()->subWeek(),
+            'tanggal_krs_akhir' => $item[2]->copy()->addWeeks(2),
+            'status' => $index === count($periode) - 1,
+        ]));
+    }
 
-        // Kelas Kuliah — kode_kelas unik per matkul (A/B/C), round-robin dosen & tahun ajaran
-        $tahunAkademik = [];
-        foreach ([
-            ['2023/2024', 'Ganjil', '2023-08-01', '2024-01-31'],
-            ['2023/2024', 'Genap', '2024-02-01', '2024-07-31'],
-            ['2024/2025', 'Ganjil', '2024-08-01', '2025-01-31'],
-            ['2024/2025', 'Genap', '2025-02-01', '2025-07-31'],
-            ['2025/2026', 'Ganjil', '2025-08-01', '2026-01-31'],
-        ] as [$tahun, $semester, $tanggalMulai, $tanggalAkhir]) {
-            $akademik = TahunAkademik::updateOrCreate(['tahun' => $tahun, 'semester' => $semester], ['tanggal_mulai' => $tanggalMulai, 'tanggal_akhir' => $tanggalAkhir, 'tanggal_krs_awal' => $tanggalMulai, 'tanggal_krs_akhir' => date('Y-m-d', strtotime($tanggalMulai.' +14 days')), 'status' => $tahun === '2025/2026' && $semester === 'Ganjil']);
-            $tahunAkademik[] = $akademik->id;
-        }
+    /**
+     * Mahasiswa tiga angkatan per program studi. Angkatan terlama sudah menempuh dua semester
+     * sebelumnya sehingga kini di semester 5; angkatan terbaru baru masuk semester 1.
+     *
+     * @param  Collection<int, ProgramStudi>  $prodi
+     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @return Collection<int, MahasiswaProfile>
+     */
+    private function mahasiswa(Collection $prodi, Collection $dosen, TahunAkademik $tahunAktif): Collection
+    {
+        $namaDepan = ['Andi', 'Citra', 'Dimas', 'Fitri', 'Galih', 'Hana', 'Irfan', 'Kirana', 'Lukman', 'Mira', 'Naufal', 'Oktavia', 'Putra', 'Rani', 'Satria'];
+        $namaBelakang = ['Saputra', 'Maharani', 'Prasetya', 'Handayani', 'Wibowo', 'Salsabila', 'Hakim', 'Pertiwi', 'Ardiansyah', 'Utami'];
+        $tahunMasukAktif = (int) explode('/', $tahunAktif->tahun)[0];
+        $mahasiswa = collect();
+        $nomor = 0;
 
-        foreach ($tahunAkademik as $periodeIndex => $tahunAkademikId) {
-            foreach ($mataKuliahIds as $index => $matkulId) {
-                $mk = MataKuliah::find($matkulId);
-                for ($section = 0; $section < 3; $section++) {
-                    $suffix = chr(65 + $section);
-                    $tahunAkademik = TahunAkademik::find($tahunAkademikId);
-                    $kodeTahun = substr($tahunAkademik->tahun, 2, 2).substr($tahunAkademik->tahun, 7, 2);
-                    $kodeKelas = ($mk?->kode_matkul ?? 'KK-'.$matkulId).'-'.$kodeTahun.'-'.$periodeIndex.$suffix;
-                    KelasKuliah::create(['kode_kelas' => $kodeKelas, 'tahun_akademik_id' => $tahunAkademikId, 'kapasitas' => 30 + $section * 10, 'dosen_id' => $section === 0 ? $dosenProfiles[0]->id : $dosenProfiles[($index + $section) % count($dosenProfiles)]->id, 'matkul_id' => $matkulId]);
+        foreach ($prodi as $indexProdi => $item) {
+            foreach ([2, 1, 0] as $mundur) {
+                $angkatan = $tahunMasukAktif - $mundur;
+                $semester = $mundur * 2 + 1;
+
+                for ($urut = 1; $urut <= self::MAHASISWA_PER_ANGKATAN; $urut++) {
+                    $nomor++;
+                    // Mahasiswa pertama memakai username 33333, akun contoh yang dipakai tim.
+                    $username = $nomor === 1 ? '33333' : 'mahasiswa'.$nomor;
+                    $nama = $namaDepan[($nomor - 1) % count($namaDepan)].' '.$namaBelakang[($nomor + $mundur) % count($namaBelakang)];
+                    $user = $this->akun($username, $nama, $username.'@example.com', UserType::Mahasiswa, $username);
+
+                    $mahasiswa->push($user->mahasiswaProfile()->updateOrCreate([], [
+                        'nim' => $angkatan.str_pad((string) ($indexProdi + 1), 2, '0', STR_PAD_LEFT).str_pad((string) $urut, 3, '0', STR_PAD_LEFT),
+                        'angkatan' => $angkatan,
+                        'semester' => $semester,
+                        'status' => 'Aktif',
+                        'prodi_id' => $item->id,
+                        'dosen_wali_id' => $dosen[$indexProdi * 4 + ($urut % 4)]->id,
+                        'sekolah_asal' => ['SMA Negeri 1 '.self::KOTA[$nomor % 10], 'SMK Negeri 2 '.self::KOTA[($nomor + 3) % 10]][$nomor % 2],
+                        'nisn' => str_pad((string) (1000000000 + $nomor), 10, '0', STR_PAD_LEFT),
+                        'email_alternatif' => $username.'.alt@example.com',
+                        'nama_ayah_kandung' => 'Bapak '.$namaBelakang[$nomor % count($namaBelakang)],
+                        'nama_ibu_kandung' => 'Ibu '.$namaBelakang[($nomor + 5) % count($namaBelakang)],
+                        'tanggal_lahir_ayah' => Carbon::create(1970 + ($nomor % 8), ($nomor % 12) + 1, 12)->toDateString(),
+                        'tanggal_lahir_ibu' => Carbon::create(1972 + ($nomor % 8), (($nomor + 4) % 12) + 1, 5)->toDateString(),
+                        'pendidikan_terakhir_ayah' => ['SMA/SMK', 'D3', 'S1', 'S2'][$nomor % 4],
+                        'pendidikan_terakhir_ibu' => ['SMA/SMK', 'D3', 'S1'][$nomor % 3],
+                        'pekerjaan_ayah' => self::PEKERJAAN[$nomor % count(self::PEKERJAAN)],
+                        'pekerjaan_ibu' => self::PEKERJAAN[($nomor + 2) % count(self::PEKERJAAN)],
+                        'penghasilan_ayah' => self::PENGHASILAN[$nomor % count(self::PENGHASILAN)],
+                        'penghasilan_ibu' => self::PENGHASILAN[($nomor + 1) % count(self::PENGHASILAN)],
+                        'no_telepon_ayah' => '0812'.str_pad((string) (3000 + $nomor), 8, '0', STR_PAD_LEFT),
+                        'no_telepon_ibu' => '0813'.str_pad((string) (4000 + $nomor), 8, '0', STR_PAD_LEFT),
+                        'email_ayah' => 'ayah.'.$username.'@example.com',
+                        'email_ibu' => 'ibu.'.$username.'@example.com',
+                        'alamat_ayah' => 'Jl. Melati No. '.$nomor.', '.self::KOTA[$nomor % 10],
+                        'alamat_ibu' => 'Jl. Melati No. '.$nomor.', '.self::KOTA[$nomor % 10],
+                        ...$this->profilUmum($nomor, $angkatan - 18),
+                    ]));
                 }
             }
         }
 
-        $kelasKonten = KelasKuliah::all();
+        return $mahasiswa;
+    }
 
-        foreach ($kelasKonten as $kelas) {
-            Materi::updateOrCreate(
-                ['kelas_id' => $kelas->id, 'judul_materi' => 'Pengantar Materi Perkuliahan'],
-                [
-                    'pertemuan_ke' => 1,
+    /**
+     * Kelas dibuat hanya untuk semester yang memang ditempuh salah satu angkatan pada tahun tersebut,
+     * lalu dijadwalkan agar tidak bentrok ruang, dosen, maupun antar kelas dalam satu paket semester.
+     *
+     * @param  Collection<int, TahunAkademik>  $tahunAkademik
+     * @param  Collection<int, ProgramStudi>  $prodi
+     * @param  Collection<int, MataKuliah>  $mataKuliah
+     * @param  Collection<int, \App\Models\DosenProfile>  $dosen
+     * @param  Collection<int, Ruang>  $ruang
+     */
+    private function kelasDanJadwal(Collection $tahunAkademik, Collection $prodi, Collection $mataKuliah, Collection $dosen, Collection $ruang): void
+    {
+        $ruangTerpakai = [];   // "tahun-hari-slot" => id ruang yang sudah dipakai
+        $dosenTerpakai = [];   // "tahun-hari-slot" => id dosen yang sudah mengajar
+
+        foreach ($tahunAkademik as $urutanTahun => $tahun) {
+            foreach ($prodi as $indexProdi => $item) {
+                foreach ($this->semesterDitempuh($urutanTahun) as $indexPaket => $semester) {
+                    $paket = $mataKuliah->where('prodi_id', $item->id)->where('semester', $semester)->values();
+                    $pengampuProdi = $dosen->where('prodi_id', $item->id)->values();
+
+                    foreach ($paket as $indexMatkul => $matkul) {
+                        // Tahun berjalan punya dua kelas paralel per mata kuliah agar pindah kelas bisa dicoba.
+                        $jumlahKelas = $tahun->status ? 2 : 1;
+
+                        for ($section = 0; $section < $jumlahKelas; $section++) {
+                            // Satu paket semester adalah satu rombongan belajar, jadi tiap mata kuliahnya
+                            // menempati slot berbeda; kelas paralel dipindah ke hari lain agar mahasiswa
+                            // yang mencampur kelas A dan B tetap tidak bentrok.
+                            $hari = self::HARI[($indexProdi + $indexPaket + $section * 2) % count(self::HARI)];
+                            $slot = $indexMatkul % count(self::SLOT);
+                            $kunci = $tahun->id.'-'.$hari.'-'.$slot;
+
+                            $pengampu = $pengampuProdi->first(fn ($profil): bool => ! in_array($profil->id, $dosenTerpakai[$kunci] ?? [], true))
+                                ?? $pengampuProdi->first();
+                            $ruangDipakai = $ruang->first(fn (Ruang $r): bool => ! in_array($r->id, $ruangTerpakai[$kunci] ?? [], true))
+                                ?? $ruang->first();
+
+                            $kelas = KelasKuliah::create([
+                                'kode_kelas' => $matkul->kode_matkul.'-'.chr(65 + $section),
+                                'tahun_akademik_id' => $tahun->id,
+                                'kapasitas' => 30,
+                                'dosen_id' => $pengampu->id,
+                                'matkul_id' => $matkul->id,
+                            ]);
+
+                            Jadwal::create([
+                                'kelas_id' => $kelas->id,
+                                'hari' => $hari,
+                                'jam_mulai' => self::SLOT[$slot][0],
+                                'jam_akhir' => self::SLOT[$slot][1],
+                                'ruang_id' => $ruangDipakai->id,
+                            ]);
+
+                            $ruangTerpakai[$kunci][] = $ruangDipakai->id;
+                            $dosenTerpakai[$kunci][] = $pengampu->id;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Semester yang ditempuh angkatan-angkatan pada tahun akademik ke-$urutanTahun (0 = paling lama).
+     *
+     * @return list<int>
+     */
+    private function semesterDitempuh(int $urutanTahun): array
+    {
+        return match ($urutanTahun) {
+            0 => [1, 3],
+            1 => [2, 4],
+            default => [1, 3, 5],
+        };
+    }
+
+    /**
+     * KRS tiap mahasiswa: paket semester yang sesuai, dibatasi SKS menurut IPS semester sebelumnya.
+     * Tahun-tahun lampau sudah bernilai lengkap; tahun aktif masih kosong karena kuliah sedang berjalan.
+     *
+     * @param  Collection<int, TahunAkademik>  $tahunAkademik
+     * @param  Collection<int, MahasiswaProfile>  $mahasiswa
+     */
+    private function krsDanNilai(Collection $tahunAkademik, Collection $mahasiswa): void
+    {
+        $huruf = SkalaNilai::semua()->keys()->values();
+        $tahunAktif = $tahunAkademik->last();
+
+        foreach ($tahunAkademik as $urutanTahun => $tahun) {
+            foreach ($mahasiswa as $indexMahasiswa => $profil) {
+                // Tiap tahun akademik di data demo adalah satu semester berurutan (Ganjil, Genap, Ganjil).
+                $semester = $profil->semester - (count($tahunAkademik) - 1 - $urutanTahun);
+
+                if ($semester < 1) {
+                    continue;
+                }
+
+                $maksSks = PengaturanAkademik::maksSksUntuk($profil->ipsSemesterSebelum($tahun)['ips'] ?? null);
+                $terpakai = 0;
+
+                // Bila satu mata kuliah punya kelas paralel, mahasiswa hanya masuk ke salah satunya.
+                $kelasSemester = KelasKuliah::query()
+                    ->where('tahun_akademik_id', $tahun->id)
+                    ->whereHas('mataKuliah', fn ($query) => $query->where('prodi_id', $profil->prodi_id)->where('semester', $semester))
+                    ->with('mataKuliah:id,sks')
+                    ->orderBy('kode_kelas')
+                    ->get()
+                    ->groupBy('matkul_id')
+                    ->map(fn (Collection $paralel) => $paralel->values()[$indexMahasiswa % $paralel->count()])
+                    ->values();
+
+                foreach ($kelasSemester as $indexKelas => $kelas) {
+                    if ($terpakai + $kelas->mataKuliah->sks > $maksSks) {
+                        continue;
+                    }
+
+                    // Nilai hanya untuk tahun yang sudah selesai; hurufnya berputar agar IP beragam.
+                    // Nilai E dihindari supaya tidak ada mata kuliah tertinggal yang menyulitkan demo.
+                    Krs::create([
+                        'mahasiswa_id' => $profil->id,
+                        'kelas_id' => $kelas->id,
+                        'status' => 'Aktif',
+                        'nilai' => $tahun->is($tahunAktif) ? null : $huruf[($indexMahasiswa + $indexKelas + $urutanTahun) % max($huruf->count() - 1, 1)],
+                    ]);
+
+                    $terpakai += $kelas->mataKuliah->sks;
+                }
+            }
+        }
+    }
+
+    /**
+     * Materi, tugas, dan quiz untuk kelas tahun berjalan, beserta pengumpulan dan pengerjaan mahasiswa
+     * dalam format yang sama dengan yang dihasilkan aplikasi.
+     *
+     * @param  Collection<int, MahasiswaProfile>  $mahasiswa
+     */
+    private function kontenKelas(TahunAkademik $tahunAktif, Collection $mahasiswa): void
+    {
+        $kelasAktif = KelasKuliah::query()
+            ->where('tahun_akademik_id', $tahunAktif->id)
+            ->with('dosen:id,user_id', 'mataKuliah:id,nama_matkul', 'krs:id,kelas_id,mahasiswa_id')
+            ->get();
+
+        foreach ($kelasAktif as $indexKelas => $kelas) {
+            $pengunggah = $kelas->dosen->user_id;
+
+            foreach ([1, 2] as $pertemuan) {
+                Materi::create([
+                    'kelas_id' => $kelas->id,
+                    'judul_materi' => 'Pertemuan '.$pertemuan.': '.$kelas->mataKuliah->nama_matkul,
+                    'pertemuan_ke' => $pertemuan,
                     'jenis' => 'Materi',
                     'file' => [],
-                    'catatan' => 'Materi pembuka perkuliahan.',
-                    'uploaded_by' => $dosen->id,
-                ],
-            );
-            Materi::updateOrCreate(
-                ['kelas_id' => $kelas->id, 'judul_materi' => 'Pengumuman Perkuliahan'],
-                [
-                    'pertemuan_ke' => 1,
-                    'jenis' => 'Pengumuman',
-                    'file' => [],
-                    'catatan' => 'Perkuliahan dimulai sesuai jadwal.',
-                    'uploaded_by' => $dosen->id,
-                ],
-            );
-
-            $tugas = Tugas::updateOrCreate(
-                ['kelas_id' => $kelas->id, 'judul_tugas' => 'Tugas Pertemuan 1'],
-                [
-                    'file' => [],
-                    'tenggat_waktu' => '2025-09-15 23:59:00',
-                    'catatan' => 'Kerjakan secara mandiri.',
-                    'uploaded_by' => $dosen->id,
-                ],
-            );
-
-            $quiz = Quiz::updateOrCreate(
-                ['kelas_id' => $kelas->id, 'nama_quiz' => 'Quiz Materi Pertemuan 1'],
-                [
-                    'catatan' => 'Quiz pemahaman materi dasar.',
-                    'waktu_pengerjaan' => 30,
-                    'tenggat_waktu' => '2025-09-20 23:59:00',
-                    'uploaded_by' => $dosen->id,
-                ],
-            );
-            Question::updateOrCreate(
-                ['quiz_id' => $quiz->id, 'question_text' => 'Apa tujuan utama mempelajari materi ini?'],
-                [
-                    'question_type' => 'single_choice',
-                    'question_option' => [
-                        ['text' => 'Memahami konsep dasar', 'is_correct' => true],
-                        ['text' => 'Menghindari perkuliahan', 'is_correct' => false],
-                        ['text' => 'Menghapus tugas', 'is_correct' => false],
-                    ],
-                    'points' => 10,
-                ],
-            );
-        }
-
-        $mahasiswaProfiles = User::ofType(UserType::Mahasiswa)->with('mahasiswaProfile')->get()->pluck('mahasiswaProfile')->filter()->values();
-        $tahunDenganNilai = TahunAkademik::whereIn('tahun', ['2023/2024', '2024/2025'])
-            ->whereIn('semester', ['Ganjil', 'Genap'])
-            ->pluck('id')
-            ->all();
-        $nilaiHuruf = ['A', 'B', 'C', 'D', 'E'];
-
-        foreach ($kelasKonten as $kelasIndex => $kelas) {
-            $beriNilai = in_array($kelas->tahun_akademik_id, $tahunDenganNilai, true);
-
-            foreach ($mahasiswaProfiles->slice(0, 3) as $studentIndex => $profile) {
-                Krs::create(['mahasiswa_id' => $profile->id, 'kelas_id' => $kelas->id, 'nilai' => $beriNilai ? $nilaiHuruf[($kelasIndex + $studentIndex) % count($nilaiHuruf)] : null, 'status' => 'Aktif']);
+                    'catatan' => 'Ringkasan materi pertemuan '.$pertemuan.'.',
+                    'uploaded_by' => $pengunggah,
+                ]);
             }
-            $tugas = $kelas->tugas->first();
-            if ($tugas) {
-                PengumpulanTugas::create(['tugas_id' => $tugas->id, 'mahasiswa_id' => $mahasiswaProfiles[0]->id, 'file_jawaban' => [], 'nilai' => 85, 'submitted_at' => '2025-10-01 10:00:00']);
+
+            $tugas = Tugas::create([
+                'kelas_id' => $kelas->id,
+                'judul_tugas' => 'Tugas 1 '.$kelas->mataKuliah->nama_matkul,
+                'tenggat_waktu' => Carbon::today()->addWeek()->setTime(23, 59),
+                'catatan' => 'Kerjakan dan unggah dalam format PDF.',
+                'file' => [],
+                'uploaded_by' => $pengunggah,
+            ]);
+
+            $quiz = Quiz::create([
+                'kelas_id' => $kelas->id,
+                'nama_quiz' => 'Quiz 1 '.$kelas->mataKuliah->nama_matkul,
+                'catatan' => 'Quiz pemahaman materi pertemuan 1–2.',
+                'waktu_pengerjaan' => 30,
+                'tenggat_waktu' => Carbon::today()->addDays(3)->setTime(23, 59),
+                'uploaded_by' => $pengunggah,
+            ]);
+
+            $soal = $this->soalQuiz($quiz);
+            $peserta = $mahasiswa->whereIn('id', $kelas->krs->pluck('mahasiswa_id'))->values();
+
+            // Sebagian kelas sudah dikerjakan: satu attempt selesai dinilai, satu menunggu koreksi esai.
+            if ($indexKelas % 3 === 0) {
+                foreach ($peserta->take(2) as $urutan => $profil) {
+                    $this->kerjakanQuiz($quiz, $soal, $profil, esaiDinilai: $urutan === 0);
+                }
             }
-            $quiz = $kelas->quizzes->first();
-            $question = $quiz?->questions->first();
-            if ($quiz && $question) {
-                $attempt = QuizAttempt::create(['quiz_id' => $quiz->id, 'mahasiswa_id' => $mahasiswaProfiles[0]->id, 'started_at' => '2025-10-01 09:00:00', 'submitted_at' => '2025-10-01 09:20:00', 'score' => 10]);
-                QuizAnswer::create(['attempt_id' => $attempt->id, 'question_id' => $question->id, 'answer' => ['text' => 'Memahami konsep dasar'], 'point' => 10]);
+
+            if ($indexKelas % 2 === 0) {
+                foreach ($peserta->take(2) as $urutan => $profil) {
+                    PengumpulanTugas::create([
+                        'tugas_id' => $tugas->id,
+                        'mahasiswa_id' => $profil->id,
+                        'file_jawaban' => [],
+                        'nilai' => $urutan === 0 ? 85 : null,
+                        'submitted_at' => Carbon::today()->subDay()->setTime(20, 15),
+                    ]);
+                }
             }
         }
+    }
 
-        // Jadwal — Senin..Jumat, jam 07:00/10:00/13:00/16:00, round-robin kelas & ruang
-        $hari = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
-        $slot = [['07:00:00', '09:30:00'], ['10:00:00', '12:30:00'], ['13:00:00', '15:30:00'], ['16:00:00', '18:30:00']];
-        $kelasIds = KelasKuliah::pluck('id')->all();
-        foreach ($kelasIds as $index => $kelasId) {
-            [$mulai, $akhir] = $slot[$index % count($slot)];
-            Jadwal::updateOrCreate(['kelas_id' => $kelasId], [
-                'hari' => $hari[$index % count($hari)],
-                'jam_mulai' => $mulai,
-                'jam_akhir' => $akhir,
-                'ruang_id' => $ruangIds[$index % count($ruangIds)],
+    /**
+     * @return Collection<int, Question>
+     */
+    private function soalQuiz(Quiz $quiz): Collection
+    {
+        return collect([
+            $quiz->questions()->create([
+                'question_text' => 'Manakah pernyataan yang benar tentang materi pertemuan 1?',
+                'question_type' => 'single_choice',
+                'question_option' => [
+                    ['text' => 'Pernyataan A', 'is_correct' => true],
+                    ['text' => 'Pernyataan B', 'is_correct' => false],
+                    ['text' => 'Pernyataan C', 'is_correct' => false],
+                ],
+                'points' => 30,
+            ]),
+            $quiz->questions()->create([
+                'question_text' => 'Pilih semua komponen yang dibahas pada pertemuan 2.',
+                'question_type' => 'multiple_choice',
+                'question_option' => [
+                    ['text' => 'Komponen 1', 'is_correct' => true],
+                    ['text' => 'Komponen 2', 'is_correct' => false],
+                    ['text' => 'Komponen 3', 'is_correct' => true],
+                ],
+                'points' => 40,
+            ]),
+            $quiz->questions()->create([
+                'question_text' => 'Jelaskan penerapan materi ini pada satu studi kasus sederhana.',
+                'question_type' => 'essay',
+                'points' => 30,
+            ]),
+        ]);
+    }
+
+    /**
+     * Kerjakan quiz seperti mahasiswa: jawaban tersimpan sebagai daftar, pilihan dinilai otomatis,
+     * esai menunggu koreksi dosen kecuali memang sudah dinilai.
+     *
+     * @param  Collection<int, Question>  $soal
+     */
+    private function kerjakanQuiz(Quiz $quiz, Collection $soal, MahasiswaProfile $profil, bool $esaiDinilai): void
+    {
+        $attempt = QuizAttempt::create([
+            'quiz_id' => $quiz->id,
+            'mahasiswa_id' => $profil->id,
+            'started_at' => Carbon::today()->subDay()->setTime(9, 0),
+        ]);
+
+        $attempt->setRelation('quiz', $quiz)->finalize([
+            $soal[0]->id => 'Pernyataan A',
+            $soal[1]->id => ['Komponen 1', 'Komponen 3'],
+            $soal[2]->id => 'Materi ini saya terapkan pada studi kasus sederhana di tempat magang.',
+        ]);
+
+        if ($esaiDinilai) {
+            QuizAnswer::query()
+                ->where('attempt_id', $attempt->id)
+                ->where('question_id', $soal[2]->id)
+                ->update(['point' => 25]);
+            $attempt->recalculateScore();
+        }
+    }
+
+    /**
+     * Satu pengajuan pindah kelas yang masih menunggu, antar kelas mata kuliah yang sama di tahun aktif.
+     *
+     * @param  Collection<int, MahasiswaProfile>  $mahasiswa
+     */
+    private function pindahKelas(TahunAkademik $tahunAktif, Collection $mahasiswa): void
+    {
+        $krs = Krs::query()
+            ->whereIn('mahasiswa_id', $mahasiswa->pluck('id'))
+            ->whereHas('kelasKuliah', fn ($query) => $query->where('tahun_akademik_id', $tahunAktif->id))
+            ->with('kelasKuliah:id,matkul_id,tahun_akademik_id')
+            ->get();
+
+        foreach ($krs as $item) {
+            $tujuan = KelasKuliah::query()
+                ->where('tahun_akademik_id', $tahunAktif->id)
+                ->where('matkul_id', $item->kelasKuliah->matkul_id)
+                ->whereKeyNot($item->kelas_id)
+                ->whereDoesntHave('krs', fn ($query) => $query->where('mahasiswa_id', $item->mahasiswa_id))
+                ->first();
+
+            if ($tujuan !== null) {
+                PengajuanPindahKelas::create([
+                    'mahasiswa_id' => $item->mahasiswa_id,
+                    'kelas_asal_id' => $item->kelas_id,
+                    'kelas_tujuan_id' => $tujuan->id,
+                    'alasan' => 'Jadwal kelas ini bentrok dengan kegiatan asisten laboratorium.',
+                    'status' => PengajuanPindahKelas::STATUS_PENDING,
+                ]);
+
+                return;
+            }
+        }
+    }
+
+    private function infoKuliah(): void
+    {
+        $adminId = User::query()->where('username', 'admin')->value('id');
+
+        $pengumuman = [
+            'pengumuman-perkuliahan' => 'Perkuliahan semester berjalan dimulai sesuai jadwal pada menu Jadwal Kuliah.',
+            'pengumuman-krs' => 'Pengisian KRS dibuka sampai dua pekan setelah perkuliahan dimulai.',
+            'pengumuman-ketidakhadiran' => 'Mahasiswa yang berhalangan hadir wajib mengunggah surat keterangan ke dosen pengampu.',
+        ];
+
+        foreach ($pengumuman as $berkas => $informasi) {
+            InfoKuliah::create([
+                'information' => $informasi,
+                'file' => $this->berkasDemo('info-kuliahs', $berkas, $informasi),
+                'uploaded_by' => $adminId,
             ]);
         }
     }
 
     /**
-     * Buat atau perbarui akun demo tanpa mengganti kata sandi akun yang sudah ada.
-     *
-     * @param  array<string, mixed>  $attributes
-     * @param  array<string, mixed>  $values
+     * Tulis satu berkas PDF sederhana ke disk privat, agar tautan unduhan pada data demo benar-benar bisa dibuka.
      */
-    private function demoUser(array $attributes, array $values): User
+    private function berkasDemo(string $direktori, string $nama, string $isi): string
     {
-        $user = User::query()->firstOrNew($attributes);
+        $path = $direktori.'/'.$nama.'-'.Str::lower(Str::random(6)).'.pdf';
+        $teks = str_replace(['(', ')'], '', $isi);
+        $konten = "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+            ."3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n"
+            ."4 0 obj<</Length 90>>stream\nBT /F1 12 Tf 60 760 Td ({$teks}) Tj ET\nendstream endobj\n"
+            ."5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n";
 
-        if ($user->exists) {
-            unset($values['password']);
+        Storage::disk(AllowedUpload::DISK)->put($path, $konten);
+
+        return $path;
+    }
+
+    /**
+     * Kolom profil yang sama untuk semua peran.
+     *
+     * @return array<string, string>
+     */
+    private function profilUmum(int $nomor, int $tahunLahir): array
+    {
+        $kota = self::KOTA[$nomor % count(self::KOTA)];
+
+        return [
+            'tempat_lahir' => $kota,
+            'tanggal_lahir' => Carbon::create($tahunLahir, ($nomor % 12) + 1, ($nomor % 27) + 1)->toDateString(),
+            'jenis_kelamin' => $nomor % 2 === 0 ? 'Laki-laki' : 'Perempuan',
+            'agama' => self::AGAMA[$nomor % count(self::AGAMA)],
+            'no_telepon' => '0811'.str_pad((string) (2000 + $nomor), 8, '0', STR_PAD_LEFT),
+            'alamat' => 'Jl. Pendidikan No. '.($nomor + 1).', '.$kota,
+            'kewarganegaraan' => 'Indonesia',
+        ];
+    }
+
+    /**
+     * Buat atau perbarui akun demo tanpa mengganti kata sandi akun yang sudah ada.
+     */
+    private function akun(string $username, string $nama, string $email, UserType $tipe, string $password): User
+    {
+        $user = User::query()->firstOrNew(['username' => $username]);
+        $user->fill(['name' => $nama, 'email' => $email, 'role_id' => Role::system($tipe)->id]);
+
+        if (! $user->exists) {
+            $user->password = Hash::make($password);
         }
 
-        $user->fill($values)->save();
+        $user->save();
 
         return $user;
     }

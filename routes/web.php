@@ -245,7 +245,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('materi/{materi}', fn (Request $request, Materi $materi) => app(MahasiswaContentController::class)->materiShow($request, $materi))->name('mahasiswa.materi.show');
         Route::get('quiz/{quiz}', fn (Request $request, Quiz $quiz) => app(MahasiswaContentController::class)->quizShow($request, $quiz))->name('mahasiswa.quiz.show');
         Route::post('quiz/{quiz}/start', [QuizAttemptController::class, 'start'])->name('mahasiswa.quiz.start');
-        Route::post('quiz/{quiz}/answers', [QuizAttemptController::class, 'saveAnswers'])->name('mahasiswa.quiz.answers');
+        Route::post('quiz/{quiz}/answers', [QuizAttemptController::class, 'saveAnswers'])->middleware('throttle:60,1')->name('mahasiswa.quiz.answers');
         Route::post('quiz/{quiz}/submit', [QuizAttemptController::class, 'submit'])->name('mahasiswa.quiz.submit');
         Route::get('jadwal', fn (Request $request) => app(MahasiswaContentController::class)->jadwalKuliah($request))
             ->name('mahasiswa.jadwal-kuliah');

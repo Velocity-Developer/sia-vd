@@ -168,3 +168,19 @@ it('forbids non admin roles from managing pindah kelas', function () {
     $this->actingAs($mahasiswa)->put(route('admin.pindah-kelas.approve', $pengajuan))->assertForbidden();
     $this->actingAs($mahasiswa)->put(route('admin.pindah-kelas.reject', $pengajuan), ['catatan_admin' => 'X'])->assertForbidden();
 });
+
+it('warns before approving a move that clashes with the student schedule', function () {
+    [$admin, , , $kelasAsal, $kelasTujuan, , $pengajuan] = createAdminPindahKelas();
+    $ruang = \App\Models\Ruang::create(['kode_ruang' => 'R-901', 'nama_ruang' => 'Ruang 901', 'kapasitas' => 30]);
+    $kelasLain = \App\Models\KelasKuliah::create(['kode_kelas' => 'LAIN-A', 'tahun_akademik_id' => $kelasAsal->tahun_akademik_id, 'kapasitas' => 30, 'dosen_id' => $kelasAsal->dosen_id, 'matkul_id' => $kelasAsal->matkul_id]);
+    Krs::create(['mahasiswa_id' => $pengajuan->mahasiswa_id, 'kelas_id' => $kelasLain->id, 'status' => 'Aktif']);
+    \App\Models\Jadwal::create(['kelas_id' => $kelasLain->id, 'hari' => 'Senin', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $ruang->id]);
+    \App\Models\Jadwal::create(['kelas_id' => $kelasTujuan->id, 'hari' => 'Senin', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'ruang_id' => $ruang->id]);
+
+    $this->actingAs($admin)->put(route('admin.pindah-kelas.approve', $pengajuan))
+        ->assertSessionHas('pindah_kelas_warning', fn (string $pesan): bool => str_contains($pesan, 'bentrok'));
+    expect($pengajuan->fresh()->status)->toBe(PengajuanPindahKelas::STATUS_PENDING);
+
+    $this->actingAs($admin)->put(route('admin.pindah-kelas.approve', $pengajuan), ['force' => true])->assertSessionHas('success');
+    expect($pengajuan->fresh()->status)->toBe(PengajuanPindahKelas::STATUS_DISETUJUI);
+});
