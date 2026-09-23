@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
+import SelectFilter from '@/components/SelectFilter.vue';
 import { Input } from '@/components/ui/input';
 import { router } from '@inertiajs/vue3';
 import { Search } from 'lucide-vue-next';
@@ -24,28 +24,34 @@ const props = defineProps<{
     mataKuliahOptions: Opsi[];
     kelasOptions: Opsi[];
     dosenOptions: Opsi[];
+    /** Jumlah data pada hasil filter, ditampilkan di kanan seperti halaman Kelas Kuliah. */
+    total: number;
+    placeholder?: string;
     /** Filter tambahan khas satu menu, mis. jenis materi. */
     tambahan?: Record<string, string | number | null>;
 }>();
 
-const sel = 'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px] text-black';
 const semua = 'all';
-const nilai = ref({ ...props.filter });
-const cari = ref(props.filter.search);
-let jedaCari: number | undefined;
+const dariFilter = (nilai: number | null): number | string => nilai ?? semua;
 
-const keParameter = (value: number | string | null) => (value === null || value === semua ? undefined : value);
+const tahunAkademikId = ref<number | string>(dariFilter(props.filter.tahun_akademik_id));
+const prodiId = ref<number | string>(dariFilter(props.filter.prodi_id));
+const mataKuliahId = ref<number | string>(dariFilter(props.filter.mata_kuliah_id));
+const kelasId = ref<number | string>(dariFilter(props.filter.kelas_id));
+const dosenId = ref<number | string>(dariFilter(props.filter.dosen_id));
+const search = ref(props.filter.search);
+let jedaCari: number | undefined;
 
 const kirim = () => {
     router.get(
         props.url,
         {
-            tahun_akademik_id: keParameter(nilai.value.tahun_akademik_id),
-            prodi_id: keParameter(nilai.value.prodi_id),
-            mata_kuliah_id: keParameter(nilai.value.mata_kuliah_id),
-            kelas_id: keParameter(nilai.value.kelas_id),
-            dosen_id: keParameter(nilai.value.dosen_id),
-            search: cari.value || undefined,
+            search: search.value,
+            tahun_akademik_id: tahunAkademikId.value,
+            prodi_id: prodiId.value,
+            mata_kuliah_id: mataKuliahId.value,
+            kelas_id: kelasId.value,
+            dosen_id: dosenId.value,
             ...(props.tambahan ?? {}),
         },
         { preserveState: true, preserveScroll: true, replace: true },
@@ -53,31 +59,37 @@ const kirim = () => {
 };
 
 // Mengganti filter yang lebih luas mengosongkan filter di bawahnya, agar pilihannya tidak saling bertentangan.
-const ubah = (field: keyof NilaiFilter) => {
-    if (field === 'tahun_akademik_id' || field === 'prodi_id') {
-        nilai.value.mata_kuliah_id = null;
-        nilai.value.kelas_id = null;
-    }
-    if (field === 'mata_kuliah_id') nilai.value.kelas_id = null;
-
+const gantiTahunAkademik = () => {
+    mataKuliahId.value = semua;
+    kelasId.value = semua;
     kirim();
 };
 
-const reset = () => {
-    nilai.value = { tahun_akademik_id: null, prodi_id: null, mata_kuliah_id: null, kelas_id: null, dosen_id: null, search: '' };
-    cari.value = '';
+const gantiProdi = () => {
+    mataKuliahId.value = semua;
+    kelasId.value = semua;
     kirim();
 };
 
-watch(cari, () => {
+const gantiMataKuliah = () => {
+    kelasId.value = semua;
+    kirim();
+};
+
+watch(search, () => {
     window.clearTimeout(jedaCari);
     jedaCari = window.setTimeout(kirim, 400);
 });
+
 watch(
     () => props.filter,
     (baru) => {
-        nilai.value = { ...baru };
-        cari.value = baru.search;
+        tahunAkademikId.value = dariFilter(baru.tahun_akademik_id);
+        prodiId.value = dariFilter(baru.prodi_id);
+        mataKuliahId.value = dariFilter(baru.mata_kuliah_id);
+        kelasId.value = dariFilter(baru.kelas_id);
+        dosenId.value = dariFilter(baru.dosen_id);
+        search.value = baru.search;
     },
 );
 
@@ -85,39 +97,50 @@ defineExpose({ kirim });
 </script>
 
 <template>
-    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-[#e6e6e6] bg-white p-4">
-        <div class="relative min-w-[220px] flex-1">
-            <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-            <Input v-model="cari" placeholder="Cari…" class="h-10 rounded-[4px] border-[#dddddd] pl-9" aria-label="Cari" />
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div class="grid gap-3 sm:grid-cols-2 xl:flex xl:items-center">
+            <div class="relative w-full sm:max-w-sm">
+                <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                <Input
+                    v-model="search"
+                    :placeholder="props.placeholder ?? 'Cari…'"
+                    aria-label="Cari"
+                    class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
+                />
+            </div>
+
+            <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="gantiTahunAkademik">
+                <option :value="semua">Semua Tahun Akademik</option>
+                <option v-for="item in props.tahunAkademikOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+            </SelectFilter>
+
+            <SelectFilter v-model="prodiId" label="Filter program studi" @change="gantiProdi">
+                <option :value="semua">Semua Program Studi</option>
+                <option v-for="item in props.prodiOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+            </SelectFilter>
+
+            <SelectFilter v-model="mataKuliahId" label="Filter mata kuliah" @change="gantiMataKuliah">
+                <option :value="semua">Semua Mata Kuliah</option>
+                <option v-for="item in props.mataKuliahOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+            </SelectFilter>
+
+            <SelectFilter v-model="kelasId" label="Filter kelas" @change="kirim">
+                <option :value="semua">Semua Kelas</option>
+                <option v-for="item in props.kelasOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+            </SelectFilter>
+
+            <SelectFilter v-if="props.dosenOptions.length" v-model="dosenId" label="Filter dosen" @change="kirim">
+                <option :value="semua">Semua Dosen</option>
+                <option v-for="item in props.dosenOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+            </SelectFilter>
+
+            <slot name="tambahan" />
         </div>
 
-        <select v-model="nilai.tahun_akademik_id" :class="sel" aria-label="Filter tahun akademik" @change="ubah('tahun_akademik_id')">
-            <option :value="null">Semua tahun akademik</option>
-            <option v-for="item in props.tahunAkademikOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-
-        <select v-model="nilai.prodi_id" :class="sel" aria-label="Filter program studi" @change="ubah('prodi_id')">
-            <option :value="null">Semua program studi</option>
-            <option v-for="item in props.prodiOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-
-        <select v-model="nilai.mata_kuliah_id" :class="sel" aria-label="Filter mata kuliah" @change="ubah('mata_kuliah_id')">
-            <option :value="null">Semua mata kuliah</option>
-            <option v-for="item in props.mataKuliahOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-
-        <select v-model="nilai.kelas_id" :class="sel" aria-label="Filter kelas" @change="ubah('kelas_id')">
-            <option :value="null">Semua kelas</option>
-            <option v-for="item in props.kelasOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-
-        <select v-if="props.dosenOptions.length" v-model="nilai.dosen_id" :class="sel" aria-label="Filter dosen" @change="ubah('dosen_id')">
-            <option :value="null">Semua dosen</option>
-            <option v-for="item in props.dosenOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-        </select>
-
-        <slot name="tambahan" />
-
-        <Button variant="outline" class="h-10 rounded-[4px]" @click="reset">Reset</Button>
+        <p class="text-sm text-[#615d59]">
+            <span class="font-medium text-black">{{ props.total }}</span> data<span v-if="props.filter.search">
+                · hasil untuk "{{ props.filter.search }}"</span
+            >
+        </p>
     </div>
 </template>

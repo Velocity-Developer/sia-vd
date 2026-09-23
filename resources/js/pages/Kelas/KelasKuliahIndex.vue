@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import Pagination from '@/components/Pagination.vue';
+import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -50,9 +51,6 @@ const search = ref(props.search ?? '');
 const tahunAkademikId = ref<number | string>(props.tahunAkademikId ?? 'all');
 const mataKuliahId = ref<number | string>(props.mataKuliahId ?? 'all');
 const dosenId = ref<number | string>(props.dosenId ?? 'all');
-
-const sel =
-    'h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 text-sm text-[#31302e] shadow-sm transition-colors outline-none hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 sm:min-w-[180px] sm:w-auto';
 
 const applyFilters = () =>
     router.get(
@@ -130,20 +128,20 @@ const ruangText = (item: KelasKuliah) => {
                                 class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
                             />
                         </div>
-                        <select v-model="tahunAkademikId" :class="sel" aria-label="Filter tahun akademik" @change="onTahunAkademikChange">
+                        <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="onTahunAkademikChange">
                             <option value="all">Semua Tahun Akademik</option>
                             <option v-for="ta in props.tahunAkademiks" :key="ta.id" :value="ta.id">{{ ta.name }}</option>
-                        </select>
-                        <select v-model="mataKuliahId" :class="sel" aria-label="Filter mata kuliah" @change="applyFilters">
+                        </SelectFilter>
+                        <SelectFilter v-model="mataKuliahId" label="Filter mata kuliah" @change="applyFilters">
                             <option value="all">Semua Mata Kuliah</option>
                             <option v-for="mataKuliah in props.mataKuliahOptions" :key="mataKuliah.id" :value="mataKuliah.id">
                                 {{ mataKuliah.name }}
                             </option>
-                        </select>
-                        <select v-if="isAdmin" v-model="dosenId" :class="sel" aria-label="Filter dosen" @change="applyFilters">
+                        </SelectFilter>
+                        <SelectFilter v-if="isAdmin" v-model="dosenId" label="Filter dosen" @change="applyFilters">
                             <option value="all">Semua Dosen</option>
                             <option v-for="dosen in props.dosenOptions ?? []" :key="dosen.id" :value="dosen.id">{{ dosen.name }}</option>
-                        </select>
+                        </SelectFilter>
                     </div>
                     <p class="text-sm text-[#615d59]">
                         <span class="font-medium text-black">{{ props.kelasKuliahs.total }}</span> data<span v-if="props.search">

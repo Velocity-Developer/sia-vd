@@ -64,6 +64,8 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                     :mata-kuliah-options="props.mataKuliahOptions"
                     :kelas-options="props.kelasOptions"
                     :dosen-options="props.dosenOptions"
+                    :total="props.quizzes.total"
+                    placeholder="Cari nama quiz atau kode kelas"
                 />
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">

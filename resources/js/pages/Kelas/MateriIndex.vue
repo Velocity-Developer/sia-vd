@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import FilterKonten, { type NilaiFilter, type Opsi } from '@/components/FilterKonten.vue';
 import Pagination from '@/components/Pagination.vue';
+import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
@@ -80,19 +81,16 @@ const tanggal = (value: string) => new Intl.DateTimeFormat('id-ID', { dateStyle:
                     :mata-kuliah-options="props.mataKuliahOptions"
                     :kelas-options="props.kelasOptions"
                     :dosen-options="props.dosenOptions"
+                    :total="props.materis.total"
+                    placeholder="Cari judul materi atau kode kelas"
                     :tambahan="{ jenis: jenis === 'all' ? null : jenis }"
                 >
                     <template #tambahan>
-                        <select
-                            v-model="jenis"
-                            class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px] text-black"
-                            aria-label="Filter jenis"
-                            @change="filterRef?.kirim()"
-                        >
-                            <option value="all">Semua jenis</option>
+                        <SelectFilter v-model="jenis" label="Filter jenis" @change="filterRef?.kirim()">
+                            <option value="all">Semua Jenis</option>
                             <option value="Materi">Materi</option>
                             <option value="Pengumuman">Pengumuman</option>
-                        </select>
+                        </SelectFilter>
                     </template>
                 </FilterKonten>
 
