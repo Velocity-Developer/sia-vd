@@ -80,26 +80,63 @@ class KelasKuliah extends Model
     }
 
     /**
-     * Ubah jumlah pertemuan kelas. Pertemuan di atas jumlah baru ikut dihapus, kecuali yang sudah berjalan
-     * atau sudah punya presensi.
+     * Ubah jumlah pertemuan kelas dengan tetap menjaga posisi ujian: UAS selalu di pertemuan terakhir, dan
+     * UTS yang ikut terbuang dipindah ke tengah. Pertemuan yang sudah berjalan, sudah punya presensi, atau
+     * sudah punya pengajuan izin tidak dihapus; permintaan seperti itu ditolak dengan pesan yang jelas.
+     * Bila kelas sudah punya pertemuan, pertemuan tambahan langsung dibuat dari jadwal mingguan.
      */
     public function ubahJumlahPertemuan(int $jumlah, string $field = 'jumlah_pertemuan'): void
     {
-        $dibuang = $this->pertemuans()->where('pertemuan_ke', '>', $jumlah);
+        $lama = $this->jumlah_pertemuan;
+        $pertemuan = $this->pertemuans()->withCount(['presensiMahasiswas', 'pengajuanIzins'])->get()->keyBy('pertemuan_ke');
+        $bebas = fn (Pertemuan $p): bool => $p->status === Pertemuan::DIJADWALKAN && $p->presensi_mahasiswas_count === 0 && $p->pengajuan_izins_count === 0;
+        $tolak = fn (string $pesan) => throw ValidationException::withMessages([$field => $pesan]);
 
-        $terpakai = (clone $dibuang)
-            ->where(fn ($query) => $query->whereIn('status', [Pertemuan::BERLANGSUNG, Pertemuan::SELESAI])->orWhereHas('presensiMahasiswas'))
-            ->orderByDesc('pertemuan_ke')
-            ->value('pertemuan_ke');
+        $dibuang = $pertemuan->filter(fn (Pertemuan $p): bool => $p->pertemuan_ke > $jumlah);
+        $berjalan = $dibuang->whereIn('status', [Pertemuan::BERLANGSUNG, Pertemuan::SELESAI])->max('pertemuan_ke');
+        $adaData = $dibuang->filter(fn (Pertemuan $p): bool => $p->presensi_mahasiswas_count > 0 || $p->pengajuan_izins_count > 0)->max('pertemuan_ke');
 
-        if ($terpakai !== null) {
-            throw ValidationException::withMessages([
-                $field => "Pertemuan ke-{$terpakai} sudah berjalan, jadi jumlah pertemuan minimal {$terpakai}.",
-            ]);
+        if ($berjalan !== null) {
+            $tolak("Pertemuan ke-{$berjalan} sudah berjalan, jadi jumlah pertemuan minimal {$berjalan}.");
         }
 
-        $dibuang->delete();
+        if ($adaData !== null) {
+            $tolak("Pertemuan ke-{$adaData} sudah punya presensi atau pengajuan izin mahasiswa, jadi jumlah pertemuan minimal {$adaData}.");
+        }
+
+        // Pindahkan UTS/UAS yang ikut terbuang ke posisi barunya (UAS terakhir, UTS di tengah).
+        foreach ([Pertemuan::UAS => $jumlah, Pertemuan::UTS => intdiv($jumlah, 2)] as $jenis => $nomor) {
+            $ujian = $pertemuan->firstWhere('jenis', $jenis);
+
+            if ($ujian === null || $ujian->pertemuan_ke <= $jumlah || $jumlah < 4) {
+                continue;
+            }
+
+            $tujuan = $pertemuan->get($nomor);
+
+            if ($tujuan !== null && ($tujuan->jenis !== Pertemuan::KULIAH || ! $bebas($tujuan))) {
+                $tolak(strtoupper($jenis)." tidak bisa dipindah ke pertemuan ke-{$nomor} karena pertemuan itu sudah berjalan atau bukan pertemuan kuliah.");
+            }
+
+            $tujuan?->update(['jenis' => $jenis]);
+        }
+
+        // Saat jumlah bertambah, UAS lama yang belum berjalan menjadi kuliah biasa; UAS baru dibuat di nomor terakhir.
+        $uas = $pertemuan->firstWhere('jenis', Pertemuan::UAS);
+        if ($jumlah > $lama && $uas !== null && $uas->pertemuan_ke < $jumlah && $bebas($uas)) {
+            $uas->update(['jenis' => Pertemuan::KULIAH]);
+        }
+
+        $this->pertemuans()->whereIn('id', $dibuang->pluck('id'))->delete();
         $this->update(['jumlah_pertemuan' => $jumlah]);
+
+        if ($jumlah > $lama && $pertemuan->isNotEmpty()) {
+            try {
+                Pertemuan::generateUntuk($this->fresh());
+            } catch (ValidationException) {
+                // Kelas tanpa jadwal mingguan: pertemuan tambahan dibuat nanti lewat tombol "Buat pertemuan".
+            }
+        }
     }
 
     public function dispensasiUjians(): HasMany

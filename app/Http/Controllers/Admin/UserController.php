@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\DispensasiUjian;
 use App\Models\DosenProfile;
 use App\Models\Fakultas;
 use App\Models\MahasiswaProfile;
+use App\Models\PengajuanIzin;
+use App\Models\PresensiMahasiswa;
 use App\Models\ProgramStudi;
 use App\Models\Role;
 use App\Models\User;
@@ -256,6 +259,14 @@ class UserController extends Controller
 
         if ($user->mahasiswaProfile?->krs()->exists()) {
             return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena sudah memiliki KRS.');
+        }
+
+        // KRS yang dibatalkan tidak menghapus riwayat presensinya; riwayat itu tetap dijaga.
+        $mahasiswaId = $user->mahasiswaProfile?->id;
+        if ($mahasiswaId !== null && (PresensiMahasiswa::where('mahasiswa_id', $mahasiswaId)->exists()
+            || PengajuanIzin::where('mahasiswa_id', $mahasiswaId)->exists()
+            || DispensasiUjian::where('mahasiswa_id', $mahasiswaId)->exists())) {
+            return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena sudah memiliki riwayat presensi atau pengajuan izin.');
         }
 
         try {

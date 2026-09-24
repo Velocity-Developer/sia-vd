@@ -313,6 +313,20 @@ class PresensiController extends Controller
         ]);
     }
 
+    /**
+     * Susun ulang pertemuan yang belum berjalan mengikuti jadwal mingguan dan tanggal tahun akademik terbaru.
+     */
+    public function susunUlang(KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $this->pastikanPengampu($kelasKuliah);
+        abort_if($this->nilaiTerkunci($kelasKuliah), 403);
+        $hasil = Pertemuan::susunUlang($kelasKuliah);
+
+        return back()->with('success', $hasil['diubah'] > 0
+            ? "{$hasil['diubah']} pertemuan disesuaikan dengan jadwal terbaru.".($hasil['dilewati'] > 0 ? " {$hasil['dilewati']} pertemuan yang tanggalnya sudah lewat tidak diubah." : '')
+            : 'Semua pertemuan yang belum berjalan sudah sesuai jadwal.');
+    }
+
     public function generate(KelasKuliah $kelasKuliah): RedirectResponse
     {
         $this->pastikanPengampu($kelasKuliah);

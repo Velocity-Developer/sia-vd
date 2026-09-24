@@ -9,6 +9,7 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MataKuliah;
 use App\Models\PengaturanAkademik;
+use App\Models\Pertemuan;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
@@ -145,8 +146,20 @@ class KelasKuliahController extends Controller
             return to_route($this->rute('kelas-kuliah.index'))->with('error', 'Kelas Kuliah tidak dapat dihapus karena sudah memiliki KRS mahasiswa.');
         }
 
+        // Pertemuan yang belum pernah dipakai ikut terhapus; kelas dengan riwayat presensi dipertahankan.
+        $adaPresensi = $kelasKuliah->pertemuans()
+            ->where(fn ($query) => $query->whereIn('status', [Pertemuan::BERLANGSUNG, Pertemuan::SELESAI])->orWhereHas('presensiMahasiswas')->orWhereHas('pengajuanIzins'))
+            ->exists();
+
+        if ($adaPresensi || $kelasKuliah->dispensasiUjians()->exists()) {
+            return to_route($this->rute('kelas-kuliah.index'))->with('error', 'Kelas Kuliah tidak dapat dihapus karena sudah memiliki data presensi (pertemuan berjalan, presensi, pengajuan izin, atau dispensasi).');
+        }
+
         try {
-            $kelasKuliah->delete();
+            DB::transaction(function () use ($kelasKuliah): void {
+                $kelasKuliah->pertemuans()->delete();
+                $kelasKuliah->delete();
+            });
         } catch (Throwable) {
             return to_route($this->rute('kelas-kuliah.index'))->with('error', 'Kelas Kuliah gagal dihapus.');
         }

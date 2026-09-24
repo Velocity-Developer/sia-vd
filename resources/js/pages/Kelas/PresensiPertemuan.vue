@@ -19,7 +19,7 @@ import {
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { CheckCheck, Play, QrCode, Square, TriangleAlert } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 
 type Pertemuan = {
     id: number;
@@ -82,11 +82,25 @@ const bisaIsi = computed(() => props.bisaKelola && !props.terkunci && (status.va
 // Dosen pengganti hanya boleh membuka pertemuan ini, bukan halaman kelasnya.
 const pengganti = computed(() => props.bisaKelola && !props.bisaAturJadwal);
 
-// Salinan lokal daftar hadir; diperbarui setiap kali data dari server berubah.
-const baris = ref<{ mahasiswa_id: number; status: StatusPresensi; keterangan: string }[]>([]);
+// Salinan lokal daftar hadir. Saat data dari server berganti (simpan jurnal, presensi mandiri, dsb.), baris
+// yang sedang diubah dosen dan belum disimpan dipertahankan; baris lain ikut data terbaru dari server.
+type BarisLokal = { mahasiswa_id: number; status: StatusPresensi; keterangan: string };
+const baris = ref<BarisLokal[]>([]);
+let dataServerSebelumnya = new Map<number, { status: StatusPresensi; keterangan: string }>();
 watch(
     () => props.presensi,
-    (data) => (baris.value = data.map((item) => ({ mahasiswa_id: item.mahasiswa_id, status: item.status, keterangan: item.keterangan ?? '' }))),
+    (data) => {
+        const lokal = new Map(baris.value.map((item) => [item.mahasiswa_id, item]));
+        baris.value = data.map((item) => {
+            const milikDosen = lokal.get(item.mahasiswa_id);
+            const sebelumnya = dataServerSebelumnya.get(item.mahasiswa_id);
+            const belumDisimpan =
+                milikDosen && sebelumnya && (milikDosen.status !== sebelumnya.status || milikDosen.keterangan.trim() !== sebelumnya.keterangan);
+
+            return belumDisimpan ? milikDosen : { mahasiswa_id: item.mahasiswa_id, status: item.status, keterangan: item.keterangan ?? '' };
+        });
+        dataServerSebelumnya = new Map(data.map((item) => [item.mahasiswa_id, { status: item.status, keterangan: item.keterangan ?? '' }]));
+    },
     { immediate: true },
 );
 const asli = computed(() => new Map(props.presensi.map((item) => [item.mahasiswa_id, item])));
@@ -96,6 +110,23 @@ const berubah = computed(() =>
         return awal && (awal.status !== item.status || (awal.keterangan ?? '') !== item.keterangan.trim());
     }),
 );
+// Peringatan sebelum meninggalkan halaman bila masih ada perubahan presensi yang belum disimpan.
+const pesanBelumDisimpan = () => `Ada ${berubah.value.length} perubahan presensi yang belum disimpan. Tinggalkan halaman ini?`;
+const hapusPenjagaNavigasi = router.on('before', (event) => {
+    const kunjungan = event.detail.visit;
+    // Hanya pindah halaman biasa; simpan jurnal/presensi dan muat ulang sebagian tidak dicegat.
+    if (kunjungan.method !== 'get' || kunjungan.only.length > 0 || !berubah.value.length) return;
+    if (!window.confirm(pesanBelumDisimpan())) event.preventDefault();
+});
+const cegahTutupTab = (event: BeforeUnloadEvent) => {
+    if (berubah.value.length) event.preventDefault();
+};
+window.addEventListener('beforeunload', cegahTutupTab);
+onUnmounted(() => {
+    hapusPenjagaNavigasi();
+    window.removeEventListener('beforeunload', cegahTutupTab);
+});
+
 const ringkasan = computed(() => STATUS_PRESENSI.map((s) => ({ ...s, jumlah: baris.value.filter((item) => item.status === s.value).length })));
 
 const tandaiSemuaHadir = () =>

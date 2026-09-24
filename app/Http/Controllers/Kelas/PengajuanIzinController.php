@@ -92,15 +92,22 @@ class PengajuanIzinController extends Controller
             return back()->with('error', 'Pengajuan ini sudah diproses.');
         }
 
-        DB::transaction(function () use ($pengajuanIzin, $data, $request): void {
+        $sudahHadir = $data['keputusan'] === PengajuanIzin::DISETUJUI && in_array(
+            PresensiMahasiswa::where('pertemuan_id', $pengajuanIzin->pertemuan_id)->where('mahasiswa_id', $pengajuanIzin->mahasiswa_id)->value('status'),
+            PresensiMahasiswa::DIHITUNG_HADIR,
+            true,
+        );
+
+        DB::transaction(function () use ($pengajuanIzin, $data, $request, $sudahHadir): void {
             $pengajuanIzin->update([
                 'status' => $data['keputusan'],
-                'catatan_dosen' => $data['catatan_dosen'] ?? null,
+                // Mahasiswa ternyata hadir: pengajuan tetap tercatat disetujui, tetapi status Hadir tidak diturunkan.
+                'catatan_dosen' => $data['catatan_dosen'] ?? ($sudahHadir ? 'Mahasiswa tercatat hadir; status presensi tidak diubah.' : null),
                 'diproses_oleh' => $request->user()->id,
                 'diproses_at' => now(),
             ]);
 
-            if ($data['keputusan'] === PengajuanIzin::DISETUJUI) {
+            if ($data['keputusan'] === PengajuanIzin::DISETUJUI && ! $sudahHadir) {
                 // Pertemuan yang belum dimulai belum punya baris presensi; barisnya dibuat sekarang dan
                 // tidak ditimpa saat pertemuan dimulai (siapkanPeserta hanya menambah yang belum ada).
                 PresensiMahasiswa::updateOrCreate(
@@ -116,8 +123,10 @@ class PengajuanIzinController extends Controller
             }
         });
 
-        return back()->with('success', $data['keputusan'] === PengajuanIzin::DISETUJUI
-            ? 'Pengajuan disetujui; presensi diubah menjadi '.ucfirst($pengajuanIzin->jenis).'.'
-            : 'Pengajuan ditolak.');
+        return back()->with('success', match (true) {
+            $data['keputusan'] === PengajuanIzin::DITOLAK => 'Pengajuan ditolak.',
+            $sudahHadir => 'Pengajuan disetujui. Mahasiswa sudah tercatat hadir, jadi status presensinya tetap Hadir.',
+            default => 'Pengajuan disetujui; presensi diubah menjadi '.ucfirst($pengajuanIzin->jenis).'.',
+        });
     }
 }

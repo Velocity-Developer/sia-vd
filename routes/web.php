@@ -49,6 +49,7 @@ $rutePresensi = function (string $peran): void {
     Route::get('presensi', [PresensiController::class, 'index'])->name($peran.'.presensi.index');
     Route::get('presensi/kelas/{kelasKuliah}', [PresensiController::class, 'kelas'])->name($peran.'.presensi.kelas');
     Route::post('presensi/kelas/{kelasKuliah}/generate', [PresensiController::class, 'generate'])->name($peran.'.presensi.generate');
+    Route::post('presensi/kelas/{kelasKuliah}/susun-ulang', [PresensiController::class, 'susunUlang'])->name($peran.'.presensi.susun-ulang');
     Route::get('presensi/kelas/{kelasKuliah}/ekspor', [PresensiController::class, 'ekspor'])->name($peran.'.presensi.ekspor');
     Route::get('presensi/kelas/{kelasKuliah}/peserta-ujian', [PresensiController::class, 'pesertaUjian'])->name($peran.'.presensi.peserta-ujian');
     Route::post('presensi/kelas/{kelasKuliah}/dispensasi', [PresensiController::class, 'dispensasiSimpan'])->name($peran.'.presensi.dispensasi.simpan');

@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\Jadwal;
 use App\Models\KelasKuliah;
+use App\Models\Pertemuan;
 use App\Models\Ruang;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,7 @@ class JadwalController extends Controller
             'kelasKuliah' => $kelasKuliah,
             'jadwal' => null,
             'ruangs' => $this->ruangs(),
+            'pertemuanTerkait' => $this->pertemuanTerkait($kelasKuliah),
         ]);
     }
 
@@ -61,9 +63,9 @@ class JadwalController extends Controller
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
         $this->ensureNoConflict($kelasKuliah, $data, null);
         $data['kelas_id'] = $kelasKuliah->id;
-        Jadwal::create($data);
+        Jadwal::create(collect($data)->except('terapkan_ke_pertemuan')->all());
 
-        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil ditambahkan.');
+        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil ditambahkan.'.$this->terapkanKePertemuan($request, $kelasKuliah));
     }
 
     public function edit(KelasKuliah $kelasKuliah, Jadwal $jadwal): Response
@@ -75,6 +77,7 @@ class JadwalController extends Controller
             'kelasKuliah' => $kelasKuliah,
             'jadwal' => $jadwal,
             'ruangs' => $this->ruangs(),
+            'pertemuanTerkait' => $this->pertemuanTerkait($kelasKuliah),
         ]);
     }
 
@@ -83,9 +86,9 @@ class JadwalController extends Controller
         $this->ensureScoped($kelasKuliah, $jadwal);
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
         $this->ensureNoConflict($kelasKuliah, $data, $jadwal);
-        $jadwal->update($data);
+        $jadwal->update(collect($data)->except('terapkan_ke_pertemuan')->all());
 
-        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil diperbarui.');
+        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil diperbarui.'.$this->terapkanKePertemuan($request, $kelasKuliah));
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Jadwal $jadwal): RedirectResponse
@@ -97,7 +100,30 @@ class JadwalController extends Controller
             return $this->keKelas($kelasKuliah)->with('jadwal_error', 'Jadwal gagal dihapus.');
         }
 
-        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil dihapus.');
+        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil dihapus.'.($kelasKuliah->pertemuans()->exists()
+            ? ' Pertemuan yang sudah dibuat tidak berubah; pakai "Susun ulang dari jadwal" di halaman Presensi kelas bila perlu.'
+            : ''));
+    }
+
+    private function pertemuanTerkait(KelasKuliah $kelasKuliah): int
+    {
+        return $kelasKuliah->pertemuans()->where('status', Pertemuan::DIJADWALKAN)->where('jadwal_manual', false)->whereDate('tanggal', '>=', today())->count();
+    }
+
+    /**
+     * Bila diminta, susun ulang pertemuan yang belum berjalan mengikuti jadwal mingguan terbaru.
+     * Mengembalikan kalimat tambahan untuk pesan sukses.
+     */
+    private function terapkanKePertemuan(Request $request, KelasKuliah $kelasKuliah): string
+    {
+        if (! $request->boolean('terapkan_ke_pertemuan') || ! $kelasKuliah->pertemuans()->exists()) {
+            return '';
+        }
+
+        $hasil = Pertemuan::susunUlang($kelasKuliah);
+
+        return " {$hasil['diubah']} pertemuan disesuaikan dengan jadwal baru."
+            .($hasil['dilewati'] > 0 ? " {$hasil['dilewati']} pertemuan yang tanggalnya sudah lewat tidak diubah." : '');
     }
 
     /**
@@ -168,6 +194,7 @@ class JadwalController extends Controller
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_akhir' => ['required', 'date_format:H:i', 'after:jam_mulai'],
             'ruang_id' => ['required', 'exists:ruangs,id'],
+            'terapkan_ke_pertemuan' => ['sometimes', 'boolean'],
         ];
     }
 

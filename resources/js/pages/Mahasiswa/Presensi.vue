@@ -16,7 +16,7 @@ import {
 } from '@/lib/presensi';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { ChevronDown, CircleCheck, QrCode, RefreshCw } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 type Rekap = { hadir: number; terlambat: number; izin: number; sakit: number; alpa: number; dihitung: number; persen: number | null };
 type PertemuanSaya = {
@@ -68,12 +68,15 @@ const props = defineProps<{
 const page = usePage<{ flash?: { success?: string } }>();
 const sudahHadir = (status: string | null) => status === 'hadir' || status === 'terlambat';
 
+// Tiap kelas yang membuka presensi punya kolom PIN sendiri; pesan kesalahan tampil di kelas yang dikirim.
 const form = useForm({ pertemuan_id: 0, kode: '' });
+const pin = reactive<Record<number, string>>({});
 const aktif = ref<number | null>(null);
 const kirim = (pertemuanId: number) => {
     aktif.value = pertemuanId;
     form.pertemuan_id = pertemuanId;
-    form.post(route('mahasiswa.presensi.check-in'), { preserveScroll: true, onSuccess: () => form.reset() });
+    form.kode = pin[pertemuanId] ?? '';
+    form.post(route('mahasiswa.presensi.check-in'), { preserveScroll: true, onSuccess: () => (pin[pertemuanId] = '') });
 };
 
 // Pindai QR dari dalam aplikasi: isi QR adalah tautan halaman konfirmasi, jadi pertemuan dan kodenya
@@ -190,21 +193,20 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                             <form v-else class="mt-3 flex flex-wrap items-start gap-2" @submit.prevent="kirim(item.id)">
                                 <div class="grid gap-1">
                                     <Input
-                                        v-model="form.kode"
+                                        v-model="pin[item.id]"
                                         inputmode="numeric"
                                         autocomplete="one-time-code"
                                         maxlength="6"
                                         placeholder="PIN 6 angka"
                                         :aria-label="`PIN presensi ${item.nama_matkul}`"
                                         class="h-11 w-44 rounded-lg border-[#dddddd] text-center font-mono text-lg tracking-[0.3em]"
-                                        @focus="aktif = item.id"
                                     />
                                     <InputError v-if="aktif === item.id" :message="form.errors.kode" />
                                 </div>
                                 <Button
                                     type="submit"
                                     class="h-11 bg-[#0075de] px-5 text-white hover:bg-[#005bab]"
-                                    :disabled="form.processing || form.kode.length < 6"
+                                    :disabled="form.processing || (pin[item.id] ?? '').length < 6"
                                 >
                                     Hadir
                                 </Button>

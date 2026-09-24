@@ -118,10 +118,11 @@ class PertemuanController extends Controller
             unset($data['dosen_id']);
         }
 
-        $jadwalBerubah = $data['tanggal'] !== $pertemuan->tanggal->toDateString()
+        $waktuBerubah = $data['tanggal'] !== $pertemuan->tanggal->toDateString()
             || $data['jam_mulai'] !== substr($pertemuan->jam_mulai, 0, 5)
             || $data['jam_akhir'] !== substr($pertemuan->jam_akhir, 0, 5)
-            || (int) ($data['ruang_id'] ?? 0) !== (int) $pertemuan->ruang_id
+            || (int) ($data['ruang_id'] ?? 0) !== (int) $pertemuan->ruang_id;
+        $jadwalBerubah = $waktuBerubah
             || (array_key_exists('dosen_id', $data) && (int) ($data['dosen_id'] ?? 0) !== (int) $pertemuan->dosen_id);
 
         if ($jadwalBerubah) {
@@ -140,10 +141,12 @@ class PertemuanController extends Controller
             );
 
             if ($bentrok !== null) {
-                throw ValidationException::withMessages([
-                    'tanggal' => 'Bentrok dengan pertemuan ke-'.$bentrok->pertemuan_ke.' kelas '.($bentrok->kelasKuliah?->kode_kelas ?? '-')
-                        .' ('.substr($bentrok->jam_mulai, 0, 5).'–'.substr($bentrok->jam_akhir, 0, 5).') pada ruang atau dosen yang sama.',
-                ]);
+                throw ValidationException::withMessages(['tanggal' => $bentrok]);
+            }
+
+            // Jadwal ulang manual: pertemuan ini tidak ikut disusun ulang saat jadwal mingguan berubah.
+            if ($waktuBerubah) {
+                $data['jadwal_manual'] = true;
             }
         }
 

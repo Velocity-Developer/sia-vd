@@ -13,6 +13,8 @@ const props = defineProps<{
     kelasKuliah: Record<string, any>;
     jadwal: Record<string, any> | null;
     ruangs: { id: number; name: string }[];
+    /** Pertemuan belum berjalan (dan tidak dijadwal ulang manual) yang bisa ikut disusun ulang. */
+    pertemuanTerkait: number;
 }>();
 
 const title = `${props.jadwal ? 'Edit' : 'Tambah'} Jadwal`;
@@ -25,6 +27,7 @@ const form = useForm({
     jam_mulai: toHHMM(props.jadwal?.jam_mulai ?? ''),
     jam_akhir: toHHMM(props.jadwal?.jam_akhir ?? ''),
     ruang_id: props.jadwal?.ruang_id ?? '',
+    terapkan_ke_pertemuan: true,
 });
 
 const submit = () =>
@@ -108,6 +111,20 @@ const sel =
                             <InputError :message="form.errors.ruang_id" />
                         </div>
                     </section>
+
+                    <label
+                        v-if="props.pertemuanTerkait > 0"
+                        class="flex items-start gap-2.5 rounded-xl border border-[#e6e6e6] bg-white p-4 text-sm text-[#31302e]"
+                    >
+                        <input v-model="form.terapkan_ke_pertemuan" type="checkbox" class="mt-0.5 size-4 accent-[#0075de]" />
+                        <span>
+                            Terapkan juga ke {{ props.pertemuanTerkait }} pertemuan yang belum berjalan
+                            <span class="block text-xs text-[#a39e98]">
+                                Tanggal, jam, dan ruang pertemuan disusun ulang dari jadwal mingguan. Pertemuan yang sudah berjalan, sudah lewat, atau
+                                pernah dijadwal ulang manual tidak diubah.
+                            </span>
+                        </span>
+                    </label>
 
                     <div class="flex justify-end pt-2">
                         <Button :disabled="form.processing" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">Simpan</Button>

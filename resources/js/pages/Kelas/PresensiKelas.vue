@@ -16,7 +16,7 @@ import {
 } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { CalendarPlus, Download, Pencil } from 'lucide-vue-next';
+import { CalendarPlus, Download, Pencil, RefreshCw } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Pertemuan = {
@@ -111,6 +111,17 @@ const jumlahTidakMemenuhi = computed(() => props.peserta.filter((m) => m.ujian?.
 const kurang = computed(() => props.kelasKuliah.jumlah_pertemuan - props.pertemuan.length);
 
 const generating = ref(false);
+const susunUlang = () =>
+    router.post(
+        rute('presensi.susun-ulang', props.kelasKuliah.id),
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (generating.value = true),
+            onFinish: () => (generating.value = false),
+        },
+    );
+
 const generate = () =>
     router.post(
         rute('presensi.generate', props.kelasKuliah.id),
@@ -226,6 +237,16 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                             @click="generate"
                         >
                             <CalendarPlus class="mr-1 size-4" /> Buat {{ kurang }} pertemuan
+                        </Button>
+                        <Button
+                            v-if="props.pertemuan.length && bisaUbah"
+                            variant="outline"
+                            class="rounded-lg border-[#e6e6e6] bg-white text-black"
+                            title="Samakan tanggal, jam, dan ruang pertemuan yang belum berjalan dengan jadwal mingguan terbaru"
+                            :disabled="generating"
+                            @click="susunUlang"
+                        >
+                            <RefreshCw class="mr-1 size-4" /> Susun ulang dari jadwal
                         </Button>
                     </div>
                 </div>

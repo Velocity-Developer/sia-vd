@@ -144,6 +144,13 @@ const lampiran = (item: Pengajuan) => Array.from({ length: item.jumlah_lampiran 
                     </p>
                     <p v-if="item.catatan_dosen" class="mt-1 text-sm text-[#dd5b00]">Catatan: {{ item.catatan_dosen }}</p>
 
+                    <p
+                        v-if="item.status === 'menunggu' && (item.status_presensi === 'hadir' || item.status_presensi === 'terlambat')"
+                        class="mt-3 rounded-lg bg-[#fff6e0] px-3 py-2 text-sm text-[#8a5a00]"
+                    >
+                        Mahasiswa ini sudah tercatat {{ infoStatusPresensi(item.status_presensi)?.label.toLowerCase() }} di pertemuan tersebut.
+                        Menyetujui pengajuan tidak akan mengubah status hadirnya.
+                    </p>
                     <div v-if="item.status === 'menunggu'" class="mt-4 flex flex-wrap justify-end gap-2">
                         <Button type="button" variant="outline" class="text-[#dd5b00]" @click="bukaTolak(item)">Tolak</Button>
                         <Button type="button" class="bg-[#1a7f37] text-white hover:bg-[#146c2e]" @click="setujui(item)">Setujui</Button>

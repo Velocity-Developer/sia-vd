@@ -237,7 +237,10 @@ class PresensiController extends Controller
             ->map(fn ($berkas): string => $berkas->storeAs('izin', Str::random(24).'.'.strtolower($berkas->getClientOriginalExtension()), AllowedUpload::DISK))
             ->all();
 
-        if ($lama?->lampiran) {
+        // Pengajuan ulang tanpa berkas baru tetap memakai lampiran sebelumnya; berkas lama hanya dibuang bila diganti.
+        if ($lampiran === []) {
+            $lampiran = $lama?->lampiran ?? [];
+        } elseif ($lama?->lampiran) {
             Storage::disk(AllowedUpload::DISK)->delete($lama->lampiran);
         }
 
