@@ -19,7 +19,7 @@ class TampilanController extends Controller
 
         return Inertia::render('PengaturanSistem/Tampilan', [
             'pengaturan' => [
-                ...$tampilan->only(['nama_aplikasi', 'login_judul', 'login_teks', 'login_sorotan', 'sidebar_bawaan']),
+                ...$tampilan->only(['nama_aplikasi', 'login_judul', 'login_teks', 'login_sorotan', 'login_tata_letak', 'sidebar_bawaan']),
                 'favicon_url' => PengaturanTampilan::urlBerkas($tampilan->favicon),
                 'login_gambar_url' => PengaturanTampilan::urlBerkas($tampilan->login_gambar),
             ],
@@ -37,6 +37,7 @@ class TampilanController extends Controller
             'login_judul' => ['nullable', 'string', 'max:120'],
             'login_teks' => ['nullable', 'string', 'max:300'],
             'login_sorotan' => ['required', 'boolean'],
+            'login_tata_letak' => ['required', Rule::in(PengaturanTampilan::LOGIN_TATA_LETAK)],
             'sidebar_bawaan' => ['required', Rule::in(PengaturanTampilan::SIDEBAR)],
             // SVG sengaja tidak diterima: berkas SVG bisa berisi skrip bila dibuka langsung.
             'favicon' => ['nullable', 'file', 'max:512', 'extensions:png,ico,webp', 'mimes:png,ico,webp'],
@@ -53,6 +54,7 @@ class TampilanController extends Controller
             'login_judul' => 'Judul halaman masuk',
             'login_teks' => 'Teks sambutan',
             'login_sorotan' => 'Daftar fitur',
+            'login_tata_letak' => 'Tata letak halaman masuk',
             'sidebar_bawaan' => 'Sidebar bawaan',
             'favicon' => 'Favicon',
             'login_gambar' => 'Gambar latar',
@@ -60,7 +62,7 @@ class TampilanController extends Controller
 
         $tampilan = PengaturanTampilan::current();
         $simpan = [
-            ...collect($data)->only(['nama_aplikasi', 'login_judul', 'login_teks', 'login_sorotan', 'sidebar_bawaan'])->all(),
+            ...collect($data)->only(['nama_aplikasi', 'login_judul', 'login_teks', 'login_sorotan', 'login_tata_letak', 'sidebar_bawaan'])->all(),
             'updated_by' => $request->user()->id,
         ];
 

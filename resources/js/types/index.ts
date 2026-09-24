@@ -50,6 +50,7 @@ export interface Tampilan {
     login_teks: string;
     login_gambar_url: string | null;
     login_sorotan: boolean;
+    login_tata_letak: 'panel' | 'tengah';
     sidebar_bawaan: 'lebar' | 'ringkas';
 }
 

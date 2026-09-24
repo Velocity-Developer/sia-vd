@@ -18,6 +18,9 @@ class PengaturanTampilan extends Model
 
     public const SIDEBAR = ['lebar', 'ringkas'];
 
+    /** Tata letak halaman masuk: panel merek + form (bawaan), atau kartu di tengah layar. */
+    public const LOGIN_TATA_LETAK = ['panel', 'tengah'];
+
     public const LOGIN_JUDUL_BAWAAN = 'Sistem Informasi Akademik';
 
     public const LOGIN_TEKS_BAWAAN = 'Satu akun untuk rencana studi, perkuliahan, nilai, dan administrasi Anda.';
@@ -26,11 +29,12 @@ class PengaturanTampilan extends Model
 
     protected $table = 'pengaturan_tampilan';
 
-    protected $fillable = ['nama_aplikasi', 'favicon', 'login_judul', 'login_teks', 'login_gambar', 'login_sorotan', 'sidebar_bawaan', 'updated_by'];
+    protected $fillable = ['nama_aplikasi', 'favicon', 'login_judul', 'login_teks', 'login_gambar', 'login_sorotan', 'login_tata_letak', 'sidebar_bawaan', 'updated_by'];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
         'login_sorotan' => true,
+        'login_tata_letak' => 'panel',
         'sidebar_bawaan' => 'lebar',
     ];
 
@@ -50,7 +54,7 @@ class PengaturanTampilan extends Model
      * Nilai yang dipakai di seluruh halaman (sudah terisi bawaan), disimpan di cache dan dihapus saat
      * pengaturan tampilan atau institusi disimpan.
      *
-     * @return array{nama_aplikasi: string, favicon_url: string, login_judul: string, login_teks: string, login_gambar_url: ?string, login_sorotan: bool, sidebar_bawaan: string}
+     * @return array{nama_aplikasi: string, favicon_url: string, login_judul: string, login_teks: string, login_gambar_url: ?string, login_sorotan: bool, login_tata_letak: string, sidebar_bawaan: string}
      */
     public static function shared(): array
     {
@@ -66,6 +70,7 @@ class PengaturanTampilan extends Model
                 'login_teks' => $tampilan->login_teks ?: self::LOGIN_TEKS_BAWAAN,
                 'login_gambar_url' => self::urlBerkas($tampilan->login_gambar),
                 'login_sorotan' => $tampilan->login_sorotan,
+                'login_tata_letak' => $tampilan->login_tata_letak,
                 'sidebar_bawaan' => $tampilan->sidebar_bawaan,
             ];
         });

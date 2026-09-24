@@ -15,6 +15,9 @@ const institusi = computed(() => page.props.institusi);
 // Judul, teks, gambar, dan daftar fitur panel merek diatur di Pengaturan Sistem → Tampilan.
 const tampilan = computed(() => page.props.tampilan);
 const tahun = new Date().getFullYear();
+const tengah = computed(() => tampilan.value?.login_tata_letak === 'tengah');
+// Di tata letak tengah, teks di luar kartu menjadi putih bila ada gambar latar (diberi lapisan warna).
+const adaGambar = computed(() => Boolean(tampilan.value?.login_gambar_url));
 
 // Ditulis di panel merek supaya pengguna tahu sistem ini untuk apa sebelum masuk.
 const sorotan = [
@@ -25,7 +28,50 @@ const sorotan = [
 </script>
 
 <template>
-    <div class="min-h-svh bg-[#f6f5f4] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]">
+    <!-- Tata letak "tengah": kartu masuk di tengah layar, identitas institusi di atasnya. -->
+    <div
+        v-if="tengah"
+        class="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[#f6f5f4] bg-cover bg-center px-4 py-10"
+        :style="adaGambar ? { backgroundImage: `url(${tampilan?.login_gambar_url})` } : undefined"
+    >
+        <div v-if="adaGambar" class="pointer-events-none absolute inset-0 bg-[#0075de]/80" aria-hidden="true" />
+        <template v-else>
+            <div class="pointer-events-none absolute -right-32 -top-32 size-[460px] rounded-full bg-[#0075de]/10" aria-hidden="true" />
+            <div class="pointer-events-none absolute -bottom-40 -left-24 size-[400px] rounded-full bg-[#0075de]/5" aria-hidden="true" />
+        </template>
+
+        <div class="relative w-full max-w-[420px]">
+            <Link :href="route('home')" class="mb-6 flex flex-col items-center gap-3 text-center">
+                <div
+                    class="flex size-14 items-center justify-center overflow-hidden rounded-2xl shadow-sm"
+                    :class="institusi?.logo_url ? 'border border-[#e6e6e6] bg-white' : 'bg-[#0075de]'"
+                >
+                    <img v-if="institusi?.logo_url" :src="institusi.logo_url" :alt="institusi.nama_pt" class="size-full object-contain p-2" />
+                    <AppLogoIcon v-else class="size-7 fill-current text-white" />
+                </div>
+                <div class="leading-tight">
+                    <p class="text-base font-semibold" :class="adaGambar ? 'text-white' : 'text-black'">
+                        {{ institusi?.nama_pt ?? page.props.name }}
+                    </p>
+                    <p class="mt-1 text-sm" :class="adaGambar ? 'text-white/80' : 'text-[#615d59]'">{{ tampilan?.login_judul }}</p>
+                </div>
+            </Link>
+
+            <div class="rounded-2xl border border-[#e6e6e6] bg-white p-6 shadow-lg sm:p-8">
+                <div class="mb-6 space-y-1.5">
+                    <h1 class="text-[24px] font-bold leading-8 tracking-[-0.5px] text-black">{{ title }}</h1>
+                    <p v-if="description" class="text-sm leading-5 text-[#615d59]">{{ description }}</p>
+                </div>
+                <slot />
+            </div>
+
+            <p class="mt-6 text-center text-xs" :class="adaGambar ? 'text-white/70' : 'text-[#a39e98]'">
+                © {{ tahun }} {{ institusi?.nama_pt ?? page.props.name }}
+            </p>
+        </div>
+    </div>
+
+    <div v-else class="min-h-svh bg-[#f6f5f4] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]">
         <!-- Panel merek hanya tampil di layar lebar; di HP identitas cukup lewat kepala kartu. -->
         <aside
             class="relative hidden overflow-hidden bg-[#0075de] bg-cover bg-center p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14"

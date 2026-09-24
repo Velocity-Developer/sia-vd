@@ -52,6 +52,7 @@ it('shares defaults derived from the institution until display settings are fill
             ->where('tampilan.favicon_url', '/favicon.ico')
             ->where('tampilan.login_judul', PengaturanTampilan::LOGIN_JUDUL_BAWAAN)
             ->where('tampilan.login_sorotan', true)
+            ->where('tampilan.login_tata_letak', 'panel')
             ->where('tampilan.sidebar_bawaan', 'lebar'));
 });
 
@@ -63,6 +64,7 @@ it('saves display settings with uploaded favicon and login background', function
         'login_judul' => 'Selamat datang',
         'login_teks' => 'Masuk dengan akun kampus.',
         'login_sorotan' => false,
+        'login_tata_letak' => 'tengah',
         'sidebar_bawaan' => 'ringkas',
         'favicon' => UploadedFile::fake()->image('ikon.png', 64, 64),
         'login_gambar' => UploadedFile::fake()->image('kampus.jpg', 1200, 800),
@@ -80,6 +82,7 @@ it('saves display settings with uploaded favicon and login background', function
         ->where('tampilan.login_judul', 'Selamat datang')
         ->where('tampilan.login_gambar_url', '/storage/'.$tampilan->login_gambar)
         ->where('tampilan.login_sorotan', false)
+        ->where('tampilan.login_tata_letak', 'tengah')
         ->where('tampilan.sidebar_bawaan', 'ringkas'));
 
     // Judul & favicon juga ditulis server-side agar tab browser benar sejak halaman pertama.
@@ -88,7 +91,7 @@ it('saves display settings with uploaded favicon and login background', function
     // Menghapus berkas mengembalikan ke bawaan dan membuang berkas lama.
     $favicon = $tampilan->favicon;
     $this->actingAs($admin)->post(route('pengaturan-tampilan.update'), [
-        'nama_aplikasi' => '', 'login_sorotan' => true, 'sidebar_bawaan' => 'lebar', 'hapus_favicon' => true,
+        'nama_aplikasi' => '', 'login_sorotan' => true, 'login_tata_letak' => 'panel', 'sidebar_bawaan' => 'lebar', 'hapus_favicon' => true,
     ])->assertSessionHas('success');
     Storage::disk('public')->assertMissing($favicon);
     expect(PengaturanTampilan::shared()['favicon_url'])->toBe('/favicon.ico')
@@ -98,10 +101,11 @@ it('saves display settings with uploaded favicon and login background', function
 it('rejects svg favicons and non-image login backgrounds', function () {
     $this->actingAs(User::factory()->admin()->create())->post(route('pengaturan-tampilan.update'), [
         'login_sorotan' => true,
+        'login_tata_letak' => 'melayang',
         'sidebar_bawaan' => 'lebar',
         'favicon' => UploadedFile::fake()->create('ikon.svg', 2, 'image/svg+xml'),
         'login_gambar' => UploadedFile::fake()->create('kampus.pdf', 10, 'application/pdf'),
-    ])->assertSessionHasErrors(['favicon', 'login_gambar']);
+    ])->assertSessionHasErrors(['favicon', 'login_gambar', 'login_tata_letak']);
 });
 
 it('refreshes the shared name when the institution changes', function () {
@@ -117,6 +121,6 @@ it('limits the display tab to its own permission', function () {
     $user = User::factory()->withRole($staf)->create();
 
     $this->actingAs($user)->get(route('pengaturan-sistem.tampilan'))->assertForbidden();
-    $this->actingAs($user)->post(route('pengaturan-tampilan.update'), ['login_sorotan' => true, 'sidebar_bawaan' => 'lebar'])->assertForbidden();
+    $this->actingAs($user)->post(route('pengaturan-tampilan.update'), ['login_sorotan' => true, 'login_tata_letak' => 'panel', 'sidebar_bawaan' => 'lebar'])->assertForbidden();
     $this->actingAs($user)->get(route('pengaturan-sistem.institusi'))->assertOk();
 });
