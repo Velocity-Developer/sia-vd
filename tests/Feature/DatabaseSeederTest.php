@@ -12,6 +12,8 @@ use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengumpulanTugas;
+use App\Models\Pertemuan;
+use App\Models\PresensiMahasiswa;
 use App\Models\ProgramStudi;
 use App\Models\Question;
 use App\Models\Quiz;
@@ -158,6 +160,34 @@ it('seeds quiz and tugas content in the format the application produces', functi
     $esai = $jawaban->filter(fn (QuizAnswer $item): bool => $item->question->question_type === 'essay');
     expect($esai->whereNotNull('point'))->not->toBeEmpty()
         ->and($esai->whereNull('point'))->not->toBeEmpty();
+});
+
+it('seeds meetings and attendance that follow the presensi rules', function () {
+    $this->seed();
+
+    // Setiap kelas punya pertemuan sebanyak jumlah_pertemuan-nya, dengan satu UTS dan satu UAS.
+    foreach (KelasKuliah::withCount(['pertemuans', 'krs'])->get() as $kelas) {
+        expect($kelas->pertemuans_count)->toBe($kelas->jumlah_pertemuan)
+            ->and($kelas->pertemuans()->where('jenis', Pertemuan::UTS)->count())->toBe(1)
+            ->and($kelas->pertemuans()->where('jenis', Pertemuan::UAS)->count())->toBe(1);
+    }
+
+    // Hanya pertemuan yang sudah lewat yang selesai, dan tiap pertemuan selesai berjurnal serta berisi seluruh peserta.
+    expect(Pertemuan::where('status', Pertemuan::SELESAI)->whereDate('tanggal', '>=', today())->exists())->toBeFalse()
+        ->and(Pertemuan::where('status', Pertemuan::SELESAI)->whereNull('topik')->exists())->toBeFalse();
+
+    $selesai = Pertemuan::where('status', Pertemuan::SELESAI)->withCount('presensiMahasiswas')->with('kelasKuliah')->get();
+    expect($selesai)->not->toBeEmpty();
+    foreach ($selesai as $pertemuan) {
+        expect($pertemuan->presensi_mahasiswas_count)->toBe($pertemuan->kelasKuliah->krs()->count());
+    }
+
+    // Rekap kelas tahun lalu menampilkan mahasiswa di atas maupun di bawah batas kehadiran.
+    $batas = PengaturanAkademik::current()->min_kehadiran_ujian;
+    $persen = KelasKuliah::whereHas('tahunAkademik', fn ($q) => $q->where('status', false))->get()
+        ->flatMap(fn (KelasKuliah $kelas) => PresensiMahasiswa::rekapKelas($kelas->id)->pluck('persen'));
+    expect($persen->filter(fn ($p) => $p < $batas))->not->toBeEmpty()
+        ->and($persen->filter(fn ($p) => $p >= $batas))->not->toBeEmpty();
 });
 
 it('seeds students who can immediately fill in their KRS', function () {

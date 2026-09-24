@@ -8,10 +8,12 @@ use App\Models\DosenProfile;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MataKuliah;
+use App\Models\PengaturanAkademik;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -55,6 +57,7 @@ class KelasKuliahController extends Controller
     {
         return Inertia::render('Admin/KelasKuliahForm', [
             'kelasKuliah' => null,
+            'jumlahPertemuanBawaan' => PengaturanAkademik::current()->jumlah_pertemuan,
             'dosens' => $this->dosens(),
             'matkulGroups' => $this->matkulGroups(),
             'tahunAkademiks' => TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get(),
@@ -241,6 +244,7 @@ class KelasKuliahController extends Controller
             'kode_kelas' => ['required', 'string', 'max:50', Rule::unique('kelas_kuliah', 'kode_kelas')->where('tahun_akademik_id', $request->input('tahun_akademik_id'))->ignore($model)],
             'tahun_akademik_id' => ['required', 'exists:tahun_akademik,id'],
             'kapasitas' => ['required', 'integer', 'min:1', 'max:500'],
+            'jumlah_pertemuan' => ['nullable', 'integer', 'min:1', 'max:32'],
             'dosen_id' => ['required', 'exists:dosen_profiles,id'],
             'matkul_id' => ['required', 'exists:mata_kuliahs,id'],
         ], $this->messages(), $this->attributes());
@@ -257,7 +261,24 @@ class KelasKuliahController extends Controller
             }
         }
 
-        $model->fill($data)->save();
+        // Jumlah pertemuan disimpan terpisah agar pertemuan berlebih ikut dirapikan (dan ditolak bila sudah berjalan).
+        // Bila dikosongkan, kelas baru memakai bawaan Pengaturan Akademik dan kelas lama tidak berubah.
+        $jumlahPertemuan = isset($data['jumlah_pertemuan']) ? (int) $data['jumlah_pertemuan'] : null;
+        unset($data['jumlah_pertemuan']);
+
+        DB::transaction(function () use ($model, $data, $jumlahPertemuan): void {
+            if (! $model->exists) {
+                $model->fill([...$data, 'jumlah_pertemuan' => $jumlahPertemuan])->save();
+
+                return;
+            }
+
+            $model->fill($data)->save();
+
+            if ($jumlahPertemuan !== null && $jumlahPertemuan !== $model->jumlah_pertemuan) {
+                $model->ubahJumlahPertemuan($jumlahPertemuan);
+            }
+        });
     }
 
     /**
@@ -279,6 +300,7 @@ class KelasKuliahController extends Controller
             'kode_kelas' => 'Kode Kelas',
             'tahun_akademik_id' => 'Tahun Akademik',
             'kapasitas' => 'Kapasitas',
+            'jumlah_pertemuan' => 'Jumlah Pertemuan',
             'dosen_id' => 'Dosen',
             'matkul_id' => 'Mata Kuliah',
         ];

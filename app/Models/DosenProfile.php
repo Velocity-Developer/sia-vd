@@ -37,4 +37,12 @@ class DosenProfile extends Model
     {
         return $this->hasMany(KelasKuliah::class, 'dosen_id');
     }
+
+    /**
+     * Program studi yang dipimpin dosen ini sebagai kaprodi.
+     */
+    public function prodiDipimpin(): HasMany
+    {
+        return $this->hasMany(ProgramStudi::class, 'kaprodi');
+    }
 }

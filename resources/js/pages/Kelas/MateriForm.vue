@@ -177,7 +177,7 @@ const sel =
                                     v-model="form.pertemuan_ke"
                                     type="number"
                                     min="1"
-                                    max="32"
+                                    :max="Math.max(props.kelasKuliah.jumlah_pertemuan ?? 32, props.materi?.pertemuan_ke ?? 0)"
                                     placeholder="cth. 1"
                                     :class="inp"
                                     required

@@ -6,6 +6,7 @@ use App\AllowedUpload;
 use App\Models\InfoKuliah;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
+use App\Models\PengajuanIzin;
 use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
 use App\Models\User;
@@ -43,6 +44,22 @@ class BerkasController extends Controller
         abort_unless($milikSendiri || $this->bolehAksesKelas($user, $pengumpulan->tugas?->kelasKuliah, mahasiswaKelas: false), 403);
 
         return $this->kirim($this->berkasKe($pengumpulan->file_jawaban, $index));
+    }
+
+    /**
+     * Lampiran izin/sakit: mahasiswa pengaju, dosen pengampu, dan admin presensi.
+     */
+    public function izin(Request $request, PengajuanIzin $pengajuanIzin, int $index): StreamedResponse
+    {
+        $user = $request->user();
+        $kelas = $pengajuanIzin->pertemuan?->kelasKuliah;
+        $boleh = ($user->mahasiswaProfile !== null && $pengajuanIzin->mahasiswa_id === $user->mahasiswaProfile->id)
+            || $user->hasPermission('admin.presensi')
+            || ($user->dosenProfile !== null && $kelas?->dosen_id === $user->dosenProfile->id && $user->hasPermission('dosen.presensi'));
+
+        abort_unless($boleh, 403);
+
+        return $this->kirim($this->berkasKe($pengajuanIzin->lampiran, $index));
     }
 
     public function infoKuliah(Request $request, InfoKuliah $infoKuliah): StreamedResponse

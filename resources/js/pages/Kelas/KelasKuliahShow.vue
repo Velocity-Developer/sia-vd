@@ -2,6 +2,7 @@
 import AlertModal from '@/components/AlertModal.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
@@ -110,6 +111,7 @@ const props = defineProps<{
     nilaiTerkunci: boolean;
 }>();
 const rute = rutePeran(props.peran);
+const { can } = usePermissions();
 // Kelola jadwal, edit kelas, data dosen pengampu, dan pembatalan KRS hanya untuk admin.
 const isAdmin = computed(() => props.peran === 'admin');
 
@@ -322,6 +324,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     <div class="flex gap-2">
                         <Link :href="rute('kelas-kuliah.index')"
                             ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
+                        >
+                        <Link v-if="can(`${props.peran}.presensi`)" :href="rute('presensi.kelas', props.kelasKuliah.id)"
+                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Presensi</Button></Link
                         >
                         <Link v-if="isAdmin" :href="rute('kelas-kuliah.edit', props.kelasKuliah.id)"
                             ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link

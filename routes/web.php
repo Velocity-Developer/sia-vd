@@ -17,6 +17,9 @@ use App\Http\Controllers\Dosen\MahasiswaKelasController;
 use App\Http\Controllers\Kelas\JadwalController;
 use App\Http\Controllers\Kelas\KelasKuliahController;
 use App\Http\Controllers\Kelas\MateriController;
+use App\Http\Controllers\Kelas\PengajuanIzinController;
+use App\Http\Controllers\Kelas\PertemuanController;
+use App\Http\Controllers\Kelas\PresensiController;
 use App\Http\Controllers\Kelas\QuizController;
 use App\Http\Controllers\Kelas\QuizPenilaianController;
 use App\Http\Controllers\Kelas\TugasController;
@@ -27,11 +30,13 @@ use App\Http\Controllers\Mahasiswa\InfoKuliahController as MahasiswaInfoKuliahCo
 use App\Http\Controllers\Mahasiswa\KrsController;
 use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
 use App\Http\Controllers\Mahasiswa\PindahKelasController as MahasiswaPindahKelasController;
+use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
 use App\Http\Controllers\Mahasiswa\QuizAttemptController;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
 use App\Models\User;
+use App\PeringatanPresensi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -39,6 +44,30 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
+
+// Rute presensi sama untuk admin dan dosen; bedanya hanya prefix nama dan izin grup.
+$rutePresensi = function (string $peran): void {
+    Route::get('presensi', [PresensiController::class, 'index'])->name($peran.'.presensi.index');
+    Route::get('presensi/kelas/{kelasKuliah}', [PresensiController::class, 'kelas'])->name($peran.'.presensi.kelas');
+    Route::post('presensi/kelas/{kelasKuliah}/generate', [PresensiController::class, 'generate'])->name($peran.'.presensi.generate');
+    Route::get('presensi/kelas/{kelasKuliah}/ekspor', [PresensiController::class, 'ekspor'])->name($peran.'.presensi.ekspor');
+    Route::get('presensi/kelas/{kelasKuliah}/peserta-ujian', [PresensiController::class, 'pesertaUjian'])->name($peran.'.presensi.peserta-ujian');
+    Route::post('presensi/kelas/{kelasKuliah}/dispensasi', [PresensiController::class, 'dispensasiSimpan'])->name($peran.'.presensi.dispensasi.simpan');
+    Route::delete('presensi/dispensasi/{dispensasi}', [PresensiController::class, 'dispensasiHapus'])->name($peran.'.presensi.dispensasi.hapus');
+    Route::get('presensi/izin', [PengajuanIzinController::class, 'index'])->name($peran.'.presensi.izin.index');
+    Route::put('presensi/izin/{pengajuanIzin}', [PengajuanIzinController::class, 'proses'])->name($peran.'.presensi.izin.proses');
+    Route::get('presensi/pertemuan/{pertemuan}', [PertemuanController::class, 'show'])->name($peran.'.presensi.pertemuan.show');
+    Route::put('presensi/pertemuan/{pertemuan}', [PertemuanController::class, 'update'])->name($peran.'.presensi.pertemuan.update');
+    Route::put('presensi/pertemuan/{pertemuan}/batal', [PertemuanController::class, 'batal'])->name($peran.'.presensi.pertemuan.batal');
+    Route::put('presensi/pertemuan/{pertemuan}/aktifkan', [PertemuanController::class, 'aktifkan'])->name($peran.'.presensi.pertemuan.aktifkan');
+    Route::post('presensi/pertemuan/{pertemuan}/mulai', [PertemuanController::class, 'mulai'])->name($peran.'.presensi.pertemuan.mulai');
+    Route::post('presensi/pertemuan/{pertemuan}/selesai', [PertemuanController::class, 'selesai'])->name($peran.'.presensi.pertemuan.selesai');
+    Route::put('presensi/pertemuan/{pertemuan}/jurnal', [PertemuanController::class, 'jurnal'])->name($peran.'.presensi.pertemuan.jurnal');
+    Route::put('presensi/pertemuan/{pertemuan}/mahasiswa', [PertemuanController::class, 'simpanPresensi'])->name($peran.'.presensi.pertemuan.mahasiswa');
+    Route::post('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'bukaMandiri'])->name($peran.'.presensi.pertemuan.mandiri.buka');
+    Route::delete('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'tutupMandiri'])->name($peran.'.presensi.pertemuan.mandiri.tutup');
+    Route::get('presensi/pertemuan/{pertemuan}/kode', [PertemuanController::class, 'kode'])->name($peran.'.presensi.pertemuan.kode');
+};
 
 Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
@@ -58,6 +87,7 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('tugas/{tugas}/{index}', [BerkasController::class, 'tugas'])->whereNumber('index')->name('berkas.tugas');
     Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
+    Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
 });
 
 Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function () {
@@ -81,7 +111,7 @@ Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function (
     }
 });
 
-Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): void {
+Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi): void {
     Route::middleware('can:admin.roles')->group(function (): void {
         Route::resource('roles', RoleController::class)->except('show')->names('admin.roles');
     });
@@ -95,6 +125,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
         Route::put('pengaturan-akademik/batas-sks', [PengaturanAkademikController::class, 'updateBatasSks'])->name('admin.pengaturan-akademik.batas-sks');
         Route::put('pengaturan-akademik/skala-nilai', [PengaturanAkademikController::class, 'updateSkalaNilai'])->name('admin.pengaturan-akademik.skala-nilai');
         Route::put('pengaturan-akademik/kunci-krs', [PengaturanAkademikController::class, 'updateKunciKrs'])->name('admin.pengaturan-akademik.kunci-krs');
+        Route::put('pengaturan-akademik/presensi', [PengaturanAkademikController::class, 'updatePresensi'])->name('admin.pengaturan-akademik.presensi');
     });
 
     Route::middleware('can:admin.jenis-biaya')->group(function (): void {
@@ -147,6 +178,11 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
     Route::middleware('can:admin.materi')->group(fn () => Route::get('materi', [MateriController::class, 'index'])->name('admin.materi.index'));
     Route::middleware('can:admin.tugas')->group(fn () => Route::get('tugas', [TugasController::class, 'index'])->name('admin.tugas.index'));
     Route::middleware('can:admin.quiz')->group(fn () => Route::get('quiz', [QuizController::class, 'index'])->name('admin.quiz.index'));
+    Route::middleware('can:admin.presensi')->group(function () use ($rutePresensi): void {
+        $rutePresensi('admin');
+        Route::put('presensi/kelas/{kelasKuliah}/jumlah', [PresensiController::class, 'ubahJumlah'])->name('admin.presensi.jumlah');
+        Route::get('presensi/laporan-dosen', [PresensiController::class, 'laporanDosen'])->name('admin.presensi.laporan-dosen');
+    });
 
     Route::middleware('can:admin.kelas-kuliah')->group(function (): void {
         Route::resource('kelas-kuliah', KelasKuliahController::class)->parameters(['kelas_kuliah' => 'kelasKuliah'])->names('admin.kelas-kuliah');
@@ -186,9 +222,13 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function (): voi
     });
 });
 
-Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () {
+Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi) {
     Route::middleware('can:dosen.dashboard')->group(function (): void {
-        Route::get('/', fn () => Inertia::render('Dashboard'))->name('dosen.dashboard');
+        Route::get('/', fn (Request $request) => Inertia::render('Dashboard', [
+            'presensiDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.presensi')
+                ? PeringatanPresensi::untukDosen($request->user()->dosenProfile)
+                : null,
+        ]))->name('dosen.dashboard');
         Route::get('profile', fn () => Inertia::render('DosenPlaceholder', ['title' => 'Profile']))->name('dosen.profile');
     });
 
@@ -196,6 +236,7 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:dosen.materi')->group(fn () => Route::get('materi', [MateriController::class, 'index'])->name('dosen.materi.index'));
     Route::middleware('can:dosen.tugas')->group(fn () => Route::get('tugas', [TugasController::class, 'index'])->name('dosen.tugas.index'));
     Route::middleware('can:dosen.quiz')->group(fn () => Route::get('quiz', [QuizController::class, 'index'])->name('dosen.quiz.index'));
+    Route::middleware('can:dosen.presensi')->group(fn () => $rutePresensi('dosen'));
 
     Route::middleware('can:dosen.kelas-kuliah')->group(function (): void {
         Route::get('kelas-kuliah', [KelasKuliahController::class, 'index'])->name('dosen.kelas-kuliah.index');
@@ -237,7 +278,11 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () {
 
 Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:mahasiswa.dashboard')->group(function (): void {
-        Route::get('/', fn () => Inertia::render('Dashboard'))->name('mahasiswa.dashboard');
+        Route::get('/', fn (Request $request) => Inertia::render('Dashboard', [
+            'peringatanPresensi' => $request->user()->mahasiswaProfile && $request->user()->hasPermission('mahasiswa.presensi')
+                ? PeringatanPresensi::untukMahasiswa($request->user()->mahasiswaProfile)
+                : null,
+        ]))->name('mahasiswa.dashboard');
 
         foreach ([
             'profile' => 'Profile', 'info-perkuliahan' => 'Info Perkuliahan',
@@ -269,6 +314,13 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('transkrip', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.transkrip');
         Route::get('khs/transkrip-nilai', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.khs.transkrip-nilai');
         Route::get('khs', [HasilStudiController::class, 'index'])->name('mahasiswa.khs');
+    });
+
+    Route::middleware('can:mahasiswa.presensi')->group(function (): void {
+        Route::get('presensi', [MahasiswaPresensiController::class, 'index'])->name('mahasiswa.presensi');
+        Route::get('presensi/masuk/{pertemuan}', [MahasiswaPresensiController::class, 'masuk'])->name('mahasiswa.presensi.masuk');
+        Route::post('presensi', [MahasiswaPresensiController::class, 'checkIn'])->middleware('throttle:10,1')->name('mahasiswa.presensi.check-in');
+        Route::post('presensi/izin', [MahasiswaPresensiController::class, 'ajukanIzin'])->name('mahasiswa.presensi.izin');
     });
 
     Route::middleware('can:mahasiswa.pindah-kelas')->group(function (): void {

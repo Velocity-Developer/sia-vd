@@ -11,7 +11,16 @@ import { Plus, Trash2 } from 'lucide-vue-next';
 type BatasSks = { ips_minimal: number | string; maks_sks: number | string };
 type SkalaNilai = { huruf: string; bobot: number | string; lulus: boolean; boleh_diulang: boolean; dipakai?: number };
 
-const props = defineProps<{ maksSksTanpaIps: number; kunciKrsAktif: boolean; batasSks: BatasSks[]; skalaNilai: SkalaNilai[] }>();
+type Presensi = {
+    jumlah_pertemuan: number;
+    min_kehadiran_ujian: number;
+    toleransi_terlambat_menit: number;
+    durasi_presensi_mandiri_menit: number;
+    batas_pengajuan_izin_hari: number;
+    syarat_ujian_aktif: boolean;
+};
+
+const props = defineProps<{ maksSksTanpaIps: number; kunciKrsAktif: boolean; presensi: Presensi; batasSks: BatasSks[]; skalaNilai: SkalaNilai[] }>();
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 
 const sksForm = useForm({
@@ -28,6 +37,9 @@ const errorOf = (form: { errors: object }, key: string) => (form.errors as Recor
 
 const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
 
+const presensiForm = useForm({ ...props.presensi });
+const simpanPresensi = () => presensiForm.put(route('admin.pengaturan-akademik.presensi'), { preserveScroll: true });
+
 const simpanKunciKrs = () => kunciForm.put(route('admin.pengaturan-akademik.kunci-krs'), { preserveScroll: true });
 
 const saveSks = () => sksForm.put(route('admin.pengaturan-akademik.batas-sks'), { preserveScroll: true });
@@ -43,7 +55,9 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
             <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
                 <div class="space-y-1">
                     <h1 class="text-[26px] font-bold">Pengaturan Akademik</h1>
-                    <p class="text-sm text-[#615d59]">Penguncian KRS, batas SKS saat mengisi KRS, dan skala nilai untuk KHS serta transkrip.</p>
+                    <p class="text-sm text-[#615d59]">
+                        Penguncian KRS, presensi, batas SKS saat mengisi KRS, dan skala nilai untuk KHS serta transkrip.
+                    </p>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
@@ -69,6 +83,84 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                             class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
                         >
                             Simpan Pengaturan Kunci
+                        </Button>
+                    </div>
+                </form>
+
+                <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="simpanPresensi">
+                    <h2 class="text-lg font-semibold text-black">Presensi</h2>
+                    <p class="mt-1 text-sm text-[#615d59]">
+                        Kehadiran dihitung dari pertemuan kuliah yang sudah selesai (UTS, UAS, dan pertemuan batal tidak dihitung). Izin dan sakit
+                        dihitung tidak hadir; terlambat dihitung hadir.
+                    </p>
+
+                    <div class="mt-5 grid content-start items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="grid content-start gap-2">
+                            <Label for="jumlah_pertemuan">Jumlah pertemuan per kelas</Label>
+                            <Input id="jumlah_pertemuan" v-model="presensiForm.jumlah_pertemuan" type="number" min="1" max="32" :class="inp" />
+                            <p class="text-xs text-[#a39e98]">Nilai awal untuk kelas baru, bisa diubah per kelas. Kelas lama tidak berubah.</p>
+                            <InputError :message="presensiForm.errors.jumlah_pertemuan" />
+                        </div>
+                        <div class="grid content-start gap-2">
+                            <Label for="min_kehadiran_ujian">Minimal kehadiran ujian (%)</Label>
+                            <Input id="min_kehadiran_ujian" v-model="presensiForm.min_kehadiran_ujian" type="number" min="0" max="100" :class="inp" />
+                            <p class="text-xs text-[#a39e98]">Mahasiswa di bawah batas ini ditandai di rekap presensi.</p>
+                            <InputError :message="presensiForm.errors.min_kehadiran_ujian" />
+                        </div>
+                        <div class="grid content-start gap-2">
+                            <Label for="toleransi_terlambat_menit">Toleransi terlambat (menit)</Label>
+                            <Input
+                                id="toleransi_terlambat_menit"
+                                v-model="presensiForm.toleransi_terlambat_menit"
+                                type="number"
+                                min="0"
+                                max="180"
+                                :class="inp"
+                            />
+                            <p class="text-xs text-[#a39e98]">Lewat dari jam mulai + toleransi, presensi mandiri tercatat Terlambat.</p>
+                            <InputError :message="presensiForm.errors.toleransi_terlambat_menit" />
+                        </div>
+                        <div class="grid content-start gap-2">
+                            <Label for="durasi_presensi_mandiri_menit">Durasi presensi mandiri (menit)</Label>
+                            <Input
+                                id="durasi_presensi_mandiri_menit"
+                                v-model="presensiForm.durasi_presensi_mandiri_menit"
+                                type="number"
+                                min="1"
+                                max="180"
+                                :class="inp"
+                            />
+                            <p class="text-xs text-[#a39e98]">Lama QR/PIN bisa dipakai setelah dosen membukanya; bisa diperpanjang.</p>
+                            <InputError :message="presensiForm.errors.durasi_presensi_mandiri_menit" />
+                        </div>
+                        <div class="grid content-start gap-2">
+                            <Label for="batas_pengajuan_izin_hari">Batas pengajuan izin (hari)</Label>
+                            <Input
+                                id="batas_pengajuan_izin_hari"
+                                v-model="presensiForm.batas_pengajuan_izin_hari"
+                                type="number"
+                                min="0"
+                                max="14"
+                                :class="inp"
+                            />
+                            <p class="text-xs text-[#a39e98]">
+                                Izin/sakit diajukan paling lambat sekian hari sesudah tanggal pertemuan (0 = hari itu juga).
+                            </p>
+                            <InputError :message="presensiForm.errors.batas_pengajuan_izin_hari" />
+                        </div>
+                    </div>
+
+                    <Label for="syarat_ujian_aktif" class="mt-5 flex w-fit items-start gap-2.5 text-sm text-[#31302e]">
+                        <Checkbox id="syarat_ujian_aktif" v-model="presensiForm.syarat_ujian_aktif" class="mt-0.5" />
+                        <span>
+                            Terapkan syarat kehadiran ujian: mahasiswa di bawah batas minimal ditandai <strong>tidak memenuhi syarat</strong> UTS/UAS
+                            di daftar peserta ujian dan halaman presensinya, kecuali mendapat dispensasi.
+                        </span>
+                    </Label>
+
+                    <div class="mt-5 flex justify-end">
+                        <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="presensiForm.processing">
+                            Simpan Pengaturan Presensi
                         </Button>
                     </div>
                 </form>

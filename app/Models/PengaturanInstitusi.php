@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class PengaturanInstitusi extends Model
 {
@@ -72,6 +73,37 @@ class PengaturanInstitusi extends Model
     protected function logoUrl(): Attribute
     {
         return Attribute::get(fn (): ?string => $this->logo ? '/storage/'.ltrim($this->logo, '/') : null);
+    }
+
+    /**
+     * Logo sebagai data URI untuk kop dokumen PDF (dompdf tidak mengambil gambar lewat URL).
+     */
+    public function logoDataUri(): ?string
+    {
+        $disk = Storage::disk('public');
+
+        if ($this->logo === null || ! $disk->exists($this->logo)) {
+            return null;
+        }
+
+        $mime = $disk->mimeType($this->logo) ?: 'image/png';
+
+        return "data:{$mime};base64,".base64_encode($disk->get($this->logo));
+    }
+
+    /**
+     * Baris kontak di kop dokumen: alamat, telepon, surel, situs.
+     *
+     * @return list<string>
+     */
+    public function kontakKop(): array
+    {
+        return array_values(array_filter([
+            $this->alamat,
+            $this->telepon ? "Telp. {$this->telepon}" : null,
+            $this->email,
+            $this->website,
+        ]));
     }
 
     public function updater(): BelongsTo

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\AllowedUpload;
+use App\Models\DispensasiUjian;
 use App\Models\DosenProfile;
 use App\Models\Fakultas;
 use App\Models\InfoKuliah;
@@ -14,11 +15,14 @@ use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\Materi;
+use App\Models\PengajuanIzin;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengaturanPindahKelas;
 use App\Models\PengumpulanTugas;
+use App\Models\Pertemuan;
+use App\Models\PresensiMahasiswa;
 use App\Models\ProgramStudi;
 use App\Models\Question;
 use App\Models\Quiz;
@@ -101,6 +105,8 @@ class DemoSeeder extends Seeder
         $this->kelasDanJadwal($tahunAkademik, $prodi, $mataKuliah, $dosen, $ruang);
         $this->krsDanNilai($tahunAkademik, $mahasiswa);
         $this->kontenKelas($tahunAkademik->last(), $mahasiswa);
+        $this->presensi($tahunAkademik);
+        $this->pengajuanIzin($tahunAkademik->last());
         $this->pindahKelas($tahunAkademik->last(), $mahasiswa);
         $this->infoKuliah();
         $this->keuangan($tahunAkademik, $mahasiswa);
@@ -112,6 +118,10 @@ class DemoSeeder extends Seeder
         QuizAttempt::query()->delete();
         PengumpulanTugas::query()->delete();
         PengajuanPindahKelas::query()->delete();
+        DispensasiUjian::query()->delete();
+        PengajuanIzin::query()->delete();
+        PresensiMahasiswa::query()->delete();
+        Pertemuan::query()->delete();
         Krs::query()->delete();
         Question::query()->delete();
         Quiz::query()->delete();
@@ -530,6 +540,102 @@ class DemoSeeder extends Seeder
                 }
             }
         }
+    }
+
+    /**
+     * Pertemuan setiap kelas dari jadwal mingguannya. Pertemuan yang tanggalnya sudah lewat diselesaikan
+     * lengkap dengan jurnal dan presensi (sekitar 85% hadir, satu-dua mahasiswa per kelas sering absen
+     * agar tanda "di bawah batas" terlihat); pertemuan hari ini dan sesudahnya tetap dijadwalkan.
+     *
+     * @param  Collection<int, TahunAkademik>  $tahunAkademik
+     */
+    private function presensi(Collection $tahunAkademik): void
+    {
+        $kelasSemua = KelasKuliah::query()
+            ->whereIn('tahun_akademik_id', $tahunAkademik->pluck('id'))
+            ->with('tahunAkademik', 'jadwals', 'mataKuliah:id,nama_matkul', 'krs:id,kelas_id,mahasiswa_id')
+            ->get();
+
+        foreach ($kelasSemua as $kelas) {
+            Pertemuan::generateUntuk($kelas);
+            $peserta = $kelas->krs->pluck('mahasiswa_id')->values();
+
+            foreach ($kelas->pertemuans()->where('tanggal', '<', today())->get() as $pertemuan) {
+                $mulai = $pertemuan->mulaiAt();
+                $pertemuan->update([
+                    'status' => Pertemuan::SELESAI,
+                    'dosen_masuk_at' => $mulai->copy()->addMinutes(($pertemuan->pertemuan_ke * 3) % 11),
+                    'dosen_keluar_at' => $pertemuan->akhirAt(),
+                    'topik' => match ($pertemuan->jenis) {
+                        Pertemuan::UTS => 'Ujian Tengah Semester',
+                        Pertemuan::UAS => 'Ujian Akhir Semester',
+                        default => $kelas->mataKuliah->nama_matkul.': pembahasan bagian '.$pertemuan->pertemuan_ke,
+                    },
+                ]);
+
+                PresensiMahasiswa::query()->insert($peserta->map(function (int $mahasiswaId, int $urutan) use ($pertemuan, $mulai): array {
+                    $status = $this->statusPresensiDemo($urutan, $pertemuan->pertemuan_ke, $pertemuan->jenis !== Pertemuan::KULIAH);
+
+                    return [
+                        'pertemuan_id' => $pertemuan->id,
+                        'mahasiswa_id' => $mahasiswaId,
+                        'status' => $status,
+                        'waktu_presensi' => in_array($status, PresensiMahasiswa::DIHITUNG_HADIR, true) ? $mulai->copy()->addMinutes($status === PresensiMahasiswa::TERLAMBAT ? 25 : 2) : null,
+                        'metode' => 'manual',
+                        'keterangan' => match ($status) {
+                            PresensiMahasiswa::IZIN => 'Keperluan keluarga',
+                            PresensiMahasiswa::SAKIT => 'Surat dokter',
+                            default => null,
+                        },
+                        'created_at' => $mulai,
+                        'updated_at' => $mulai,
+                    ];
+                })->all());
+            }
+        }
+    }
+
+    /**
+     * Beberapa pengajuan izin/sakit yang menunggu persetujuan dosen, dari alpa terakhir di tahun aktif.
+     */
+    private function pengajuanIzin(TahunAkademik $tahunAktif): void
+    {
+        PresensiMahasiswa::query()
+            ->where('status', PresensiMahasiswa::ALPA)
+            ->whereHas('pertemuan.kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahunAktif->id))
+            ->orderByDesc('pertemuan_id')
+            ->limit(3)
+            ->get()
+            ->each(fn (PresensiMahasiswa $presensi, int $i) => PengajuanIzin::create([
+                'pertemuan_id' => $presensi->pertemuan_id,
+                'mahasiswa_id' => $presensi->mahasiswa_id,
+                'jenis' => $i === 0 ? PresensiMahasiswa::SAKIT : PresensiMahasiswa::IZIN,
+                'alasan' => $i === 0 ? 'Demam tinggi, istirahat di rumah.' : 'Menghadiri pernikahan kakak di luar kota.',
+                'status' => PengajuanIzin::MENUNGGU,
+            ]));
+    }
+
+    /**
+     * Pola kehadiran tetap (bukan acak) agar hasil seeder selalu sama. Mahasiswa urutan ke-4, ke-13, dst.
+     * sering alpa sehingga kehadirannya di bawah 75%.
+     */
+    private function statusPresensiDemo(int $urutan, int $pertemuanKe, bool $ujian): string
+    {
+        if ($ujian) {
+            return PresensiMahasiswa::HADIR;
+        }
+
+        if ($urutan % 9 === 4 && $pertemuanKe % 3 !== 0) {
+            return PresensiMahasiswa::ALPA;
+        }
+
+        return match (($urutan * 7 + $pertemuanKe * 3) % 20) {
+            0 => PresensiMahasiswa::ALPA,
+            1 => PresensiMahasiswa::IZIN,
+            2 => PresensiMahasiswa::SAKIT,
+            3, 4 => PresensiMahasiswa::TERLAMBAT,
+            default => PresensiMahasiswa::HADIR,
+        };
     }
 
     /**

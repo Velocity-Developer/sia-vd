@@ -61,7 +61,7 @@ class MateriController extends Controller
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
         $this->pastikanAksesKelas($kelasKuliah);
-        $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
+        $data = $request->validate($this->rules($kelasKuliah), $this->messages(), $this->attributes());
 
         $data['file'] = $this->storeFiles($request);
         $data['kelas_id'] = $kelasKuliah->id;
@@ -86,7 +86,7 @@ class MateriController extends Controller
     public function update(Request $request, KelasKuliah $kelasKuliah, Materi $materi): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $materi);
-        $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
+        $data = $request->validate($this->rules($kelasKuliah, $materi), $this->messages(), $this->attributes());
 
         $newFiles = $this->storeFiles($request);
 
@@ -211,13 +211,17 @@ class MateriController extends Controller
     }
 
     /**
+     * Nomor pertemuan dibatasi jumlah pertemuan kelas; materi lama yang nomornya sudah di atas batas tetap bisa disunting.
+     *
      * @return array<string, array<int, string>>
      */
-    private function rules(): array
+    private function rules(KelasKuliah $kelasKuliah, ?Materi $materi = null): array
     {
+        $maksPertemuan = max($kelasKuliah->jumlah_pertemuan, $materi?->pertemuan_ke ?? 0);
+
         return [
             'judul_materi' => ['required', 'string', 'max:255'],
-            'pertemuan_ke' => ['required', 'integer', 'min:1', 'max:32'],
+            'pertemuan_ke' => ['required', 'integer', 'min:1', 'max:'.$maksPertemuan],
             'jenis' => ['required', 'in:Materi,Pengumuman'],
             'file' => ['nullable', 'array', 'max:5'],
             'file.*' => ['file', 'max:10240', ...AllowedUpload::rules()],

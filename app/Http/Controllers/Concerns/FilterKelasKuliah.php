@@ -64,7 +64,9 @@ trait FilterKelasKuliah
     {
         $kelasTerlihat = fn (Builder $query) => $query
             ->when($filter['tahun_akademik_id'] !== null, fn (Builder $q) => $q->where('tahun_akademik_id', $filter['tahun_akademik_id']))
-            ->when($filter['dosen_id'] !== null, fn (Builder $q) => $q->where('dosen_id', $filter['dosen_id']));
+            ->when($filter['dosen_id'] !== null, fn (Builder $q) => $q->where('dosen_id', $filter['dosen_id']))
+            // Lingkup kaprodi (menu Presensi): hanya kelas di prodi yang dipimpinnya.
+            ->when(isset($filter['prodi_ids']), fn (Builder $q) => $q->whereHas('mataKuliah', fn (Builder $matkul) => $matkul->whereIn('prodi_id', $filter['prodi_ids'])));
 
         return [
             'tahunAkademikOptions' => TahunAkademik::orderByDesc('tanggal_mulai')->get(['id', 'tahun', 'semester'])

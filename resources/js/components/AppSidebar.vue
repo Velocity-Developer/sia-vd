@@ -25,6 +25,7 @@ import {
     Receipt,
     ShieldCheck,
     SlidersHorizontal,
+    UserCheck,
     UserCog,
     Users,
     Wallet,
@@ -76,6 +77,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Materi', routeName: 'admin.materi.index', icon: BookMarked, permission: 'admin.materi' },
                     { title: 'Tugas', routeName: 'admin.tugas.index', icon: ClipboardList, permission: 'admin.tugas' },
                     { title: 'Quiz', routeName: 'admin.quiz.index', icon: FileText, permission: 'admin.quiz' },
+                    { title: 'Presensi', routeName: 'admin.presensi.index', icon: UserCheck, permission: 'admin.presensi' },
                 ],
             },
             {
@@ -116,6 +118,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 items: [
                     { title: 'Kelas Kuliah', href: '/dosen/kelas-kuliah', icon: ClipboardList, permission: 'dosen.kelas-kuliah' },
                     { title: 'Jadwal Mengajar', routeName: 'dosen.jadwal.index', icon: CalendarDays, permission: 'dosen.jadwal' },
+                    { title: 'Presensi', routeName: 'dosen.presensi.index', icon: UserCheck, permission: 'dosen.presensi' },
                     { title: 'Mahasiswa Kelas', href: '/dosen/mahasiswa-kelas', icon: Users, permission: 'dosen.mahasiswa-kelas' },
                 ],
             },
@@ -142,6 +145,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Kartu Hasil Studi', href: '/mahasiswa/khs', icon: FileText, permission: 'mahasiswa.hasil-studi' },
                     { title: 'Transkrip Nilai', href: '/mahasiswa/transkrip', icon: BookOpen, permission: 'mahasiswa.hasil-studi' },
                     { title: 'Jadwal Kuliah', href: '/mahasiswa/jadwal', icon: CalendarDays, permission: 'mahasiswa.jadwal-kuliah' },
+                    { title: 'Presensi', routeName: 'mahasiswa.presensi', icon: UserCheck, permission: 'mahasiswa.presensi' },
                 ],
             },
             {

@@ -19,10 +19,12 @@ class PengaturanAkademikController extends Controller
     public function index(): Response
     {
         $dipakai = $this->jumlahNilaiDipakai();
+        $pengaturan = PengaturanAkademik::current();
 
         return Inertia::render('Admin/PengaturanAkademik', [
-            'maksSksTanpaIps' => PengaturanAkademik::current()->maks_sks_tanpa_ips,
-            'kunciKrsAktif' => PengaturanAkademik::current()->kunci_krs_aktif,
+            'maksSksTanpaIps' => $pengaturan->maks_sks_tanpa_ips,
+            'kunciKrsAktif' => $pengaturan->kunci_krs_aktif,
+            'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
             'skalaNilai' => SkalaNilai::query()->orderByDesc('bobot')->orderBy('huruf')->get(['huruf', 'bobot', 'lulus', 'boleh_diulang'])
                 ->map(fn (SkalaNilai $nilai): array => [...$nilai->toArray(), 'dipakai' => $dipakai[$nilai->huruf] ?? 0]),
@@ -46,6 +48,32 @@ class PengaturanAkademikController extends Controller
         return back()->with('success', $data['kunci_krs_aktif']
             ? 'Penguncian KRS dinyalakan: mahasiswa dengan tagihan belum lunas tidak bisa mengisi KRS.'
             : 'Penguncian KRS dimatikan.');
+    }
+
+    /**
+     * Bawaan presensi. Jumlah pertemuan hanya menjadi nilai awal kelas baru; kelas yang sudah ada tidak berubah.
+     */
+    public function updatePresensi(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'jumlah_pertemuan' => ['required', 'integer', 'min:1', 'max:32'],
+            'min_kehadiran_ujian' => ['required', 'integer', 'min:0', 'max:100'],
+            'toleransi_terlambat_menit' => ['required', 'integer', 'min:0', 'max:180'],
+            'durasi_presensi_mandiri_menit' => ['required', 'integer', 'min:1', 'max:180'],
+            'batas_pengajuan_izin_hari' => ['required', 'integer', 'min:0', 'max:14'],
+            'syarat_ujian_aktif' => ['required', 'boolean'],
+        ], attributes: [
+            'jumlah_pertemuan' => 'Jumlah pertemuan',
+            'min_kehadiran_ujian' => 'Minimal kehadiran',
+            'toleransi_terlambat_menit' => 'Toleransi terlambat',
+            'durasi_presensi_mandiri_menit' => 'Durasi presensi mandiri',
+            'batas_pengajuan_izin_hari' => 'Batas pengajuan izin',
+            'syarat_ujian_aktif' => 'Syarat kehadiran ujian',
+        ]);
+
+        PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
+
+        return back()->with('success', 'Pengaturan presensi berhasil disimpan.');
     }
 
     public function updateBatasSks(Request $request): RedirectResponse

@@ -11,6 +11,7 @@ const page = usePage<{ flash: { success?: string; error?: string } }>();
 
 const props = defineProps<{
     kelasKuliah: Record<string, any> | null;
+    jumlahPertemuanBawaan?: number;
     dosens: { id: number; name: string }[];
     matkulGroups: { label: string; options: { id: number; name: string }[] }[];
     tahunAkademiks: { id: number; tahun: string; semester: string }[];
@@ -22,6 +23,7 @@ const form = useForm({
     kode_kelas: props.kelasKuliah?.kode_kelas ?? '',
     tahun_ajaran: props.kelasKuliah?.tahun_ajaran ?? '',
     kapasitas: props.kelasKuliah?.kapasitas ?? '',
+    jumlah_pertemuan: props.kelasKuliah?.jumlah_pertemuan ?? props.jumlahPertemuanBawaan ?? 16,
     dosen_id: props.kelasKuliah?.dosen_id ?? '',
     matkul_id: props.kelasKuliah?.matkul_id ?? '',
     tahun_akademik_id: props.kelasKuliah?.tahun_akademik_id ?? '',
@@ -88,10 +90,18 @@ const sel =
                                 <InputError :message="form.errors.tahun_akademik_id" />
                             </div>
                         </div>
-                        <div class="mt-4 grid gap-2 sm:max-w-[240px]">
-                            <Label for="kapasitas" class="text-sm font-medium text-black">Kapasitas</Label>
-                            <Input id="kapasitas" v-model="form.kapasitas" type="number" min="1" max="500" :class="inp" required />
-                            <InputError :message="form.errors.kapasitas" />
+                        <div class="mt-4 grid content-start items-start gap-4 sm:grid-cols-2">
+                            <div class="grid content-start gap-2">
+                                <Label for="kapasitas" class="text-sm font-medium text-black">Kapasitas</Label>
+                                <Input id="kapasitas" v-model="form.kapasitas" type="number" min="1" max="500" :class="inp" required />
+                                <InputError :message="form.errors.kapasitas" />
+                            </div>
+                            <div class="grid content-start gap-2">
+                                <Label for="jumlah_pertemuan" class="text-sm font-medium text-black">Jumlah Pertemuan</Label>
+                                <Input id="jumlah_pertemuan" v-model="form.jumlah_pertemuan" type="number" min="1" max="32" :class="inp" required />
+                                <p class="text-xs text-[#a39e98]">Termasuk UTS dan UAS. Bawaan dari Pengaturan Akademik.</p>
+                                <InputError :message="form.errors.jumlah_pertemuan" />
+                            </div>
                         </div>
                         <div class="mt-4 grid gap-2">
                             <Label for="dosen_id" class="text-sm font-medium text-black">Dosen Pengampu</Label>
