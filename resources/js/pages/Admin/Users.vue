@@ -45,11 +45,11 @@ const searchPlaceholder: Record<string, string> = {
     karyawan: 'Cari nama atau Nomor Induk',
 };
 const idLabel: Record<string, string> = { dosen: 'NIDN', mahasiswa: 'NIM', karyawan: 'Nomor Induk' };
-const createLabel: Record<string, string> = { dosen: 'Tambah Dosen', mahasiswa: 'Tambah Mahasiswa' };
+const createLabel: Record<string, string> = { dosen: 'Tambah Dosen', mahasiswa: 'Tambah Mahasiswa', karyawan: 'Tambah Karyawan' };
 const subtitle: Record<string, string> = {
     dosen: 'Kelola data dosen dan home base program studi.',
     mahasiswa: 'Kelola data mahasiswa, dosen wali, dan informasi orang tua.',
-    karyawan: 'Kelola data staf dan nomor induk karyawan.',
+    karyawan: 'Kelola akun staf/karyawan: nomor induk, data diri, dan role yang menentukan menu yang bisa dibuka.',
 };
 const idValue = (user: User): string => user.profile?.nidn ?? user.profile?.nim ?? user.profile?.nomor_induk ?? '-';
 
@@ -84,7 +84,7 @@ const confirmDelete = () => {
                         <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">{{ props.title }}</h1>
                         <p class="text-sm leading-5 text-[#615d59]">{{ subtitle[props.type] ?? '' }}</p>
                     </div>
-                    <Link v-if="props.type !== 'karyawan'" :href="route(`admin.users.${props.type}.create`)">
+                    <Link :href="route(`admin.users.${props.type}.create`)">
                         <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"> {{ createLabel[props.type] }} </Button>
                     </Link>
                 </div>

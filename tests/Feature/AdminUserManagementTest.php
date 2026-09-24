@@ -151,3 +151,44 @@ it('blocks non-admin users from user management pages', function () {
         $this->actingAs($user)->get(route('admin.users.'.$type))->assertForbidden();
     }
 });
+
+it('lets admin create, update, and delete a karyawan with a custom staff role', function () {
+    $admin = User::factory()->admin()->create();
+    $role = Role::factory()->type(UserType::Admin)->withPermissions(['admin.dashboard', 'admin.tagihan'])->create(['name' => 'Staf Keuangan']);
+
+    $this->actingAs($admin)->get(route('admin.users.karyawan.create'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('Admin/UserForm')->where('type', 'karyawan')
+            ->where('roles', fn ($roles) => collect($roles)->pluck('name')->contains('Staf Keuangan')));
+
+    $data = [
+        'role_id' => $role->id, 'name' => 'Rina Keuangan', 'username' => 'rina.keu', 'email' => 'rina@kampus.test',
+        'nomor_induk' => 'KRY-001', 'tempat_lahir' => 'Bandung', 'tanggal_lahir' => '1992-03-04', 'jenis_kelamin' => 'Perempuan',
+        'agama' => 'Islam', 'no_telepon' => '0812', 'alamat' => 'Jl. Kampus 1', 'kewarganegaraan' => 'Indonesia',
+    ];
+    $this->actingAs($admin)->post(route('admin.users.karyawan.store'), [...$data, 'password' => 'rahasia123', 'password_confirmation' => 'rahasia123'])
+        ->assertRedirect(route('admin.users.karyawan'))
+        ->assertSessionHas('success');
+
+    $rina = User::where('username', 'rina.keu')->firstOrFail();
+    expect($rina->type())->toBe(UserType::Admin)
+        ->and($rina->adminProfile->nomor_induk)->toBe('KRY-001')
+        ->and($rina->hasPermission('admin.tagihan'))->toBeTrue();
+
+    // Karyawan hanya membuka menu sesuai role-nya. Sesi admin dikosongkan dulu karena hash kata sandi
+    // akun baru berbeda dari akun factory (AuthenticateSession akan mengeluarkannya).
+    $this->flushSession();
+    $this->actingAs($rina)->get(route('admin.tagihan.index'))->assertOk();
+    $this->actingAs($rina)->get(route('admin.users.karyawan'))->assertForbidden();
+    $this->flushSession();
+
+    $this->actingAs($admin)->get(route('admin.users.karyawan'))
+        ->assertInertia(fn ($page) => $page->where('users.data', fn ($users) => collect($users)->contains(fn ($u) => $u['username'] === 'rina.keu' && $u['role_name'] === 'Staf Keuangan')));
+
+    $this->actingAs($admin)->put(route('admin.users.karyawan.update', $rina), [...$data, 'nomor_induk' => 'KRY-002', 'alamat' => 'Jl. Baru 2'])
+        ->assertSessionHas('success');
+    expect($rina->adminProfile->fresh()->only(['nomor_induk', 'alamat']))->toBe(['nomor_induk' => 'KRY-002', 'alamat' => 'Jl. Baru 2']);
+
+    $this->actingAs($admin)->delete(route('admin.users.karyawan.destroy', $rina))->assertSessionHas('success');
+    expect(User::whereKey($rina->id)->exists())->toBeFalse();
+});
