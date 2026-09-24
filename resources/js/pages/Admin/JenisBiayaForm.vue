@@ -129,7 +129,7 @@ const inp =
                         </div>
 
                         <Label for="aktif" class="mt-4 flex w-fit items-center gap-2.5 text-sm text-[#31302e]">
-                            <Checkbox id="aktif" v-model:checked="form.aktif" />
+                            <Checkbox id="aktif" v-model="form.aktif" />
                             <span>Aktif — ikut ditagihkan saat tagihan diterbitkan</span>
                         </Label>
                     </div>

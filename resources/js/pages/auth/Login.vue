@@ -98,7 +98,7 @@ const isian =
             </div>
 
             <Label for="remember" class="flex w-fit items-center gap-2.5 text-sm text-[#31302e]">
-                <Checkbox id="remember" v-model:checked="form.remember" tabindex="3" />
+                <Checkbox id="remember" v-model="form.remember" tabindex="3" />
                 <span>Ingat saya di perangkat ini</span>
             </Label>
 

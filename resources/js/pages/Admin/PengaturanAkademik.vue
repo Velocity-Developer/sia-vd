@@ -72,7 +72,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     </p>
 
                     <Label for="kunci_krs_aktif" class="mt-4 flex w-fit items-center gap-2.5 text-sm text-[#31302e]">
-                        <Checkbox id="kunci_krs_aktif" v-model:checked="kunciForm.kunci_krs_aktif" />
+                        <Checkbox id="kunci_krs_aktif" v-model="kunciForm.kunci_krs_aktif" />
                         <span>Kunci pengisian KRS bila tagihan semester berjalan belum lunas</span>
                     </Label>
 
