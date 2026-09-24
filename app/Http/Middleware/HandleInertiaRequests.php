@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\PengaturanInstitusi;
+use App\Models\PengaturanTampilan;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'institusi' => fn (): array => PengaturanInstitusi::shared(),
+            'tampilan' => fn (): array => PengaturanTampilan::shared(),
             'auth' => [
                 'user' => $request->user()?->withoutRelations(),
                 'role' => fn (): ?array => $request->user()?->role?->only(['id', 'name', 'slug', 'user_type']),

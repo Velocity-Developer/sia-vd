@@ -19,7 +19,7 @@ defineProps<Props>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
-        title: 'Password settings',
+        title: 'Kata Sandi',
         href: '/settings/password',
     },
 ];
@@ -58,7 +58,7 @@ const updatePassword = () => {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbItems">
-        <Head title="Profile settings" />
+        <Head title="Kata Sandi" />
 
         <SettingsLayout>
             <div class="space-y-6">

@@ -2,12 +2,8 @@
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { usePermissions } from '@/composables/usePermissions';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
-
-const { can } = usePermissions();
 
 const sidebarNavItems: NavItem[] = [
     {
@@ -20,18 +16,15 @@ const sidebarNavItems: NavItem[] = [
     },
 ];
 
-const navItems = computed<NavItem[]>(() => [
-    ...sidebarNavItems,
-    ...(can('admin.institusi') ? [{ title: 'Institusi', href: '/settings/institusi' }] : []),
-    ...(can('admin.pengaturan-email') ? [{ title: 'Email', href: '/settings/email' }] : []),
-]);
+// Institusi, Email, dan pengaturan lain untuk seluruh sistem ada di menu Pengaturan Sistem.
+const navItems = sidebarNavItems;
 
 const currentPath = window.location.pathname;
 </script>
 
 <template>
     <div class="px-4 py-6">
-        <Heading title="Pengaturan" description="Kelola profil dan pengaturan akun Anda" />
+        <Heading title="Pengaturan Profil" description="Kelola profil dan kata sandi akun Anda" />
 
         <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
             <aside class="w-full max-w-xl lg:w-48">

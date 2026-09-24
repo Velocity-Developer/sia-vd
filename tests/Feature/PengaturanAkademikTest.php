@@ -99,6 +99,6 @@ it('does not remove a grade letter that students already have', function () {
 
 it('keeps academic settings admin-only', function () {
     $this->actingAs(User::factory()->dosen()->create())
-        ->get(route('admin.pengaturan-akademik.index'))
+        ->get(route('pengaturan-sistem.akademik'))
         ->assertForbidden();
 });

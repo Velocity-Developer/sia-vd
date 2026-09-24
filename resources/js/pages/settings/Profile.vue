@@ -21,7 +21,7 @@ const props = defineProps<Props>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Profile settings',
+        title: 'Pengaturan Profil',
         href: '/settings/profile',
     },
 ];
@@ -43,7 +43,7 @@ const submit = () => {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head title="Profile settings" />
+        <Head title="Pengaturan Profil" />
 
         <SettingsLayout>
             <div class="flex flex-col space-y-6">

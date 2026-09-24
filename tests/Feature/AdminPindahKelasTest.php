@@ -52,7 +52,7 @@ it('toggles the pindah kelas form setting', function () {
     PengaturanPindahKelas::current()->update(['is_active' => false]);
     [$admin] = createAdminPindahKelas();
 
-    $this->actingAs($admin)->put(route('admin.pindah-kelas.pengaturan'), ['is_active' => true])
+    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.pindah-kelas'), ['is_active' => true])
         ->assertRedirect()
         ->assertSessionHas('success');
 
@@ -60,7 +60,7 @@ it('toggles the pindah kelas form setting', function () {
     expect($pengaturan->is_active)->toBeTrue()
         ->and($pengaturan->updated_by)->toBe($admin->id);
 
-    $this->actingAs($admin)->put(route('admin.pindah-kelas.pengaturan'), ['is_active' => false])->assertRedirect();
+    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.pindah-kelas'), ['is_active' => false])->assertRedirect();
     expect(PengaturanPindahKelas::current()->is_active)->toBeFalse();
 });
 
@@ -166,7 +166,7 @@ it('forbids non admin roles from managing pindah kelas', function () {
     [, $mahasiswa, , , , , $pengajuan] = createAdminPindahKelas();
 
     $this->actingAs($mahasiswa)->get(route('admin.pindah-kelas.index'))->assertForbidden();
-    $this->actingAs($mahasiswa)->put(route('admin.pindah-kelas.pengaturan'), ['is_active' => true])->assertForbidden();
+    $this->actingAs($mahasiswa)->put(route('admin.pengaturan-akademik.pindah-kelas'), ['is_active' => true])->assertForbidden();
     $this->actingAs($mahasiswa)->put(route('admin.pindah-kelas.approve', $pengajuan))->assertForbidden();
     $this->actingAs($mahasiswa)->put(route('admin.pindah-kelas.reject', $pengajuan), ['catatan_admin' => 'X'])->assertForbidden();
 });

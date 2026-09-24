@@ -5,8 +5,9 @@ import Pagination from '@/components/Pagination.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { AlertTriangle, Check, Search, X } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
@@ -75,25 +76,8 @@ const formatDateTime = (value: string | null): string => {
     return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 };
 
-/* Toggle switch pengaturan form pindah kelas */
-const settingForm = useForm({ is_active: props.isActive });
-
-watch(
-    () => props.isActive,
-    (value) => {
-        settingForm.is_active = value;
-    },
-);
-
-const toggleSetting = () => {
-    settingForm.is_active = !settingForm.is_active;
-    settingForm.put(route('admin.pindah-kelas.pengaturan'), {
-        preserveScroll: true,
-        onError: () => {
-            settingForm.is_active = props.isActive;
-        },
-    });
-};
+/* Status form pindah kelas; diubah di Pengaturan Sistem → Akademik. */
+const { can } = usePermissions();
 
 /* Approve */
 const approveTarget = ref<Pengajuan | null>(null);
@@ -200,35 +184,19 @@ watch(
                     {{ warningFlash }}
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div class="space-y-1">
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pengaturan Form Pindah Kelas</h2>
-                            <p class="text-sm leading-5 text-[#615d59] dark:text-gray-400">
-                                {{
-                                    settingForm.is_active
-                                        ? 'Form pindah kelas sedang dibuka untuk mahasiswa.'
-                                        : 'Form pindah kelas sedang ditutup untuk mahasiswa.'
-                                }}
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            role="switch"
-                            :aria-checked="settingForm.is_active"
-                            aria-label="Buka atau tutup form pindah kelas"
-                            :disabled="settingForm.processing"
-                            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0075de] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-                            :class="settingForm.is_active ? 'bg-[#1aae39]' : 'bg-[#dddddd] dark:bg-gray-700'"
-                            @click="toggleSetting"
-                        >
-                            <span
-                                class="inline-block size-5 transform rounded-full bg-white shadow transition-transform"
-                                :class="settingForm.is_active ? 'translate-x-[22px]' : 'translate-x-0.5'"
-                            />
-                        </button>
-                    </div>
-                    <InputError class="mt-2" :message="settingForm.errors.is_active" />
+                <section class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e6e6e6] bg-white px-6 py-4 shadow-sm">
+                    <p class="flex items-center gap-2 text-sm text-[#31302e]">
+                        <span class="size-2.5 rounded-full" :class="props.isActive ? 'bg-[#1aae39]' : 'bg-[#a39e98]'" aria-hidden="true" />
+                        {{
+                            props.isActive ? 'Form pindah kelas sedang dibuka untuk mahasiswa.' : 'Form pindah kelas sedang ditutup untuk mahasiswa.'
+                        }}
+                    </p>
+                    <Link
+                        v-if="can('admin.pengaturan-akademik')"
+                        :href="`${route('pengaturan-sistem.akademik')}#pindah-kelas`"
+                        class="text-sm font-medium text-[#0075de] hover:underline"
+                        >Ubah di Pengaturan Sistem →</Link
+                    >
                 </section>
 
                 <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">

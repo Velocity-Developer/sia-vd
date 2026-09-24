@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BatasSks;
 use App\Models\Krs;
 use App\Models\PengaturanAkademik;
+use App\Models\PengaturanPindahKelas;
 use App\Models\SkalaNilai;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,9 +22,10 @@ class PengaturanAkademikController extends Controller
         $dipakai = $this->jumlahNilaiDipakai();
         $pengaturan = PengaturanAkademik::current();
 
-        return Inertia::render('Admin/PengaturanAkademik', [
+        return Inertia::render('PengaturanSistem/Akademik', [
             'maksSksTanpaIps' => $pengaturan->maks_sks_tanpa_ips,
             'kunciKrsAktif' => $pengaturan->kunci_krs_aktif,
+            'pindahKelasAktif' => PengaturanPindahKelas::current()->is_active,
             'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
             'skalaNilai' => SkalaNilai::query()->orderByDesc('bobot')->orderBy('huruf')->get(['huruf', 'bobot', 'lulus', 'boleh_diulang'])
@@ -74,6 +76,20 @@ class PengaturanAkademikController extends Controller
         PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
 
         return back()->with('success', 'Pengaturan presensi berhasil disimpan.');
+    }
+
+    /**
+     * Buka/tutup form pengajuan pindah kelas bagi mahasiswa.
+     */
+    public function updatePindahKelas(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ], ['boolean' => ':attribute tidak valid.'], ['is_active' => 'Status form pindah kelas']);
+
+        PengaturanPindahKelas::current()->update(['is_active' => $data['is_active'], 'updated_by' => $request->user()->id]);
+
+        return back()->with('success', $data['is_active'] ? 'Form pindah kelas dibuka untuk mahasiswa.' : 'Form pindah kelas ditutup.');
     }
 
     public function updateBatasSks(Request $request): RedirectResponse

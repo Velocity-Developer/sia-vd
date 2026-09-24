@@ -17,7 +17,7 @@ class InstitusiController extends Controller
      */
     public function edit(): Response
     {
-        return Inertia::render('settings/Institusi', [
+        return Inertia::render('PengaturanSistem/Institusi', [
             'institusi' => PengaturanInstitusi::current(),
         ]);
     }

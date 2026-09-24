@@ -66,8 +66,15 @@ class PengaturanInstitusi extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget(self::SHARED_CACHE_KEY));
-        static::deleted(fn () => Cache::forget(self::SHARED_CACHE_KEY));
+        // Nama aplikasi dan favicon bawaan diturunkan dari data institusi, jadi cache tampilan ikut dihapus.
+        static::saved(function (): void {
+            Cache::forget(self::SHARED_CACHE_KEY);
+            PengaturanTampilan::lupakanCache();
+        });
+        static::deleted(function (): void {
+            Cache::forget(self::SHARED_CACHE_KEY);
+            PengaturanTampilan::lupakanCache();
+        });
     }
 
     protected function logoUrl(): Attribute

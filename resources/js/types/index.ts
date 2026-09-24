@@ -42,11 +42,23 @@ export interface Institusi {
     logo_url: string | null;
 }
 
+/** Pengaturan tampilan sistem, sudah terisi nilai bawaan (lihat PengaturanTampilan::shared). */
+export interface Tampilan {
+    nama_aplikasi: string;
+    favicon_url: string;
+    login_judul: string;
+    login_teks: string;
+    login_gambar_url: string | null;
+    login_sorotan: boolean;
+    sidebar_bawaan: 'lebar' | 'ringkas';
+}
+
 export interface SharedData {
     [key: string]: unknown;
     name: string;
     quote: { message: string; author: string };
     institusi: Institusi;
+    tampilan: Tampilan;
     auth: Auth;
     ziggy: {
         location: string;

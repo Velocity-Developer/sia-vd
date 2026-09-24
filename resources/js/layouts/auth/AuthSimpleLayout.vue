@@ -12,6 +12,8 @@ defineProps<{
 
 const page = usePage<SharedData>();
 const institusi = computed(() => page.props.institusi);
+// Judul, teks, gambar, dan daftar fitur panel merek diatur di Pengaturan Sistem → Tampilan.
+const tampilan = computed(() => page.props.tampilan);
 const tahun = new Date().getFullYear();
 
 // Ditulis di panel merek supaya pengguna tahu sistem ini untuk apa sebelum masuk.
@@ -25,7 +27,12 @@ const sorotan = [
 <template>
     <div class="min-h-svh bg-[#f6f5f4] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]">
         <!-- Panel merek hanya tampil di layar lebar; di HP identitas cukup lewat kepala kartu. -->
-        <aside class="relative hidden overflow-hidden bg-[#0075de] p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <aside
+            class="relative hidden overflow-hidden bg-[#0075de] bg-cover bg-center p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14"
+            :style="tampilan?.login_gambar_url ? { backgroundImage: `url(${tampilan.login_gambar_url})` } : undefined"
+        >
+            <!-- Lapisan warna di atas gambar latar agar teks putih tetap terbaca. -->
+            <div v-if="tampilan?.login_gambar_url" class="pointer-events-none absolute inset-0 bg-[#0075de]/80" aria-hidden="true" />
             <div class="pointer-events-none absolute -right-24 -top-24 size-[420px] rounded-full bg-white/10" aria-hidden="true" />
             <div class="pointer-events-none absolute -bottom-32 -left-20 size-[360px] rounded-full bg-black/10" aria-hidden="true" />
 
@@ -46,10 +53,12 @@ const sorotan = [
             </Link>
 
             <div class="relative max-w-[420px]">
-                <h2 class="text-[32px] font-bold leading-[1.15] tracking-[-0.8px]">Sistem Informasi Akademik</h2>
-                <p class="mt-3 text-[15px] leading-6 text-white/80">Satu akun untuk rencana studi, perkuliahan, nilai, dan administrasi Anda.</p>
+                <h2 class="text-[32px] font-bold leading-[1.15] tracking-[-0.8px]">{{ tampilan?.login_judul ?? 'Sistem Informasi Akademik' }}</h2>
+                <p class="mt-3 whitespace-pre-line text-[15px] leading-6 text-white/80">
+                    {{ tampilan?.login_teks ?? 'Satu akun untuk rencana studi, perkuliahan, nilai, dan administrasi Anda.' }}
+                </p>
 
-                <ul class="mt-8 space-y-4">
+                <ul v-if="tampilan?.login_sorotan ?? true" class="mt-8 space-y-4">
                     <li v-for="item in sorotan" :key="item.judul" class="flex gap-3">
                         <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15">
                             <component :is="item.icon" class="size-[18px]" />

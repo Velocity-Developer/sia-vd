@@ -22,7 +22,7 @@ class EmailController extends Controller
     {
         $pengaturan = PengaturanEmail::current();
 
-        return Inertia::render('settings/Email', [
+        return Inertia::render('PengaturanSistem/Email', [
             'pengaturan' => [
                 'mailer' => $pengaturan->mailer,
                 'host' => $pengaturan->host,

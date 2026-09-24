@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { usePermissions } from '@/composables/usePermissions';
 import { type NavEntry, type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
     BookMarked,
@@ -23,8 +23,8 @@ import {
     LayoutGrid,
     Library,
     Receipt,
+    Settings2,
     ShieldCheck,
-    SlidersHorizontal,
     UserCheck,
     UserCog,
     Users,
@@ -60,12 +60,6 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Program Studi', routeName: 'admin.program-studi.index', icon: BookOpen, permission: 'admin.program-studi' },
                     { title: 'Mata Kuliah', routeName: 'admin.mata-kuliah.index', icon: Library, permission: 'admin.mata-kuliah' },
                     { title: 'Ruang', routeName: 'admin.ruang.index', icon: DoorOpen, permission: 'admin.ruang' },
-                    {
-                        title: 'Pengaturan Akademik',
-                        routeName: 'admin.pengaturan-akademik.index',
-                        icon: SlidersHorizontal,
-                        permission: 'admin.pengaturan-akademik',
-                    },
                 ],
             },
             {
@@ -216,6 +210,14 @@ const visibleSections = computed(() =>
 );
 
 const footerNavItems: NavItem[] = [];
+
+// Pengaturan Sistem selalu di bawah sidebar (di luar daftar menu yang bisa di-scroll), tampil bila
+// pengguna boleh membuka minimal satu tab-nya.
+const page = usePage();
+const bisaPengaturanSistem = computed(() =>
+    ['admin.institusi', 'admin.pengaturan-email', 'admin.pengaturan-akademik', 'admin.pengaturan-tampilan'].some((izin) => can(izin)),
+);
+const pengaturanSistemAktif = computed(() => page.url.startsWith('/pengaturan-sistem'));
 </script>
 
 <template>
@@ -242,6 +244,16 @@ const footerNavItems: NavItem[] = [];
         </SidebarContent>
 
         <SidebarFooter class="border-t border-[#e6e6e6] bg-white">
+            <SidebarMenu v-if="bisaPengaturanSistem">
+                <SidebarMenuItem>
+                    <SidebarMenuButton as-child :is-active="pengaturanSistemAktif" tooltip="Pengaturan Sistem">
+                        <Link :href="route('pengaturan-sistem.index')">
+                            <Settings2 class="text-muted-foreground transition-colors group-data-[active=true]/menu-button:text-sidebar-primary" />
+                            <span>Pengaturan Sistem</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
             <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>

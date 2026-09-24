@@ -10,10 +10,10 @@ it('lets admin open the institution settings page', function () {
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
-        ->get(route('institusi.edit'))
+        ->get(route('pengaturan-sistem.institusi'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('settings/Institusi')
+            ->component('PengaturanSistem/Institusi')
             ->where('institusi.nama_pt', 'SIA VD')
         );
 });
@@ -21,7 +21,7 @@ it('lets admin open the institution settings page', function () {
 it('blocks non admins from the institution settings page', function (UserType $type) {
     $user = User::factory()->ofType($type)->create();
 
-    $this->actingAs($user)->get(route('institusi.edit'))->assertForbidden();
+    $this->actingAs($user)->get(route('pengaturan-sistem.institusi'))->assertForbidden();
     $this->actingAs($user)->put(route('institusi.update'), ['nama_pt' => 'Kampus Lain'])->assertForbidden();
 })->with([
     [UserType::Dosen],

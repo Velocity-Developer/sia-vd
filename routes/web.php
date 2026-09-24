@@ -4,7 +4,6 @@ use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JenisBiayaController;
 use App\Http\Controllers\Admin\MataKuliahController;
-use App\Http\Controllers\Admin\PengaturanAkademikController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
 use App\Http\Controllers\Admin\ProgramStudiController;
 use App\Http\Controllers\Admin\RoleController;
@@ -120,14 +119,6 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::resource('info-kuliah', InfoKuliahController::class)->except('show')->parameters(['info-kuliah' => 'infoKuliah'])->names('admin.info-kuliah');
     });
 
-    Route::middleware('can:admin.pengaturan-akademik')->group(function (): void {
-        Route::get('pengaturan-akademik', [PengaturanAkademikController::class, 'index'])->name('admin.pengaturan-akademik.index');
-        Route::put('pengaturan-akademik/batas-sks', [PengaturanAkademikController::class, 'updateBatasSks'])->name('admin.pengaturan-akademik.batas-sks');
-        Route::put('pengaturan-akademik/skala-nilai', [PengaturanAkademikController::class, 'updateSkalaNilai'])->name('admin.pengaturan-akademik.skala-nilai');
-        Route::put('pengaturan-akademik/kunci-krs', [PengaturanAkademikController::class, 'updateKunciKrs'])->name('admin.pengaturan-akademik.kunci-krs');
-        Route::put('pengaturan-akademik/presensi', [PengaturanAkademikController::class, 'updatePresensi'])->name('admin.pengaturan-akademik.presensi');
-    });
-
     Route::middleware('can:admin.jenis-biaya')->group(function (): void {
         Route::get('jenis-biaya', [JenisBiayaController::class, 'index'])->name('admin.jenis-biaya.index');
         Route::get('jenis-biaya/create', [JenisBiayaController::class, 'create'])->name('admin.jenis-biaya.create');
@@ -148,7 +139,6 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:admin.pindah-kelas')->group(function (): void {
         Route::get('pindah-kelas', [AdminPindahKelasController::class, 'index'])->name('admin.pindah-kelas.index');
-        Route::put('pindah-kelas/pengaturan', [AdminPindahKelasController::class, 'updateSetting'])->name('admin.pindah-kelas.pengaturan');
         Route::put('pindah-kelas/{pengajuan}/approve', [AdminPindahKelasController::class, 'approve'])->name('admin.pindah-kelas.approve');
         Route::put('pindah-kelas/{pengajuan}/reject', [AdminPindahKelasController::class, 'reject'])->name('admin.pindah-kelas.reject');
     });

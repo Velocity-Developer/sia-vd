@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { type SharedData } from '@/types';
+import { usePage } from '@inertiajs/vue3';
 import { onMounted, ref } from 'vue';
 
 interface Props {
@@ -8,10 +10,13 @@ interface Props {
 
 defineProps<Props>();
 
-const isOpen = ref(true);
+// Pilihan pengguna di browsernya menang; bila belum pernah memilih, pakai bawaan dari Pengaturan Sistem → Tampilan.
+const bawaanLebar = usePage<SharedData>().props.tampilan?.sidebar_bawaan !== 'ringkas';
+const isOpen = ref(bawaanLebar);
 
 onMounted(() => {
-    isOpen.value = localStorage.getItem('sidebar') !== 'false';
+    const tersimpan = localStorage.getItem('sidebar');
+    isOpen.value = tersimpan === null ? bawaanLebar : tersimpan !== 'false';
 });
 
 const handleSidebarChange = (open: boolean) => {

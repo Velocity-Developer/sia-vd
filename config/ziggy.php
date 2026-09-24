@@ -16,18 +16,18 @@ return [
     'groups' => [
         'umum' => [
             'home', 'login', 'logout', 'dashboard',
-            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'berkas.*',
+            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'berkas.*',
         ],
 
         'staf' => [
             'home', 'login', 'logout', 'dashboard',
-            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'berkas.*',
+            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'berkas.*',
             'admin.*', 'dosen.*', 'mahasiswa.*',
         ],
 
         'mahasiswa' => [
             'home', 'login', 'logout', 'dashboard',
-            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'berkas.*',
+            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'berkas.*',
             'mahasiswa.*',
         ],
     ],

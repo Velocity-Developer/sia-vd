@@ -68,24 +68,6 @@ class PindahKelasController extends Controller
         ]);
     }
 
-    public function updateSetting(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'is_active' => ['required', 'boolean'],
-        ], ['boolean' => ':attribute tidak valid.'], [
-            'is_active' => 'status form pindah kelas',
-        ]);
-
-        PengaturanPindahKelas::current()->update([
-            'is_active' => $data['is_active'],
-            'updated_by' => $request->user()->id,
-        ]);
-
-        return back()->with('success', $data['is_active']
-            ? 'Form pindah kelas berhasil dibuka.'
-            : 'Form pindah kelas berhasil ditutup.');
-    }
-
     /**
      * Setujui pengajuan lalu pindahkan mahasiswa dengan mengubah kelas_id pada baris KRS kelas asal.
      * Kapasitas kelas tujuan sengaja tidak divalidasi karena approve adalah keputusan manual admin.

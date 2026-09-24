@@ -8,15 +8,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 it('hanya bisa dibuka pengguna yang punya izin', function () {
-    $this->actingAs(User::factory()->mahasiswa()->create())->get('/settings/email')->assertForbidden();
+    $this->actingAs(User::factory()->mahasiswa()->create())->get('/pengaturan-sistem/email')->assertForbidden();
 
-    $this->actingAs(User::factory()->admin()->create())->get('/settings/email')->assertOk();
+    $this->actingAs(User::factory()->admin()->create())->get('/pengaturan-sistem/email')->assertOk();
 });
 
 it('menyimpan pengaturan smtp dan menyembunyikan kata sandinya', function () {
     $admin = User::factory()->admin()->create();
 
-    $this->actingAs($admin)->put('/settings/email', [
+    $this->actingAs($admin)->put('/pengaturan-sistem/email', [
         'mailer' => 'smtp',
         'host' => 'smtp.contoh.test',
         'port' => 587,
@@ -36,7 +36,7 @@ it('menyimpan pengaturan smtp dan menyembunyikan kata sandinya', function () {
         ->and(Crypt::decryptString(DB::table('pengaturan_email')->value('password')))->toBe('rahasia-smtp');
 
     // Halaman tidak pernah mengirim kata sandi ke browser.
-    $this->actingAs($admin)->get('/settings/email')
+    $this->actingAs($admin)->get('/pengaturan-sistem/email')
         ->assertInertia(fn ($page) => $page->where('pengaturan.password_tersimpan', true)->missing('pengaturan.password'));
 });
 
@@ -44,7 +44,7 @@ it('mempertahankan kata sandi lama bila kolomnya dikosongkan', function () {
     $admin = User::factory()->admin()->create();
     PengaturanEmail::current()->update(['mailer' => 'smtp', 'password' => 'sandi-lama']);
 
-    $this->actingAs($admin)->put('/settings/email', [
+    $this->actingAs($admin)->put('/pengaturan-sistem/email', [
         'mailer' => 'smtp',
         'host' => 'smtp.contoh.test',
         'port' => 587,
@@ -60,7 +60,7 @@ it('mempertahankan kata sandi lama bila kolomnya dikosongkan', function () {
 
 it('meminta host dan port saat metode smtp dipilih', function () {
     $this->actingAs(User::factory()->admin()->create())
-        ->put('/settings/email', ['mailer' => 'smtp'])
+        ->put('/pengaturan-sistem/email', ['mailer' => 'smtp'])
         ->assertSessionHasErrors(['host', 'port', 'encryption', 'from_address']);
 });
 
@@ -90,7 +90,7 @@ it('mengirim surel uji ke alamat yang diisi', function () {
     Mail::fake();
 
     $this->actingAs(User::factory()->admin()->create())
-        ->post('/settings/email/uji', ['email_tujuan' => 'tujuan@contoh.test'])
+        ->post('/pengaturan-sistem/email/uji', ['email_tujuan' => 'tujuan@contoh.test'])
         ->assertSessionHas('success');
 
     Mail::assertSent(Mailable::class, fn ($mail) => $mail->hasTo('tujuan@contoh.test'));
@@ -98,7 +98,7 @@ it('mengirim surel uji ke alamat yang diisi', function () {
 
 it('menolak email tujuan yang tidak valid', function () {
     $this->actingAs(User::factory()->admin()->create())
-        ->post('/settings/email/uji', ['email_tujuan' => 'bukan-email'])
+        ->post('/pengaturan-sistem/email/uji', ['email_tujuan' => 'bukan-email'])
         ->assertSessionHasErrors('email_tujuan');
 });
 
