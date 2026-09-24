@@ -7,11 +7,11 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     JENIS_PERTEMUAN,
-    STATUS_PERTEMUAN,
     STATUS_PRESENSI,
     formatJamDari,
     formatTanggal,
     jam,
+    statusTampil,
     type JenisPertemuan,
     type StatusPertemuan,
     type StatusPresensi,
@@ -22,6 +22,7 @@ import { CheckCheck, Play, QrCode, Square, TriangleAlert } from 'lucide-vue-next
 import { computed, onUnmounted, ref, watch } from 'vue';
 
 type Pertemuan = {
+    terlewat?: boolean;
     id: number;
     pertemuan_ke: number;
     tanggal: string;
@@ -68,6 +69,8 @@ const props = defineProps<{
     bisaKelola: boolean;
     bisaAturJadwal: boolean;
     bisaDimulai: boolean;
+    /** Detik menuju jam mulai menurut jam server; null bila sudah lewat atau pertemuan bukan terjadwal. */
+    detikSampaiMulai: number | null;
     mandiriTerbuka: boolean;
     durasiMandiri: number;
     terkunci: boolean;
@@ -192,10 +195,39 @@ const muatUlangPresensi = () => {
 const presensiTertutup = () => router.reload({ only: ['mandiriTerbuka', 'presensi'] });
 const judulLayar = computed(() => `${props.kelasKuliah.mata_kuliah?.nama_matkul ?? ''} · Pertemuan ${props.pertemuan.pertemuan_ke}`);
 
-const infoMulai = computed(
-    () =>
-        `Pertemuan bisa dimulai pada ${formatTanggal(props.pertemuan.tanggal)}, sejak 15 menit sebelum ${jam(props.pertemuan.jam_mulai)} sampai ${jam(props.pertemuan.jam_akhir)}.`,
+// Hitung mundur ke jam mulai (dari jam server). Saat tiba, halaman meminta ulang izin mulai ke server.
+const sisaDetik = ref(props.detikSampaiMulai);
+let detak: number | undefined;
+watch(
+    () => props.detikSampaiMulai,
+    (nilai) => {
+        sisaDetik.value = nilai;
+        window.clearInterval(detak);
+        if (nilai === null) return;
+        detak = window.setInterval(() => {
+            if (sisaDetik.value === null) return;
+            sisaDetik.value -= 1;
+            if (sisaDetik.value <= 0) {
+                window.clearInterval(detak);
+                router.reload({ only: ['bisaDimulai', 'detikSampaiMulai', 'pertemuan'] });
+            }
+        }, 1000);
+    },
+    { immediate: true },
 );
+onUnmounted(() => window.clearInterval(detak));
+const hitungMundur = computed(() => {
+    const total = Math.max(sisaDetik.value ?? 0, 0);
+    const jamSisa = Math.floor(total / 3600);
+    const menit = Math.floor((total % 3600) / 60);
+    const detik = total % 60;
+    return jamSisa > 24 ? null : [jamSisa, menit, detik].map((n) => String(n).padStart(2, '0')).join(':');
+});
+const infoMulai = computed(() => {
+    const waktu = `${formatTanggal(props.pertemuan.tanggal)} pukul ${jam(props.pertemuan.jam_mulai)}–${jam(props.pertemuan.jam_akhir)}`;
+    if (props.pertemuan.terlewat) return `Jam pertemuan (${waktu}) sudah lewat. Pertemuan yang terlewat hanya bisa dicatat admin sebagai susulan.`;
+    return `Pertemuan bisa dimulai ${waktu}, tidak bisa dibuka lebih awal dari jam mulai.`;
+});
 
 const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
 const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
@@ -223,8 +255,8 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             >
                                 {{ JENIS_PERTEMUAN[props.pertemuan.jenis] }}
                             </span>
-                            <span class="rounded-full px-2.5 py-0.5 text-sm font-medium" :class="STATUS_PERTEMUAN[status].kelas">
-                                {{ STATUS_PERTEMUAN[status].label }}
+                            <span class="rounded-full px-2.5 py-0.5 text-sm font-medium" :class="statusTampil(props.pertemuan).kelas">
+                                {{ statusTampil(props.pertemuan).label }}
                             </span>
                         </h1>
                         <p class="text-sm text-[#31302e]">
@@ -282,9 +314,15 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         <Button v-if="props.bisaDimulai" class="h-11 rounded-full bg-[#0075de] px-6 text-white hover:bg-[#005bab]" @click="mulai">
                             <Play class="mr-1 size-4" /> {{ isAdmin ? 'Buka pertemuan' : 'Mulai kuliah' }}
                         </Button>
-                        <p v-else-if="!props.terkunci && props.bisaKelola" class="text-sm text-[#615d59]">{{ infoMulai }}</p>
-                        <p v-if="isAdmin && props.bisaDimulai" class="text-xs text-[#a39e98]">
-                            Admin bisa membuka pertemuan di luar jadwal untuk mencatat presensi susulan; jam masuk dosen tidak tercatat.
+                        <div v-else-if="!props.terkunci && props.bisaKelola" class="text-sm text-[#615d59]">
+                            <p>{{ infoMulai }}</p>
+                            <p v-if="hitungMundur" class="mt-1 font-medium text-black">
+                                Tombol mulai muncul dalam <span class="font-mono">{{ hitungMundur }}</span>
+                            </p>
+                        </div>
+                        <p v-if="isAdmin && props.bisaDimulai && props.pertemuan.terlewat" class="text-xs text-[#a39e98]">
+                            Pertemuan ini terlewat. Admin bisa membukanya untuk mencatat presensi susulan secara manual (tanpa QR/PIN); jam masuk
+                            dosen tidak tercatat.
                         </p>
                     </div>
 

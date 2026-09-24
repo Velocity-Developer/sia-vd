@@ -13,6 +13,7 @@ type Baris = {
     rencana: number;
     terlaksana: number;
     dibatalkan: number;
+    terlewat: number;
     oleh_pengganti: number;
     terlambat: number;
     tanpa_jurnal: number;
@@ -50,6 +51,7 @@ const perDosen = computed(() => {
         kelas,
         rencana: kelas.reduce((n, b) => n + b.rencana, 0),
         terlaksana: kelas.reduce((n, b) => n + b.terlaksana, 0),
+        terlewat: kelas.reduce((n, b) => n + b.terlewat, 0),
         terlambat: kelas.reduce((n, b) => n + b.terlambat, 0),
         tanpa_jurnal: kelas.reduce((n, b) => n + b.tanpa_jurnal, 0),
     }));
@@ -114,6 +116,7 @@ const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
                                     <th :class="th">Dosen / Kelas</th>
                                     <th :class="[th, 'text-center']">Terlaksana</th>
                                     <th :class="[th, 'text-center']">Batal</th>
+                                    <th :class="[th, 'text-center']" title="Jadwalnya sudah lewat tetapi tidak pernah dimulai">Terlewat</th>
                                     <th :class="[th, 'text-center']">Oleh pengganti</th>
                                     <th :class="[th, 'text-center']">Masuk terlambat</th>
                                     <th :class="[th, 'text-center']">Tanpa jurnal</th>
@@ -127,6 +130,7 @@ const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
                                     </td>
                                     <td :class="[td, 'text-center font-medium']">{{ d.terlaksana }} / {{ d.rencana }}</td>
                                     <td :class="td" />
+                                    <td :class="[td, 'text-center font-medium', d.terlewat ? 'text-[#dd5b00]' : '']">{{ d.terlewat }}</td>
                                     <td :class="td" />
                                     <td :class="[td, 'text-center font-medium', d.terlambat ? 'text-[#dd5b00]' : '']">{{ d.terlambat }}</td>
                                     <td :class="[td, 'text-center font-medium', d.tanpa_jurnal ? 'text-[#dd5b00]' : '']">{{ d.tanpa_jurnal }}</td>
@@ -141,6 +145,7 @@ const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
                                     </td>
                                     <td :class="[td, 'text-center']">{{ b.terlaksana }} / {{ b.rencana }}</td>
                                     <td :class="[td, 'text-center']">{{ b.dibatalkan }}</td>
+                                    <td :class="[td, 'text-center', b.terlewat ? 'font-medium text-[#dd5b00]' : '']">{{ b.terlewat }}</td>
                                     <td :class="[td, 'text-center']">{{ b.oleh_pengganti }}</td>
                                     <td :class="[td, 'text-center']">{{ b.terlambat }}</td>
                                     <td :class="[td, 'text-center']">{{ b.tanpa_jurnal }}</td>
@@ -149,7 +154,7 @@ const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
                             </tbody>
                             <tbody v-if="!perDosen.length">
                                 <tr>
-                                    <td colspan="7" class="px-4 py-14 text-center text-sm text-[#615d59]">
+                                    <td colspan="8" class="px-4 py-14 text-center text-sm text-[#615d59]">
                                         Tidak ada kelas pada tahun akademik ini.
                                     </td>
                                 </tr>

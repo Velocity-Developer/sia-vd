@@ -33,9 +33,6 @@ class Pertemuan extends Model
 
     public const NAMA_HARI = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
 
-    /** Dosen boleh membuka pertemuan sekian menit sebelum jam mulai. */
-    public const BUKA_LEBIH_AWAL_MENIT = 15;
-
     /** Pertemuan yang lupa ditutup dianggap selesai sekian menit sesudah jam akhir. */
     public const TUTUP_OTOMATIS_MENIT = 60;
 
@@ -54,6 +51,8 @@ class Pertemuan extends Model
     ];
 
     protected $hidden = ['kode_rahasia'];
+
+    protected $appends = ['terlewat'];
 
     protected function casts(): array
     {
@@ -113,14 +112,35 @@ class Pertemuan extends Model
     }
 
     /**
-     * Rentang waktu dosen boleh menekan "Mulai Kuliah". Admin tidak terikat rentang ini.
+     * Pertemuan hanya bisa dibuka mulai jam yang tertera (tidak lebih awal), agar presensi mandiri tidak
+     * mencatat Hadir sebelum kuliah dimulai. Dosen: jam mulai s.d. jam akhir. Admin: kapan saja sesudah jam
+     * mulai (untuk mencatat susulan).
      */
     public function bisaDimulaiDosen(?Carbon $sekarang = null): bool
     {
         $sekarang ??= now();
 
-        return $this->status === self::DIJADWALKAN
-            && $sekarang->between($this->mulaiAt()->subMinutes(self::BUKA_LEBIH_AWAL_MENIT), $this->akhirAt());
+        return $this->status === self::DIJADWALKAN && $sekarang->between($this->mulaiAt(), $this->akhirAt());
+    }
+
+    public function bisaDimulaiAdmin(?Carbon $sekarang = null): bool
+    {
+        return $this->status === self::DIJADWALKAN && ($sekarang ?? now())->gte($this->mulaiAt());
+    }
+
+    /**
+     * Terlewat: jam akhirnya sudah lewat tetapi pertemuan tidak pernah dimulai (hanya admin yang bisa
+     * mencatatnya sebagai susulan). Bukan status tersimpan, dihitung saat ditampilkan.
+     */
+    public function terlewat(): bool
+    {
+        return $this->status === self::DIJADWALKAN && $this->akhirAt()->isPast();
+    }
+
+    protected function getTerlewatAttribute(): bool
+    {
+        // Model yang dimuat tanpa kolom tanggal/jam (select terbatas) tidak bisa dinilai.
+        return isset($this->attributes['tanggal'], $this->attributes['jam_akhir'], $this->attributes['status']) && $this->terlewat();
     }
 
     /**
@@ -145,7 +165,8 @@ class Pertemuan extends Model
 
     public function mandiriTerbuka(): bool
     {
-        return $this->status === self::BERLANGSUNG && $this->mandiri_sampai !== null && $this->mandiri_sampai->isFuture();
+        // Presensi mandiri berhenti paling lambat di jam akhir pertemuan.
+        return $this->status === self::BERLANGSUNG && $this->mandiri_sampai !== null && $this->mandiri_sampai->isFuture() && $this->akhirAt()->isFuture();
     }
 
     public static function periodeKode(?Carbon $waktu = null): int

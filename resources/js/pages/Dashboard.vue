@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { JENIS_PERTEMUAN, STATUS_PERTEMUAN, jam, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
+import { JENIS_PERTEMUAN, jam, statusTampil, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { TriangleAlert } from 'lucide-vue-next';
@@ -14,6 +14,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 type PertemuanHariIni = {
+    terlewat?: boolean;
     id: number;
     pertemuan_ke: number;
     jam_mulai: string;
@@ -86,9 +87,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     >
                         <div class="flex items-start justify-between gap-2">
                             <p class="font-medium text-black">{{ p.kelas_kuliah?.mata_kuliah?.nama_matkul }}</p>
-                            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs" :class="STATUS_PERTEMUAN[p.status].kelas">{{
-                                STATUS_PERTEMUAN[p.status].label
-                            }}</span>
+                            <span class="shrink-0 rounded-full px-2 py-0.5 text-xs" :class="statusTampil(p).kelas">{{ statusTampil(p).label }}</span>
                         </div>
                         <p class="text-xs text-[#a39e98]">
                             {{ p.kelas_kuliah?.kode_kelas }} · Pertemuan {{ p.pertemuan_ke
@@ -96,6 +95,9 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         </p>
                         <p class="mt-1 text-sm text-[#31302e]">
                             {{ jam(p.jam_mulai) }}–{{ jam(p.jam_akhir) }}<template v-if="p.ruang"> · {{ p.ruang.kode_ruang }}</template>
+                        </p>
+                        <p v-if="p.status === 'dijadwalkan' && !p.terlewat" class="mt-1 text-xs text-[#a39e98]">
+                            Bisa dimulai pukul {{ jam(p.jam_mulai) }}
                         </p>
                     </Link>
                 </div>

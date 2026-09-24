@@ -6,11 +6,11 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     JENIS_PERTEMUAN,
-    STATUS_PERTEMUAN,
     STATUS_PRESENSI,
     formatTanggal,
     infoStatusPresensi,
     jam,
+    statusTampil,
     type JenisPertemuan,
     type StatusPertemuan,
 } from '@/lib/presensi';
@@ -20,6 +20,7 @@ import { CalendarPlus, Download, Pencil, RefreshCw } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Pertemuan = {
+    terlewat?: boolean;
     id: number;
     pertemuan_ke: number;
     tanggal: string;
@@ -353,8 +354,8 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                     </td>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ item.ruang?.kode_ruang ?? '-' }}</td>
                                     <td class="px-4 py-3">
-                                        <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="STATUS_PERTEMUAN[item.status].kelas">
-                                            {{ STATUS_PERTEMUAN[item.status].label }}
+                                        <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="statusTampil(item).kelas">
+                                            {{ statusTampil(item).label }}
                                         </span>
                                         <span
                                             v-if="item.catatan"
@@ -542,7 +543,7 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                             v-for="item in props.pertemuan"
                                             :key="item.id"
                                             class="px-1.5 py-3 text-center text-xs font-semibold text-[#a39e98]"
-                                            :title="`${formatTanggal(item.tanggal)} — ${STATUS_PERTEMUAN[item.status].label}`"
+                                            :title="`${formatTanggal(item.tanggal)} — ${statusTampil(item).label}`"
                                         >
                                             {{ item.jenis === 'kuliah' ? item.pertemuan_ke : JENIS_PERTEMUAN[item.jenis] }}
                                         </th>

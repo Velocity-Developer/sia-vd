@@ -78,6 +78,10 @@ class PertemuanController extends Controller
             'bisaKelola' => $this->bolehKelolaPertemuan($pertemuan),
             'bisaAturJadwal' => $this->pengampu($kelas),
             'bisaDimulai' => $this->bolehKelolaPertemuan($pertemuan) && $this->bisaDimulai($pertemuan),
+            // Hitung mundur di layar memakai jam server, bukan jam perangkat.
+            'detikSampaiMulai' => $pertemuan->status === Pertemuan::DIJADWALKAN && now()->lt($pertemuan->mulaiAt())
+                ? (int) now()->diffInSeconds($pertemuan->mulaiAt(), true)
+                : null,
             'mandiriTerbuka' => $pertemuan->mandiriTerbuka(),
             'durasiMandiri' => PengaturanAkademik::current()->durasi_presensi_mandiri_menit,
             'terkunci' => $this->nilaiTerkunci($kelas),
@@ -214,9 +218,13 @@ class PertemuanController extends Controller
         if (! $dimulai) {
             $pertemuan->refresh();
 
-            return back()->with('error', $pertemuan->status === Pertemuan::DIJADWALKAN
-                ? 'Pertemuan hanya bisa dimulai pada tanggalnya, mulai '.Pertemuan::BUKA_LEBIH_AWAL_MENIT.' menit sebelum jam mulai sampai jam akhir.'
-                : 'Pertemuan ini sudah dimulai, selesai, atau dibatalkan.');
+            $mulai = $pertemuan->mulaiAt()->locale('id')->translatedFormat('l, d F Y \\p\\u\\k\\u\\l H.i');
+
+            return back()->with('error', match (true) {
+                $pertemuan->status !== Pertemuan::DIJADWALKAN => 'Pertemuan ini sudah dimulai, selesai, atau dibatalkan.',
+                now()->lt($pertemuan->mulaiAt()) => "Pertemuan belum bisa dibuka. Pertemuan bisa dimulai {$mulai}.",
+                default => 'Jam pertemuan sudah lewat. Pertemuan yang terlewat hanya bisa dicatat admin sebagai susulan.',
+            });
         }
 
         return back()->with('success', 'Pertemuan ke-'.$pertemuan->pertemuan_ke.' dimulai. Catat kehadiran mahasiswa di bawah.');
@@ -260,14 +268,20 @@ class PertemuanController extends Controller
             return back()->with('error', 'Presensi mandiri hanya bisa dibuka saat pertemuan berlangsung.');
         }
 
+        // Presensi mandiri hanya dalam jam pertemuan; pertemuan susulan diisi manual.
+        if ($pertemuan->akhirAt()->isPast()) {
+            return back()->with('error', 'Jam pertemuan sudah berakhir, jadi presensi mandiri tidak bisa dibuka. Isi presensi secara manual.');
+        }
+
         $menit = (int) ($data['menit'] ?? PengaturanAkademik::current()->durasi_presensi_mandiri_menit);
+        $sampai = now()->addMinutes($menit)->min($pertemuan->akhirAt());
 
         $pertemuan->update([
             'kode_rahasia' => $pertemuan->kode_rahasia ?? Str::random(40),
-            'mandiri_sampai' => now()->addMinutes($menit),
+            'mandiri_sampai' => $sampai,
         ]);
 
-        return back()->with('success', "Presensi mandiri dibuka {$menit} menit. Tampilkan QR atau PIN kepada mahasiswa.");
+        return back()->with('success', 'Presensi mandiri dibuka sampai pukul '.$sampai->format('H.i').'. Tampilkan QR atau PIN kepada mahasiswa.');
     }
 
     public function tutupMandiri(Pertemuan $pertemuan): RedirectResponse
@@ -376,9 +390,7 @@ class PertemuanController extends Controller
             return false;
         }
 
-        return $this->peran() === 'admin'
-            ? $pertemuan->status === Pertemuan::DIJADWALKAN
-            : $pertemuan->bisaDimulaiDosen();
+        return $this->peran() === 'admin' ? $pertemuan->bisaDimulaiAdmin() : $pertemuan->bisaDimulaiDosen();
     }
 
     /**

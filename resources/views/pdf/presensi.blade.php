@@ -132,7 +132,7 @@
                     <td>{{ $p->dosen?->user?->name ?? $kelas->dosen?->user?->name }}</td>
                     <td class="center">{{ $p->dosen_masuk_at?->format('H:i') ?? '-' }}–{{ $p->dosen_keluar_at?->format('H:i') ?? '-' }}</td>
                     <td class="center">{{ $p->jumlah_tercatat ? $p->jumlah_hadir.'/'.$p->jumlah_tercatat : '-' }}</td>
-                    <td>{{ ucfirst($p->status) }}</td>
+                    <td>{{ $p->terlewat() ? 'Terlewat' : ucfirst($p->status) }}</td>
                 </tr>
             @endforeach
         </tbody>

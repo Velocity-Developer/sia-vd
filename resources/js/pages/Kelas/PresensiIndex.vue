@@ -3,7 +3,7 @@ import FilterKonten, { type NilaiFilter, type Opsi } from '@/components/FilterKo
 import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { JENIS_PERTEMUAN, STATUS_PERTEMUAN, jam, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
+import { JENIS_PERTEMUAN, jam, statusTampil, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -21,6 +21,7 @@ type Kelas = {
     tahun_akademik?: { tahun: string; semester: string } | null;
 };
 type PertemuanHariIni = {
+    terlewat?: boolean;
     id: number;
     pertemuan_ke: number;
     jam_mulai: string;
@@ -116,13 +117,16 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                         <template v-if="item.jenis !== 'kuliah'"> · {{ JENIS_PERTEMUAN[item.jenis] }}</template>
                                     </p>
                                 </div>
-                                <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium" :class="STATUS_PERTEMUAN[item.status].kelas">
-                                    {{ STATUS_PERTEMUAN[item.status].label }}
+                                <span class="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium" :class="statusTampil(item).kelas">
+                                    {{ statusTampil(item).label }}
                                 </span>
                             </div>
                             <p class="mt-2 text-sm text-[#31302e]">
                                 {{ jam(item.jam_mulai) }}–{{ jam(item.jam_akhir)
                                 }}<template v-if="item.ruang"> · {{ item.ruang.kode_ruang }}</template>
+                            </p>
+                            <p v-if="item.status === 'dijadwalkan' && !item.terlewat" class="mt-1 text-xs text-[#a39e98]">
+                                Bisa dimulai pukul {{ jam(item.jam_mulai) }}
                             </p>
                         </Link>
                     </div>

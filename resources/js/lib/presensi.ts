@@ -19,6 +19,13 @@ export const STATUS_PERTEMUAN: Record<StatusPertemuan, { label: string; kelas: s
     dibatalkan: { label: 'Dibatalkan', kelas: 'bg-[#fdecea] text-[#b42318]' },
 };
 
+/**
+ * Status yang ditampilkan: pertemuan terjadwal yang jam akhirnya sudah lewat tanpa pernah dimulai tampil
+ * sebagai "Terlewat" (dihitung server, lihat Pertemuan::terlewat).
+ */
+export const statusTampil = (pertemuan: { status: StatusPertemuan; terlewat?: boolean }): { label: string; kelas: string } =>
+    pertemuan.terlewat ? { label: 'Terlewat', kelas: 'bg-[#fff6e0] text-[#8a5a00]' } : STATUS_PERTEMUAN[pertemuan.status];
+
 export const JENIS_PERTEMUAN: Record<JenisPertemuan, string> = { kuliah: 'Kuliah', uts: 'UTS', uas: 'UAS' };
 
 const BULAN = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];

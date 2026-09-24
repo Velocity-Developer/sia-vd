@@ -5,6 +5,7 @@ use App\Models\Jadwal;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\PengajuanIzin;
+use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
@@ -109,12 +110,19 @@ it('lets the lecturer start a meeting only around its scheduled time', function 
     $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.mulai', $pertemuan))->assertSessionHas('error');
     expect($pertemuan->fresh()->status)->toBe(Pertemuan::DIJADWALKAN);
 
-    $this->travelTo('2025-08-04 07:50:00');
+    // Tidak bisa dibuka lebih awal dari jam mulai, walau hanya 1 menit.
+    $this->travelTo('2025-08-04 07:59:00');
+    $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.mulai', $pertemuan))
+        ->assertSessionHas('error', 'Pertemuan belum bisa dibuka. Pertemuan bisa dimulai Senin, 04 Agustus 2025 pukul 08.00.');
+    $this->actingAs($dosen)->get(route('dosen.presensi.pertemuan.show', $pertemuan))
+        ->assertInertia(fn ($page) => $page->where('bisaDimulai', false)->where('detikSampaiMulai', 60));
+
+    $this->travelTo('2025-08-04 08:00:00');
     $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.mulai', $pertemuan))->assertSessionHas('success');
 
     $pertemuan->refresh();
     expect($pertemuan->status)->toBe(Pertemuan::BERLANGSUNG)
-        ->and($pertemuan->dosen_masuk_at->format('H:i'))->toBe('07:50')
+        ->and($pertemuan->dosen_masuk_at->format('H:i'))->toBe('08:00')
         ->and($pertemuan->presensiMahasiswas()->count())->toBe(3)
         ->and($pertemuan->presensiMahasiswas()->where('status', PresensiMahasiswa::ALPA)->count())->toBe(3);
 });
@@ -890,4 +898,102 @@ it('keeps the previous attachment when a rejected request is resubmitted without
 
     expect($pengajuan->fresh()->lampiran)->toBe([$berkas]);
     Storage::disk('local')->assertExists($berkas);
+});
+
+// ---- Aturan jam buka, batas presensi mandiri, status terlewat, riwayat pindah kelas ----
+
+it('does not let admin open a meeting before its start time but allows a make-up afterwards', function () {
+    [$kelas] = kelasPresensi(1);
+    Pertemuan::generateUntuk($kelas);
+    $admin = User::factory()->admin()->create();
+
+    $this->travelTo('2025-08-04 07:00:00');
+    $this->actingAs($admin)->post(route('admin.presensi.pertemuan.mulai', pertemuanKe($kelas, 1)))->assertSessionHas('error');
+    expect(pertemuanKe($kelas, 1)->status)->toBe(Pertemuan::DIJADWALKAN);
+
+    // Sesudah jam akhir: dosen tidak bisa lagi, admin masih bisa mencatat susulan (tanpa presensi mandiri).
+    $this->travelTo('2025-08-04 13:00:00');
+    $this->actingAs($admin)->get(route('admin.presensi.pertemuan.show', pertemuanKe($kelas, 1)))
+        ->assertInertia(fn ($page) => $page->where('pertemuan.terlewat', true)->where('bisaDimulai', true));
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($kelas->dosen->user)->post(route('dosen.presensi.pertemuan.mulai', pertemuanKe($kelas, 1)))
+        ->assertSessionHas('error', 'Jam pertemuan sudah lewat. Pertemuan yang terlewat hanya bisa dicatat admin sebagai susulan.');
+
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($admin)->post(route('admin.presensi.pertemuan.mulai', pertemuanKe($kelas, 1)))->assertSessionHas('success');
+    $this->actingAs($admin)->post(route('admin.presensi.pertemuan.mandiri.buka', pertemuanKe($kelas, 1)))->assertSessionHas('error');
+    expect(pertemuanKe($kelas, 1)->status)->toBe(Pertemuan::BERLANGSUNG)
+        ->and(pertemuanKe($kelas, 1)->mandiri_sampai)->toBeNull();
+});
+
+it('stops self check-in at the end of the meeting', function () {
+    [$kelas, $mahasiswa] = kelasPresensi(1);
+    Pertemuan::generateUntuk($kelas);
+    $pertemuan = pertemuanKe($kelas, 1);
+    $dosen = $kelas->dosen->user;
+
+    $this->travelTo('2025-08-04 09:50:00');
+    $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.mulai', $pertemuan));
+    $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.mandiri.buka', $pertemuan), ['menit' => 30])
+        ->assertSessionHas('success', 'Presensi mandiri dibuka sampai pukul 10.00. Tampilkan QR atau PIN kepada mahasiswa.');
+    expect($pertemuan->fresh()->mandiri_sampai->format('H:i'))->toBe('10:00');
+
+    $this->travelTo('2025-08-04 10:01:00');
+    $kode = $pertemuan->fresh()->kodeUntuk(Pertemuan::periodeKode())['pin'];
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.presensi.check-in'), ['pertemuan_id' => $pertemuan->id, 'kode' => $kode])
+        ->assertSessionHasErrors('kode');
+});
+
+it('shows missed meetings as terlewat and counts them in the lecturer report', function () {
+    [$kelas] = kelasPresensi(0);
+    Pertemuan::generateUntuk($kelas);
+    $this->travelTo('2025-08-19 12:00:00'); // pertemuan 1–3 (4, 11, 18 Agustus) sudah lewat
+    selesaikanPertemuan($kelas, 1, []);
+    pertemuanKe($kelas, 2)->update(['status' => Pertemuan::DIBATALKAN]);
+
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($kelas->dosen->user)->get(route('dosen.presensi.kelas', $kelas))
+        ->assertInertia(fn ($page) => $page
+            ->where('pertemuan.0.terlewat', false)
+            ->where('pertemuan.1.terlewat', false)
+            ->where('pertemuan.2.terlewat', true)
+            ->where('pertemuan.3.terlewat', false));
+
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs(User::factory()->admin()->create())->get(route('admin.presensi.laporan-dosen', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
+        ->assertInertia(fn ($page) => $page->where('baris.0.terlewat', 1));
+});
+
+it('moves attendance history along when a class transfer is approved', function () {
+    [$asal, $mahasiswa] = kelasPresensi(1);
+    $tujuan = createMateriKelasKuliah($asal->tahunAkademik);
+    $tujuan->update(['matkul_id' => $asal->matkul_id]);
+    Jadwal::create(['kelas_id' => $tujuan->id, 'hari' => 'Selasa', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => Ruang::first()->id]);
+    Pertemuan::generateUntuk($asal);
+    Pertemuan::generateUntuk($tujuan->fresh());
+    $id = $mahasiswa[0]->mahasiswaProfile->id;
+
+    selesaikanPertemuan($asal, 1, [$id => 'hadir']);
+    selesaikanPertemuan($asal, 2, [$id => 'alpa']);
+    selesaikanPertemuan($tujuan, 1, []);
+    selesaikanPertemuan($tujuan, 2, []);
+    DispensasiUjian::create(['kelas_id' => $asal->id, 'mahasiswa_id' => $id, 'jenis' => 'uts', 'alasan' => 'Sakit']);
+    $pengajuan = PengajuanPindahKelas::create(['mahasiswa_id' => $id, 'kelas_asal_id' => $asal->id, 'kelas_tujuan_id' => $tujuan->id, 'alasan' => 'Jadwal kerja', 'status' => PengajuanPindahKelas::STATUS_PENDING]);
+
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs(User::factory()->admin()->create())->put(route('admin.pindah-kelas.approve', $pengajuan), ['force' => true])
+        ->assertSessionHas('success', 'Pengajuan pindah kelas disetujui dan mahasiswa dipindahkan ke kelas tujuan. 2 riwayat presensi ikut dipindahkan.');
+
+    $rekap = PresensiMahasiswa::rekapKelas($tujuan->id);
+    expect($rekap[$id]['dihitung'])->toBe(2)
+        ->and($rekap[$id]['persen'])->toBe(50.0)
+        ->and(PresensiMahasiswa::rekapKelas($asal->id)->has($id))->toBeFalse()
+        ->and(DispensasiUjian::where('mahasiswa_id', $id)->value('kelas_id'))->toBe($tujuan->id);
 });

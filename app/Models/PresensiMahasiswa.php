@@ -57,6 +57,52 @@ class PresensiMahasiswa extends Model
     }
 
     /**
+     * Pindahkan riwayat presensi, pengajuan izin, dan dispensasi ujian seorang mahasiswa dari kelas asal ke
+     * kelas tujuan (dipakai saat pindah kelas disetujui). Presensi pertemuan ke-N di kelas asal pindah ke
+     * pertemuan ke-N di kelas tujuan; yang tidak punya pasangan (belum dibuat/dibatalkan, atau sudah terisi)
+     * tetap di kelas asal.
+     *
+     * @return array{dipindah: int, tertinggal: int}
+     */
+    public static function pindahkanRiwayat(int $mahasiswaId, int $kelasAsalId, int $kelasTujuanId): array
+    {
+        $tujuan = Pertemuan::query()
+            ->where('kelas_id', $kelasTujuanId)
+            ->where('status', '!=', Pertemuan::DIBATALKAN)
+            ->pluck('id', 'pertemuan_ke');
+        $nomorAsal = Pertemuan::query()->where('kelas_id', $kelasAsalId)->pluck('pertemuan_ke', 'id');
+        $hasil = ['dipindah' => 0, 'tertinggal' => 0];
+
+        foreach ([self::class, PengajuanIzin::class] as $model) {
+            $sudahAda = $model::query()->where('mahasiswa_id', $mahasiswaId)->whereIn('pertemuan_id', $tujuan->values())->pluck('pertemuan_id')->flip();
+
+            foreach ($model::query()->where('mahasiswa_id', $mahasiswaId)->whereIn('pertemuan_id', $nomorAsal->keys())->get() as $baris) {
+                $target = $tujuan[$nomorAsal[$baris->pertemuan_id]] ?? null;
+
+                $pindah = $target !== null && ! $sudahAda->has($target);
+
+                if ($pindah) {
+                    $baris->update(['pertemuan_id' => $target]);
+                }
+
+                // Hitungan untuk pesan admin hanya dari baris presensi, bukan pengajuan izin.
+                if ($model === self::class) {
+                    $hasil[$pindah ? 'dipindah' : 'tertinggal']++;
+                }
+            }
+        }
+
+        $dispensasiTujuan = DispensasiUjian::query()->where('kelas_id', $kelasTujuanId)->where('mahasiswa_id', $mahasiswaId)->pluck('jenis');
+        DispensasiUjian::query()
+            ->where('kelas_id', $kelasAsalId)
+            ->where('mahasiswa_id', $mahasiswaId)
+            ->whereNotIn('jenis', $dispensasiTujuan)
+            ->update(['kelas_id' => $kelasTujuanId]);
+
+        return $hasil;
+    }
+
+    /**
      * Rekap kehadiran per mahasiswa di satu kelas, hanya dari pertemuan yang dihitung. Pembaginya adalah
      * pertemuan yang ia ikuti sejak terdaftar (punya baris presensi), bukan seluruh pertemuan kelas.
      *

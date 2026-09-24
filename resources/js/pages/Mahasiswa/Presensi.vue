@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
-    JENIS_PERTEMUAN,
-    STATUS_PERTEMUAN,
     formatJamDari,
     formatTanggal,
     infoStatusPresensi,
     jam,
+    JENIS_PERTEMUAN,
+    statusTampil,
     type JenisPertemuan,
     type StatusPertemuan,
 } from '@/lib/presensi';
@@ -20,6 +20,7 @@ import { computed, reactive, ref } from 'vue';
 
 type Rekap = { hadir: number; terlambat: number; izin: number; sakit: number; alpa: number; dihitung: number; persen: number | null };
 type PertemuanSaya = {
+    terlewat?: boolean;
     id: number;
     pertemuan_ke: number;
     tanggal: string;
@@ -320,9 +321,7 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                                     :title="p.presensi.waktu_presensi ? `Pukul ${formatJamDari(p.presensi.waktu_presensi)}` : undefined"
                                     >{{ infoStatusPresensi(p.presensi.status)?.label }}</span
                                 >
-                                <span v-else class="rounded px-2 py-0.5 text-xs" :class="STATUS_PERTEMUAN[p.status].kelas">{{
-                                    STATUS_PERTEMUAN[p.status].label
-                                }}</span>
+                                <span v-else class="rounded px-2 py-0.5 text-xs" :class="statusTampil(p).kelas">{{ statusTampil(p).label }}</span>
                             </li>
                             <li v-if="!k.pertemuan.length" class="px-4 py-6 text-center text-sm text-[#615d59]">Pertemuan belum dijadwalkan.</li>
                         </ul>

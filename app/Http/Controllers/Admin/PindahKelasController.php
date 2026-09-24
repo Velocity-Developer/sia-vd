@@ -7,6 +7,7 @@ use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanPindahKelas;
+use App\Models\PresensiMahasiswa;
 use App\Models\TahunAkademik;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -111,7 +112,8 @@ class PindahKelasController extends Controller
         }
 
         // Kunci pengajuan agar tidak disetujui dua kali. Kapasitas kelas tujuan sengaja tidak dicek (admin boleh melebihi).
-        $error = DB::transaction(function () use ($request, $pengajuan, $krs): ?string {
+        $riwayat = ['dipindah' => 0, 'tertinggal' => 0];
+        $error = DB::transaction(function () use ($request, $pengajuan, $krs, &$riwayat): ?string {
             $terkunci = PengajuanPindahKelas::query()->whereKey($pengajuan->id)->lockForUpdate()->first();
 
             if ($terkunci?->status !== PengajuanPindahKelas::STATUS_PENDING) {
@@ -119,6 +121,8 @@ class PindahKelasController extends Controller
             }
 
             $krs->update(['kelas_id' => $pengajuan->kelas_tujuan_id]);
+            // Riwayat presensi ikut pindah agar persentase kehadiran (dan syarat ujian) tidak mulai dari nol.
+            $riwayat = PresensiMahasiswa::pindahkanRiwayat($pengajuan->mahasiswa_id, $pengajuan->kelas_asal_id, $pengajuan->kelas_tujuan_id);
 
             $pengajuan->update([
                 'status' => PengajuanPindahKelas::STATUS_DISETUJUI,
@@ -133,7 +137,9 @@ class PindahKelasController extends Controller
             return back()->with('error', $error);
         }
 
-        return back()->with('success', 'Pengajuan pindah kelas disetujui dan mahasiswa dipindahkan ke kelas tujuan.');
+        return back()->with('success', 'Pengajuan pindah kelas disetujui dan mahasiswa dipindahkan ke kelas tujuan.'
+            .($riwayat['dipindah'] > 0 ? " {$riwayat['dipindah']} riwayat presensi ikut dipindahkan." : '')
+            .($riwayat['tertinggal'] > 0 ? " {$riwayat['tertinggal']} presensi tetap di kelas asal karena pertemuan dengan nomor yang sama di kelas tujuan belum ada atau dibatalkan." : ''));
     }
 
     public function reject(Request $request, PengajuanPindahKelas $pengajuan): RedirectResponse

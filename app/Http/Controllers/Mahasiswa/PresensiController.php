@@ -107,6 +107,7 @@ class PresensiController extends Controller
                         'jam_akhir' => $p->jam_akhir,
                         'jenis' => $p->jenis,
                         'status' => $p->status,
+                        'terlewat' => $p->terlewat(),
                         'topik' => $p->topik,
                         'presensi' => $p->presensiMahasiswas->first()?->toArray(),
                         'pengajuan' => $pengajuan->get($p->id)?->only(['jenis', 'alasan', 'status', 'catatan_dosen']),

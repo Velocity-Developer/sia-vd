@@ -282,6 +282,7 @@ class PresensiController extends Controller
                 'rencana' => $item->jumlah_pertemuan,
                 'terlaksana' => $selesai->count(),
                 'dibatalkan' => $pertemuan->where('status', Pertemuan::DIBATALKAN)->count(),
+                'terlewat' => $pertemuan->filter(fn (Pertemuan $p): bool => $p->terlewat())->count(),
                 'oleh_pengganti' => $selesai->filter(fn (Pertemuan $p): bool => $p->dosen_id !== null && $p->dosen_id !== $item->dosen_id)->count(),
                 'terlambat' => $selesai->filter(fn (Pertemuan $p): bool => $p->dosen_masuk_at !== null && $p->dosen_masuk_at->gt($p->mulaiAt()->addMinutes($toleransi)))->count(),
                 'tanpa_jurnal' => $selesai->filter(fn (Pertemuan $p): bool => blank($p->topik))->count(),
@@ -295,9 +296,9 @@ class PresensiController extends Controller
             return response()->streamDownload(function () use ($baris): void {
                 $keluar = fopen('php://output', 'w');
                 fwrite($keluar, "\xEF\xBB\xBF");
-                fputcsv($keluar, ['Dosen', 'NIDN', 'Kelas', 'Mata Kuliah', 'Rencana', 'Terlaksana', 'Dibatalkan', 'Oleh Pengganti', 'Masuk Terlambat', 'Tanpa Jurnal', 'Rata-rata Hadir Mahasiswa (%)']);
+                fputcsv($keluar, ['Dosen', 'NIDN', 'Kelas', 'Mata Kuliah', 'Rencana', 'Terlaksana', 'Dibatalkan', 'Terlewat', 'Oleh Pengganti', 'Masuk Terlambat', 'Tanpa Jurnal', 'Rata-rata Hadir Mahasiswa (%)']);
                 foreach ($baris as $b) {
-                    fputcsv($keluar, [$b['dosen'], $b['nidn'], $b['kode_kelas'], $b['mata_kuliah'], $b['rencana'], $b['terlaksana'], $b['dibatalkan'], $b['oleh_pengganti'], $b['terlambat'], $b['tanpa_jurnal'], $b['rata_kehadiran'] ?? '']);
+                    fputcsv($keluar, [$b['dosen'], $b['nidn'], $b['kode_kelas'], $b['mata_kuliah'], $b['rencana'], $b['terlaksana'], $b['dibatalkan'], $b['terlewat'], $b['oleh_pengganti'], $b['terlambat'], $b['tanpa_jurnal'], $b['rata_kehadiran'] ?? '']);
                 }
                 fclose($keluar);
             }, 'laporan-kehadiran-dosen-'.Str::slug(($tahun?->tahun ?? '').'-'.($tahun?->semester ?? '')).'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);

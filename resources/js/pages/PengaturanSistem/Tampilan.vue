@@ -233,7 +233,11 @@ const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
                     >
                         <div v-if="pratinjauGambar" class="absolute inset-0 bg-[#0075de]/80" aria-hidden="true" />
                         <div class="relative flex w-full flex-col items-center text-center">
-                            <img :src="page.props.institusi?.logo_url ?? faviconTampil" alt="" class="size-8 rounded-lg bg-white object-contain p-1 shadow-sm" />
+                            <img
+                                :src="page.props.institusi?.logo_url ?? faviconTampil"
+                                alt=""
+                                class="size-8 rounded-lg bg-white object-contain p-1 shadow-sm"
+                            />
                             <p class="mt-2 text-xs font-semibold" :class="pratinjauGambar ? 'text-white' : 'text-black'">
                                 {{ page.props.institusi?.nama_pt }}
                             </p>
