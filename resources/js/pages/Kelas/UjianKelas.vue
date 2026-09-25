@@ -21,6 +21,7 @@ type Peserta = {
         mulai_at: string | null;
         selesai_at: string | null;
         skor: string | null;
+        nilai: number | null;
         auto_closed: boolean;
         essay_belum_dinilai: boolean;
     } | null;
@@ -65,6 +66,8 @@ const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const rute = rutePeran(props.peran);
 const berkasMode = computed(() => props.ujian.mode === 'online_berkas');
 const soalMode = computed(() => props.ujian.mode === 'online_soal');
+const tatapMuka = computed(() => props.ujian.mode === 'tatap_muka');
+const dinilai = computed(() => props.peserta.filter((p) => p.jawaban?.nilai != null).length);
 const terkumpul = computed(() => props.peserta.filter((p) => (soalMode.value ? p.pengerjaan?.selesai_at : p.jawaban)).length);
 const buatLembarSoal = () => router.post(rute('ujian.lembar-soal', props.ujian.id));
 
@@ -84,20 +87,16 @@ const unggahSoal = () =>
 const hapusSoal = (index: number) => router.delete(rute('ujian.soal.hapus', [props.ujian.id, index]), { preserveScroll: true });
 const errorSoal = computed(() => Object.entries(soalForm.errors).find(([k]) => k.startsWith('soal'))?.[1]);
 
-// Nilai per jawaban.
+// Nilai per mahasiswa (tatap muka & unggah berkas).
 const nilai = reactive<Record<number, { nilai: string; catatan: string }>>(
-    Object.fromEntries(
-        props.peserta
-            .filter((p) => p.jawaban)
-            .map((p) => [p.jawaban!.id, { nilai: p.jawaban!.nilai ?? '', catatan: p.jawaban!.catatan_dosen ?? '' }]),
-    ),
+    Object.fromEntries(props.peserta.map((p) => [p.mahasiswa_id, { nilai: p.jawaban?.nilai ?? '', catatan: p.jawaban?.catatan_dosen ?? '' }])),
 );
 const menyimpan = ref<number | null>(null);
-const simpanNilai = (jawabanId: number) => {
-    menyimpan.value = jawabanId;
+const simpanNilai = (mahasiswaId: number) => {
+    menyimpan.value = mahasiswaId;
     router.put(
-        rute('ujian.jawaban.nilai', [props.ujian.id, jawabanId]),
-        { nilai: nilai[jawabanId].nilai === '' ? null : nilai[jawabanId].nilai, catatan_dosen: nilai[jawabanId].catatan || null },
+        rute('ujian.nilai', [props.ujian.id, mahasiswaId]),
+        { nilai: nilai[mahasiswaId].nilai === '' ? null : nilai[mahasiswaId].nilai, catatan_dosen: nilai[mahasiswaId].catatan || null },
         { preserveScroll: true, onFinish: () => (menyimpan.value = null) },
     );
 };
@@ -198,12 +197,13 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                 </section>
 
                 <!-- Pengumpulan & nilai -->
-                <section v-if="berkasMode" :class="kartu">
+                <section v-if="berkasMode || tatapMuka" :class="kartu">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="text-lg font-semibold text-black">Jawaban mahasiswa</h2>
+                            <h2 class="text-lg font-semibold text-black">{{ tatapMuka ? 'Nilai ujian' : 'Jawaban mahasiswa' }}</h2>
                             <p class="mt-1 text-sm text-[#615d59]">
-                                {{ terkumpul }} dari {{ props.peserta.length }} mahasiswa mengumpulkan.
+                                <template v-if="tatapMuka">{{ dinilai }} dari {{ props.peserta.length }} mahasiswa sudah dinilai.</template>
+                                <template v-else>{{ terkumpul }} dari {{ props.peserta.length }} mahasiswa mengumpulkan.</template>
                                 <template v-if="!props.sudahSelesai">Nilai diisi setelah ujian selesai.</template>
                             </p>
                         </div>
@@ -223,7 +223,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                     <tr>
                                         <th :class="th">Mahasiswa</th>
                                         <th v-if="props.syaratAktif" :class="th">Syarat</th>
-                                        <th :class="th">Jawaban</th>
+                                        <th v-if="berkasMode" :class="th">Jawaban</th>
                                         <th :class="th">Nilai (0–100)</th>
                                     </tr>
                                 </thead>
@@ -240,7 +240,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                         >
                                             {{ labelSyarat(p.syarat) }}
                                         </td>
-                                        <td class="px-4 py-2.5">
+                                        <td v-if="berkasMode" class="px-4 py-2.5">
                                             <template v-if="p.jawaban">
                                                 <a
                                                     v-for="(nama, i) in p.jawaban.nama_berkas"
@@ -257,12 +257,12 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                         </td>
                                         <td class="px-4 py-2.5">
                                             <form
-                                                v-if="p.jawaban && props.sudahSelesai && !props.terkunci"
+                                                v-if="(tatapMuka || p.jawaban) && props.sudahSelesai && !props.terkunci"
                                                 class="flex flex-wrap items-center gap-2"
-                                                @submit.prevent="simpanNilai(p.jawaban.id)"
+                                                @submit.prevent="simpanNilai(p.mahasiswa_id)"
                                             >
                                                 <Input
-                                                    v-model="nilai[p.jawaban.id].nilai"
+                                                    v-model="nilai[p.mahasiswa_id].nilai"
                                                     type="number"
                                                     min="0"
                                                     max="100"
@@ -271,12 +271,12 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                                     :aria-label="`Nilai ${p.nama}`"
                                                 />
                                                 <Input
-                                                    v-model="nilai[p.jawaban.id].catatan"
+                                                    v-model="nilai[p.mahasiswa_id].catatan"
                                                     maxlength="1000"
                                                     placeholder="Catatan (opsional)"
                                                     class="h-9 w-48"
                                                 />
-                                                <Button type="submit" size="sm" variant="outline" :disabled="menyimpan === p.jawaban.id"
+                                                <Button type="submit" size="sm" variant="outline" :disabled="menyimpan === p.mahasiswa_id"
                                                     >Simpan</Button
                                                 >
                                             </form>
@@ -342,7 +342,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                             <th :class="th">Mahasiswa</th>
                                             <th v-if="props.syaratAktif" :class="th">Syarat</th>
                                             <th :class="th">Status</th>
-                                            <th :class="th">Skor</th>
+                                            <th :class="th">Nilai (0–100)</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-[#e6e6e6]">
@@ -372,7 +372,10 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                             </td>
                                             <td class="px-4 py-2.5">
                                                 <template v-if="p.pengerjaan?.selesai_at && props.lembarSoal">
-                                                    {{ p.pengerjaan.skor ?? '-' }} / {{ props.lembarSoal.total_poin }}
+                                                    <span class="font-medium text-black">{{ p.pengerjaan.nilai ?? '-' }}</span>
+                                                    <span class="ml-1 text-xs text-[#a39e98]"
+                                                        >({{ p.pengerjaan.skor ?? '-' }} / {{ props.lembarSoal.total_poin }} poin)</span
+                                                    >
                                                     <Link
                                                         :href="
                                                             rute('kelas-kuliah.quiz.attempts.show', [

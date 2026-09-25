@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kelas;
 use App\AllowedUpload;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
+use App\Models\MahasiswaProfile;
 use App\Models\Quiz;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
@@ -41,13 +42,14 @@ class UjianKelasController extends Controller
             ->withExists(['answers as essay_belum_dinilai' => fn ($a) => $a->whereNull('point')->whereHas('question', fn ($q) => $q->where('question_type', 'essay'))])
             ->get()
             ->keyBy('mahasiswa_id');
+        $totalPoin = (int) $quiz?->questions_sum_points;
 
         $peserta = $kelas->krs()
             ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name'])
             ->get(['id', 'kelas_id', 'mahasiswa_id'])
             ->sortBy(fn ($krs) => $krs->mahasiswa?->nim)
             ->values()
-            ->map(function ($krs) use ($jawaban, $syarat, $ujian, $attempt): array {
+            ->map(function ($krs) use ($jawaban, $syarat, $ujian, $attempt, $totalPoin): array {
                 $j = $jawaban->get($krs->mahasiswa_id);
                 $a = $attempt->get($krs->mahasiswa_id);
 
@@ -70,6 +72,7 @@ class UjianKelasController extends Controller
                         'mulai_at' => $a->started_at?->toIso8601String(),
                         'selesai_at' => $a->submitted_at?->toIso8601String(),
                         'skor' => $a->score,
+                        'nilai' => Ujian::nilaiDariSkor($a->score, $totalPoin),
                         'auto_closed' => $a->auto_closed,
                         'essay_belum_dinilai' => (bool) $a->essay_belum_dinilai,
                     ],
@@ -90,7 +93,7 @@ class UjianKelasController extends Controller
             'lembarSoal' => $quiz === null ? null : [
                 'id' => $quiz->id,
                 'jumlah_soal' => $quiz->questions_count,
-                'total_poin' => (int) $quiz->questions_sum_points,
+                'total_poin' => $totalPoin,
                 'waktu_pengerjaan' => $quiz->waktu_pengerjaan,
             ],
             'syaratAktif' => $syarat['aktif'],
@@ -176,16 +179,25 @@ class UjianKelasController extends Controller
     }
 
     /**
-     * Nilai angka (0–100) untuk jawaban berkas, setelah ujian selesai.
+     * Nilai angka (0–100) per mahasiswa setelah ujian selesai: ujian tatap muka (tanpa berkas) dan jawaban
+     * berkas. Mode soal di sistem dinilai lewat koreksi quiz.
      */
-    public function nilai(Request $request, Ujian $ujian, UjianJawaban $jawaban): RedirectResponse
+    public function nilai(Request $request, Ujian $ujian, MahasiswaProfile $mahasiswa): RedirectResponse
     {
-        abort_unless($jawaban->ujian_id === $ujian->id, 404);
-        $this->pastikanAksesKelas($ujian->kelasKuliah);
-        $this->pastikanNilaiTidakTerkunci($ujian->kelasKuliah);
+        $kelas = $ujian->kelasKuliah;
+        $this->pastikanAksesKelas($kelas);
+        abort_if($ujian->mode === Ujian::ONLINE_SOAL, 404);
+        abort_unless($kelas->krs()->where('mahasiswa_id', $mahasiswa->id)->exists(), 404);
+        $this->pastikanNilaiTidakTerkunci($kelas);
 
         if (! $ujian->sudahSelesai()) {
-            return back()->with('error', 'Jawaban dinilai setelah ujian selesai.');
+            return back()->with('error', 'Nilai diisi setelah ujian selesai.');
+        }
+
+        $jawaban = $ujian->jawabans()->where('mahasiswa_id', $mahasiswa->id)->first();
+
+        if ($ujian->mode === Ujian::ONLINE_BERKAS && $jawaban === null) {
+            return back()->with('error', 'Mahasiswa ini tidak mengumpulkan jawaban.');
         }
 
         $data = $request->validate([
@@ -193,7 +205,9 @@ class UjianKelasController extends Controller
             'catatan_dosen' => ['nullable', 'string', 'max:1000'],
         ], attributes: ['nilai' => 'Nilai', 'catatan_dosen' => 'Catatan']);
 
-        $jawaban->update([...$data, 'dinilai_oleh' => $request->user()->id]);
+        ($jawaban ?? new UjianJawaban(['ujian_id' => $ujian->id, 'mahasiswa_id' => $mahasiswa->id]))
+            ->fill([...$data, 'dinilai_oleh' => $request->user()->id])
+            ->save();
 
         return back()->with('success', 'Nilai disimpan.');
     }
@@ -205,6 +219,12 @@ class UjianKelasController extends Controller
     {
         $this->pastikanAksesKelas($ujian->kelasKuliah);
         $data = $request->validate(['nilai_dirilis' => ['required', 'boolean']]);
+
+        // Dirilis saat ujian masih berjalan, mahasiswa yang selesai lebih dulu melihat nilainya sementara yang lain masih mengerjakan.
+        if ($data['nilai_dirilis'] && ! $ujian->sudahSelesai()) {
+            return back()->with('error', 'Nilai baru bisa dirilis setelah ujian selesai.');
+        }
+
         $ujian->update($data);
 
         return back()->with('success', $data['nilai_dirilis'] ? 'Nilai ujian kini terlihat oleh mahasiswa.' : 'Nilai ujian disembunyikan dari mahasiswa.');

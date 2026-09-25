@@ -32,7 +32,7 @@ const props = defineProps<{
     jawaban: { nama_berkas: string[]; dikumpulkan_at: string | null; nilai: string | null; catatan_dosen: string | null } | null;
     nilaiDirilis: boolean;
     lembarSoal: { id: number; siap: boolean; jumlah_soal: number; total_poin: number; waktu_pengerjaan: number | null } | null;
-    pengerjaan: { selesai: boolean; selesai_at: string | null; skor: string | null } | null;
+    pengerjaan: { selesai: boolean; selesai_at: string | null; skor: string | null; nilai: number | null } | null;
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -128,6 +128,10 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 
                 <section v-if="props.ujian.mode === 'tatap_muka'" :class="kartu">
                     <p class="text-sm text-[#31302e]">Ujian dilaksanakan di ruang {{ props.ujian.ruang ?? '-' }}. Bawa kartu ujian.</p>
+                    <div v-if="props.nilaiDirilis && props.jawaban" class="mt-3 rounded-lg bg-[#f6f5f4] px-4 py-3 text-sm">
+                        <p class="font-medium text-black">Nilai: {{ props.jawaban.nilai ?? 'belum dinilai' }}</p>
+                        <p v-if="props.jawaban.catatan_dosen" class="mt-1 text-[#615d59]">Catatan dosen: {{ props.jawaban.catatan_dosen }}</p>
+                    </div>
                     <Link :href="route('mahasiswa.ujian')" class="mt-2 inline-block text-sm font-medium text-[#0075de] hover:underline"
                         >Kembali ke jadwal ujian</Link
                     >
@@ -225,7 +229,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         <p class="mt-2 text-sm text-[#31302e]">
                             {{
                                 props.nilaiDirilis
-                                    ? `Nilai: ${props.pengerjaan.skor ?? '-'} / ${props.lembarSoal?.total_poin}`
+                                    ? `Nilai: ${props.pengerjaan.nilai ?? '-'} (${props.pengerjaan.skor ?? '-'} dari ${props.lembarSoal?.total_poin} poin)`
                                     : 'Nilai akan terlihat setelah dosen merilisnya.'
                             }}
                         </p>

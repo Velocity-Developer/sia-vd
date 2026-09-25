@@ -53,7 +53,7 @@ $ruteUjianKelas = function (string $peran): void {
     Route::get('ujian/{ujian}', [UjianKelasController::class, 'show'])->name($peran.'.ujian.show');
     Route::post('ujian/{ujian}/soal', [UjianKelasController::class, 'unggahSoal'])->name($peran.'.ujian.soal.unggah');
     Route::delete('ujian/{ujian}/soal/{index}', [UjianKelasController::class, 'hapusSoal'])->whereNumber('index')->name($peran.'.ujian.soal.hapus');
-    Route::put('ujian/{ujian}/jawaban/{jawaban}/nilai', [UjianKelasController::class, 'nilai'])->name($peran.'.ujian.jawaban.nilai');
+    Route::put('ujian/{ujian}/nilai/{mahasiswa}', [UjianKelasController::class, 'nilai'])->name($peran.'.ujian.nilai');
     Route::put('ujian/{ujian}/rilis-nilai', [UjianKelasController::class, 'rilisNilai'])->name($peran.'.ujian.rilis-nilai');
     Route::post('ujian/{ujian}/lembar-soal', [UjianKelasController::class, 'buatSoal'])->name($peran.'.ujian.lembar-soal');
 };

@@ -98,6 +98,7 @@ class UjianController extends Controller
                 'selesai' => $attempt->submitted_at !== null,
                 'selesai_at' => $attempt->submitted_at?->toIso8601String(),
                 'skor' => $ujian->nilai_dirilis ? $attempt->score : null,
+                'nilai' => $ujian->nilai_dirilis ? Ujian::nilaiDariSkor($attempt->score, (int) $quiz->questions_sum_points) : null,
             ],
         ]);
     }

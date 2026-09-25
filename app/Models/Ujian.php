@@ -187,6 +187,18 @@ class Ujian extends Model
     }
 
     /**
+     * Skor lembar soal (poin) dikonversi ke skala 0–100, agar sama dengan nilai mode lain.
+     */
+    public static function nilaiDariSkor(int|float|string|null $skor, int $totalPoin): ?float
+    {
+        if ($skor === null || $totalPoin <= 0) {
+            return null;
+        }
+
+        return round(min(100, (float) $skor / $totalPoin * 100), 2);
+    }
+
+    /**
      * Label singkat untuk tampilan dan PDF.
      */
     public function labelMode(): string

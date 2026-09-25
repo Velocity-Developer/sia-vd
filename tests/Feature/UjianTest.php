@@ -301,13 +301,18 @@ it('lets the lecturer grade after the exam and release the scores', function () 
     $this->actingAs($mahasiswa[0])->get(route('berkas.ujian-jawaban', [$jawaban, 0]))->assertOk();
     gantiAkun($this, $mahasiswa[1])->get(route('berkas.ujian-jawaban', [$jawaban, 0]))->assertForbidden();
 
-    gantiAkun($this, $dosen)->put(route('dosen.ujian.jawaban.nilai', [$ujian, $jawaban]), ['nilai' => 80])->assertSessionHas('error', 'Jawaban dinilai setelah ujian selesai.');
+    $mhs0 = $mahasiswa[0]->mahasiswaProfile;
+    gantiAkun($this, $dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs0]), ['nilai' => 80])->assertSessionHas('error', 'Nilai diisi setelah ujian selesai.');
 
     $this->travelTo('2025-10-06 15:30:00');
     $this->actingAs($dosen)->get(route('dosen.ujian.show', $ujian))
         ->assertInertia(fn ($page) => $page->component('Kelas/UjianKelas')->has('peserta', 2)->where('sudahSelesai', true));
-    $this->actingAs($dosen)->put(route('dosen.ujian.jawaban.nilai', [$ujian, $jawaban]), ['nilai' => 87.5, 'catatan_dosen' => 'Bagus'])->assertSessionHas('success');
-    $this->actingAs($dosen)->put(route('dosen.ujian.jawaban.nilai', [$ujian, $jawaban]), ['nilai' => 120])->assertSessionHasErrors('nilai');
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs0]), ['nilai' => 87.5, 'catatan_dosen' => 'Bagus'])->assertSessionHas('success');
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs0]), ['nilai' => 120])->assertSessionHasErrors('nilai');
+    // Mode berkas: yang tidak mengumpulkan tidak bisa dinilai (tidak dibuatkan jawaban kosong).
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mahasiswa[1]->mahasiswaProfile]), ['nilai' => 0])
+        ->assertSessionHas('error', 'Mahasiswa ini tidak mengumpulkan jawaban.');
+    expect($ujian->jawabans()->count())->toBe(1)->and((float) $jawaban->fresh()->nilai)->toBe(87.5);
 
     gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('jawaban.nilai', null));
     gantiAkun($this, $dosen)->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
@@ -423,8 +428,14 @@ it('hides the exam score until the lecturer releases it', function () {
 
     $this->travelTo('2025-10-06 13:05:00');
     $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz));
-    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.submit', $quiz), ['answers' => [$soal[0]->id => 'A', $soal[1]->id => 'A']]);
-    expect((float) QuizAttempt::first()->score)->toBe(20.0);
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.submit', $quiz), ['answers' => [$soal[0]->id => 'A', $soal[1]->id => 'B']]);
+    expect((float) QuizAttempt::first()->score)->toBe(10.0);
+
+    // Rilis ditolak selama ujian masih berjalan.
+    gantiAkun($this, $kelas->dosen->user)->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])
+        ->assertSessionHas('error', 'Nilai baru bisa dirilis setelah ujian selesai.');
+    expect($ujian->fresh()->nilai_dirilis)->toBeFalse();
+    gantiAkun($this, $mahasiswa[0]);
 
     $this->actingAs($mahasiswa[0])->get(route('mahasiswa.quiz.show', $quiz))
         ->assertInertia(fn ($page) => $page->where('attempt.score', null)->where('ujian.nilai_dirilis', false));
@@ -433,11 +444,11 @@ it('hides the exam score until the lecturer releases it', function () {
 
     $this->travelTo('2025-10-06 15:30:00');
     gantiAkun($this, $kelas->dosen->user)->get(route('dosen.ujian.show', $ujian))
-        ->assertInertia(fn ($page) => $page->where('peserta.0.pengerjaan.skor', '20.00')->where('lembarSoal.total_poin', 20));
+        ->assertInertia(fn ($page) => $page->where('peserta.0.pengerjaan.skor', '10.00')->where('peserta.0.pengerjaan.nilai', 50)->where('lembarSoal.total_poin', 20));
     $this->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
 
-    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('pengerjaan.skor', '20.00'));
-    $this->get(route('mahasiswa.quiz.show', $quiz))->assertInertia(fn ($page) => $page->where('attempt.score', '20.00'));
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('pengerjaan.skor', '10.00')->where('pengerjaan.nilai', 50));
+    $this->get(route('mahasiswa.quiz.show', $quiz))->assertInertia(fn ($page) => $page->where('attempt.score', '10.00'));
 });
 
 it('keeps draft exam question sheets closed to students', function () {
@@ -447,4 +458,28 @@ it('keeps draft exam question sheets closed to students', function () {
     $this->travelTo('2025-10-06 13:05:00');
     $this->actingAs($mahasiswa[0])->get(route('mahasiswa.quiz.show', $quiz))->assertNotFound();
     $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz))->assertSessionHas('error', 'Ujian belum diterbitkan.');
+});
+
+it('lets the lecturer grade a face-to-face exam per student', function () {
+    [$kelas, $mahasiswa] = kelasUjian(2);
+    $ujian = Ujian::create([...isianUjian(['status' => 'terbit']), 'kelas_id' => $kelas->id, 'jenis' => 'uts']);
+    $dosen = $kelas->dosen->user;
+    $mhs = $mahasiswa[0]->mahasiswaProfile;
+
+    $this->travelTo('2025-10-06 14:00:00');
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs]), ['nilai' => 75])->assertSessionHas('error', 'Nilai diisi setelah ujian selesai.');
+
+    $this->travelTo('2025-10-06 15:30:00');
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs]), ['nilai' => 75, 'catatan_dosen' => 'Cukup'])->assertSessionHas('success');
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs]), ['nilai' => 78])->assertSessionHas('success');
+    expect($ujian->jawabans()->count())->toBe(1)
+        ->and($ujian->jawabans()->first()->only(['nilai', 'berkas', 'dikumpulkan_at']))->toBe(['nilai' => '78.00', 'berkas' => null, 'dikumpulkan_at' => null]);
+
+    // Bukan peserta kelas → 404; lembar soal tidak lewat jalur ini.
+    $luar = User::factory()->mahasiswa()->create()->mahasiswaProfile;
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $luar]), ['nilai' => 90])->assertNotFound();
+
+    $this->actingAs($dosen)->get(route('dosen.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('peserta', fn ($peserta) => collect($peserta)->firstWhere('mahasiswa_id', $mhs->id)['jawaban']['nilai'] === '78.00'));
+    $this->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('jawaban.nilai', '78.00'));
 });
