@@ -42,6 +42,7 @@ use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
 use App\Models\User;
+use App\PengingatRemidi;
 use App\PeringatanPresensi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -264,6 +265,9 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
             'presensiDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.presensi')
                 ? PeringatanPresensi::untukDosen($request->user()->dosenProfile)
                 : null,
+            'remidiDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.kelas-kuliah')
+                ? PengingatRemidi::untukDosen($request->user()->dosenProfile)
+                : null,
         ]))->name('dosen.dashboard');
         Route::get('profile', fn () => Inertia::render('DosenPlaceholder', ['title' => 'Profile']))->name('dosen.profile');
     });
@@ -325,6 +329,9 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('/', fn (Request $request) => Inertia::render('Dashboard', [
             'peringatanPresensi' => $request->user()->mahasiswaProfile && $request->user()->hasPermission('mahasiswa.presensi')
                 ? PeringatanPresensi::untukMahasiswa($request->user()->mahasiswaProfile)
+                : null,
+            'remidiMahasiswa' => $request->user()->mahasiswaProfile
+                ? PengingatRemidi::untukMahasiswa($request->user()->mahasiswaProfile, $request->user()->hasPermission('mahasiswa.info-biaya'), $request->user()->hasPermission('mahasiswa.ujian'))
                 : null,
         ]))->name('mahasiswa.dashboard');
 

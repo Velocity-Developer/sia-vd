@@ -182,3 +182,38 @@ it('requires the remidi payment deadline to come after the grade deadline', func
     // Batas input nilai remidi boleh diisi tanpa batas bayar (tidak gagal karena pembanding kosong).
     $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [...$isian, 'batas_input_nilai_remidi' => '2032-01-30'])->assertSessionHasNoErrors();
 });
+
+it('reminds students of unpaid remidi bills and upcoming remidi exams on the dashboard', function () {
+    [$kelas, $krs] = kelasNilaiRemidi();
+    $lunas = $krs[0]->mahasiswa->user;
+    $belum = $krs[1]->mahasiswa->user;
+
+    $this->travelTo('2026-01-10 08:00:00');
+    $this->actingAs($belum)->get(route('mahasiswa.dashboard'))
+        ->assertInertia(fn ($page) => $page->has('remidiMahasiswa.tagihan', 1)->where('remidiMahasiswa.tagihan.0.batas_bayar', '2026-01-12')->has('remidiMahasiswa.ujian', 0));
+    $this->actingAs($lunas)->get(route('mahasiswa.dashboard'))
+        ->assertInertia(fn ($page) => $page->has('remidiMahasiswa.tagihan', 0)->has('remidiMahasiswa.ujian', 1)->where('remidiMahasiswa.ujian.0.tanggal', '2026-01-15'));
+
+    // Lewat batas bayar tagihan gugur tidak diingatkan lagi; sesudah ujian selesai jadwal hilang.
+    $this->travelTo('2026-01-15 12:00:00');
+    $this->actingAs($belum)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page->has('remidiMahasiswa.tagihan', 0));
+    $this->actingAs($lunas)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page->has('remidiMahasiswa.ujian', 0));
+});
+
+it('reminds lecturers to lock remidi lists and to grade finished remidi', function () {
+    [$kelas] = kelasNilaiRemidi();
+    $dosen = $kelas->dosen->user;
+    $lain = KelasKuliah::create(['kode_kelas' => 'LAIN-B', 'tahun_akademik_id' => $kelas->tahun_akademik_id, 'kapasitas' => 30, 'dosen_id' => $kelas->dosen_id, 'matkul_id' => $kelas->matkul_id, 'nilai_final_at' => now()]);
+    Krs::create(['mahasiswa_id' => User::factory()->mahasiswa()->create()->mahasiswaProfile->id, 'kelas_id' => $lain->id, 'nilai' => 'E']);
+
+    $this->travelTo('2026-01-14 08:00:00');
+    $this->actingAs($dosen)->get(route('dosen.dashboard'))
+        ->assertInertia(fn ($page) => $page->where('remidiDosen.kunci_daftar.0.id', $lain->id)->has('remidiDosen.kunci_daftar', 1)->has('remidiDosen.isi_nilai', 0));
+
+    $this->travelTo('2026-01-16 08:00:00');
+    $this->actingAs($dosen)->get(route('dosen.dashboard'))
+        ->assertInertia(fn ($page) => $page->where('remidiDosen.isi_nilai.0.id', $kelas->id));
+
+    $kelas->update(['remidi_final_at' => now()]);
+    $this->actingAs($dosen)->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page->has('remidiDosen.isi_nilai', 0));
+});
