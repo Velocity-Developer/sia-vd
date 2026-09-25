@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Jadwal ujian (UTS/UAS) satu kelas. Ditentukan admin, termasuk modenya; pertemuan UTS/UAS kelas
@@ -218,6 +219,24 @@ class Ujian extends Model
         ]);
 
         return true;
+    }
+
+    /**
+     * Nilai 0–100 tiap mahasiswa yang sudah dinilai: dari lembar soal (skor dikonversi) atau dari nilai dosen.
+     *
+     * @return Collection<int, float>
+     */
+    public function nilaiPeserta(): Collection
+    {
+        if ($this->mode === self::ONLINE_SOAL) {
+            $quiz = $this->quiz()->withSum('questions', 'points')->first();
+
+            return $quiz === null ? collect() : $quiz->attempts()->whereNotNull('submitted_at')->get(['mahasiswa_id', 'score'])
+                ->mapWithKeys(fn (QuizAttempt $a): array => [$a->mahasiswa_id => self::nilaiDariSkor($a->score, (int) $quiz->questions_sum_points)])
+                ->filter(fn (?float $n): bool => $n !== null);
+        }
+
+        return $this->jawabans()->whereNotNull('nilai')->pluck('nilai', 'mahasiswa_id')->map(fn ($n): float => (float) $n);
     }
 
     /**

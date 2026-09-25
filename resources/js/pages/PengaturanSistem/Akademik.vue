@@ -23,6 +23,7 @@ type Presensi = {
 const props = defineProps<{
     maksSksTanpaIps: number;
     kunciKrsAktif: boolean;
+    hurufMaksRemidi: string | null;
     pindahKelasAktif: boolean;
     presensi: Presensi;
     batasSks: BatasSks[];
@@ -43,6 +44,12 @@ const errorOf = (form: { errors: object }, key: string) => (form.errors as Recor
 
 const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
 
+const remidiForm = useForm({ huruf_maks_remidi: props.hurufMaksRemidi ?? '' });
+const simpanRemidi = () =>
+    remidiForm
+        .transform((data) => ({ huruf_maks_remidi: data.huruf_maks_remidi || null }))
+        .put(route('admin.pengaturan-akademik.remidi'), { preserveScroll: true });
+
 const presensiForm = useForm({ ...props.presensi });
 const simpanPresensi = () => presensiForm.put(route('admin.pengaturan-akademik.presensi'), { preserveScroll: true });
 
@@ -53,6 +60,7 @@ const daftarBagian = [
     { id: 'krs', judul: 'KRS & SKS' },
     { id: 'pindah-kelas', judul: 'Pindah Kelas' },
     { id: 'nilai', judul: 'Nilai' },
+    { id: 'remidi', judul: 'Remidi' },
     { id: 'presensi', judul: 'Presensi' },
 ];
 
@@ -265,6 +273,38 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="nilaiForm.processing"
                         >Simpan Skala Nilai</Button
                     >
+                </div>
+            </form>
+        </section>
+
+        <section id="remidi" class="flex scroll-mt-4 flex-col gap-4">
+            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Remidi</h2>
+            <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="simpanRemidi">
+                <h2 class="text-lg font-semibold text-black">Huruf Akhir Setelah Remidi</h2>
+                <p class="mt-1 text-sm text-[#615d59]">
+                    Setelah ujian remidi selesai, dosen bisa mengubah huruf akhir peserta remidi yang lunas sampai batas input nilai remidi. Batasi
+                    huruf tertinggi yang boleh diberikan, atau biarkan bebas.
+                </p>
+                <div class="mt-4 grid max-w-xs gap-2">
+                    <Label for="huruf_maks_remidi">Huruf maksimal</Label>
+                    <select
+                        id="huruf_maks_remidi"
+                        v-model="remidiForm.huruf_maks_remidi"
+                        class="h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                    >
+                        <option value="">Bebas</option>
+                        <option v-for="row in props.skalaNilai" :key="row.huruf" :value="row.huruf">{{ row.huruf }}</option>
+                    </select>
+                    <InputError :message="remidiForm.errors.huruf_maks_remidi" />
+                </div>
+                <div class="mt-5 flex justify-end">
+                    <Button
+                        type="submit"
+                        :disabled="remidiForm.processing"
+                        class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
+                    >
+                        Simpan Pengaturan Remidi
+                    </Button>
                 </div>
             </form>
         </section>

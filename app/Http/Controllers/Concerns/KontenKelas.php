@@ -58,9 +58,15 @@ trait KontenKelas
         }
 
         if ($ujian?->remidi()) {
-            return $this->peran() === 'dosen' && $kelasKuliah->tahunAkademik?->batasNilaiRemidiLewat()
-                ? 'Batas input nilai remidi sudah lewat. Hubungi admin bila perlu perubahan.'
-                : null;
+            if ($this->peran() !== 'dosen') {
+                return null;
+            }
+
+            return match (true) {
+                $kelasKuliah->remidi_final_at !== null => 'Nilai remidi kelas ini sudah difinalisasi. Hubungi admin bila perlu perubahan.',
+                (bool) $kelasKuliah->tahunAkademik?->batasNilaiRemidiLewat() => 'Batas input nilai remidi sudah lewat. Hubungi admin bila perlu perubahan.',
+                default => null,
+            };
         }
 
         if ($this->peran() === 'dosen' && $kelasKuliah->nilaiFinal()) {

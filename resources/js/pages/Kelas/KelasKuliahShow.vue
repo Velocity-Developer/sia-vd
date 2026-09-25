@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { formatTanggal } from '@/lib/presensi';
+import { formatTanggal, jam as jamPendek } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
+import { STATUS_TAGIHAN_REMIDI, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Copy, Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -53,6 +54,7 @@ type TugasShow = {
 
 type KrsShow = {
     id: number;
+    mahasiswa_id: number;
     nilai?: string | null;
     mahasiswa?: {
         nim: string;
@@ -121,9 +123,17 @@ type RemidiMahasiswa = {
     ikut_uas: boolean | null;
     diusulkan: boolean;
     terpilih: boolean;
+    nilai_awal?: string | null;
+    tagihan?: StatusTagihanRemidi | null;
+    nilai_remidi?: number | null;
 };
 
 type RemidiInfo = {
+    ujian: { id: number; tanggal: string; jam_mulai: string; jam_akhir: string; selesai: boolean } | null;
+    final_at: string | null;
+    batas_nilai: string | null;
+    jendela_terbuka: boolean;
+    huruf_maks: string | null;
     dikunci_at: string | null;
     dikunci_oleh: string | null;
     ada_uas: boolean;
@@ -140,6 +150,8 @@ const props = defineProps<{
     nilaiTerkunci: boolean;
     statusNilai: StatusNilai;
     remidi: RemidiInfo | null;
+    remidiTerbuka: number[];
+    hurufRemidi: string[];
 }>();
 const rute = rutePeran(props.peran);
 const { can } = usePermissions();
@@ -240,6 +252,17 @@ const kunciRemidi = () =>
         { preserveScroll: true, onFinish: () => (kunciRemidiOpen.value = false) },
     );
 const bukaRemidi = () => router.post(route('admin.kelas-kuliah.remidi.buka', props.kelasKuliah.id), {}, { preserveScroll: true });
+const finalRemidiOpen = ref(false);
+const finalisasiRemidi = () =>
+    router.post(
+        rute('kelas-kuliah.remidi.finalisasi', props.kelasKuliah.id),
+        {},
+        { preserveScroll: true, onFinish: () => (finalRemidiOpen.value = false) },
+    );
+const bukaFinalRemidi = () => router.post(route('admin.kelas-kuliah.remidi.buka-finalisasi', props.kelasKuliah.id), {}, { preserveScroll: true });
+// Huruf akhir peserta remidi yang lunas dibuka setelah ujian remidi selesai, walau nilai kelas sudah final.
+const bolehUbahNilai = (krs: KrsShow) => !props.nilaiTerkunci || props.remidiTerbuka.includes(krs.mahasiswa_id);
+const opsiHuruf = (krs: KrsShow) => (props.nilaiTerkunci && props.remidiTerbuka.includes(krs.mahasiswa_id) ? props.hurufRemidi : props.skalaNilai);
 const ketIkutUas = (m: RemidiMahasiswa) => (m.ikut_uas === null ? '—' : m.ikut_uas ? 'Ya' : 'Tidak');
 
 const pendingCancelKrs = ref<KrsShow | null>(null);
@@ -1110,8 +1133,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 v-model="grade"
                                                 class="h-9 rounded-lg border border-[#e6e6e6] bg-white px-3 text-sm"
                                             >
-                                                <option value="">— Kosong —</option>
-                                                <option v-for="option in props.skalaNilai" :key="option" :value="option">
+                                                <option v-if="!props.remidiTerbuka.includes(krs.mahasiswa_id)" value="">— Kosong —</option>
+                                                <option v-for="option in opsiHuruf(krs)" :key="option" :value="option">
                                                     {{ option }}
                                                 </option>
                                             </select>
@@ -1129,9 +1152,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     >Batal</Button
                                                 >
                                             </template>
-                                            <span v-else-if="props.nilaiTerkunci" class="text-xs text-[#a39e98]">Nilai terkunci</span>
+                                            <span v-else-if="!bolehUbahNilai(krs)" class="text-xs text-[#a39e98]">Nilai terkunci</span>
                                             <template v-else>
-                                                <Button size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)">Ubah Nilai</Button>
+                                                <Button size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)">{{
+                                                    props.nilaiTerkunci ? 'Ubah Nilai Remidi' : 'Ubah Nilai'
+                                                }}</Button>
                                                 <Button
                                                     v-if="isAdmin && !krs.nilai"
                                                     size="sm"
@@ -1168,9 +1193,35 @@ const formatTenggat = (value: string | null | undefined): string => {
                                 >
                                 sudah dicentang otomatis. Tambah atau coret sesuai kebutuhan, lalu kunci daftar agar tagihan remidi bisa diterbitkan.
                             </p>
-                            <p v-if="!props.remidi.ada_uas" class="mt-1 text-xs text-[#a39e98]">
+                            <p v-if="!props.remidi.ada_uas && !remidiDikunci" class="mt-1 text-xs text-[#a39e98]">
                                 Kelas ini tidak punya jadwal UAS terbit di sistem, jadi keikutsertaan UAS tidak diperiksa.
                             </p>
+                            <template v-if="remidiDikunci && remidiTampil.length">
+                                <p class="mt-1 text-sm text-[#615d59]">
+                                    <template v-if="props.remidi.ujian">
+                                        Ujian remidi {{ formatTanggal(props.remidi.ujian.tanggal) }}, {{ jamPendek(props.remidi.ujian.jam_mulai) }}–{{
+                                            jamPendek(props.remidi.ujian.jam_akhir)
+                                        }}
+                                        <Link :href="rute('ujian.show', props.remidi.ujian.id)" class="text-[#0075de] hover:underline"
+                                            >Buka ujian</Link
+                                        >
+                                    </template>
+                                    <template v-else>Ujian remidi belum dijadwalkan admin.</template>
+                                </p>
+                                <p v-if="props.remidi.final_at" class="mt-1 text-sm text-[#31302e]">
+                                    <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Remidi final</span>
+                                    {{ formatTanggal(props.remidi.final_at) }}
+                                </p>
+                                <p v-else-if="props.remidi.ujian?.selesai && props.remidi.jendela_terbuka" class="mt-1 text-sm text-[#615d59]">
+                                    Huruf akhir peserta lunas bisa diubah di tabel Nilai Mahasiswa<template v-if="props.remidi.huruf_maks">
+                                        (paling tinggi {{ props.remidi.huruf_maks }})</template
+                                    ><template v-if="props.remidi.batas_nilai"> sampai {{ formatTanggal(props.remidi.batas_nilai) }}</template
+                                    >.
+                                </p>
+                                <p v-else-if="props.remidi.ujian?.selesai" class="mt-1 text-sm text-[#615d59]">
+                                    Batas input nilai remidi sudah lewat.
+                                </p>
+                            </template>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <Button
@@ -1180,7 +1231,22 @@ const formatTenggat = (value: string | null | undefined): string => {
                                 @click="kunciRemidiOpen = true"
                                 >Kunci Daftar ({{ remidiDipilih.length }})</Button
                             >
-                            <Button v-else-if="isAdmin" size="sm" variant="outline" class="rounded-full" @click="bukaRemidi"
+                            <Button
+                                v-if="remidiDikunci && props.remidi.ujian?.selesai && props.remidi.jendela_terbuka"
+                                size="sm"
+                                class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
+                                @click="finalRemidiOpen = true"
+                                >Finalisasi Remidi</Button
+                            >
+                            <Button v-if="isAdmin && props.remidi.final_at" size="sm" variant="outline" class="rounded-full" @click="bukaFinalRemidi"
+                                >Buka Finalisasi Remidi</Button
+                            >
+                            <Button
+                                v-if="isAdmin && remidiDikunci && !remidiTampil.some((m) => m.tagihan)"
+                                size="sm"
+                                variant="outline"
+                                class="rounded-full"
+                                @click="bukaRemidi"
                                 >Buka Kunci Daftar</Button
                             >
                         </div>
@@ -1192,9 +1258,17 @@ const formatTenggat = (value: string | null | undefined): string => {
                                     <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
                                         <th v-if="!remidiDikunci" class="w-10 px-4 py-3"></th>
                                         <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Mahasiswa</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Ikut UAS</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Keterangan</th>
+                                        <template v-if="remidiDikunci">
+                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai Awal</th>
+                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Tagihan</th>
+                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai Remidi</th>
+                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Huruf Akhir</th>
+                                        </template>
+                                        <template v-else>
+                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai</th>
+                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Ikut UAS</th>
+                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Keterangan</th>
+                                        </template>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
@@ -1213,17 +1287,33 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 {{ m.nama ?? '-' }} <span class="text-[#615d59]">({{ m.nim ?? '-' }})</span>
                                             </label>
                                         </td>
-                                        <td class="px-4 py-3 text-sm font-semibold" :class="m.huruf_remidi ? 'text-[#dd5b00]' : ''">
-                                            {{ m.nilai ?? '-' }}
-                                        </td>
-                                        <td class="px-4 py-3 text-sm" :class="m.ikut_uas === false ? 'text-[#dd5b00]' : 'text-[#31302e]'">
-                                            {{ ketIkutUas(m) }}
-                                        </td>
-                                        <td class="px-4 py-3 text-xs text-[#615d59]">
-                                            <span v-if="m.diusulkan">Usulan otomatis</span>
-                                            <span v-else-if="m.huruf_remidi && m.ikut_uas === false">Tidak ikut UAS</span>
-                                            <span v-else-if="remidiDipilih.includes(m.mahasiswa_id) || remidiDikunci">Ditambahkan manual</span>
-                                        </td>
+                                        <template v-if="remidiDikunci">
+                                            <td class="px-4 py-3 text-sm font-semibold text-[#dd5b00]">{{ m.nilai_awal ?? '-' }}</td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <span
+                                                    v-if="m.tagihan"
+                                                    class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
+                                                    :class="STATUS_TAGIHAN_REMIDI[m.tagihan].kelas"
+                                                    >{{ STATUS_TAGIHAN_REMIDI[m.tagihan].label }}</span
+                                                >
+                                                <span v-else class="text-xs text-[#a39e98]">Belum terbit</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-[#31302e]">{{ m.nilai_remidi ?? '-' }}</td>
+                                            <td class="px-4 py-3 text-sm font-semibold text-black">{{ m.nilai ?? '-' }}</td>
+                                        </template>
+                                        <template v-else>
+                                            <td class="px-4 py-3 text-sm font-semibold" :class="m.huruf_remidi ? 'text-[#dd5b00]' : ''">
+                                                {{ m.nilai ?? '-' }}
+                                            </td>
+                                            <td class="px-4 py-3 text-sm" :class="m.ikut_uas === false ? 'text-[#dd5b00]' : 'text-[#31302e]'">
+                                                {{ ketIkutUas(m) }}
+                                            </td>
+                                            <td class="px-4 py-3 text-xs text-[#615d59]">
+                                                <span v-if="m.diusulkan">Usulan otomatis</span>
+                                                <span v-else-if="m.huruf_remidi && m.ikut_uas === false">Tidak ikut UAS</span>
+                                                <span v-else-if="remidiDipilih.includes(m.mahasiswa_id)">Ditambahkan manual</span>
+                                            </td>
+                                        </template>
                                     </tr>
                                     <tr v-if="!remidiTampil.length">
                                         <td colspan="5" class="px-4 py-8 text-center text-sm text-[#615d59]">
@@ -1264,6 +1354,16 @@ const formatTenggat = (value: string | null | undefined): string => {
                     @update:open="!$event && (pendingCancelKrs = null)"
                     @confirm="confirmCancelKrs"
                     @cancel="pendingCancelKrs = null"
+                />
+                <AlertModal
+                    :open="finalRemidiOpen"
+                    title="Finalisasi remidi?"
+                    description="Nilai remidi dan huruf akhir peserta remidi akan terkunci. Hanya admin yang bisa membukanya kembali."
+                    confirm-text="Finalisasi"
+                    cancel-text="Batal"
+                    @update:open="finalRemidiOpen = $event"
+                    @confirm="finalisasiRemidi"
+                    @cancel="finalRemidiOpen = false"
                 />
                 <AlertModal
                     :open="kunciRemidiOpen"

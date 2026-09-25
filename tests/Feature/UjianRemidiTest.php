@@ -143,8 +143,8 @@ it('lets the lecturer prepare and grade the remidi although class grades are fin
     $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs[1]->mahasiswaProfile]), ['nilai' => 72])->assertNotFound();
     $this->actingAs($dosen)->get(route('dosen.ujian.daftar-hadir', $ujian))->assertOk()->assertHeader('content-type', 'application/pdf');
 
-    // Nilai tugas/huruf akhir biasa tetap terkunci karena kelas sudah final.
-    $krs = Krs::where('kelas_id', $kelas->id)->first();
+    // Huruf akhir mahasiswa yang bukan peserta remidi tetap terkunci karena kelas sudah final.
+    $krs = Krs::where('kelas_id', $kelas->id)->where('mahasiswa_id', $mhs[2]->mahasiswaProfile->id)->first();
     $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'C'])->assertSessionHas('error');
 
     $this->travelTo('2026-01-26 08:00:00');

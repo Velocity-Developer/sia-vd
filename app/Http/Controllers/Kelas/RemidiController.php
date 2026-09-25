@@ -75,4 +75,32 @@ class RemidiController extends Controller
 
         return back()->with('success', 'Kunci daftar remidi dibuka.');
     }
+
+    /**
+     * Dosen menutup remidi: nilai remidi dan huruf akhir peserta terkunci lagi sebelum batas input nilai remidi.
+     */
+    public function finalisasi(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $this->pastikanAksesKelas($kelasKuliah);
+        $ujian = $kelasKuliah->ujianRemidi();
+
+        if ($ujian === null || ! $ujian->sudahSelesai()) {
+            return back()->with('error', 'Remidi baru bisa difinalisasi setelah ujian remidi selesai.');
+        }
+
+        if (! $kelasKuliah->jendelaRemidiTerbuka()) {
+            return back()->with('error', 'Remidi kelas ini sudah terkunci.');
+        }
+
+        $kelasKuliah->update(['remidi_final_at' => now()]);
+
+        return back()->with('success', 'Remidi difinalisasi. Nilai remidi dan huruf akhir peserta kini terkunci.');
+    }
+
+    public function bukaFinalisasi(KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $kelasKuliah->update(['remidi_final_at' => null]);
+
+        return back()->with('success', 'Finalisasi remidi dibuka. Dosen bisa mengubah nilai remidi sampai batas input nilai remidi.');
+    }
 }

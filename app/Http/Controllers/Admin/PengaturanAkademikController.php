@@ -11,6 +11,7 @@ use App\Models\SkalaNilai;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -25,6 +26,7 @@ class PengaturanAkademikController extends Controller
         return Inertia::render('PengaturanSistem/Akademik', [
             'maksSksTanpaIps' => $pengaturan->maks_sks_tanpa_ips,
             'kunciKrsAktif' => $pengaturan->kunci_krs_aktif,
+            'hurufMaksRemidi' => $pengaturan->huruf_maks_remidi,
             'pindahKelasAktif' => PengaturanPindahKelas::current()->is_active,
             'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
@@ -159,6 +161,12 @@ class PengaturanAkademikController extends Controller
         }
 
         DB::transaction(function () use ($data): void {
+            // Batas huruf remidi yang hurufnya dihapus dari skala kembali bebas.
+            $maks = PengaturanAkademik::current();
+            if ($maks->huruf_maks_remidi !== null && ! collect($data['skala_nilai'])->pluck('huruf')->contains($maks->huruf_maks_remidi)) {
+                $maks->update(['huruf_maks_remidi' => null]);
+            }
+
             SkalaNilai::query()->delete();
 
             foreach ($data['skala_nilai'] as $row) {
@@ -172,6 +180,17 @@ class PengaturanAkademikController extends Controller
         });
 
         return back()->with('success', 'Skala nilai berhasil disimpan.');
+    }
+
+    public function updateRemidi(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'huruf_maks_remidi' => ['nullable', Rule::in(SkalaNilai::huruf())],
+        ], attributes: ['huruf_maks_remidi' => 'Huruf maksimal setelah remidi']);
+
+        PengaturanAkademik::current()->update(['huruf_maks_remidi' => $data['huruf_maks_remidi'] ?? null, 'updated_by' => $request->user()->id]);
+
+        return back()->with('success', 'Pengaturan remidi disimpan.');
     }
 
     /**

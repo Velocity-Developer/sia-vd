@@ -56,4 +56,18 @@ class SkalaNilai extends Model
     {
         return (bool) static::semua()->get(strtoupper((string) $nilai))?->boleh_diulang;
     }
+
+    /**
+     * Huruf yang boleh diberikan dengan batas atas tertentu (bobotnya tidak melebihi huruf batas). Batas kosong = semua.
+     *
+     * @return list<string>
+     */
+    public static function hurufSampai(?string $maks): array
+    {
+        $batas = static::bobot($maks);
+
+        return $batas === null
+            ? static::huruf()
+            : static::semua()->filter(fn (self $nilai): bool => (float) $nilai->bobot <= (float) $batas)->keys()->all();
+    }
 }

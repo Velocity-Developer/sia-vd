@@ -15,7 +15,7 @@ class KelasKuliah extends Model
 
     protected $table = 'kelas_kuliah';
 
-    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai', 'remidi_dikunci_at', 'remidi_dikunci_oleh'];
+    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai', 'remidi_dikunci_at', 'remidi_dikunci_oleh', 'remidi_final_at'];
 
     /**
      * Kelas baru tanpa jumlah pertemuan memakai bawaan di Pengaturan Akademik.
@@ -35,7 +35,41 @@ class KelasKuliah extends Model
             'nilai_final_at' => 'datetime',
             'nilai_dibuka_sampai' => 'date:Y-m-d',
             'remidi_dikunci_at' => 'datetime',
+            'remidi_final_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Ujian remidi terbit kelas ini, bila ada.
+     */
+    public function ujianRemidi(): ?Ujian
+    {
+        return $this->ujians()->where('jenis', Ujian::REMIDI)->terbit()->first();
+    }
+
+    /**
+     * Jendela nilai remidi masih terbuka: belum difinalisasi dosen dan batas input nilai remidi belum lewat.
+     */
+    public function jendelaRemidiTerbuka(): bool
+    {
+        return $this->remidi_final_at === null && ! ($this->loadMissing('tahunAkademik')->tahunAkademik?->batasNilaiRemidiLewat() ?? false);
+    }
+
+    /**
+     * Mahasiswa yang huruf akhirnya boleh diubah dosen walau nilai kelas final: peserta remidi yang lunas, setelah
+     * ujian remidi selesai, selama jendela remidi masih terbuka.
+     *
+     * @return list<int>
+     */
+    public function mahasiswaRemidiTerbuka(): array
+    {
+        $ujian = $this->ujianRemidi();
+
+        if ($ujian === null || ! $ujian->sudahSelesai() || ! $this->jendelaRemidiTerbuka()) {
+            return [];
+        }
+
+        return $this->remidiPesertas()->lunas()->pluck('mahasiswa_id')->all();
     }
 
     /**

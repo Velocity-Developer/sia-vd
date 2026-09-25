@@ -86,7 +86,11 @@ class KelasKuliahController extends Controller
             'skalaNilai' => SkalaNilai::huruf(),
             'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
             'statusNilai' => $this->statusNilai($kelasKuliah),
+            // Peserta remidi yang huruf akhirnya boleh diubah dosen walau kelas final, dan huruf yang boleh dipilih.
+            'remidiTerbuka' => $this->nilaiTerkunci($kelasKuliah) && ! $this->tahunAkademikTerkunci($kelasKuliah) ? $kelasKuliah->mahasiswaRemidiTerbuka() : [],
+            'hurufRemidi' => SkalaNilai::hurufSampai(PengaturanAkademik::current()->huruf_maks_remidi),
             'remidi' => $kelasKuliah->nilaiFinal() ? [
+                ...$this->infoUjianRemidi($kelasKuliah),
                 'dikunci_at' => $kelasKuliah->remidi_dikunci_at?->toIso8601String(),
                 'dikunci_oleh' => $kelasKuliah->remidi_dikunci_at !== null ? $kelasKuliah->remidiDikunciOleh()->value('name') : null,
                 ...UsulanRemidi::susun($kelasKuliah),
@@ -140,11 +144,20 @@ class KelasKuliahController extends Controller
         abort_if($krs->kelas_id !== $kelasKuliah->id, 404);
         $this->pastikanAksesKelas($kelasKuliah);
 
-        if (($pesan = $this->pesanNilaiTerkunci($kelasKuliah)) !== null) {
+        $pesan = $this->pesanNilaiTerkunci($kelasKuliah);
+        // Nilai kelas sudah final, tetapi huruf akhir peserta remidi yang lunas dibuka setelah ujian remidi selesai.
+        $remidi = $pesan !== null && ! $this->tahunAkademikTerkunci($kelasKuliah)
+            && in_array($krs->mahasiswa_id, $kelasKuliah->mahasiswaRemidiTerbuka(), true);
+
+        if ($pesan !== null && ! $remidi) {
             return back()->with('error', $pesan);
         }
 
-        $krs->update($request->validate(['nilai' => ['nullable', Rule::in(SkalaNilai::huruf())]]));
+        $maks = $remidi ? PengaturanAkademik::current()->huruf_maks_remidi : null;
+        $krs->update($request->validate(
+            ['nilai' => [$remidi ? 'required' : 'nullable', Rule::in(SkalaNilai::hurufSampai($maks))]],
+            ['nilai.in' => $maks !== null ? "Huruf akhir setelah remidi paling tinggi {$maks}." : 'Huruf nilai tidak dikenal.', 'nilai.required' => 'Pilih huruf akhir setelah remidi.'],
+        ));
 
         return back()->with('success', 'Nilai berhasil diperbarui.');
     }
@@ -163,6 +176,28 @@ class KelasKuliahController extends Controller
         $krs->cancel();
 
         return back()->with('success', 'KRS mahasiswa berhasil dibatalkan.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function infoUjianRemidi(KelasKuliah $kelas): array
+    {
+        $ujian = $kelas->ujianRemidi();
+
+        return [
+            'ujian' => $ujian === null ? null : [
+                'id' => $ujian->id,
+                'tanggal' => $ujian->tanggal->toDateString(),
+                'jam_mulai' => $ujian->jam_mulai,
+                'jam_akhir' => $ujian->jam_akhir,
+                'selesai' => $ujian->sudahSelesai(),
+            ],
+            'final_at' => $kelas->remidi_final_at?->toIso8601String(),
+            'batas_nilai' => $kelas->tahunAkademik?->batas_input_nilai_remidi?->toDateString(),
+            'jendela_terbuka' => $kelas->jendelaRemidiTerbuka(),
+            'huruf_maks' => PengaturanAkademik::current()->huruf_maks_remidi,
+        ];
     }
 
     /**
