@@ -26,7 +26,7 @@ class QuizAttemptController extends Controller
                 $ujian->status !== Ujian::TERBIT => 'Ujian belum diterbitkan.',
                 ! $ujian->sudahMulai() => 'Ujian belum dimulai.',
                 $ujian->sudahSelesai() => 'Waktu ujian sudah habis.',
-                ! $ujian->bolehIkut($mahasiswa->id) => 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.',
+                ! $ujian->bolehIkut($mahasiswa->id) => $ujian->remidi() ? 'Anda bukan peserta remidi yang tagihannya lunas.' : 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.',
                 default => null,
             };
 

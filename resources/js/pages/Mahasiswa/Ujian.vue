@@ -30,7 +30,7 @@ const props = defineProps<{ ujians: Ujian[]; tahunAkademikId: number | null; tah
 const tahun = ref<number | string>(props.tahunAkademikId ?? '');
 const gantiTahun = () => router.get(route('mahasiswa.ujian'), { tahun_akademik_id: tahun.value }, { preserveScroll: true });
 const perJenis = computed(() =>
-    (['uts', 'uas'] as const).map((j) => ({ jenis: j, ujians: props.ujians.filter((u) => u.jenis === j) })).filter((g) => g.ujians.length),
+    (['uts', 'uas', 'remidi'] as const).map((j) => ({ jenis: j, ujians: props.ujians.filter((u) => u.jenis === j) })).filter((g) => g.ujians.length),
 );
 const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, tahun_akademik_id: props.tahunAkademikId });
 </script>
@@ -43,7 +43,9 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="space-y-1">
                         <h1 class="text-[26px] font-bold leading-[1.23] text-black">Jadwal Ujian</h1>
-                        <p class="text-sm text-[#615d59]">UTS dan UAS mata kuliah di KRS Anda. Cetak kartu ujian dan bawa saat ujian tatap muka.</p>
+                        <p class="text-sm text-[#615d59]">
+                            UTS, UAS, dan remidi mata kuliah di KRS Anda. Cetak kartu ujian dan bawa saat ujian tatap muka.
+                        </p>
                     </div>
                     <SelectFilter v-model="tahun" label="Tahun akademik" @change="gantiTahun">
                         <option v-for="t in props.tahunAkademikOptions" :key="t.id" :value="t.id">{{ t.name }}</option>

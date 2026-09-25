@@ -17,7 +17,12 @@ type Ujian = {
     pengawas: string | null;
     petunjuk: string | null;
     ruang?: { kode_ruang: string; nama_ruang: string } | null;
-    kelas_kuliah?: { kode_kelas: string; krs_count: number; mata_kuliah?: { kode_matkul: string; nama_matkul: string } | null } | null;
+    kelas_kuliah?: {
+        kode_kelas: string;
+        krs_count: number;
+        remidi_lunas_count: number;
+        mata_kuliah?: { kode_matkul: string; nama_matkul: string } | null;
+    } | null;
 };
 
 const props = defineProps<{ ujians: Ujian[]; tahunAkademikId: number | null; tahunAkademikOptions: { id: number; name: string }[] }>();
@@ -47,7 +52,11 @@ const gantiTahun = () => router.get(route('dosen.ujian.index'), { tahun_akademik
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <p class="font-medium text-black">{{ u.kelas_kuliah?.mata_kuliah?.nama_matkul }}</p>
-                            <p class="text-xs text-[#a39e98]">{{ u.kelas_kuliah?.kode_kelas }} · {{ u.kelas_kuliah?.krs_count }} mahasiswa</p>
+                            <p class="text-xs text-[#a39e98]">
+                                {{ u.kelas_kuliah?.kode_kelas }} ·
+                                {{ u.jenis === 'remidi' ? u.kelas_kuliah?.remidi_lunas_count : u.kelas_kuliah?.krs_count }}
+                                {{ u.jenis === 'remidi' ? 'peserta remidi' : 'mahasiswa' }}
+                            </p>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="rounded bg-[#fff6e0] px-2 py-0.5 text-xs font-semibold text-[#8a5a00]">{{ JENIS_UJIAN[u.jenis] }}</span>

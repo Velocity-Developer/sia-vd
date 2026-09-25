@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -38,5 +39,15 @@ class RemidiPeserta extends Model
     public function tagihan(): HasOne
     {
         return $this->hasOne(TagihanRemidi::class, 'remidi_peserta_id');
+    }
+
+    /**
+     * Peserta yang tagihan remidinya lunas, satu-satunya yang boleh mengikuti ujian remidi.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeLunas(Builder $query): void
+    {
+        $query->whereHas('tagihan', fn (Builder $q) => $q->where('status', TagihanRemidi::LUNAS));
     }
 }

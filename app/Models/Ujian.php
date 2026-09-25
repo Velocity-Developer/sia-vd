@@ -21,6 +21,11 @@ class Ujian extends Model
 
     public const JENIS = [Pertemuan::UTS, Pertemuan::UAS];
 
+    /** Remidi mata kuliah: satu per kelas, tanpa pertemuan, hanya untuk peserta remidi yang lunas. */
+    public const REMIDI = 'remidi';
+
+    public const SEMUA_JENIS = [Pertemuan::UTS, Pertemuan::UAS, self::REMIDI];
+
     public const TATAP_MUKA = 'tatap_muka';
 
     public const ONLINE_BERKAS = 'online_berkas';
@@ -83,6 +88,16 @@ class Ujian extends Model
         $query->where('status', self::TERBIT);
     }
 
+    public function remidi(): bool
+    {
+        return $this->jenis === self::REMIDI;
+    }
+
+    public function labelJenis(): string
+    {
+        return $this->remidi() ? 'Remidi' : strtoupper($this->jenis);
+    }
+
     public function online(): bool
     {
         return $this->mode !== self::TATAP_MUKA;
@@ -105,10 +120,14 @@ class Ujian extends Model
 
     /**
      * Mahasiswa peserta kelas yang boleh mengikuti ujian ini: syarat kehadiran dipenuhi, mendapat
-     * dispensasi, atau syarat belum diberlakukan.
+     * dispensasi, atau syarat belum diberlakukan. Ujian remidi: hanya peserta remidi yang lunas.
      */
     public function bolehIkut(int $mahasiswaId): bool
     {
+        if ($this->remidi()) {
+            return RemidiPeserta::query()->where('kelas_id', $this->kelas_id)->where('mahasiswa_id', $mahasiswaId)->lunas()->exists();
+        }
+
         $kelas = $this->kelasKuliah;
 
         if (! $kelas->krs()->where('mahasiswa_id', $mahasiswaId)->exists()) {
@@ -168,6 +187,10 @@ class Ujian extends Model
      */
     public function pertemuan(): ?Pertemuan
     {
+        if ($this->remidi()) {
+            return null;
+        }
+
         return Pertemuan::query()->where('kelas_id', $this->kelas_id)->where('jenis', $this->jenis)->first();
     }
 

@@ -13,7 +13,7 @@ class TahunAkademik extends Model
 
     protected $table = 'tahun_akademik';
 
-    protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'batas_input_nilai', 'batas_bayar_remidi', 'status'];
+    protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'batas_input_nilai', 'batas_bayar_remidi', 'batas_input_nilai_remidi', 'status'];
 
     protected function casts(): array
     {
@@ -22,6 +22,7 @@ class TahunAkademik extends Model
             'tanggal_akhir' => 'date',
             'batas_input_nilai' => 'date:Y-m-d',
             'batas_bayar_remidi' => 'date:Y-m-d',
+            'batas_input_nilai_remidi' => 'date:Y-m-d',
             'status' => 'boolean',
         ];
     }
@@ -44,5 +45,13 @@ class TahunAkademik extends Model
             Carbon::parse($this->tanggal_krs_awal)->startOfDay(),
             Carbon::parse($this->tanggal_krs_akhir)->endOfDay(),
         );
+    }
+
+    /**
+     * Nilai remidi (dan huruf akhir peserta remidi) masih boleh diisi dosen sampai akhir hari batas.
+     */
+    public function batasNilaiRemidiLewat(): bool
+    {
+        return $this->batas_input_nilai_remidi?->copy()->endOfDay()->isPast() ?? false;
     }
 }

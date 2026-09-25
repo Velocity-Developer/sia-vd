@@ -9,6 +9,7 @@ use App\Models\MahasiswaProfile;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\Pertemuan;
+use App\Models\RemidiPeserta;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
@@ -66,6 +67,7 @@ class UjianController extends Controller
         return Inertia::render('Mahasiswa/UjianShow', [
             'ujian' => [
                 ...$ujian->only(['id', 'jenis', 'mode', 'jam_mulai', 'jam_akhir', 'pengawas', 'petunjuk']),
+                'label_jenis' => $ujian->labelJenis(),
                 'tanggal' => $ujian->tanggal->toDateString(),
                 'label_mode' => $ujian->labelMode(),
                 'ruang' => $ujian->ruang ? $ujian->ruang->kode_ruang.' — '.$ujian->ruang->nama_ruang : null,
@@ -132,7 +134,7 @@ class UjianController extends Controller
         }
 
         if (! $ujian->bolehIkut($mahasiswa->id)) {
-            throw ValidationException::withMessages(['jawaban' => 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.']);
+            throw ValidationException::withMessages(['jawaban' => $ujian->remidi() ? 'Anda bukan peserta remidi yang tagihannya lunas.' : 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.']);
         }
 
         $berkas = collect($request->file('jawaban'))->map(fn ($f): string => $f->storeAs(
@@ -164,12 +166,12 @@ class UjianController extends Controller
     public function kartu(Request $request): HttpResponse
     {
         $mahasiswa = $this->mahasiswa($request)->loadMissing('user:id,name', 'prodi:id,nama_prodi,jenjang');
-        $jenis = $request->query('jenis') === Pertemuan::UAS ? Pertemuan::UAS : Pertemuan::UTS;
+        $jenis = in_array($request->query('jenis'), Ujian::SEMUA_JENIS, true) ? $request->query('jenis') : Pertemuan::UTS;
         $tahun = TahunAkademik::find($request->integer('tahun_akademik_id')) ?? TahunAkademik::where('status', true)->first();
         abort_if($tahun === null, 404);
 
         $ujians = $this->daftarUjian($mahasiswa, $tahun->id)->where('jenis', $jenis)->values();
-        abort_if($ujians->isEmpty(), 404, 'Belum ada jadwal '.strtoupper($jenis).' yang terbit.');
+        abort_if($ujians->isEmpty(), 404, 'Belum ada jadwal '.($jenis === Ujian::REMIDI ? 'remidi' : strtoupper($jenis)).' yang terbit.');
         $institusi = PengaturanInstitusi::current();
 
         return Pdf::loadView('pdf.kartu-ujian', [
@@ -180,7 +182,7 @@ class UjianController extends Controller
             'tahun' => $tahun,
             'jenis' => $jenis,
             'ujians' => $ujians,
-            'syaratAktif' => PengaturanAkademik::current()->syarat_ujian_aktif,
+            'syaratAktif' => $jenis !== Ujian::REMIDI && PengaturanAkademik::current()->syarat_ujian_aktif,
         ])->download('kartu-'.$jenis.'-'.$mahasiswa->nim.'-'.Str::slug($tahun->tahun.'-'.$tahun->semester).'.pdf');
     }
 
@@ -195,6 +197,10 @@ class UjianController extends Controller
             ->with(['mataKuliah:id,kode_matkul,nama_matkul,sks', 'ujians' => fn ($q) => $q->terbit()->with('ruang:id,kode_ruang,nama_ruang')])
             ->get(['id', 'kode_kelas', 'matkul_id']);
 
+        // Jadwal remidi hanya tampil bagi peserta remidi yang tagihannya lunas.
+        $kelasRemidi = RemidiPeserta::query()->where('mahasiswa_id', $mahasiswa->id)->whereIn('kelas_id', $kelas->pluck('id'))->lunas()->pluck('kelas_id')->flip();
+        $kelas->each(fn (KelasKuliah $k) => $k->setRelation('ujians', $k->ujians->reject(fn (Ujian $u): bool => $u->remidi() && ! $kelasRemidi->has($k->id))->values()));
+
         $pertemuan = Pertemuan::query()->whereIn('kelas_id', $kelas->pluck('id'))->get()->groupBy('kelas_id');
         $syarat = SyaratUjian::untukMahasiswa(
             $mahasiswa->id,
@@ -205,6 +211,7 @@ class UjianController extends Controller
         return $kelas->flatMap(fn (KelasKuliah $k) => $k->ujians->map(fn (Ujian $u): array => [
             'id' => $u->id,
             'jenis' => $u->jenis,
+            'label_jenis' => $u->labelJenis(),
             'mode' => $u->mode,
             'label_mode' => $u->labelMode(),
             'tanggal' => $u->tanggal->toDateString(),
@@ -227,6 +234,8 @@ class UjianController extends Controller
     private function pastikanPeserta(Ujian $ujian, MahasiswaProfile $mahasiswa): void
     {
         abort_unless($ujian->status === Ujian::TERBIT && $ujian->kelasKuliah->krs()->where('mahasiswa_id', $mahasiswa->id)->exists(), 404);
+        // Ujian remidi tidak terlihat sama sekali oleh yang bukan peserta lunas.
+        abort_if($ujian->remidi() && ! $ujian->bolehIkut($mahasiswa->id), 404);
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile

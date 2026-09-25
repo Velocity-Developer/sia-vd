@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>Kartu {{ strtoupper($jenis) }} {{ $mahasiswa->nim }}</title>
+    <title>Kartu {{ $jenis === 'remidi' ? 'Remidi' : strtoupper($jenis) }} {{ $mahasiswa->nim }}</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #1a1a1a; margin: 0; }
@@ -46,7 +46,7 @@
         </table>
     </div>
 
-    <p class="title">Kartu {{ $jenis === 'uts' ? 'Ujian Tengah Semester' : 'Ujian Akhir Semester' }}</p>
+    <p class="title">Kartu {{ ['uts' => 'Ujian Tengah Semester', 'uas' => 'Ujian Akhir Semester', 'remidi' => 'Ujian Remidi'][$jenis] }}</p>
     <p class="subtitle">Tahun Akademik {{ $tahun->tahun }} {{ $tahun->semester }}</p>
 
     <table class="identitas">

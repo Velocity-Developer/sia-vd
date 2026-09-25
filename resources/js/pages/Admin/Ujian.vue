@@ -32,7 +32,8 @@ type Ujian = {
 const props = defineProps<{
     ujians: { data: Ujian[]; links: { url: string | null; label: string; active: boolean }[]; total: number };
     filter: { tahun_akademik_id: number | null; prodi_id: number | null; jenis: JenisUjian | null; status: 'draf' | 'terbit' | null; search: string };
-    belumAda: Record<JenisUjian, number>;
+    belumAda: Record<'uts' | 'uas', number>;
+    remidiSiap: number;
     jumlahDraf: number;
     tahunAkademikOptions: Opsi[];
     prodiOptions: Opsi[];
@@ -119,6 +120,16 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                 </div>
 
                 <div
+                    v-if="props.remidiSiap"
+                    class="flex flex-wrap items-center gap-3 rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
+                >
+                    <span>{{ props.remidiSiap }} kelas punya peserta remidi yang sudah lunas tetapi belum dijadwalkan remidinya.</span>
+                    <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: 'remidi' })">
+                        <Button size="sm" variant="outline" class="bg-white">Jadwalkan remidi</Button>
+                    </Link>
+                </div>
+
+                <div
                     v-if="props.belumAda.uts || props.belumAda.uas"
                     class="flex flex-wrap items-center gap-3 rounded-xl border border-[#f1d9a0] bg-[#fff6e0] px-4 py-3 text-sm text-[#8a5a00]"
                 >
@@ -149,9 +160,10 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                         <option v-for="p in props.prodiOptions" :key="p.id" :value="p.id">{{ p.name }}</option>
                     </SelectFilter>
                     <SelectFilter v-model="jenis" label="Jenis ujian" @change="kirim">
-                        <option value="all">UTS &amp; UAS</option>
+                        <option value="all">Semua jenis</option>
                         <option value="uts">UTS</option>
                         <option value="uas">UAS</option>
+                        <option value="remidi">Remidi</option>
                     </SelectFilter>
                     <SelectFilter v-model="status" label="Status" @change="kirim">
                         <option value="all">Semua status</option>

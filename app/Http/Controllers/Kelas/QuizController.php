@@ -214,7 +214,7 @@ class QuizController extends Controller
             return $terkunci;
         }
         // Mengubah atau menghapus soal menilai ulang attempt yang sudah dikirim.
-        $this->pastikanNilaiTidakTerkunci($kelasKuliah);
+        $this->pastikanNilaiTidakTerkunci($kelasKuliah, $quiz->ujian);
         abort_unless($question->quiz_id === $quiz->id, 404);
 
         $data = $request->validate([
@@ -273,7 +273,7 @@ class QuizController extends Controller
             return $terkunci;
         }
         // Mengubah atau menghapus soal menilai ulang attempt yang sudah dikirim.
-        $this->pastikanNilaiTidakTerkunci($kelasKuliah);
+        $this->pastikanNilaiTidakTerkunci($kelasKuliah, $quiz->ujian);
         abort_unless($question->quiz_id === $quiz->id, 404);
         $question->delete();
         $quiz->regradeAttempts();

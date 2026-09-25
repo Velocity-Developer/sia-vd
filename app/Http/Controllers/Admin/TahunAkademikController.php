@@ -85,10 +85,12 @@ class TahunAkademikController extends Controller
                 'tanggal_krs_akhir' => ['required', 'date', 'after_or_equal:tanggal_krs_awal'],
                 'batas_input_nilai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
                 'batas_bayar_remidi' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+                'batas_input_nilai_remidi' => ['nullable', 'date', 'after:batas_bayar_remidi'],
                 'status' => ['boolean'],
             ],
             [
                 'after_or_equal' => ':attribute harus sama atau setelah :date.',
+                'batas_input_nilai_remidi.after' => 'Batas input nilai remidi harus setelah batas bayar remidi.',
                 'tahun.unique' => 'Tahun akademik dengan tahun dan semester ini sudah ada.',
             ],
             [
@@ -100,6 +102,7 @@ class TahunAkademikController extends Controller
                 'tanggal_krs_akhir' => 'tanggal KRS akhir',
                 'batas_input_nilai' => 'batas input nilai',
                 'batas_bayar_remidi' => 'batas bayar remidi',
+                'batas_input_nilai_remidi' => 'batas input nilai remidi',
                 'status' => 'status',
             ],
         );

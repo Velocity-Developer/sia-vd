@@ -55,14 +55,14 @@ class QuizPenilaianController extends Controller
                 'back' => route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz]),
             ],
             'breadcrumbKelas' => route($this->rute('kelas-kuliah.show'), $kelasKuliah),
-            'nilaiTerkunci' => $this->pesanNilaiTerkunci($kelasKuliah),
+            'nilaiTerkunci' => $this->pesanNilaiTerkunci($kelasKuliah, $quiz->ujian),
         ]);
     }
 
     public function grade(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz, QuizAttempt $attempt): RedirectResponse
     {
         $this->ensureAccess($request, $kelasKuliah, $quiz, $attempt);
-        $this->pastikanNilaiTidakTerkunci($kelasKuliah);
+        $this->pastikanNilaiTidakTerkunci($kelasKuliah, $quiz->ujian);
         abort_if($attempt->submitted_at === null, 422, 'Quiz belum dikirim mahasiswa.');
 
         $essays = $quiz->questions()->where('question_type', 'essay')->get()->keyBy('id');

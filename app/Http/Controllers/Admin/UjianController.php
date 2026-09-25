@@ -8,6 +8,7 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\Pertemuan;
 use App\Models\ProgramStudi;
+use App\Models\RemidiPeserta;
 use App\Models\Ruang;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
@@ -32,7 +33,7 @@ class UjianController extends Controller
         $filter = [
             'tahun_akademik_id' => $request->integer('tahun_akademik_id') ?: $tahunAkademiks->firstWhere('status', true)?->id,
             'prodi_id' => $request->integer('prodi_id') ?: null,
-            'jenis' => in_array($request->query('jenis'), Ujian::JENIS, true) ? $request->query('jenis') : null,
+            'jenis' => in_array($request->query('jenis'), Ujian::SEMUA_JENIS, true) ? $request->query('jenis') : null,
             'status' => in_array($request->query('status'), [Ujian::DRAF, Ujian::TERBIT], true) ? $request->query('status') : null,
             'search' => $request->string('search')->trim()->toString(),
         ];
@@ -62,6 +63,8 @@ class UjianController extends Controller
             'ujians' => $ujians,
             'filter' => $filter,
             'belumAda' => $belumAda,
+            // Kelas yang daftar remidinya sudah dikunci dan punya peserta lunas, tetapi belum dijadwalkan.
+            'remidiSiap' => $this->kelasRemidiSiap($filter['tahun_akademik_id'])->count(),
             'jumlahDraf' => Ujian::query()->where('status', Ujian::DRAF)->whereHas('kelasKuliah', fn (Builder $k) => $k->where('tahun_akademik_id', $filter['tahun_akademik_id']))->count(),
             'tahunAkademikOptions' => $tahunAkademiks->map(fn (TahunAkademik $t): array => ['id' => $t->id, 'name' => $t->tahun.' '.$t->semester]),
             'prodiOptions' => ProgramStudi::orderBy('nama_prodi')->get(['id', 'nama_prodi'])->map(fn (ProgramStudi $p): array => ['id' => $p->id, 'name' => $p->nama_prodi]),
@@ -124,6 +127,7 @@ class UjianController extends Controller
 
         return Inertia::render('Admin/UjianForm', [
             'ujian' => null,
+            'jenisAwal' => in_array($request->query('jenis'), Ujian::SEMUA_JENIS, true) ? $request->query('jenis') : null,
             ...$this->opsiForm($tahunId),
         ]);
     }
@@ -147,6 +151,7 @@ class UjianController extends Controller
 
         return Inertia::render('Admin/UjianForm', [
             'ujian' => $ujian,
+            'jenisAwal' => null,
             ...$this->opsiForm($ujian->kelasKuliah->tahun_akademik_id),
         ]);
     }
@@ -184,7 +189,7 @@ class UjianController extends Controller
 
         $ujian->delete();
 
-        return back()->with('success', 'Jadwal ujian dihapus. Pertemuan '.strtoupper($ujian->jenis).' kelas tidak berubah.');
+        return back()->with('success', $ujian->remidi() ? 'Jadwal remidi dihapus.' : 'Jadwal ujian dihapus. Pertemuan '.strtoupper($ujian->jenis).' kelas tidak berubah.');
     }
 
     /**
@@ -217,12 +222,25 @@ class UjianController extends Controller
         $kelasId = $ujian?->kelas_id ?? $request->integer('kelas_id');
         $kelas = KelasKuliah::with('tahunAkademik')->find($kelasId);
 
+        $remidi = ($ujian?->jenis ?? $request->input('jenis')) === Ujian::REMIDI;
+        $ta = $kelas?->tahunAkademik;
+
+        if ($remidi && $kelas !== null) {
+            $this->pastikanKelasSiapRemidi($kelas);
+        }
+
+        // UTS/UAS dalam rentang tahun akademik; remidi sesudah batas bayar sampai batas input nilai remidi.
+        $rentangTanggal = match (true) {
+            $ta === null => [],
+            $remidi => ['after:'.$ta->batas_bayar_remidi->toDateString(), 'before_or_equal:'.$ta->batas_input_nilai_remidi->toDateString()],
+            default => ['after_or_equal:'.$ta->tanggal_mulai->toDateString(), 'before_or_equal:'.$ta->tanggal_akhir->toDateString()],
+        };
+
         $data = $request->validate([
             'kelas_id' => [$ujian ? 'prohibited' : 'required', 'exists:kelas_kuliah,id'],
-            'jenis' => [$ujian ? 'prohibited' : 'required', Rule::in(Ujian::JENIS), Rule::unique('ujians')->where('kelas_id', $kelasId)],
+            'jenis' => [$ujian ? 'prohibited' : 'required', Rule::in(Ujian::SEMUA_JENIS), Rule::unique('ujians')->where('kelas_id', $kelasId)],
             'mode' => ['required', Rule::in(Ujian::MODE)],
-            'tanggal' => ['required', 'date_format:Y-m-d',
-                ...($kelas ? ['after_or_equal:'.$kelas->tahunAkademik->tanggal_mulai->toDateString(), 'before_or_equal:'.$kelas->tahunAkademik->tanggal_akhir->toDateString()] : [])],
+            'tanggal' => ['required', 'date_format:Y-m-d', ...$rentangTanggal],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_akhir' => ['required', 'date_format:H:i', 'after:jam_mulai'],
             'ruang_id' => ['nullable', 'required_if:mode,'.Ujian::TATAP_MUKA, 'exists:ruangs,id'],
@@ -230,10 +248,13 @@ class UjianController extends Controller
             'petunjuk' => ['nullable', 'string', 'max:5000'],
             'status' => ['required', Rule::in([Ujian::DRAF, Ujian::TERBIT])],
         ], [
-            'jenis.unique' => 'Kelas ini sudah punya jadwal ujian dengan jenis tersebut.',
+            'jenis.unique' => 'Kelas ini sudah punya jadwal ujian dengan jenis tersebut. Remidi hanya sekali per kelas.',
             'ruang_id.required_if' => 'Ruang wajib diisi untuk ujian tatap muka.',
             'tanggal.after_or_equal' => 'Tanggal ujian harus berada dalam tahun akademik kelas.',
-            'tanggal.before_or_equal' => 'Tanggal ujian harus berada dalam tahun akademik kelas.',
+            'tanggal.after' => 'Tanggal remidi harus sesudah batas bayar remidi ('.$ta?->batas_bayar_remidi?->translatedFormat('d M Y').').',
+            'tanggal.before_or_equal' => $remidi
+                ? 'Tanggal remidi paling lambat batas input nilai remidi ('.$ta?->batas_input_nilai_remidi?->translatedFormat('d M Y').').'
+                : 'Tanggal ujian harus berada dalam tahun akademik kelas.',
             'after' => ':attribute harus lebih besar dari Jam Mulai.',
             'date_format' => ':attribute tidak valid.',
         ], [
@@ -277,7 +298,10 @@ class UjianController extends Controller
             return;
         }
 
-        $mahasiswaKelas = Krs::query()->where('kelas_id', $kelas->id)->select('mahasiswa_id');
+        // Ujian remidi hanya diikuti peserta remidi, bukan seluruh kelas.
+        $mahasiswaKelas = $ujian->remidi()
+            ? RemidiPeserta::query()->where('kelas_id', $kelas->id)->select('mahasiswa_id')
+            : Krs::query()->where('kelas_id', $kelas->id)->select('mahasiswa_id');
         $bentrok = Krs::query()
             ->whereIn('mahasiswa_id', $mahasiswaKelas)
             ->where('kelas_id', '!=', $kelas->id)
@@ -287,13 +311,17 @@ class UjianController extends Controller
 
         if ($bentrok > 0) {
             throw ValidationException::withMessages([
-                'tanggal' => "{$bentrok} mahasiswa kelas ini juga punya ujian lain pada jam yang sama. Ubah jadwal, atau centang \"Tetap simpan\" bila memang disengaja.",
+                'tanggal' => $bentrok.' mahasiswa '.($ujian->remidi() ? 'peserta remidi' : 'kelas ini').' juga punya ujian lain pada jam yang sama. Ubah jadwal, atau centang "Tetap simpan" bila memang disengaja.',
             ]);
         }
     }
 
     private function pesanSinkron(Ujian $ujian, bool $sinkron): string
     {
+        if ($ujian->remidi()) {
+            return '';
+        }
+
         $jenis = strtoupper($ujian->jenis);
 
         return $sinkron
@@ -302,12 +330,53 @@ class UjianController extends Controller
     }
 
     /**
+     * Kelas yang bisa dijadwalkan remidi: daftar remidi dikunci, ada peserta yang lunas, belum punya jadwal remidi.
+     *
+     * @return Builder<KelasKuliah>
+     */
+    private function kelasRemidiSiap(?int $tahunId): Builder
+    {
+        return KelasKuliah::query()
+            ->where('tahun_akademik_id', $tahunId)
+            ->whereNotNull('remidi_dikunci_at')
+            ->whereHas('remidiPesertas', fn (Builder $q) => $q->lunas())
+            ->whereDoesntHave('ujians', fn (Builder $q) => $q->where('jenis', Ujian::REMIDI));
+    }
+
+    private function pastikanKelasSiapRemidi(KelasKuliah $kelas): void
+    {
+        $ta = $kelas->tahunAkademik;
+        $pesan = match (true) {
+            $ta->batas_bayar_remidi === null || $ta->batas_input_nilai_remidi === null => 'Isi dulu Batas Bayar Remidi dan Batas Input Nilai Remidi di menu Tahun Akademik.',
+            $kelas->remidi_dikunci_at === null => 'Daftar remidi kelas ini belum dikunci dosen.',
+            ! $kelas->remidiPesertas()->lunas()->exists() => 'Belum ada peserta remidi kelas ini yang tagihannya lunas.',
+            default => null,
+        };
+
+        if ($pesan !== null) {
+            throw ValidationException::withMessages(['kelas_id' => $pesan]);
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function opsiForm(?int $tahunId): array
     {
+        $ta = TahunAkademik::find($tahunId);
+
         return [
             'tahunAkademikId' => $tahunId,
+            'kelasRemidiOptions' => $this->kelasRemidiSiap($tahunId)
+                ->with('mataKuliah:id,nama_matkul')
+                ->withCount(['remidiPesertas as peserta_lunas' => fn (Builder $q) => $q->lunas()])
+                ->orderBy('kode_kelas')
+                ->get(['id', 'kode_kelas', 'matkul_id'])
+                ->map(fn (KelasKuliah $k): array => ['id' => $k->id, 'name' => $k->kode_kelas.' — '.$k->mataKuliah?->nama_matkul.' ('.$k->peserta_lunas.' peserta lunas)']),
+            'batasRemidi' => [
+                'bayar' => $ta?->batas_bayar_remidi?->toDateString(),
+                'nilai' => $ta?->batas_input_nilai_remidi?->toDateString(),
+            ],
             'kelasOptions' => KelasKuliah::query()
                 ->where('tahun_akademik_id', $tahunId)
                 ->with('mataKuliah:id,kode_matkul,nama_matkul')

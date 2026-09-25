@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\KelasKuliah;
+use App\Models\Ujian;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -41,15 +42,25 @@ trait KontenKelas
      * Nilai (huruf akhir, nilai tugas, koreksi quiz, nilai ujian) dikunci untuk dosen bila tahun akademik tidak
      * aktif, nilai kelas sudah difinalisasi, atau batas input nilai sudah lewat. Admin tetap bisa mengubah.
      */
-    protected function nilaiTerkunci(KelasKuliah $kelasKuliah): bool
+    protected function nilaiTerkunci(KelasKuliah $kelasKuliah, ?Ujian $ujian = null): bool
     {
-        return $this->pesanNilaiTerkunci($kelasKuliah) !== null;
+        return $this->pesanNilaiTerkunci($kelasKuliah, $ujian) !== null;
     }
 
-    protected function pesanNilaiTerkunci(KelasKuliah $kelasKuliah): ?string
+    /**
+     * Ujian remidi punya jendela sendiri: nilai kelas memang sudah final, tetapi soal dan nilai remidi masih boleh
+     * diubah dosen sampai batas input nilai remidi.
+     */
+    protected function pesanNilaiTerkunci(KelasKuliah $kelasKuliah, ?Ujian $ujian = null): ?string
     {
         if ($this->tahunAkademikTerkunci($kelasKuliah)) {
             return 'Nilai terkunci karena tahun akademik kelas ini sudah tidak aktif. Hubungi admin untuk perubahan nilai.';
+        }
+
+        if ($ujian?->remidi()) {
+            return $this->peran() === 'dosen' && $kelasKuliah->tahunAkademik?->batasNilaiRemidiLewat()
+                ? 'Batas input nilai remidi sudah lewat. Hubungi admin bila perlu perubahan.'
+                : null;
         }
 
         if ($this->peran() === 'dosen' && $kelasKuliah->nilaiFinal()) {
@@ -61,9 +72,9 @@ trait KontenKelas
         return null;
     }
 
-    protected function pastikanNilaiTidakTerkunci(KelasKuliah $kelasKuliah): void
+    protected function pastikanNilaiTidakTerkunci(KelasKuliah $kelasKuliah, ?Ujian $ujian = null): void
     {
-        $pesan = $this->pesanNilaiTerkunci($kelasKuliah);
+        $pesan = $this->pesanNilaiTerkunci($kelasKuliah, $ujian);
         abort_if($pesan !== null, 403, $pesan ?? '');
     }
 

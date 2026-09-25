@@ -80,6 +80,7 @@ class ContentController extends Controller
         // Lembar soal ujian hanya bisa dibuka bila jadwal ujiannya sudah terbit.
         $ujian = $quiz->ujian;
         abort_if($ujian !== null && $ujian->status !== Ujian::TERBIT, 404);
+        abort_if($ujian?->remidi() && ! $ujian->bolehIkut($mahasiswa->id), 404);
 
         $quiz->load(['kelasKuliah.mataKuliah', 'uploader:id,name']);
         $attempt = QuizAttempt::query()

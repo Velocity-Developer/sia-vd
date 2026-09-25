@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { jam } from '@/lib/presensi';
+import { formatTanggal, jam } from '@/lib/presensi';
 import { JENIS_UJIAN, MODE_UJIAN, type JenisUjian, type ModeUjian } from '@/lib/ujian';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 type Opsi = { id: number; name: string };
 type Ujian = {
@@ -26,11 +26,19 @@ type Ujian = {
     kelas_kuliah?: { kode_kelas: string; mata_kuliah?: { nama_matkul: string } | null } | null;
 };
 
-const props = defineProps<{ ujian: Ujian | null; tahunAkademikId: number | null; kelasOptions: Opsi[]; ruangOptions: Opsi[] }>();
+const props = defineProps<{
+    ujian: Ujian | null;
+    tahunAkademikId: number | null;
+    kelasOptions: Opsi[];
+    kelasRemidiOptions: Opsi[];
+    batasRemidi: { bayar: string | null; nilai: string | null };
+    ruangOptions: Opsi[];
+    jenisAwal: JenisUjian | null;
+}>();
 
 const form = useForm({
     kelas_id: '' as number | string,
-    jenis: 'uts' as JenisUjian,
+    jenis: (props.jenisAwal ?? 'uts') as JenisUjian,
     mode: props.ujian?.mode ?? ('tatap_muka' as ModeUjian),
     tanggal: props.ujian?.tanggal.slice(0, 10) ?? '',
     jam_mulai: jam(props.ujian?.jam_mulai),
@@ -51,7 +59,16 @@ const simpan = () => {
     if (props.ujian) form.put(route('admin.ujian.update', props.ujian.id));
     else form.post(route('admin.ujian.store'));
 };
-const bentrokMahasiswa = computed(() => (form.errors.tanggal ?? '').includes('mahasiswa kelas ini'));
+const bentrokMahasiswa = computed(() => (form.errors.tanggal ?? '').includes('punya ujian lain'));
+const remidi = computed(() => (props.ujian?.jenis ?? form.jenis) === 'remidi');
+// Remidi hanya untuk kelas yang daftar remidinya dikunci dan punya peserta lunas.
+const opsiKelas = computed(() => (remidi.value ? props.kelasRemidiOptions : props.kelasOptions));
+watch(
+    () => form.jenis,
+    () => {
+        if (!opsiKelas.value.some((k) => k.id === form.kelas_id)) form.kelas_id = '';
+    },
+);
 const judul = computed(() => (props.ujian ? 'Ubah Jadwal Ujian' : 'Tambah Jadwal Ujian'));
 
 const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
@@ -83,17 +100,20 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
 
                 <form class="flex flex-col gap-4" @submit.prevent="simpan">
                     <section v-if="!props.ujian" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                        <div class="grid content-start items-start gap-4 sm:grid-cols-[1fr,200px]">
+                        <div class="grid content-start items-start gap-4 sm:grid-cols-[1fr,260px]">
                             <div class="grid content-start gap-2">
                                 <Label for="kelas_id">Kelas</Label>
                                 <SearchSelect
                                     id="kelas_id"
                                     v-model="form.kelas_id"
-                                    :options="props.kelasOptions"
+                                    :options="opsiKelas"
                                     placeholder="Pilih kelas"
                                     search-placeholder="Cari kode kelas atau mata kuliah"
                                     required
                                 />
+                                <p v-if="remidi && !props.kelasRemidiOptions.length" class="text-xs text-[#a39e98]">
+                                    Belum ada kelas yang daftar remidinya dikunci dan punya peserta lunas.
+                                </p>
                                 <InputError :message="form.errors.kelas_id" />
                             </div>
                             <div class="grid content-start gap-2">
@@ -133,6 +153,10 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                             <div class="grid content-start gap-2">
                                 <Label for="tanggal">Tanggal</Label>
                                 <Input id="tanggal" v-model="form.tanggal" type="date" :class="inp" required />
+                                <p v-if="remidi && props.batasRemidi.bayar" class="text-xs text-[#a39e98]">
+                                    Sesudah {{ formatTanggal(props.batasRemidi.bayar, false) }} s.d.
+                                    {{ formatTanggal(props.batasRemidi.nilai, false) }}
+                                </p>
                                 <InputError :message="form.errors.tanggal" />
                             </div>
                             <div class="grid content-start gap-2">

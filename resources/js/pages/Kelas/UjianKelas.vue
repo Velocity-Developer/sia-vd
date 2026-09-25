@@ -60,6 +60,7 @@ const props = defineProps<{
     sudahMulai: boolean;
     sudahSelesai: boolean;
     terkunci: boolean;
+    batasNilaiRemidi: string | null;
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -133,6 +134,10 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             >Draf – belum tampil ke mahasiswa</span
                         >
                     </p>
+                    <p v-if="props.ujian.jenis === 'remidi'" class="text-sm text-[#615d59]">
+                        Hanya peserta remidi yang tagihannya lunas.
+                        <template v-if="props.batasNilaiRemidi">Nilai remidi bisa diisi sampai {{ formatTanggal(props.batasNilaiRemidi) }}.</template>
+                    </p>
                 </div>
 
                 <div
@@ -204,7 +209,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             <p class="mt-1 text-sm text-[#615d59]">
                                 <template v-if="tatapMuka">{{ dinilai }} dari {{ props.peserta.length }} mahasiswa sudah dinilai.</template>
                                 <template v-else>{{ terkumpul }} dari {{ props.peserta.length }} mahasiswa mengumpulkan.</template>
-                                <template v-if="!props.sudahSelesai">Nilai diisi setelah ujian selesai.</template>
+                                <template v-if="!props.sudahSelesai">{{ ' ' }}Nilai diisi setelah ujian selesai.</template>
                             </p>
                         </div>
                         <div v-if="props.sudahSelesai && !props.terkunci" class="flex items-center gap-2 text-sm">
@@ -399,7 +404,12 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                 </template>
 
                 <section v-if="props.ujian.mode === 'tatap_muka'" :class="kartu">
-                    <p class="text-sm text-[#615d59]">
+                    <p v-if="props.ujian.jenis === 'remidi'" class="text-sm text-[#615d59]">
+                        Ujian remidi tatap muka:
+                        <a :href="rute('ujian.daftar-hadir', props.ujian.id)" class="text-[#0075de] hover:underline">unduh daftar hadir (PDF)</a>
+                        berisi peserta remidi yang sudah lunas.
+                    </p>
+                    <p v-else class="text-sm text-[#615d59]">
                         Ujian tatap muka: daftar hadir dicetak dari halaman
                         <Link :href="rute('presensi.kelas', props.kelasKuliah.id)" class="text-[#0075de] hover:underline">Presensi kelas</Link>
                         (tab Peserta Ujian).

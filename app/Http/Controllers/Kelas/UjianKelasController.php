@@ -5,13 +5,20 @@ namespace App\Http\Controllers\Kelas;
 use App\AllowedUpload;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
+use App\Models\KelasKuliah;
+use App\Models\Krs;
 use App\Models\MahasiswaProfile;
+use App\Models\PengaturanInstitusi;
 use App\Models\Quiz;
+use App\Models\RemidiPeserta;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\SyaratUjian;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -44,7 +51,7 @@ class UjianKelasController extends Controller
             ->keyBy('mahasiswa_id');
         $totalPoin = (int) $quiz?->questions_sum_points;
 
-        $peserta = $kelas->krs()
+        $peserta = $this->kueriPeserta($ujian)
             ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name'])
             ->get(['id', 'kelas_id', 'mahasiswa_id'])
             ->sortBy(fn ($krs) => $krs->mahasiswa?->nim)
@@ -87,6 +94,7 @@ class UjianKelasController extends Controller
                 'tanggal' => $ujian->tanggal->toDateString(),
                 'label_mode' => $ujian->labelMode(),
                 'ruang' => $ujian->ruang ? $ujian->ruang->kode_ruang.' — '.$ujian->ruang->nama_ruang : null,
+                'label_jenis' => $ujian->labelJenis(),
                 'soal' => array_map(fn (string $path): string => basename($path), $ujian->soal_berkas ?? []),
             ],
             'peserta' => $peserta,
@@ -96,11 +104,54 @@ class UjianKelasController extends Controller
                 'total_poin' => $totalPoin,
                 'waktu_pengerjaan' => $quiz->waktu_pengerjaan,
             ],
-            'syaratAktif' => $syarat['aktif'],
+            'syaratAktif' => $syarat['aktif'] && ! $ujian->remidi(),
             'sudahMulai' => $ujian->sudahMulai(),
             'sudahSelesai' => $ujian->sudahSelesai(),
-            'terkunci' => $this->nilaiTerkunci($kelas),
+            'terkunci' => $this->nilaiTerkunci($kelas, $ujian),
+            'batasNilaiRemidi' => $ujian->remidi() ? $kelas->tahunAkademik?->batas_input_nilai_remidi?->toDateString() : null,
         ]);
+    }
+
+    /**
+     * Daftar hadir ujian remidi tatap muka (PDF): hanya peserta remidi yang lunas. Daftar hadir UTS/UAS ada di menu Presensi.
+     */
+    public function daftarHadir(Ujian $ujian): HttpResponse
+    {
+        $kelas = $ujian->kelasKuliah;
+        $this->pastikanAksesKelas($kelas);
+        abort_unless($ujian->remidi(), 404);
+        $kelas->load(['mataKuliah:id,kode_matkul,nama_matkul,sks,prodi_id', 'mataKuliah.prodi:id,nama_prodi', 'dosen:id,user_id,nidn', 'dosen.user:id,name', 'tahunAkademik:id,tahun,semester']);
+        $ujian->load('ruang:id,kode_ruang');
+        $institusi = PengaturanInstitusi::current();
+
+        return Pdf::loadView('pdf.peserta-ujian', [
+            'institusi' => $institusi,
+            'logoSrc' => $institusi->logoDataUri(),
+            'kontak' => $institusi->kontakKop(),
+            'kelas' => $kelas,
+            'jenis' => Ujian::REMIDI,
+            'jadwal' => $ujian,
+            'aktif' => false,
+            'min' => null,
+            'peserta' => $this->kueriPeserta($ujian)
+                ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name'])
+                ->get()
+                ->sortBy(fn ($p) => $p->mahasiswa?->nim)
+                ->map(fn ($p): array => ['nim' => $p->mahasiswa?->nim, 'nama' => $p->mahasiswa?->user?->name, 'syarat' => null])
+                ->values(),
+        ])->download('peserta-remidi-'.Str::slug($kelas->kode_kelas.'-'.$kelas->tahunAkademik?->tahun.'-'.$kelas->tahunAkademik?->semester).'.pdf');
+    }
+
+    /**
+     * Peserta ujian: mahasiswa KRS kelas, atau untuk remidi hanya peserta remidi yang lunas.
+     *
+     * @return HasMany<Krs|RemidiPeserta, KelasKuliah>
+     */
+    private function kueriPeserta(Ujian $ujian): HasMany
+    {
+        return $ujian->remidi()
+            ? $ujian->kelasKuliah->remidiPesertas()->lunas()
+            : $ujian->kelasKuliah->krs();
     }
 
     /**
@@ -166,7 +217,7 @@ class UjianKelasController extends Controller
         abort_unless($ujian->mode === Ujian::ONLINE_SOAL, 404);
 
         $quiz = $ujian->quiz ?? Quiz::create([
-            'nama_quiz' => strtoupper($ujian->jenis).' '.$kelas->mataKuliah?->nama_matkul,
+            'nama_quiz' => $ujian->labelJenis().' '.$kelas->mataKuliah?->nama_matkul,
             'catatan' => $ujian->petunjuk,
             'waktu_pengerjaan' => null,
             'tenggat_waktu' => $ujian->akhirAt(),
@@ -187,8 +238,8 @@ class UjianKelasController extends Controller
         $kelas = $ujian->kelasKuliah;
         $this->pastikanAksesKelas($kelas);
         abort_if($ujian->mode === Ujian::ONLINE_SOAL, 404);
-        abort_unless($kelas->krs()->where('mahasiswa_id', $mahasiswa->id)->exists(), 404);
-        $this->pastikanNilaiTidakTerkunci($kelas);
+        abort_unless($this->kueriPeserta($ujian)->where('mahasiswa_id', $mahasiswa->id)->exists(), 404);
+        $this->pastikanNilaiTidakTerkunci($kelas, $ujian);
 
         if (! $ujian->sudahSelesai()) {
             return back()->with('error', 'Nilai diisi setelah ujian selesai.');

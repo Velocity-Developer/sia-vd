@@ -25,7 +25,7 @@ class UjianController extends Controller
         $ujians = Ujian::query()
             ->whereHas('kelasKuliah', fn (Builder $k) => $k->where('dosen_id', $dosenId)->where('tahun_akademik_id', $tahunId))
             ->with([
-                'kelasKuliah' => fn ($q) => $q->select(['id', 'kode_kelas', 'matkul_id'])->withCount('krs'),
+                'kelasKuliah' => fn ($q) => $q->select(['id', 'kode_kelas', 'matkul_id'])->withCount(['krs', 'remidiPesertas as remidi_lunas_count' => fn ($p) => $p->lunas()]),
                 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul',
                 'ruang:id,kode_ruang,nama_ruang',
             ])
