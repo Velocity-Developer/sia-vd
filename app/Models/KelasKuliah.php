@@ -143,4 +143,9 @@ class KelasKuliah extends Model
     {
         return $this->hasMany(DispensasiUjian::class, 'kelas_id');
     }
+
+    public function ujians(): HasMany
+    {
+        return $this->hasMany(Ujian::class, 'kelas_id');
+    }
 }

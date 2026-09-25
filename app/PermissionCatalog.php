@@ -36,6 +36,7 @@ class PermissionCatalog
             ['key' => 'admin.tugas', 'name' => 'Tugas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola tugas seluruh kelas kuliah.', 'defaults' => $admin],
             ['key' => 'admin.quiz', 'name' => 'Quiz', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola quiz seluruh kelas kuliah.', 'defaults' => $admin],
             ['key' => 'admin.presensi', 'name' => 'Presensi', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola pertemuan, presensi dosen, dan presensi mahasiswa seluruh kelas kuliah.', 'defaults' => $admin],
+            ['key' => 'admin.ujian', 'name' => 'Jadwal Ujian', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Menyusun, menerbitkan, dan mengatur mode jadwal UTS/UAS seluruh kelas.', 'defaults' => $admin],
             ['key' => 'admin.pindah-kelas', 'name' => 'Pindah Kelas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Memproses pengajuan dan pengaturan pindah kelas.', 'defaults' => $admin],
             ['key' => 'admin.jenis-biaya', 'name' => 'Jenis Biaya', 'group' => 'Keuangan', 'user_type' => null, 'description' => 'Mengelola jenis biaya kuliah dan tarifnya per prodi/angkatan.', 'defaults' => $admin],
             ['key' => 'admin.tagihan', 'name' => 'Tagihan Mahasiswa', 'group' => 'Keuangan', 'user_type' => null, 'description' => 'Menerbitkan tagihan semester dan mengubah status pembayaran mahasiswa.', 'defaults' => $admin],
@@ -55,6 +56,7 @@ class PermissionCatalog
             ['key' => 'dosen.tugas', 'name' => 'Tugas Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola tugas dari kelas yang diampu.', 'defaults' => [UserType::Dosen]],
             ['key' => 'dosen.quiz', 'name' => 'Quiz Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola quiz dari kelas yang diampu.', 'defaults' => [UserType::Dosen]],
             ['key' => 'dosen.presensi', 'name' => 'Presensi Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Membuka pertemuan, mengisi jurnal, dan mencatat presensi mahasiswa di kelas yang diampu.', 'defaults' => [UserType::Dosen]],
+            ['key' => 'dosen.ujian', 'name' => 'Ujian Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Melihat jadwal ujian kelas yang diampu, menyiapkan soal, dan menilai jawaban.', 'defaults' => [UserType::Dosen]],
             ['key' => 'dosen.mahasiswa-kelas', 'name' => 'Mahasiswa Kelas', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Melihat daftar mahasiswa di kelas yang diampu.', 'defaults' => [UserType::Dosen]],
 
             ['key' => 'mahasiswa.dashboard', 'name' => 'Beranda Mahasiswa', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Membuka beranda, profil, dan halaman informasi mahasiswa.', 'defaults' => [UserType::Mahasiswa]],
@@ -63,6 +65,7 @@ class PermissionCatalog
             ['key' => 'mahasiswa.hasil-studi', 'name' => 'Hasil Studi & Transkrip', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Melihat dan mengunduh KHS serta transkrip nilai.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.jadwal-kuliah', 'name' => 'Jadwal & Kelas Kuliah', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Melihat jadwal, materi, serta mengerjakan tugas dan quiz.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.presensi', 'name' => 'Presensi Mahasiswa', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Presensi mandiri lewat QR/PIN dan melihat riwayat kehadiran.', 'defaults' => [UserType::Mahasiswa]],
+            ['key' => 'mahasiswa.ujian', 'name' => 'Ujian Mahasiswa', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Melihat jadwal ujian, mencetak kartu ujian, dan mengerjakan ujian online.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.pindah-kelas', 'name' => 'Pengajuan Pindah Kelas', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Mengajukan pindah kelas.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.info-biaya', 'name' => 'Info Biaya Kuliah', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Melihat tagihan dan status pembayaran kuliah.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.perpustakaan', 'name' => 'Perpustakaan', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Membuka menu perpustakaan dan riwayat pinjaman.', 'defaults' => [UserType::Mahasiswa]],

@@ -158,6 +158,7 @@ class KelasKuliahController extends Controller
         try {
             DB::transaction(function () use ($kelasKuliah): void {
                 $kelasKuliah->pertemuans()->delete();
+                $kelasKuliah->ujians()->delete();
                 $kelasKuliah->delete();
             });
         } catch (Throwable) {

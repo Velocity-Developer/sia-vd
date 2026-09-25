@@ -36,6 +36,7 @@ use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
 use App\Models\TarifBiaya;
 use App\Models\Tugas;
+use App\Models\Ujian;
 use App\Models\User;
 use App\PermissionCatalog;
 use App\UserType;
@@ -107,6 +108,7 @@ class DemoSeeder extends Seeder
         $this->kontenKelas($tahunAkademik->last(), $mahasiswa);
         $this->presensi($tahunAkademik);
         $this->pengajuanIzin($tahunAkademik->last());
+        $this->jadwalUjian($tahunAkademik->last());
         $this->pindahKelas($tahunAkademik->last(), $mahasiswa);
         $this->infoKuliah();
         $this->keuangan($tahunAkademik, $mahasiswa);
@@ -118,6 +120,7 @@ class DemoSeeder extends Seeder
         QuizAttempt::query()->delete();
         PengumpulanTugas::query()->delete();
         PengajuanPindahKelas::query()->delete();
+        Ujian::query()->delete();
         DispensasiUjian::query()->delete();
         PengajuanIzin::query()->delete();
         PresensiMahasiswa::query()->delete();
@@ -613,6 +616,30 @@ class DemoSeeder extends Seeder
                 'alasan' => $i === 0 ? 'Demam tinggi, istirahat di rumah.' : 'Menghadiri pernikahan kakak di luar kota.',
                 'status' => PengajuanIzin::MENUNGGU,
             ]));
+    }
+
+    /**
+     * Jadwal ujian tahun aktif dari pertemuan UTS/UAS: UTS sudah terbit (tatap muka), UAS masih draf.
+     */
+    private function jadwalUjian(TahunAkademik $tahunAktif): void
+    {
+        $pertemuan = Pertemuan::query()
+            ->whereIn('jenis', [Pertemuan::UTS, Pertemuan::UAS])
+            ->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahunAktif->id))
+            ->get();
+
+        foreach ($pertemuan as $p) {
+            Ujian::create([
+                'kelas_id' => $p->kelas_id,
+                'jenis' => $p->jenis,
+                'mode' => Ujian::TATAP_MUKA,
+                'tanggal' => $p->tanggal,
+                'jam_mulai' => $p->jam_mulai,
+                'jam_akhir' => $p->jam_akhir,
+                'ruang_id' => $p->ruang_id,
+                'status' => $p->jenis === Pertemuan::UTS ? Ujian::TERBIT : Ujian::DRAF,
+            ]);
+        }
     }
 
     /**

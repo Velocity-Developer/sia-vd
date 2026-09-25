@@ -22,6 +22,7 @@ import {
     Inbox,
     LayoutGrid,
     Library,
+    NotebookPen,
     Receipt,
     Settings2,
     ShieldCheck,
@@ -72,6 +73,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Tugas', routeName: 'admin.tugas.index', icon: ClipboardList, permission: 'admin.tugas' },
                     { title: 'Quiz', routeName: 'admin.quiz.index', icon: FileText, permission: 'admin.quiz' },
                     { title: 'Presensi', routeName: 'admin.presensi.index', icon: UserCheck, permission: 'admin.presensi' },
+                    { title: 'Jadwal Ujian', routeName: 'admin.ujian.index', icon: NotebookPen, permission: 'admin.ujian' },
                 ],
             },
             {
@@ -113,6 +115,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Kelas Kuliah', href: '/dosen/kelas-kuliah', icon: ClipboardList, permission: 'dosen.kelas-kuliah' },
                     { title: 'Jadwal Mengajar', routeName: 'dosen.jadwal.index', icon: CalendarDays, permission: 'dosen.jadwal' },
                     { title: 'Presensi', routeName: 'dosen.presensi.index', icon: UserCheck, permission: 'dosen.presensi' },
+                    { title: 'Ujian', routeName: 'dosen.ujian.index', icon: NotebookPen, permission: 'dosen.ujian' },
                     { title: 'Mahasiswa Kelas', href: '/dosen/mahasiswa-kelas', icon: Users, permission: 'dosen.mahasiswa-kelas' },
                 ],
             },
@@ -140,6 +143,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Transkrip Nilai', href: '/mahasiswa/transkrip', icon: BookOpen, permission: 'mahasiswa.hasil-studi' },
                     { title: 'Jadwal Kuliah', href: '/mahasiswa/jadwal', icon: CalendarDays, permission: 'mahasiswa.jadwal-kuliah' },
                     { title: 'Presensi', routeName: 'mahasiswa.presensi', icon: UserCheck, permission: 'mahasiswa.presensi' },
+                    { title: 'Jadwal Ujian', routeName: 'mahasiswa.ujian', icon: NotebookPen, permission: 'mahasiswa.ujian' },
                 ],
             },
             {

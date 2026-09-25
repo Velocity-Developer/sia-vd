@@ -10,9 +10,11 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RuangController;
 use App\Http\Controllers\Admin\TagihanController;
 use App\Http\Controllers\Admin\TahunAkademikController;
+use App\Http\Controllers\Admin\UjianController as AdminUjianController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
+use App\Http\Controllers\Dosen\UjianController as DosenUjianController;
 use App\Http\Controllers\Kelas\JadwalController;
 use App\Http\Controllers\Kelas\KelasKuliahController;
 use App\Http\Controllers\Kelas\MateriController;
@@ -31,6 +33,7 @@ use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
 use App\Http\Controllers\Mahasiswa\PindahKelasController as MahasiswaPindahKelasController;
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
 use App\Http\Controllers\Mahasiswa\QuizAttemptController;
+use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
@@ -136,6 +139,17 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::put('tagihan/status', [TagihanController::class, 'ubahStatus'])->name('admin.tagihan.status');
         Route::put('tagihan/{mahasiswa}/rincian', [TagihanController::class, 'simpanRincian'])->name('admin.tagihan.rincian.simpan');
         Route::delete('tagihan/{mahasiswa}/kunci-krs', [TagihanController::class, 'bukaKunciKrs'])->name('admin.tagihan.buka-kunci-krs');
+    });
+
+    Route::middleware('can:admin.ujian')->group(function (): void {
+        Route::get('ujian', [AdminUjianController::class, 'index'])->name('admin.ujian.index');
+        Route::get('ujian/create', [AdminUjianController::class, 'create'])->name('admin.ujian.create');
+        Route::post('ujian', [AdminUjianController::class, 'store'])->name('admin.ujian.store');
+        Route::post('ujian/buat-massal', [AdminUjianController::class, 'buatMassal'])->name('admin.ujian.buat-massal');
+        Route::put('ujian/terbitkan', [AdminUjianController::class, 'terbitkan'])->name('admin.ujian.terbitkan');
+        Route::get('ujian/{ujian}/edit', [AdminUjianController::class, 'edit'])->name('admin.ujian.edit');
+        Route::put('ujian/{ujian}', [AdminUjianController::class, 'update'])->name('admin.ujian.update');
+        Route::delete('ujian/{ujian}', [AdminUjianController::class, 'destroy'])->name('admin.ujian.destroy');
     });
 
     Route::middleware('can:admin.pindah-kelas')->group(function (): void {
@@ -262,6 +276,8 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
         Route::redirect('jadwal-kuliah', '/dosen/kelas-kuliah', 301)->name('dosen.jadwal-kuliah');
     });
 
+    Route::middleware('can:dosen.ujian')->group(fn () => Route::get('ujian', [DosenUjianController::class, 'index'])->name('dosen.ujian.index'));
+
     Route::middleware('can:dosen.mahasiswa-kelas')->group(function (): void {
         Route::get('mahasiswa-kelas', [MahasiswaKelasController::class, 'index'])->name('dosen.mahasiswa-kelas');
     });
@@ -312,6 +328,11 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('presensi/masuk/{pertemuan}', [MahasiswaPresensiController::class, 'masuk'])->name('mahasiswa.presensi.masuk');
         Route::post('presensi', [MahasiswaPresensiController::class, 'checkIn'])->middleware('throttle:10,1')->name('mahasiswa.presensi.check-in');
         Route::post('presensi/izin', [MahasiswaPresensiController::class, 'ajukanIzin'])->name('mahasiswa.presensi.izin');
+    });
+
+    Route::middleware('can:mahasiswa.ujian')->group(function (): void {
+        Route::get('ujian', [MahasiswaUjianController::class, 'index'])->name('mahasiswa.ujian');
+        Route::get('ujian/kartu', [MahasiswaUjianController::class, 'kartu'])->name('mahasiswa.ujian.kartu');
     });
 
     Route::middleware('can:mahasiswa.pindah-kelas')->group(function (): void {
