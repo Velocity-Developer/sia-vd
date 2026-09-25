@@ -8,6 +8,7 @@ use App\Models\KelasKuliah;
 use App\Models\RemidiPeserta;
 use App\Models\TagihanRemidi;
 use App\Models\TahunAkademik;
+use App\Models\Ujian;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,8 @@ class TagihanRemidiController extends Controller
         $taId = $tahunAkademik?->id;
 
         $tagihan = TagihanRemidi::query()
-            ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name', 'kelasKuliah:id,kode_kelas,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,nama_matkul,sks', 'verifikator:id,name'])
+            ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name', 'kelasKuliah:id,kode_kelas,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,nama_matkul,sks', 'verifikator:id,name',
+                'kelasKuliah.ujians' => fn ($q) => $q->where('jenis', Ujian::REMIDI)->select(['id', 'kelas_id', 'jenis', 'tanggal', 'jam_mulai', 'jam_akhir', 'status'])])
             ->whereHas('kelasKuliah', fn (Builder $q) => $q->where('tahun_akademik_id', $taId))
             ->when(in_array($status, [TagihanRemidi::BELUM_BAYAR, TagihanRemidi::MENUNGGU, TagihanRemidi::LUNAS, TagihanRemidi::DITOLAK], true), fn (Builder $q) => $q->where('status', $status))
             ->when($search !== '', fn (Builder $q) => $q->whereHas('mahasiswa', fn (Builder $m) => $m->where('nim', 'like', "%{$search}%")->orWhereHas('user', fn (Builder $u) => $u->where('name', 'like', "%{$search}%"))))
@@ -56,6 +58,11 @@ class TagihanRemidiController extends Controller
                     'alasan_tolak' => $t->alasan_tolak,
                     'diverifikasi_oleh' => $t->verifikator?->name,
                     'diverifikasi_at' => $t->diverifikasi_at?->toIso8601String(),
+                    // Jadwal remidi kelas, agar admin mendahulukan bukti yang ujiannya sudah dekat atau lewat.
+                    'ujian_remidi' => ($u = $t->kelasKuliah?->ujians->first()) ? [
+                        'tanggal' => $u->tanggal->toDateString(),
+                        'lewat' => $u->sudahMulai(),
+                    ] : null,
                 ];
             });
 

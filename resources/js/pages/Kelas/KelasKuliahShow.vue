@@ -151,6 +151,7 @@ const props = defineProps<{
     statusNilai: StatusNilai;
     remidi: RemidiInfo | null;
     remidiTerbuka: number[];
+    pesertaRemidi: number[];
     hurufRemidi: string[];
 }>();
 const rute = rutePeran(props.peran);
@@ -261,8 +262,11 @@ const finalisasiRemidi = () =>
     );
 const bukaFinalRemidi = () => router.post(route('admin.kelas-kuliah.remidi.buka-finalisasi', props.kelasKuliah.id), {}, { preserveScroll: true });
 // Huruf akhir peserta remidi yang lunas dibuka setelah ujian remidi selesai, walau nilai kelas sudah final.
-const bolehUbahNilai = (krs: KrsShow) => !props.nilaiTerkunci || props.remidiTerbuka.includes(krs.mahasiswa_id);
-const opsiHuruf = (krs: KrsShow) => (props.nilaiTerkunci && props.remidiTerbuka.includes(krs.mahasiswa_id) ? props.hurufRemidi : props.skalaNilai);
+// Huruf peserta remidi hanya berubah lewat remidi, walau admin membuka kembali kunci nilai kelas.
+const jalurRemidi = (krs: KrsShow) => props.remidiTerbuka.includes(krs.mahasiswa_id);
+const menungguRemidi = (krs: KrsShow) => props.pesertaRemidi.includes(krs.mahasiswa_id) && !jalurRemidi(krs);
+const bolehUbahNilai = (krs: KrsShow) => jalurRemidi(krs) || (!props.nilaiTerkunci && !menungguRemidi(krs));
+const opsiHuruf = (krs: KrsShow) => (jalurRemidi(krs) ? props.hurufRemidi : props.skalaNilai);
 const ketIkutUas = (m: RemidiMahasiswa) => (m.ikut_uas === null ? '—' : m.ikut_uas ? 'Ya' : 'Tidak');
 
 const pendingCancelKrs = ref<KrsShow | null>(null);
@@ -1133,7 +1137,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 v-model="grade"
                                                 class="h-9 rounded-lg border border-[#e6e6e6] bg-white px-3 text-sm"
                                             >
-                                                <option v-if="!props.remidiTerbuka.includes(krs.mahasiswa_id)" value="">— Kosong —</option>
+                                                <option v-if="!jalurRemidi(krs)" value="">— Kosong —</option>
                                                 <option v-for="option in opsiHuruf(krs)" :key="option" :value="option">
                                                     {{ option }}
                                                 </option>
@@ -1152,10 +1156,12 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                     >Batal</Button
                                                 >
                                             </template>
-                                            <span v-else-if="!bolehUbahNilai(krs)" class="text-xs text-[#a39e98]">Nilai terkunci</span>
+                                            <span v-else-if="!bolehUbahNilai(krs)" class="text-xs text-[#a39e98]">{{
+                                                menungguRemidi(krs) && !props.nilaiTerkunci ? 'Diubah lewat remidi' : 'Nilai terkunci'
+                                            }}</span>
                                             <template v-else>
                                                 <Button size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)">{{
-                                                    props.nilaiTerkunci ? 'Ubah Nilai Remidi' : 'Ubah Nilai'
+                                                    jalurRemidi(krs) ? 'Ubah Nilai Remidi' : 'Ubah Nilai'
                                                 }}</Button>
                                                 <Button
                                                     v-if="isAdmin && !krs.nilai"
@@ -1390,6 +1396,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                         <h3 class="text-lg font-semibold">Buka kunci nilai</h3>
                         <p class="mt-2 text-sm text-[#615d59]">
                             Dosen bisa mengubah nilai kelas ini lagi sampai difinalisasi ulang atau sampai batas di bawah lewat.
+                            <template v-if="props.remidi?.dikunci_at">Huruf akhir peserta remidi tetap hanya berubah lewat remidi.</template>
                         </p>
                         <label class="mt-4 grid gap-2 text-sm">
                             <span class="font-medium"

@@ -8,6 +8,7 @@ use App\Models\TagihanRemidi;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Kelas final: [0] peserta lunas, [1] peserta belum bayar, [2] bukan peserta; semua bernilai E.
@@ -119,4 +120,65 @@ it('stores the maximum letter in the academic settings', function () {
     expect(PengaturanAkademik::current()->fresh()->huruf_maks_remidi)->toBeNull();
 
     $this->actingAs($admin)->put(route('admin.pengaturan-akademik.remidi'), ['huruf_maks_remidi' => null])->assertSessionHas('success');
+});
+
+it('keeps remidi participants locked when admin reopens the class grades', function () {
+    [$kelas, $krs] = kelasNilaiRemidi();
+    $admin = User::factory()->admin()->create();
+    $this->travelTo('2026-01-14 08:00:00');
+    $this->actingAs($admin)->post(route('admin.kelas-kuliah.buka-kunci-nilai', $kelas))->assertSessionHas('success');
+
+    // Bukan peserta bisa diubah; peserta (lunas maupun belum) menunggu remidi.
+    ubahHuruf($this, $kelas, $krs[2], 'D')->assertSessionHas('success');
+    ubahHuruf($this, $kelas, $krs[0], 'C')->assertSessionHas('error', 'Huruf akhir peserta remidi hanya bisa diubah setelah ujian remidinya selesai.');
+    ubahHuruf($this, $kelas, $krs[1], 'C')->assertSessionHas('error');
+    $this->actingAs($kelas->dosen->user)->get(route('dosen.kelas-kuliah.show', $kelas))
+        ->assertInertia(fn ($page) => $page->where('pesertaRemidi', fn ($ids) => collect($ids)->sort()->values()->all() === collect([$krs[0]->mahasiswa_id, $krs[1]->mahasiswa_id])->sort()->values()->all()));
+
+    // Sesudah ujian remidi selesai, peserta lunas lewat jalur remidi (dengan batas huruf).
+    PengaturanAkademik::current()->update(['huruf_maks_remidi' => 'C']);
+    $this->travelTo('2026-01-16 08:00:00');
+    ubahHuruf($this, $kelas, $krs[0], 'B')->assertSessionHasErrors('nilai');
+    ubahHuruf($this, $kelas, $krs[0], 'C')->assertSessionHas('success');
+    ubahHuruf($this, $kelas, $krs[1], 'C')->assertSessionHas('error');
+    // Admin tidak dibatasi.
+    ubahHuruf($this, $kelas, $krs[1], 'B', $admin)->assertSessionHas('success');
+});
+
+it('loads each published exam (UAS, remidi) once when showing a class', function () {
+    [$kelas] = kelasNilaiRemidi();
+    $this->travelTo('2026-01-16 08:00:00');
+    $dosen = $kelas->dosen->user;
+    $this->actingAs($dosen)->get(route('dosen.kelas-kuliah.show', $kelas));
+
+    DB::enableQueryLog();
+    $this->actingAs($dosen)->get(route('dosen.kelas-kuliah.show', $kelas))->assertOk();
+    $kueri = collect(DB::getQueryLog())->pluck('query');
+
+    expect($kueri->filter(fn ($q) => str_contains($q, 'from "ujians"') && str_contains($q, '"jenis" = ?'))->count())->toBe(2)
+        ->and($kueri->filter(fn ($q) => str_contains($q, 'from "users" where "users"."id" is null'))->count())->toBe(0)
+        ->and($kueri->filter(fn ($q) => str_contains($q, 'from "pengaturan_akademik"'))->count())->toBe(1);
+});
+
+it('warns about pending payment proofs when scheduling and on the bills page', function () {
+    [$kelas, $krs] = kelasNilaiRemidi();
+    TagihanRemidi::where('mahasiswa_id', $krs[1]->mahasiswa_id)->update(['status' => TagihanRemidi::MENUNGGU, 'bukti' => 'bukti-bayar/x.pdf']);
+    $admin = User::factory()->admin()->create();
+    $this->travelTo('2026-01-16 08:00:00');
+
+    $this->actingAs($admin)->get(route('admin.ujian.create', ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'jenis' => 'remidi']))
+        ->assertInertia(fn ($page) => $page->where("menungguVerifikasi.{$kelas->id}", 1));
+    $this->actingAs($admin)->get(route('admin.tagihan-remidi.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'status' => 'menunggu_verifikasi']))
+        ->assertInertia(fn ($page) => $page->where('tagihan.data.0.ujian_remidi.tanggal', '2026-01-15')->where('tagihan.data.0.ujian_remidi.lewat', true));
+});
+
+it('requires the remidi payment deadline to come after the grade deadline', function () {
+    $admin = User::factory()->admin()->create();
+    $isian = ['tahun' => '2031/2032', 'semester' => 'Ganjil', 'tanggal_mulai' => '2031-08-01', 'tanggal_akhir' => '2032-01-31',
+        'tanggal_krs_awal' => '2031-08-01', 'tanggal_krs_akhir' => '2031-08-14', 'status' => false];
+
+    $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [...$isian, 'batas_input_nilai' => '2032-01-20', 'batas_bayar_remidi' => '2032-01-20'])
+        ->assertSessionHasErrors(['batas_bayar_remidi' => 'Batas bayar remidi harus setelah batas input nilai.']);
+    // Batas input nilai remidi boleh diisi tanpa batas bayar (tidak gagal karena pembanding kosong).
+    $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [...$isian, 'batas_input_nilai_remidi' => '2032-01-30'])->assertSessionHasNoErrors();
 });

@@ -10,6 +10,7 @@ use App\Models\Pertemuan;
 use App\Models\ProgramStudi;
 use App\Models\RemidiPeserta;
 use App\Models\Ruang;
+use App\Models\TagihanRemidi;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
 use Illuminate\Contracts\Database\Eloquent\Builder;
@@ -373,6 +374,10 @@ class UjianController extends Controller
                 ->orderBy('kode_kelas')
                 ->get(['id', 'kode_kelas', 'matkul_id'])
                 ->map(fn (KelasKuliah $k): array => ['id' => $k->id, 'name' => $k->kode_kelas.' — '.$k->mataKuliah?->nama_matkul.' ('.$k->peserta_lunas.' peserta lunas)']),
+            // Bukti bayar yang belum diverifikasi: pesertanya belum dihitung lunas dan bisa tertinggal ujian remidi.
+            'menungguVerifikasi' => TagihanRemidi::query()->where('status', TagihanRemidi::MENUNGGU)
+                ->whereHas('kelasKuliah', fn (Builder $q) => $q->where('tahun_akademik_id', $tahunId))
+                ->selectRaw('kelas_id, count(*) as jumlah')->groupBy('kelas_id')->pluck('jumlah', 'kelas_id'),
             'batasRemidi' => [
                 'bayar' => $ta?->batas_bayar_remidi?->toDateString(),
                 'nilai' => $ta?->batas_input_nilai_remidi?->toDateString(),

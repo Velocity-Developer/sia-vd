@@ -25,6 +25,7 @@ type Baris = {
     alasan_tolak: string | null;
     diverifikasi_oleh: string | null;
     diverifikasi_at: string | null;
+    ujian_remidi: { tanggal: string; lewat: boolean } | null;
 };
 type Opsi = { id: number; name: string };
 
@@ -158,6 +159,10 @@ const deskripsiLunas = (baris: Baris | null) =>
                     Batas bayar remidi tahun akademik ini belum diisi.
                     <Link :href="route('admin.tahun-akademik.index')" class="font-medium text-[#0075de] hover:underline">Atur di Tahun Akademik</Link>
                 </div>
+                <div v-if="props.ringkasan.menunggu" class="rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]">
+                    {{ props.ringkasan.menunggu }} bukti bayar menunggu verifikasi. Verifikasi sebelum ujian remidi berlangsung; mahasiswa baru bisa
+                    ikut remidi setelah dinyatakan lunas.
+                </div>
                 <div v-if="props.ringkasan.kelas_belum_kunci" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#615d59]">
                     {{ props.ringkasan.kelas_belum_kunci }} kelas sudah final tetapi daftar remidinya belum dikunci dosen, jadi belum bisa ditagih.
                 </div>
@@ -230,6 +235,13 @@ const deskripsiLunas = (baris: Baris | null) =>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block">{{ baris.matkul }}</span>
                                         <span class="block text-xs text-[#a39e98]">Kelas {{ baris.kelas }}</span>
+                                        <span
+                                            v-if="baris.ujian_remidi && baris.status !== 'lunas'"
+                                            class="block text-xs"
+                                            :class="baris.ujian_remidi.lewat ? 'text-[#b42318]' : 'text-[#dd5b00]'"
+                                            >Remidi {{ formatTanggal(baris.ujian_remidi.tanggal, false)
+                                            }}{{ baris.ujian_remidi.lewat ? ' (sudah mulai)' : '' }}</span
+                                        >
                                     </td>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">
                                         <span class="block">{{ rupiah(baris.total) }}</span>

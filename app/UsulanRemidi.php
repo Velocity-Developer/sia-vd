@@ -32,7 +32,7 @@ class UsulanRemidi
      */
     public static function pesertaUas(KelasKuliah $kelas): ?Collection
     {
-        $uas = Ujian::query()->where('kelas_id', $kelas->id)->where('jenis', Pertemuan::UAS)->terbit()->first(['id', 'mode']);
+        $uas = $kelas->ujianTerbit(Pertemuan::UAS);
 
         if ($uas === null) {
             return null;

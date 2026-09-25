@@ -32,6 +32,7 @@ const props = defineProps<{
     kelasOptions: Opsi[];
     kelasRemidiOptions: Opsi[];
     batasRemidi: { bayar: string | null; nilai: string | null };
+    menungguVerifikasi: Record<number, number>;
     ruangOptions: Opsi[];
     jenisAwal: JenisUjian | null;
 }>();
@@ -62,6 +63,8 @@ const simpan = () => {
 const bentrokMahasiswa = computed(() => (form.errors.tanggal ?? '').includes('punya ujian lain'));
 const remidi = computed(() => (props.ujian?.jenis ?? form.jenis) === 'remidi');
 // Remidi hanya untuk kelas yang daftar remidinya dikunci dan punya peserta lunas.
+const kelasTerpilih = computed(() => Number(props.ujian?.kelas_id ?? form.kelas_id) || 0);
+const jumlahMenunggu = computed(() => (remidi.value ? (props.menungguVerifikasi[kelasTerpilih.value] ?? 0) : 0));
 const opsiKelas = computed(() => (remidi.value ? props.kelasRemidiOptions : props.kelasOptions));
 watch(
     () => form.jenis,
@@ -113,6 +116,10 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                 />
                                 <p v-if="remidi && !props.kelasRemidiOptions.length" class="text-xs text-[#a39e98]">
                                     Belum ada kelas yang daftar remidinya dikunci dan punya peserta lunas.
+                                </p>
+                                <p v-if="jumlahMenunggu" class="text-xs text-[#dd5b00]">
+                                    {{ jumlahMenunggu }} bukti bayar kelas ini masih menunggu verifikasi. Verifikasi dulu di Tagihan Remidi agar
+                                    pesertanya tidak tertinggal ujian.
                                 </p>
                                 <InputError :message="form.errors.kelas_id" />
                             </div>

@@ -15,6 +15,9 @@ class KelasKuliah extends Model
 
     protected $table = 'kelas_kuliah';
 
+    /** @var array<string, Ujian|null> */
+    private array $ujianTerbitCache = [];
+
     protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai', 'remidi_dikunci_at', 'remidi_dikunci_oleh', 'remidi_final_at'];
 
     /**
@@ -40,11 +43,21 @@ class KelasKuliah extends Model
     }
 
     /**
-     * Ujian remidi terbit kelas ini, bila ada.
+     * Ujian terbit kelas ini untuk satu jenis (uts/uas/remidi), bila ada. Dipanggil beberapa kali per request (status
+     * nilai, usulan remidi, akses nilai), jadi dimuat sekali per instance. Bukan relasi, agar tidak ikut terserialisasi.
      */
+    public function ujianTerbit(string $jenis): ?Ujian
+    {
+        if (! array_key_exists($jenis, $this->ujianTerbitCache)) {
+            $this->ujianTerbitCache[$jenis] = $this->ujians()->where('jenis', $jenis)->terbit()->first();
+        }
+
+        return $this->ujianTerbitCache[$jenis];
+    }
+
     public function ujianRemidi(): ?Ujian
     {
-        return $this->ujians()->where('jenis', Ujian::REMIDI)->terbit()->first();
+        return $this->ujianTerbit(Ujian::REMIDI);
     }
 
     /**
