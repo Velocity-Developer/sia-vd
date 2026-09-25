@@ -59,6 +59,9 @@ class UjianController extends Controller
         $ujian->load(['ruang:id,kode_ruang,nama_ruang', 'kelasKuliah:id,kode_kelas,matkul_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul']);
         $bolehIkut = $ujian->bolehIkut($mahasiswa->id);
         $jawaban = $ujian->jawabans()->where('mahasiswa_id', $mahasiswa->id)->first();
+        $quiz = $ujian->mode === Ujian::ONLINE_SOAL ? $ujian->quiz()->withCount('questions')->withSum('questions', 'points')->first() : null;
+        $attempt = $quiz?->attempts()->where('mahasiswa_id', $mahasiswa->id)->first();
+        $attempt?->setRelation('quiz', $quiz)->closeIfExpired();
 
         return Inertia::render('Mahasiswa/UjianShow', [
             'ujian' => [
@@ -84,6 +87,18 @@ class UjianController extends Controller
                 'catatan_dosen' => $ujian->nilai_dirilis ? $jawaban->catatan_dosen : null,
             ],
             'nilaiDirilis' => $ujian->nilai_dirilis,
+            'lembarSoal' => $quiz === null ? null : [
+                'id' => $quiz->id,
+                'siap' => $quiz->questions_count > 0,
+                'jumlah_soal' => $quiz->questions_count,
+                'total_poin' => (int) $quiz->questions_sum_points,
+                'waktu_pengerjaan' => $quiz->waktu_pengerjaan,
+            ],
+            'pengerjaan' => $attempt === null ? null : [
+                'selesai' => $attempt->submitted_at !== null,
+                'selesai_at' => $attempt->submitted_at?->toIso8601String(),
+                'skor' => $ujian->nilai_dirilis ? $attempt->score : null,
+            ],
         ]);
     }
 

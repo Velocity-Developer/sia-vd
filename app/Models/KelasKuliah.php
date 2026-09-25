@@ -64,9 +64,12 @@ class KelasKuliah extends Model
         return $this->hasMany(Tugas::class, 'kelas_id');
     }
 
+    /**
+     * Quiz biasa kelas ini; lembar soal ujian online tidak termasuk (dikelola lewat menu Ujian).
+     */
     public function quizzes(): HasMany
     {
-        return $this->hasMany(Quiz::class, 'kelas_id');
+        return $this->hasMany(Quiz::class, 'kelas_id')->whereNull('ujian_id');
     }
 
     public function krs(): HasMany

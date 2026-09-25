@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -56,6 +57,22 @@ class Ujian extends Model
     public function jawabans(): HasMany
     {
         return $this->hasMany(UjianJawaban::class);
+    }
+
+    /**
+     * Lembar soal (mode soal di sistem).
+     */
+    public function quiz(): HasOne
+    {
+        return $this->hasOne(Quiz::class);
+    }
+
+    /**
+     * Sudah ada mahasiswa yang mengumpulkan jawaban atau mengerjakan soal.
+     */
+    public function sudahDikerjakan(): bool
+    {
+        return $this->jawabans()->exists() || QuizAttempt::query()->whereHas('quiz', fn ($q) => $q->where('ujian_id', $this->id))->exists();
     }
 
     /**

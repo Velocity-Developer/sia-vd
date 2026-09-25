@@ -40,7 +40,15 @@ type Attempt = {
 
 type PageProps = { flash?: { success?: string; error?: string } };
 
-const props = defineProps<{ quiz: Quiz; attempt: Attempt; deadline: string | null; serverNow: string; essayBelumDinilai?: boolean }>();
+const props = defineProps<{
+    quiz: Quiz;
+    attempt: Attempt;
+    deadline: string | null;
+    serverNow: string;
+    essayBelumDinilai?: boolean;
+    /** Terisi bila quiz ini lembar soal ujian online. */
+    ujian?: { id: number; jenis: string; nilai_dirilis: boolean } | null;
+}>();
 const page = usePage<PageProps>();
 const kelas = computed(() => props.quiz.kelasKuliah ?? props.quiz.kelas_kuliah ?? null);
 const answers = ref<Record<number, string | string[]>>({});
@@ -231,11 +239,18 @@ onBeforeUnmount(stopTimers);
 <template>
     <Head :title="props.quiz.nama_quiz" />
     <AppLayout
-        :breadcrumbs="[
-            { title: 'Jadwal Kuliah', href: route('mahasiswa.jadwal-kuliah') },
-            { title: 'Detail Kelas', href: kelas ? route('mahasiswa.jadwal-kuliah.show', kelas.id) : '#' },
-            { title: props.quiz.nama_quiz, href: '#' },
-        ]"
+        :breadcrumbs="
+            props.ujian
+                ? [
+                      { title: 'Jadwal Ujian', href: route('mahasiswa.ujian') },
+                      { title: props.quiz.nama_quiz, href: route('mahasiswa.ujian.show', props.ujian.id) },
+                  ]
+                : [
+                      { title: 'Jadwal Kuliah', href: route('mahasiswa.jadwal-kuliah') },
+                      { title: 'Detail Kelas', href: kelas ? route('mahasiswa.jadwal-kuliah.show', kelas.id) : '#' },
+                      { title: props.quiz.nama_quiz, href: '#' },
+                  ]
+        "
     >
         <div class="min-h-full bg-[#f6f5f4]">
             <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
@@ -247,7 +262,13 @@ onBeforeUnmount(stopTimers);
                         </p>
                     </div>
                     <Link
-                        :href="kelas ? route('mahasiswa.jadwal-kuliah.show', kelas.id) : route('mahasiswa.jadwal-kuliah')"
+                        :href="
+                            props.ujian
+                                ? route('mahasiswa.ujian.show', props.ujian.id)
+                                : kelas
+                                  ? route('mahasiswa.jadwal-kuliah.show', kelas.id)
+                                  : route('mahasiswa.jadwal-kuliah')
+                        "
                         class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black"
                         >Kembali</Link
                     >
@@ -289,6 +310,9 @@ onBeforeUnmount(stopTimers);
                     <p v-else class="text-sm text-[#1aae39]">Quiz berhasil ter-submit.</p>
                     <p v-if="props.attempt?.score !== null && props.attempt?.score !== undefined" class="mt-2 text-sm text-[#615d59]">
                         Score: {{ props.attempt.score }}
+                    </p>
+                    <p v-if="props.ujian && !props.ujian.nilai_dirilis" class="mt-2 text-sm text-[#615d59]">
+                        Nilai ujian akan terlihat setelah dosen merilisnya.
                     </p>
                     <p v-if="props.essayBelumDinilai" class="mt-1 text-sm text-[#a39e98]">
                         Jawaban esai masih dikoreksi dosen; score akan bertambah setelah dinilai.

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
@@ -14,6 +15,7 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -152,11 +154,19 @@ class UjianController extends Controller
     public function update(Request $request, Ujian $ujian): RedirectResponse
     {
         $data = $this->validasi($request, $ujian);
+
+        // Mode tidak bisa diganti setelah ada yang mengerjakan, agar jawaban tidak kehilangan tempatnya.
+        if ($data['mode'] !== $ujian->mode && $ujian->sudahDikerjakan()) {
+            throw ValidationException::withMessages(['mode' => 'Mode tidak bisa diubah karena sudah ada mahasiswa yang mengerjakan ujian ini.']);
+        }
+
         $ujian->fill($data);
         $this->cekBentrok($ujian, $request->boolean('abaikan_bentrok_mahasiswa'));
 
         $ujian->save();
         $sinkron = $ujian->sinkronkanPertemuan();
+        // Batas lembar soal (mode soal di sistem) ikut jam selesai ujian yang baru.
+        $ujian->quiz?->update(['tenggat_waktu' => $ujian->akhirAt()]);
 
         return to_route('admin.ujian.index', ['tahun_akademik_id' => $ujian->kelasKuliah->tahun_akademik_id])
             ->with('success', 'Jadwal ujian diperbarui.'.$this->pesanSinkron($ujian, $sinkron));
@@ -164,6 +174,14 @@ class UjianController extends Controller
 
     public function destroy(Ujian $ujian): RedirectResponse
     {
+        if ($ujian->sudahDikerjakan()) {
+            return back()->with('error', 'Jadwal ujian tidak bisa dihapus karena sudah ada mahasiswa yang mengumpulkan jawaban atau mengerjakan soal.');
+        }
+
+        if ($ujian->soal_berkas) {
+            Storage::disk(AllowedUpload::DISK)->delete($ujian->soal_berkas);
+        }
+
         $ujian->delete();
 
         return back()->with('success', 'Jadwal ujian dihapus. Pertemuan '.strtoupper($ujian->jenis).' kelas tidak berubah.');

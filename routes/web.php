@@ -55,6 +55,7 @@ $ruteUjianKelas = function (string $peran): void {
     Route::delete('ujian/{ujian}/soal/{index}', [UjianKelasController::class, 'hapusSoal'])->whereNumber('index')->name($peran.'.ujian.soal.hapus');
     Route::put('ujian/{ujian}/jawaban/{jawaban}/nilai', [UjianKelasController::class, 'nilai'])->name($peran.'.ujian.jawaban.nilai');
     Route::put('ujian/{ujian}/rilis-nilai', [UjianKelasController::class, 'rilisNilai'])->name($peran.'.ujian.rilis-nilai');
+    Route::post('ujian/{ujian}/lembar-soal', [UjianKelasController::class, 'buatSoal'])->name($peran.'.ujian.lembar-soal');
 };
 
 // Rute presensi sama untuk admin dan dosen; bedanya hanya prefix nama dan izin grup.

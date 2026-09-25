@@ -12,7 +12,7 @@ class Quiz extends Model
 {
     use SerializesDatesInAppTimezone;
 
-    protected $fillable = ['nama_quiz', 'catatan', 'waktu_pengerjaan', 'tenggat_waktu', 'uploaded_by', 'kelas_id'];
+    protected $fillable = ['nama_quiz', 'catatan', 'waktu_pengerjaan', 'tenggat_waktu', 'uploaded_by', 'kelas_id', 'ujian_id'];
 
     protected function casts(): array
     {
@@ -20,6 +20,14 @@ class Quiz extends Model
             'waktu_pengerjaan' => 'integer',
             'tenggat_waktu' => 'datetime',
         ];
+    }
+
+    /**
+     * Ujian online yang memakai quiz ini sebagai lembar soal (null untuk quiz biasa).
+     */
+    public function ujian(): BelongsTo
+    {
+        return $this->belongsTo(Ujian::class);
     }
 
     public function kelasKuliah(): BelongsTo

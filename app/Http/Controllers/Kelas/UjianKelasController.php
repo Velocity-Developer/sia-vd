@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Kelas;
 use App\AllowedUpload;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
+use App\Models\Quiz;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\SyaratUjian;
@@ -35,14 +36,20 @@ class UjianKelasController extends Controller
 
         $syarat = SyaratUjian::untukKelas($kelas);
         $jawaban = $ujian->jawabans()->with('penilai:id,name')->get()->keyBy('mahasiswa_id');
+        $quiz = $ujian->quiz()->withCount('questions')->withSum('questions', 'points')->first();
+        $attempt = $quiz === null ? collect() : $quiz->attempts()
+            ->withExists(['answers as essay_belum_dinilai' => fn ($a) => $a->whereNull('point')->whereHas('question', fn ($q) => $q->where('question_type', 'essay'))])
+            ->get()
+            ->keyBy('mahasiswa_id');
 
         $peserta = $kelas->krs()
             ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name'])
             ->get(['id', 'kelas_id', 'mahasiswa_id'])
             ->sortBy(fn ($krs) => $krs->mahasiswa?->nim)
             ->values()
-            ->map(function ($krs) use ($jawaban, $syarat, $ujian): array {
+            ->map(function ($krs) use ($jawaban, $syarat, $ujian, $attempt): array {
                 $j = $jawaban->get($krs->mahasiswa_id);
+                $a = $attempt->get($krs->mahasiswa_id);
 
                 return [
                     'mahasiswa_id' => $krs->mahasiswa_id,
@@ -58,6 +65,14 @@ class UjianKelasController extends Controller
                         'catatan_dosen' => $j->catatan_dosen,
                         'penilai' => $j->penilai?->name,
                     ],
+                    'pengerjaan' => $a === null ? null : [
+                        'id' => $a->id,
+                        'mulai_at' => $a->started_at?->toIso8601String(),
+                        'selesai_at' => $a->submitted_at?->toIso8601String(),
+                        'skor' => $a->score,
+                        'auto_closed' => $a->auto_closed,
+                        'essay_belum_dinilai' => (bool) $a->essay_belum_dinilai,
+                    ],
                 ];
             });
 
@@ -72,6 +87,12 @@ class UjianKelasController extends Controller
                 'soal' => array_map(fn (string $path): string => basename($path), $ujian->soal_berkas ?? []),
             ],
             'peserta' => $peserta,
+            'lembarSoal' => $quiz === null ? null : [
+                'id' => $quiz->id,
+                'jumlah_soal' => $quiz->questions_count,
+                'total_poin' => (int) $quiz->questions_sum_points,
+                'waktu_pengerjaan' => $quiz->waktu_pengerjaan,
+            ],
             'syaratAktif' => $syarat['aktif'],
             'sudahMulai' => $ujian->sudahMulai(),
             'sudahSelesai' => $ujian->sudahSelesai(),
@@ -129,6 +150,29 @@ class UjianKelasController extends Controller
         $ujian->update(['soal_berkas' => array_values($berkas)]);
 
         return back()->with('success', 'Berkas soal dihapus.');
+    }
+
+    /**
+     * Buat lembar soal (mode soal di sistem) memakai mesin Quiz, lalu buka editor soalnya. Batas waktu
+     * pengerjaan otomatis jam selesai ujian.
+     */
+    public function buatSoal(Request $request, Ujian $ujian): RedirectResponse
+    {
+        $kelas = $ujian->kelasKuliah;
+        $this->pastikanAksesKelas($kelas);
+        abort_unless($ujian->mode === Ujian::ONLINE_SOAL, 404);
+
+        $quiz = $ujian->quiz ?? Quiz::create([
+            'nama_quiz' => strtoupper($ujian->jenis).' '.$kelas->mataKuliah?->nama_matkul,
+            'catatan' => $ujian->petunjuk,
+            'waktu_pengerjaan' => null,
+            'tenggat_waktu' => $ujian->akhirAt(),
+            'uploaded_by' => $request->user()->id,
+            'kelas_id' => $kelas->id,
+            'ujian_id' => $ujian->id,
+        ]);
+
+        return to_route($this->rute('kelas-kuliah.quiz.show'), [$kelas, $quiz])->with('question_success', 'Lembar soal siap. Tambahkan soal di bawah.');
     }
 
     /**

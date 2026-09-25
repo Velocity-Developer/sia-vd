@@ -62,7 +62,13 @@ type KelasKuliahDetail = {
     tahun_ajaran?: string | null;
 };
 
-const props = defineProps<{ peran: Peran; kelasKuliah: KelasKuliahDetail; quiz: QuizDetail }>();
+const props = defineProps<{
+    peran: Peran;
+    kelasKuliah: KelasKuliahDetail;
+    quiz: QuizDetail;
+    /** Terisi bila quiz ini lembar soal ujian online. */
+    ujian?: { id: number; jenis: string; sudah_mulai: boolean } | null;
+}>();
 const rute = rutePeran(props.peran);
 
 const page = usePage<{
@@ -341,14 +347,16 @@ const sel =
             <div class="relative mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 pb-28 sm:px-6 lg:px-8">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Detail Quiz</h1>
+                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">
+                            {{ props.ujian ? `Lembar Soal ${props.ujian.jenis.toUpperCase()}` : 'Detail Quiz' }}
+                        </h1>
                         <p class="max-w-xl text-sm leading-5 text-[#615d59]">
                             Kelas {{ v(props.kelasKuliah?.kode_kelas)
                             }}{{ props.kelasKuliah?.tahun_ajaran ? ` — ${v(props.kelasKuliah.tahun_ajaran)}` : '' }}
                         </p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)"
+                        <Link :href="props.ujian ? rute('ujian.show', props.ujian.id) : rute('kelas-kuliah.show', props.kelasKuliah.id)"
                             ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
                         >
                         <Link :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, props.quiz.id])"
@@ -356,6 +364,18 @@ const sel =
                         >
                     </div>
                 </div>
+
+                <p
+                    v-if="props.ujian"
+                    class="rounded-xl border px-4 py-3 text-sm"
+                    :class="props.ujian.sudah_mulai ? 'border-[#f4c3bd] bg-[#fdecea] text-[#b42318]' : 'border-[#cfe3f7] bg-[#eaf3fd] text-[#0b62b5]'"
+                >
+                    {{
+                        props.ujian.sudah_mulai
+                            ? 'Ujian sudah dimulai; soal terkunci dan tidak bisa diubah lagi.'
+                            : 'Lembar soal ujian: urutan soal dan opsi diacak per mahasiswa, satu kali pengerjaan, batas waktu jam selesai ujian. Soal terkunci saat ujian dimulai.'
+                    }}
+                </p>
 
                 <section
                     class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"

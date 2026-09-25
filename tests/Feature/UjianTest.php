@@ -5,6 +5,9 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
+use App\Models\PresensiMahasiswa;
+use App\Models\Quiz;
+use App\Models\QuizAttempt;
 use App\Models\Ruang;
 use App\Models\Ujian;
 use App\Models\User;
@@ -310,4 +313,138 @@ it('lets the lecturer grade after the exam and release the scores', function () 
     gantiAkun($this, $dosen)->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
     gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))
         ->assertInertia(fn ($page) => $page->where('jawaban.nilai', '87.50')->where('jawaban.catatan_dosen', 'Bagus'));
+});
+
+/**
+ * Ujian mode soal di sistem (terbit, 2025-10-06 13:00–15:00) beserta lembar soal berisi dua soal pilihan tunggal.
+ *
+ * @return array{0: Ujian, 1: KelasKuliah, 2: list<User>, 3: Quiz}
+ */
+function ujianSoal(int $jumlahMahasiswa = 2): array
+{
+    [$kelas, $mahasiswa] = kelasUjian($jumlahMahasiswa);
+    $ujian = Ujian::create([...isianUjian(['mode' => 'online_soal', 'ruang_id' => null, 'status' => 'terbit']), 'kelas_id' => $kelas->id, 'jenis' => 'uts']);
+    $quiz = Quiz::create([
+        'nama_quiz' => 'UTS', 'tenggat_waktu' => $ujian->akhirAt(), 'uploaded_by' => $kelas->dosen->user_id,
+        'kelas_id' => $kelas->id, 'ujian_id' => $ujian->id,
+    ]);
+    foreach (['Satu', 'Dua'] as $teks) {
+        $quiz->questions()->create([
+            'question_text' => $teks, 'question_type' => 'single_choice', 'points' => 10,
+            'question_option' => [['text' => 'A', 'is_correct' => true], ['text' => 'B', 'is_correct' => false], ['text' => 'C', 'is_correct' => false]],
+        ]);
+    }
+
+    return [$ujian, $kelas, $mahasiswa, $quiz];
+}
+
+it('creates the question sheet from the exam and keeps it out of the quiz list', function () {
+    [$kelas] = kelasUjian(1);
+    $ujian = Ujian::create([...isianUjian(['mode' => 'online_soal', 'ruang_id' => null, 'status' => 'terbit']), 'kelas_id' => $kelas->id, 'jenis' => 'uts']);
+    $dosen = $kelas->dosen->user;
+
+    $this->travelTo('2025-10-06 10:00:00');
+    $this->actingAs($dosen)->post(route('dosen.ujian.lembar-soal', $ujian))->assertRedirect();
+    $quiz = $ujian->fresh()->quiz;
+    expect($quiz)->not->toBeNull()
+        ->and($quiz->tenggat_waktu->format('Y-m-d H:i'))->toBe('2025-10-06 15:00');
+
+    // Dibuat sekali saja; tidak muncul di daftar quiz kelas, dan tidak bisa diduplikasi/dihapus dari menu quiz.
+    $this->actingAs($dosen)->post(route('dosen.ujian.lembar-soal', $ujian));
+    expect(Quiz::count())->toBe(1)->and($kelas->quizzes()->count())->toBe(0);
+    $this->actingAs($dosen)->delete(route('dosen.kelas-kuliah.quiz.destroy', [$kelas, $quiz]))->assertNotFound();
+
+    $this->actingAs($dosen)->get(route('dosen.ujian.show', $ujian))
+        ->assertInertia(fn ($page) => $page->where('lembarSoal.id', $quiz->id)->where('lembarSoal.jumlah_soal', 0));
+
+    // Jam ujian digeser admin: tenggat lembar soal ikut.
+    $this->actingAs(User::factory()->admin()->create())
+        ->put(route('admin.ujian.update', $ujian), isianUjian(['mode' => 'online_soal', 'ruang_id' => null, 'jam_akhir' => '16:00', 'status' => 'terbit']))
+        ->assertSessionHasNoErrors();
+    expect($quiz->fresh()->tenggat_waktu->format('H:i'))->toBe('16:00');
+});
+
+it('locks the questions once the exam starts', function () {
+    [$ujian, $kelas, , $quiz] = ujianSoal();
+    $dosen = $kelas->dosen->user;
+    $soal = $quiz->questions()->first();
+    $baru = ['questions' => [['question_text' => 'Tiga', 'question_type' => 'essay', 'points' => 5]]];
+
+    $this->travelTo('2025-10-06 12:00:00');
+    $this->actingAs($dosen)->post(route('dosen.kelas-kuliah.quiz.questions.store', [$kelas, $quiz]), $baru)->assertSessionHasNoErrors();
+    expect($quiz->questions()->count())->toBe(3);
+
+    $this->travelTo('2025-10-06 13:00:00');
+    $this->actingAs($dosen)->post(route('dosen.kelas-kuliah.quiz.questions.store', [$kelas, $quiz]), $baru)
+        ->assertSessionHas('question_error', 'Ujian sudah dimulai; soal tidak bisa diubah lagi.');
+    $this->actingAs($dosen)->delete(route('dosen.kelas-kuliah.quiz.questions.destroy', [$kelas, $quiz, $soal]))
+        ->assertSessionHas('question_error');
+    expect($quiz->questions()->count())->toBe(3);
+});
+
+it('lets students take the exam once, only during the exam window', function () {
+    [$ujian, $kelas, $mahasiswa, $quiz] = ujianSoal();
+    $soal = $quiz->questions()->get();
+
+    $this->travelTo('2025-10-06 12:59:00');
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz))
+        ->assertRedirect(route('mahasiswa.ujian.show', $ujian))->assertSessionHas('error', 'Ujian belum dimulai.');
+    // Soal tidak terlihat sebelum mulai.
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.quiz.show', $quiz))->assertInertia(fn ($page) => $page->has('quiz.questions', 0));
+
+    $this->travelTo('2025-10-06 13:05:00');
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz))->assertRedirect(route('mahasiswa.quiz.show', $quiz));
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.quiz.show', $quiz))
+        ->assertInertia(fn ($page) => $page->has('quiz.questions', 2)->where('ujian.id', $ujian->id));
+
+    // Mengerjakan dicatat hadir di pertemuan UTS.
+    $uts = $ujian->pertemuan();
+    expect($uts->fresh()->status)->toBe(Pertemuan::BERLANGSUNG)
+        ->and(PresensiMahasiswa::where('pertemuan_id', $uts->id)->where('mahasiswa_id', $mahasiswa[0]->mahasiswaProfile->id)->value('status'))->toBe(PresensiMahasiswa::HADIR);
+
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.submit', $quiz), ['answers' => [$soal[0]->id => 'A', $soal[1]->id => 'B']])->assertSessionHas('success');
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz))->assertSessionHas('error', 'Quiz sudah pernah dikerjakan.');
+    expect(QuizAttempt::where('quiz_id', $quiz->id)->count())->toBe(1);
+
+    // Lewat jam selesai: mahasiswa lain tidak bisa mulai lagi.
+    $this->travelTo('2025-10-06 15:01:00');
+    gantiAkun($this, $mahasiswa[1])->post(route('mahasiswa.quiz.start', $quiz))->assertSessionHas('error', 'Waktu ujian sudah habis.');
+
+    // Ujian yang sudah dikerjakan tidak bisa dihapus atau diganti modenya.
+    $admin = User::factory()->admin()->create();
+    gantiAkun($this, $admin)->delete(route('admin.ujian.destroy', $ujian))->assertSessionHas('error');
+    $this->put(route('admin.ujian.update', $ujian), isianUjian(['mode' => 'online_berkas', 'ruang_id' => null, 'status' => 'terbit']))->assertSessionHasErrors('mode');
+    expect(Ujian::find($ujian->id))->not->toBeNull();
+});
+
+it('hides the exam score until the lecturer releases it', function () {
+    [$ujian, $kelas, $mahasiswa, $quiz] = ujianSoal(1);
+    $soal = $quiz->questions()->get();
+
+    $this->travelTo('2025-10-06 13:05:00');
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz));
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.submit', $quiz), ['answers' => [$soal[0]->id => 'A', $soal[1]->id => 'A']]);
+    expect((float) QuizAttempt::first()->score)->toBe(20.0);
+
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.quiz.show', $quiz))
+        ->assertInertia(fn ($page) => $page->where('attempt.score', null)->where('ujian.nilai_dirilis', false));
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))
+        ->assertInertia(fn ($page) => $page->where('pengerjaan.selesai', true)->where('pengerjaan.skor', null));
+
+    $this->travelTo('2025-10-06 15:30:00');
+    gantiAkun($this, $kelas->dosen->user)->get(route('dosen.ujian.show', $ujian))
+        ->assertInertia(fn ($page) => $page->where('peserta.0.pengerjaan.skor', '20.00')->where('lembarSoal.total_poin', 20));
+    $this->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
+
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('pengerjaan.skor', '20.00'));
+    $this->get(route('mahasiswa.quiz.show', $quiz))->assertInertia(fn ($page) => $page->where('attempt.score', '20.00'));
+});
+
+it('keeps draft exam question sheets closed to students', function () {
+    [$ujian, , $mahasiswa, $quiz] = ujianSoal(1);
+    $ujian->update(['status' => 'draf']);
+
+    $this->travelTo('2025-10-06 13:05:00');
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.quiz.show', $quiz))->assertNotFound();
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz))->assertSessionHas('error', 'Ujian belum diterbitkan.');
 });

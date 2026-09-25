@@ -28,6 +28,8 @@ class QuizController extends Controller
         $filter = $this->filterKelas($request);
 
         $quizzes = Quiz::query()
+            // Lembar soal ujian online dikelola dari menu Ujian, bukan di daftar quiz.
+            ->whereNull('ujian_id')
             ->with(['kelasKuliah:id,kode_kelas,matkul_id,dosen_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul', 'kelasKuliah.dosen:id,user_id', 'kelasKuliah.dosen.user:id,name', 'kelasKuliah.tahunAkademik:id,tahun,semester', 'uploader:id,name'])
             ->withCount(['questions', 'attempts'])
             ->tap(fn ($query) => $this->terapkanFilterKelas($query, $filter))
@@ -86,6 +88,8 @@ class QuizController extends Controller
             'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'quiz' => $quiz,
+            // Quiz ini lembar soal ujian: halaman menampilkan tautan kembali ke ujian dan status kunci soal.
+            'ujian' => $quiz->ujian ? ['id' => $quiz->ujian->id, 'jenis' => $quiz->ujian->jenis, 'sudah_mulai' => $quiz->ujian->sudahMulai()] : null,
         ]);
     }
 
@@ -105,7 +109,17 @@ class QuizController extends Controller
     {
         $this->ensureScoped($kelasKuliah, $quiz);
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
+
+        // Batas lembar soal ujian selalu jam selesai ujian (diatur admin), tidak bisa diubah dari form quiz.
+        if ($quiz->ujian !== null) {
+            $data['tenggat_waktu'] = $quiz->ujian->akhirAt();
+        }
+
         $quiz->update($data);
+
+        if ($quiz->ujian !== null) {
+            return to_route($this->peran().'.ujian.show', $quiz->ujian)->with('success', 'Pengaturan lembar soal diperbarui.');
+        }
 
         return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil diperbarui.');
     }
@@ -113,6 +127,10 @@ class QuizController extends Controller
     public function storeQuestions(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
+
+        if ($terkunci = $this->soalUjianTerkunci($quiz)) {
+            return $terkunci;
+        }
 
         $validated = $request->validate([
             'questions' => ['required', 'array', 'min:1'],
@@ -191,6 +209,10 @@ class QuizController extends Controller
     public function updateQuestion(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz, Question $question): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
+
+        if ($terkunci = $this->soalUjianTerkunci($quiz)) {
+            return $terkunci;
+        }
         // Mengubah atau menghapus soal menilai ulang attempt yang sudah dikirim.
         $this->pastikanNilaiTidakTerkunci($kelasKuliah);
         abort_unless($question->quiz_id === $quiz->id, 404);
@@ -246,6 +268,10 @@ class QuizController extends Controller
     public function destroyQuestion(KelasKuliah $kelasKuliah, Quiz $quiz, Question $question): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
+
+        if ($terkunci = $this->soalUjianTerkunci($quiz)) {
+            return $terkunci;
+        }
         // Mengubah atau menghapus soal menilai ulang attempt yang sudah dikirim.
         $this->pastikanNilaiTidakTerkunci($kelasKuliah);
         abort_unless($question->quiz_id === $quiz->id, 404);
@@ -258,6 +284,7 @@ class QuizController extends Controller
     public function duplicate(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
+        abort_if($quiz->ujian_id !== null, 404, 'Lembar soal ujian dikelola dari menu Ujian.');
         $targets = $this->kelasTujuanDuplikasi($request, $kelasKuliah);
         $quiz->load('questions');
 
@@ -278,6 +305,7 @@ class QuizController extends Controller
     public function destroy(KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
     {
         $this->ensureScoped($kelasKuliah, $quiz);
+        abort_if($quiz->ujian_id !== null, 404, 'Lembar soal ujian dikelola dari menu Ujian.');
 
         try {
             $quiz->delete();
@@ -286,6 +314,16 @@ class QuizController extends Controller
         }
 
         return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil dihapus.');
+    }
+
+    /**
+     * Soal lembar ujian tidak bisa diubah setelah ujian dimulai, agar semua mahasiswa mengerjakan soal yang sama.
+     */
+    private function soalUjianTerkunci(Quiz $quiz): ?RedirectResponse
+    {
+        return $quiz->ujian?->sudahMulai()
+            ? back()->with('question_error', 'Ujian sudah dimulai; soal tidak bisa diubah lagi.')
+            : null;
     }
 
     private function ensureScoped(KelasKuliah $kelasKuliah, Quiz $quiz): void

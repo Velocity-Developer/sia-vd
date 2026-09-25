@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Models\Ujian;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,21 @@ class QuizAttemptController extends Controller
         $mahasiswa = $request->user()->mahasiswaProfile;
         abort_if($mahasiswa === null, 403);
         $this->ensureAccess($quiz, $mahasiswa->id);
+
+        // Lembar soal ujian: hanya selama jam ujian dan bagi yang memenuhi syarat kehadiran.
+        if ($ujian = $quiz->ujian) {
+            $tolak = match (true) {
+                $ujian->status !== Ujian::TERBIT => 'Ujian belum diterbitkan.',
+                ! $ujian->sudahMulai() => 'Ujian belum dimulai.',
+                $ujian->sudahSelesai() => 'Waktu ujian sudah habis.',
+                ! $ujian->bolehIkut($mahasiswa->id) => 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.',
+                default => null,
+            };
+
+            if ($tolak !== null) {
+                return to_route('mahasiswa.ujian.show', $ujian)->with('error', $tolak);
+            }
+        }
 
         if ($quiz->tenggat_waktu?->isPast()) {
             return to_route('mahasiswa.quiz.show', $quiz)->with('error', 'Tenggat quiz telah berakhir.');
@@ -33,7 +49,9 @@ class QuizAttemptController extends Controller
             return to_route('mahasiswa.quiz.show', $quiz)->with('error', 'Quiz sudah pernah dikerjakan.');
         }
 
-        return to_route('mahasiswa.quiz.show', $quiz)->with('success', 'Quiz dimulai.');
+        $quiz->ujian?->catatHadir($mahasiswa->id);
+
+        return to_route('mahasiswa.quiz.show', $quiz)->with('success', $quiz->ujian ? 'Ujian dimulai. Kerjakan sebelum waktu habis.' : 'Quiz dimulai.');
     }
 
     /**

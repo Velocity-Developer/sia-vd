@@ -31,6 +31,8 @@ const props = defineProps<{
     detikSampaiSelesai: number | null;
     jawaban: { nama_berkas: string[]; dikumpulkan_at: string | null; nilai: string | null; catatan_dosen: string | null } | null;
     nilaiDirilis: boolean;
+    lembarSoal: { id: number; siap: boolean; jumlah_soal: number; total_poin: number; waktu_pengerjaan: number | null } | null;
+    pengerjaan: { selesai: boolean; selesai_at: string | null; skor: string | null } | null;
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -76,6 +78,10 @@ const kumpulkan = () =>
             if (input.value) input.value.value = '';
         },
     });
+// Mode soal di sistem: mulai (atau lanjutkan) di halaman pengerjaan quiz.
+const mulaiForm = useForm({});
+const mulaiUjian = () => props.lembarSoal && mulaiForm.post(route('mahasiswa.quiz.start', props.lembarSoal.id));
+
 const galat = computed(() => Object.entries(form.errors).find(([k]) => k.startsWith('jawaban'))?.[1]);
 const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 </script>
@@ -188,6 +194,62 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         </div>
                     </section>
                 </template>
+
+                <section v-else-if="props.ujian.mode === 'online_soal'" :class="kartu">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <h2 class="text-lg font-semibold text-black">Soal ujian</h2>
+                        <span v-if="berlangsung && sisa !== null" class="rounded-full bg-[#eaf3fd] px-3 py-1 font-mono text-sm text-[#0b62b5]">
+                            Ujian ditutup dalam {{ format(sisa) }}
+                        </span>
+                    </div>
+                    <p v-if="props.lembarSoal" class="mt-1 text-sm text-[#615d59]">
+                        {{ props.lembarSoal.jumlah_soal }} soal ·
+                        {{
+                            props.lembarSoal.waktu_pengerjaan
+                                ? `durasi ${props.lembarSoal.waktu_pengerjaan} menit sejak mulai`
+                                : 'dikerjakan sampai jam selesai'
+                        }}
+                        · satu kali kesempatan, jawaban tersimpan otomatis.
+                    </p>
+
+                    <p v-if="!props.sudahMulai" class="mt-3 text-sm text-[#615d59]">
+                        Ujian bisa dimulai pukul {{ jam(props.ujian.jam_mulai)
+                        }}<template v-if="sisa !== null"
+                            >, dalam <span class="font-mono font-medium text-black">{{ format(sisa) }}</span></template
+                        >.
+                    </p>
+                    <template v-else-if="props.pengerjaan?.selesai">
+                        <p class="mt-3 flex items-center gap-1.5 text-sm text-[#1a7f37]">
+                            <CircleCheck class="size-4" /> Jawaban terkirim pukul {{ formatJamDari(props.pengerjaan.selesai_at) }}.
+                        </p>
+                        <p class="mt-2 text-sm text-[#31302e]">
+                            {{
+                                props.nilaiDirilis
+                                    ? `Nilai: ${props.pengerjaan.skor ?? '-'} / ${props.lembarSoal?.total_poin}`
+                                    : 'Nilai akan terlihat setelah dosen merilisnya.'
+                            }}
+                        </p>
+                    </template>
+                    <template v-else-if="berlangsung && props.bolehIkut">
+                        <Link
+                            v-if="props.pengerjaan && props.lembarSoal"
+                            :href="route('mahasiswa.quiz.show', props.lembarSoal.id)"
+                            class="mt-4 inline-flex h-11 items-center rounded-full bg-[#0075de] px-6 text-sm font-medium text-white hover:bg-[#005bab]"
+                            >Lanjutkan ujian</Link
+                        >
+                        <Button
+                            v-else-if="props.lembarSoal?.siap"
+                            class="mt-4 h-11 rounded-full bg-[#0075de] px-6 text-white hover:bg-[#005bab]"
+                            :disabled="mulaiForm.processing"
+                            @click="mulaiUjian"
+                            >Mulai ujian</Button
+                        >
+                        <p v-else class="mt-3 text-sm text-[#dd5b00]">Soal belum tersedia. Hubungi dosen atau pengawas.</p>
+                    </template>
+                    <p v-else-if="props.sudahSelesai" class="mt-3 text-sm text-[#b42318]">
+                        Waktu ujian sudah habis. Anda tidak mengerjakan ujian ini.
+                    </p>
+                </section>
             </div>
         </div>
     </AppLayout>

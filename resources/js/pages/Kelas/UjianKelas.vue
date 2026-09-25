@@ -16,6 +16,14 @@ type Peserta = {
     nim: string;
     nama: string;
     syarat: Syarat;
+    pengerjaan: {
+        id: number;
+        mulai_at: string | null;
+        selesai_at: string | null;
+        skor: string | null;
+        auto_closed: boolean;
+        essay_belum_dinilai: boolean;
+    } | null;
     jawaban: {
         id: number;
         jumlah_berkas: number;
@@ -46,6 +54,7 @@ const props = defineProps<{
         soal: string[];
     };
     peserta: Peserta[];
+    lembarSoal: { id: number; jumlah_soal: number; total_poin: number; waktu_pengerjaan: number | null } | null;
     syaratAktif: boolean;
     sudahMulai: boolean;
     sudahSelesai: boolean;
@@ -55,7 +64,9 @@ const props = defineProps<{
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const rute = rutePeran(props.peran);
 const berkasMode = computed(() => props.ujian.mode === 'online_berkas');
-const terkumpul = computed(() => props.peserta.filter((p) => p.jawaban).length);
+const soalMode = computed(() => props.ujian.mode === 'online_soal');
+const terkumpul = computed(() => props.peserta.filter((p) => (soalMode.value ? p.pengerjaan?.selesai_at : p.jawaban)).length);
+const buatLembarSoal = () => router.post(rute('ujian.lembar-soal', props.ujian.id));
 
 // Unggah soal (sebelum ujian dimulai).
 const soalForm = useForm({ soal: [] as File[] });
@@ -278,6 +289,111 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         </div>
                     </div>
                 </section>
+
+                <!-- Mode soal di sistem -->
+                <template v-if="soalMode">
+                    <section :class="kartu">
+                        <h2 class="text-lg font-semibold text-black">Lembar soal</h2>
+                        <p class="mt-1 text-sm text-[#615d59]">
+                            Disusun dengan editor quiz. Urutan soal dan opsi diacak per mahasiswa, satu kali pengerjaan, dan batas waktunya jam
+                            selesai ujian. Soal terkunci setelah ujian dimulai.
+                        </p>
+                        <div v-if="props.lembarSoal" class="mt-3 flex flex-wrap items-center gap-4 text-sm">
+                            <span>{{ props.lembarSoal.jumlah_soal }} soal · total {{ props.lembarSoal.total_poin }} poin</span>
+                            <span>{{
+                                props.lembarSoal.waktu_pengerjaan ? `Durasi ${props.lembarSoal.waktu_pengerjaan} menit` : 'Durasi: sampai jam selesai'
+                            }}</span>
+                            <Link
+                                :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, props.lembarSoal.id])"
+                                class="font-medium text-[#0075de] hover:underline"
+                            >
+                                {{ props.sudahMulai ? 'Lihat soal' : 'Kelola soal' }} →
+                            </Link>
+                            <span v-if="!props.lembarSoal.jumlah_soal && !props.sudahMulai" class="text-[#dd5b00]">Belum ada soal.</span>
+                        </div>
+                        <Button v-else-if="!props.sudahMulai" class="mt-3 bg-[#0075de] text-white hover:bg-[#005bab]" @click="buatLembarSoal"
+                            >Buat lembar soal</Button
+                        >
+                        <p v-else class="mt-3 text-sm text-[#b42318]">Lembar soal tidak dibuat sebelum ujian dimulai.</p>
+                    </section>
+
+                    <section :class="kartu">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h2 class="text-lg font-semibold text-black">Pengerjaan mahasiswa</h2>
+                                <p class="mt-1 text-sm text-[#615d59]">
+                                    {{ terkumpul }} dari {{ props.peserta.length }} mahasiswa selesai mengerjakan.
+                                </p>
+                            </div>
+                            <div v-if="props.sudahSelesai && !props.terkunci" class="flex items-center gap-2 text-sm">
+                                <span :class="props.ujian.nilai_dirilis ? 'text-[#1a7f37]' : 'text-[#615d59]'">
+                                    {{ props.ujian.nilai_dirilis ? 'Nilai terlihat oleh mahasiswa' : 'Nilai belum dirilis' }}
+                                </span>
+                                <Button variant="outline" size="sm" @click="rilis(!props.ujian.nilai_dirilis)">
+                                    {{ props.ujian.nilai_dirilis ? 'Sembunyikan' : 'Rilis nilai' }}
+                                </Button>
+                            </div>
+                        </div>
+                        <div class="mt-4 overflow-hidden rounded-lg border border-[#e6e6e6]">
+                            <div class="relative overflow-x-auto">
+                                <table class="w-full min-w-[720px] text-left text-sm">
+                                    <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                                        <tr>
+                                            <th :class="th">Mahasiswa</th>
+                                            <th v-if="props.syaratAktif" :class="th">Syarat</th>
+                                            <th :class="th">Status</th>
+                                            <th :class="th">Skor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-[#e6e6e6]">
+                                        <tr v-for="p in props.peserta" :key="p.mahasiswa_id">
+                                            <td class="px-4 py-2.5">
+                                                <span class="block font-medium text-black">{{ p.nama }}</span>
+                                                <span class="block text-xs text-[#a39e98]">{{ p.nim }}</span>
+                                            </td>
+                                            <td
+                                                v-if="props.syaratAktif"
+                                                class="px-4 py-2.5"
+                                                :class="p.syarat?.memenuhi === false && !p.syarat?.dispensasi ? 'text-[#b42318]' : ''"
+                                            >
+                                                {{ labelSyarat(p.syarat) }}
+                                            </td>
+                                            <td class="px-4 py-2.5">
+                                                <template v-if="p.pengerjaan?.selesai_at">
+                                                    Selesai {{ formatJamDari(p.pengerjaan.selesai_at) }}
+                                                    <span v-if="p.pengerjaan.auto_closed" class="block text-xs text-[#a39e98]"
+                                                        >ditutup otomatis saat waktu habis</span
+                                                    >
+                                                </template>
+                                                <span v-else-if="p.pengerjaan" class="text-[#0b62b5]"
+                                                    >Mengerjakan sejak {{ formatJamDari(p.pengerjaan.mulai_at) }}</span
+                                                >
+                                                <span v-else class="text-[#a39e98]">Belum mengerjakan</span>
+                                            </td>
+                                            <td class="px-4 py-2.5">
+                                                <template v-if="p.pengerjaan?.selesai_at && props.lembarSoal">
+                                                    {{ p.pengerjaan.skor ?? '-' }} / {{ props.lembarSoal.total_poin }}
+                                                    <Link
+                                                        :href="
+                                                            rute('kelas-kuliah.quiz.attempts.show', [
+                                                                props.kelasKuliah.id,
+                                                                props.lembarSoal.id,
+                                                                p.pengerjaan.id,
+                                                            ])
+                                                        "
+                                                        class="ml-2 text-[#0075de] hover:underline"
+                                                        >{{ p.pengerjaan.essay_belum_dinilai ? 'Koreksi esai' : 'Lihat jawaban' }}</Link
+                                                    >
+                                                </template>
+                                                <span v-else class="text-[#a39e98]">-</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                </template>
 
                 <section v-if="props.ujian.mode === 'tatap_muka'" :class="kartu">
                     <p class="text-sm text-[#615d59]">

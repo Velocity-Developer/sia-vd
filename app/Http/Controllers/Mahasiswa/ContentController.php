@@ -8,6 +8,7 @@ use App\Models\Krs;
 use App\Models\Materi;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Models\Ujian;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -76,6 +77,9 @@ class ContentController extends Controller
         abort_if($mahasiswa === null, 403);
 
         abort_unless($quiz->kelasKuliah()->whereHas('krs', fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id))->exists(), 403);
+        // Lembar soal ujian hanya bisa dibuka bila jadwal ujiannya sudah terbit.
+        $ujian = $quiz->ujian;
+        abort_if($ujian !== null && $ujian->status !== Ujian::TERBIT, 404);
 
         $quiz->load(['kelasKuliah.mataKuliah', 'uploader:id,name']);
         $attempt = QuizAttempt::query()
@@ -101,13 +105,31 @@ class ContentController extends Controller
                 ->all();
         });
 
+        // Ujian: urutan soal dan opsi diacak per mahasiswa (tetap sama selama ia mengerjakan). Jawaban
+        // disimpan berdasarkan teks opsi, jadi pengacakan tidak memengaruhi penilaian.
+        if ($ujian !== null && $attempt !== null) {
+            $acak = fn (string $kunci): int => crc32($attempt->id.'-'.$kunci);
+            $quiz->setRelation('questions', $quiz->questions->sortBy(fn ($q) => $acak('s'.$q->id))->values());
+            $quiz->questions->each(function ($question) use ($acak): void {
+                $question->question_option = collect($question->question_option)->sortBy(fn (array $o) => $acak('o'.$question->id.$o['text']))->values()->all();
+            });
+        }
+
+        // Nilai ujian baru terlihat setelah dosen merilisnya.
+        $sembunyikanNilai = $ujian !== null && ! $ujian->nilai_dirilis;
+        if ($sembunyikanNilai && $attempt !== null) {
+            $attempt->score = null;
+            $attempt->setRelation('answers', $attempt->answers->each(fn ($answer) => $answer->point = null));
+        }
+
         return Inertia::render('Mahasiswa/QuizShow', [
             'quiz' => $quiz,
             'attempt' => $attempt,
             // Hitung mundur di browser memakai jam server, bukan jam perangkat mahasiswa.
             'deadline' => $deadline?->toIso8601String(),
             'serverNow' => now()->toIso8601String(),
-            'essayBelumDinilai' => $attempt?->submitted_at !== null && $attempt->hasUngradedEssay(),
+            'essayBelumDinilai' => ! $sembunyikanNilai && $attempt?->submitted_at !== null && $attempt->hasUngradedEssay(),
+            'ujian' => $ujian ? ['id' => $ujian->id, 'jenis' => $ujian->jenis, 'nilai_dirilis' => $ujian->nilai_dirilis] : null,
         ]);
     }
 }
