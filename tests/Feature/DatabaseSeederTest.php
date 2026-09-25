@@ -5,6 +5,7 @@ use App\Models\DosenProfile;
 use App\Models\Fakultas;
 use App\Models\InfoKuliah;
 use App\Models\Jadwal;
+use App\Models\JenisBiaya;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
@@ -19,11 +20,17 @@ use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
+use App\Models\RemidiPeserta;
 use App\Models\SkalaNilai;
+use App\Models\TagihanItem;
+use App\Models\TagihanRemidi;
 use App\Models\TahunAkademik;
 use App\Models\Tugas;
+use App\Models\Ujian;
+use App\Models\UjianJawaban;
 use App\Models\User;
 use App\UserType;
+use App\UsulanRemidi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
@@ -201,4 +208,63 @@ it('seeds students who can immediately fill in their KRS', function () {
             ->where('periodeKrsAktif', true)
             ->where('bolehKrs', true)
             ->has('kelasKuliahs'));
+});
+
+it('seeds deadlines in the order the remidi flow needs', function () {
+    $this->seed();
+
+    foreach (TahunAkademik::whereNotNull('batas_input_nilai')->get() as $ta) {
+        expect($ta->batas_input_nilai->gte($ta->tanggal_akhir))->toBeTrue()
+            ->and($ta->batas_bayar_remidi->gt($ta->batas_input_nilai))->toBeTrue()
+            ->and($ta->batas_input_nilai_remidi->gt($ta->batas_bayar_remidi))->toBeTrue();
+    }
+
+    // Tahun aktif belum final: dosen masih bisa mengisi nilai.
+    expect(KelasKuliah::whereHas('tahunAkademik', fn ($q) => $q->where('status', true))->get()->contains(fn (KelasKuliah $k) => $k->nilaiFinal()))->toBeFalse();
+});
+
+it('seeds a finished remidi that follows the remidi rules', function () {
+    $this->seed();
+
+    $peserta = RemidiPeserta::with(['kelasKuliah.tahunAkademik', 'kelasKuliah.mataKuliah', 'tagihan'])->get();
+    expect($peserta)->not->toBeEmpty();
+
+    foreach ($peserta as $p) {
+        $kelas = $p->kelasKuliah;
+        // Hanya dari kelas final yang daftarnya dikunci, dan hanya usulan otomatis (huruf D/E saat dikunci).
+        expect($kelas->nilaiFinal())->toBeTrue()
+            ->and($kelas->remidi_dikunci_at)->not->toBeNull()
+            ->and(UsulanRemidi::hurufRemidi($p->nilai_awal))->toBeTrue()
+            ->and($p->diusulkan)->toBeTrue()
+            ->and($kelas->krs()->where('mahasiswa_id', $p->mahasiswa_id)->exists())->toBeTrue();
+
+        // Tiap peserta ditagih sesuai tarif remidi per SKS mata kuliahnya.
+        $tagihan = $p->tagihan->setRelation('kelasKuliah', $kelas);
+        expect($tagihan->total)->toBe(50_000 * $kelas->mataKuliah->sks);
+
+        $nilaiRemidi = UjianJawaban::whereHas('ujian', fn ($q) => $q->where('kelas_id', $kelas->id)->where('jenis', Ujian::REMIDI))
+            ->where('mahasiswa_id', $p->mahasiswa_id)->value('nilai');
+        $hurufAkhir = $kelas->krs()->where('mahasiswa_id', $p->mahasiswa_id)->value('nilai');
+
+        if ($tagihan->status === TagihanRemidi::LUNAS) {
+            // Ujian remidi dijadwalkan dalam jendela remidi; huruf naik ke C hanya bila nilai remidi >= 60.
+            expect($nilaiRemidi)->not->toBeNull()
+                ->and($hurufAkhir)->toBe((float) $nilaiRemidi >= 60 ? 'C' : $p->nilai_awal);
+        } else {
+            expect($tagihan->statusTampil())->toBe(TagihanRemidi::GUGUR)
+                ->and($nilaiRemidi)->toBeNull()
+                ->and($hurufAkhir)->toBe($p->nilai_awal);
+        }
+    }
+
+    foreach (Ujian::where('jenis', Ujian::REMIDI)->with('kelasKuliah.tahunAkademik')->get() as $ujian) {
+        $ta = $ujian->kelasKuliah->tahunAkademik;
+        expect($ujian->tanggal->gt($ta->batas_bayar_remidi))->toBeTrue()
+            ->and($ujian->tanggal->lte($ta->batas_input_nilai_remidi))->toBeTrue()
+            ->and($ujian->kelasKuliah->remidi_final_at)->not->toBeNull();
+    }
+
+    // Biaya remidi tidak pernah masuk tagihan semester.
+    expect(TagihanItem::whereIn('jenis_biaya_id', JenisBiaya::where('kategori', JenisBiaya::REMIDI)->select('id'))->exists())->toBeFalse()
+        ->and(TagihanRemidi::whereNotNull('bukti')->count())->toBeGreaterThan(0);
 });

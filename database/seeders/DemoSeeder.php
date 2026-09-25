@@ -28,18 +28,22 @@ use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
+use App\Models\RemidiPeserta;
 use App\Models\Role;
 use App\Models\Ruang;
 use App\Models\SkalaNilai;
 use App\Models\TagihanItem;
+use App\Models\TagihanRemidi;
 use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
 use App\Models\TarifBiaya;
 use App\Models\Tugas;
 use App\Models\Ujian;
+use App\Models\UjianJawaban;
 use App\Models\User;
 use App\PermissionCatalog;
 use App\UserType;
+use App\UsulanRemidi;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -111,11 +115,16 @@ class DemoSeeder extends Seeder
         $this->jadwalUjian($tahunAkademik->last());
         $this->pindahKelas($tahunAkademik->last(), $mahasiswa);
         $this->infoKuliah();
+        // Remidi mengubah sebagian huruf semester lalu, jadi dijalankan sebelum tagihan semester (kuota SKS dari IPS).
+        $this->remidi($tahunAkademik->get(count($tahunAkademik) - 2));
         $this->keuangan($tahunAkademik, $mahasiswa);
     }
 
     private function bersihkan(): void
     {
+        TagihanRemidi::query()->delete();
+        RemidiPeserta::query()->delete();
+        UjianJawaban::query()->delete();
         QuizAnswer::query()->delete();
         QuizAttempt::query()->delete();
         PengumpulanTugas::query()->delete();
@@ -346,6 +355,11 @@ class DemoSeeder extends Seeder
             'tanggal_akhir' => $item[2]->copy()->addMonths(5),
             'tanggal_krs_awal' => $item[2]->copy()->subWeek(),
             'tanggal_krs_akhir' => $item[2]->copy()->addWeeks(2),
+            // Tahun terlama dibuat sebelum ada kunci nilai & remidi, jadi batasnya kosong. Urutan batas:
+            // input nilai (1 minggu sesudah semester) < bayar remidi (2 minggu) < input nilai remidi (1 bulan).
+            'batas_input_nilai' => $index === 0 ? null : $item[2]->copy()->addMonths(5)->addWeek(),
+            'batas_bayar_remidi' => $index === 0 ? null : $item[2]->copy()->addMonths(5)->addWeeks(2),
+            'batas_input_nilai_remidi' => $index === 0 ? null : $item[2]->copy()->addMonths(6),
             'status' => $index === count($periode) - 1,
         ]));
     }
@@ -900,7 +914,7 @@ class DemoSeeder extends Seeder
             ]);
         }
 
-        $jenisBiaya = JenisBiaya::query()->where('aktif', true)->with('tarif')->orderBy('urutan')->get();
+        $jenisBiaya = JenisBiaya::query()->where('aktif', true)->where('kategori', JenisBiaya::SEMESTER)->with('tarif')->orderBy('urutan')->get();
         $tahunAktif = $tahunAkademik->last();
 
         foreach ($tahunAkademik as $tahun) {
@@ -939,6 +953,111 @@ class DemoSeeder extends Seeder
                     );
                 }
             }
+        }
+    }
+
+    /**
+     * Remidi semester lalu yang sudah tuntas, sebagai contoh alur lengkap. Semua kelas semester itu sudah final
+     * dan daftar remidinya dikunci; tiga kelas dengan nilai D/E terbanyak mengadakan remidi (usulan otomatis),
+     * kelas lain dikunci tanpa peserta. Semua peserta lunas kecuali satu yang gugur; yang nilai remidinya
+     * minimal 60 naik menjadi C.
+     */
+    private function remidi(TahunAkademik $tahun): void
+    {
+        $jenis = JenisBiaya::query()->create([
+            'kode' => 'REMIDI',
+            'nama' => 'Biaya Remidi',
+            'cara_hitung' => JenisBiaya::PER_SKS,
+            'kategori' => JenisBiaya::REMIDI,
+            'keterangan' => 'Per SKS mata kuliah yang diremidi.',
+            'aktif' => true,
+            'urutan' => 3,
+        ]);
+        $jenis->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => 50_000]);
+        $jenisBiaya = JenisBiaya::query()->whereKey($jenis->id)->with('tarif')->get();
+
+        $admin = User::query()->where('username', 'admin')->firstOrFail();
+        $selesai = $tahun->tanggal_akhir->copy();
+        $kelasSemua = KelasKuliah::query()
+            ->where('tahun_akademik_id', $tahun->id)
+            ->whereHas('krs')
+            ->with(['dosen:id,user_id', 'jadwals:id,kelas_id,ruang_id', 'mataKuliah:id,sks'])
+            ->orderBy('kode_kelas')
+            ->get();
+        // Kelas dengan nilai D/E terbanyak, agar contohnya memuat peserta yang naik, yang tetap, dan yang gugur.
+        $kelasRemidi = $kelasSemua->loadCount(['krs as jumlah_remidi' => fn ($q) => $q->whereIn('nilai', ['D', 'E'])])
+            ->where('jumlah_remidi', '>', 0)
+            ->sortByDesc('jumlah_remidi')
+            ->take(3)
+            ->values();
+        $nilaiRemidi = [78, 55, 66, 81, 60];
+        $urutanPeserta = 0;
+
+        foreach ($kelasSemua as $kelas) {
+            $kelas->update(['nilai_final_at' => $selesai, 'nilai_final_oleh' => $kelas->dosen->user_id]);
+            $daftar = collect(UsulanRemidi::susun($kelas)['mahasiswa'])->keyBy('mahasiswa_id');
+            $dipilih = $kelasRemidi->contains($kelas)
+                ? $daftar->where('diusulkan', true)->keys()->map(fn ($id): int => (int) $id)
+                : collect();
+
+            UsulanRemidi::kunci($kelas, $dipilih, $daftar, $kelas->dosen->user);
+            $kelas->update(['remidi_dikunci_at' => $selesai->copy()->addDays(2)]);
+
+            if ($dipilih->isEmpty()) {
+                continue;
+            }
+
+            $ujian = Ujian::query()->create([
+                'kelas_id' => $kelas->id,
+                'jenis' => Ujian::REMIDI,
+                'mode' => Ujian::TATAP_MUKA,
+                'tanggal' => $tahun->batas_bayar_remidi->copy()->addDays(3),
+                'jam_mulai' => '09:00',
+                'jam_akhir' => '11:00',
+                'ruang_id' => $kelas->jadwals->first()?->ruang_id,
+                'status' => Ujian::TERBIT,
+                'nilai_dirilis' => true,
+                'dibuat_oleh' => $admin->id,
+            ]);
+
+            foreach (RemidiPeserta::query()->where('kelas_id', $kelas->id)->with('mahasiswa')->orderBy('id')->get() as $peserta) {
+                $hitung = TagihanRemidi::hitung($peserta->mahasiswa, (int) $kelas->mataKuliah->sks, $jenisBiaya);
+                // Peserta terakhir kelas kedua tidak membayar sampai batas, sehingga gugur.
+                $gugur = $kelas->is($kelasRemidi->last()) && $peserta->is(RemidiPeserta::query()->where('kelas_id', $kelas->id)->latest('id')->first());
+                $pertama = $urutanPeserta === 0;
+
+                TagihanRemidi::query()->create([
+                    'remidi_peserta_id' => $peserta->id,
+                    'mahasiswa_id' => $peserta->mahasiswa_id,
+                    'kelas_id' => $kelas->id,
+                    ...$hitung,
+                    'status' => $gugur ? TagihanRemidi::BELUM_BAYAR : TagihanRemidi::LUNAS,
+                    // Satu contoh pembayaran lewat unggah bukti; sisanya dianggap dibayar di loket.
+                    'bukti' => $pertama ? $this->berkasDemo('bukti-bayar', 'bukti-remidi', 'Bukti transfer biaya remidi') : null,
+                    'bukti_diunggah_at' => $pertama ? $tahun->batas_bayar_remidi->copy()->subDays(3) : null,
+                    'diverifikasi_oleh' => $gugur ? null : $admin->id,
+                    'diverifikasi_at' => $gugur ? null : $tahun->batas_bayar_remidi->copy()->subDay(),
+                    'diterbitkan_oleh' => $admin->id,
+                ]);
+
+                if (! $gugur) {
+                    $nilai = $nilaiRemidi[$urutanPeserta % count($nilaiRemidi)];
+                    UjianJawaban::query()->create([
+                        'ujian_id' => $ujian->id,
+                        'mahasiswa_id' => $peserta->mahasiswa_id,
+                        'nilai' => $nilai,
+                        'dinilai_oleh' => $kelas->dosen->user_id,
+                    ]);
+
+                    if ($nilai >= 60) {
+                        Krs::query()->where('kelas_id', $kelas->id)->where('mahasiswa_id', $peserta->mahasiswa_id)->update(['nilai' => 'C']);
+                    }
+                }
+
+                $urutanPeserta++;
+            }
+
+            $kelas->update(['remidi_final_at' => $ujian->tanggal->copy()->addDays(2)]);
         }
     }
 
