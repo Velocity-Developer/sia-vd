@@ -11,7 +11,9 @@ use App\Models\SkalaNilai;
 use App\Models\TagihanRemidi;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
+use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Usulan otomatis peserta remidi: huruf akhir bertanda tidak lulus atau boleh diulang, dan ikut UAS.
@@ -93,5 +95,27 @@ class UsulanRemidi
         }
 
         return ['ada_uas' => $pesertaUas !== null, 'mahasiswa' => $mahasiswa];
+    }
+
+    /**
+     * Kunci daftar remidi kelas dengan mahasiswa terpilih; huruf akhir saat itu disimpan sebagai nilai awal.
+     *
+     * @param  Collection<int, int>  $dipilih  id mahasiswa
+     * @param  Collection<int, array<string, mixed>>  $daftar  hasil susun() dikunci per mahasiswa_id
+     */
+    public static function kunci(KelasKuliah $kelas, Collection $dipilih, Collection $daftar, User $oleh): void
+    {
+        DB::transaction(function () use ($kelas, $dipilih, $daftar, $oleh): void {
+            RemidiPeserta::query()->where('kelas_id', $kelas->id)->delete();
+            RemidiPeserta::query()->insert($dipilih->map(fn (int $id): array => [
+                'kelas_id' => $kelas->id,
+                'mahasiswa_id' => $id,
+                'nilai_awal' => $daftar[$id]['nilai'],
+                'diusulkan' => $daftar[$id]['diusulkan'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->values()->all());
+            $kelas->update(['remidi_dikunci_at' => now(), 'remidi_dikunci_oleh' => $oleh->id]);
+        });
     }
 }

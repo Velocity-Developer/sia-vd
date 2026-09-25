@@ -168,3 +168,18 @@ it('lets the lecturer edit remidi questions on a finalized class before it start
         ->assertRedirect();
     expect($soal->fresh()->question_text)->toBe('Baru');
 });
+
+it('creates draft remidi schedules for every ready class at once', function () {
+    [$kelas] = kelasUjianRemidi();
+    [$lain] = kelasUjianRemidi();
+    [$sudahAda] = kelasUjianRemidi();
+    ujianRemidi($sudahAda);
+    $admin = User::factory()->admin()->create();
+    $isian = ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'tanggal' => '2026-01-15', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'mode' => 'online_soal'];
+
+    $this->actingAs($admin)->post(route('admin.ujian.remidi-massal'), [...$isian, 'tanggal' => '2026-01-10'])->assertSessionHasErrors('tanggal');
+    $this->actingAs($admin)->post(route('admin.ujian.remidi-massal'), $isian)->assertSessionHas('success', '2 jadwal remidi dibuat sebagai draf. Periksa lalu terbitkan.');
+
+    expect(Ujian::where('jenis', 'remidi')->where('status', 'draf')->pluck('kelas_id')->sort()->values()->all())->toBe(collect([$kelas->id, $lain->id])->sort()->values()->all());
+    $this->actingAs($admin)->post(route('admin.ujian.remidi-massal'), $isian)->assertSessionHas('success', '0 jadwal remidi dibuat sebagai draf. Periksa lalu terbitkan.');
+});

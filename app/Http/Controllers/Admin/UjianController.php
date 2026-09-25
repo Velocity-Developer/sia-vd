@@ -122,6 +122,41 @@ class UjianController extends Controller
             .($hasil['tanpa_pertemuan'] > 0 ? " {$hasil['tanpa_pertemuan']} kelas belum punya pertemuan {$jenis}; buat jadwalnya satu per satu." : ''));
     }
 
+    /**
+     * Buat jadwal remidi (draf) sekaligus untuk semua kelas yang siap, dengan satu tanggal, jam, dan mode.
+     * Ujian tatap muka tetap perlu ruang per kelas sebelum bisa diterbitkan.
+     */
+    public function buatRemidiMassal(Request $request): RedirectResponse
+    {
+        $ta = TahunAkademik::query()->findOrFail($request->integer('tahun_akademik_id'));
+
+        if ($ta->batas_bayar_remidi === null || $ta->batas_input_nilai_remidi === null) {
+            return back()->with('error', 'Isi dulu Batas Bayar Remidi dan Batas Input Nilai Remidi di menu Tahun Akademik.');
+        }
+
+        $data = $request->validate([
+            'mode' => ['required', Rule::in(Ujian::MODE)],
+            'tanggal' => ['required', 'date_format:Y-m-d', 'after:'.$ta->batas_bayar_remidi->toDateString(), 'before_or_equal:'.$ta->batas_input_nilai_remidi->toDateString()],
+            'jam_mulai' => ['required', 'date_format:H:i'],
+            'jam_akhir' => ['required', 'date_format:H:i', 'after:jam_mulai'],
+        ], [
+            'tanggal.after' => 'Tanggal remidi harus sesudah batas bayar remidi ('.$ta->batas_bayar_remidi->translatedFormat('d M Y').').',
+            'tanggal.before_or_equal' => 'Tanggal remidi paling lambat batas input nilai remidi ('.$ta->batas_input_nilai_remidi->translatedFormat('d M Y').').',
+            'after' => ':attribute harus lebih besar dari Jam Mulai.',
+        ], ['mode' => 'Mode', 'tanggal' => 'Tanggal', 'jam_mulai' => 'Jam Mulai', 'jam_akhir' => 'Jam Selesai']);
+
+        $kelas = $this->kelasRemidiSiap($ta->id)->get(['id']);
+
+        DB::transaction(function () use ($kelas, $data, $request): void {
+            foreach ($kelas as $k) {
+                Ujian::create([...$data, 'kelas_id' => $k->id, 'jenis' => Ujian::REMIDI, 'status' => Ujian::DRAF, 'dibuat_oleh' => $request->user()->id]);
+            }
+        });
+
+        return back()->with('success', "{$kelas->count()} jadwal remidi dibuat sebagai draf."
+            .($data['mode'] === Ujian::TATAP_MUKA && $kelas->isNotEmpty() ? ' Isi ruangnya satu per satu sebelum diterbitkan.' : ' Periksa lalu terbitkan.'));
+    }
+
     public function create(Request $request): Response
     {
         $tahunId = $request->integer('tahun_akademik_id') ?: TahunAkademik::where('status', true)->value('id');

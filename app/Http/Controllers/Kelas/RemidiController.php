@@ -5,12 +5,10 @@ namespace App\Http\Controllers\Kelas;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
-use App\Models\RemidiPeserta;
 use App\Models\TagihanRemidi;
 use App\UsulanRemidi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Daftar peserta remidi per kelas: disusun dosen (atau admin) setelah nilai kelas final, lalu dikunci.
@@ -44,18 +42,7 @@ class RemidiController extends Controller
 
         abort_if($dipilih->contains(fn (int $id): bool => ! $daftar->has($id)), 422, 'Mahasiswa bukan peserta kelas ini.');
 
-        DB::transaction(function () use ($kelasKuliah, $daftar, $dipilih, $request): void {
-            RemidiPeserta::query()->where('kelas_id', $kelasKuliah->id)->delete();
-            RemidiPeserta::query()->insert($dipilih->map(fn (int $id): array => [
-                'kelas_id' => $kelasKuliah->id,
-                'mahasiswa_id' => $id,
-                'nilai_awal' => $daftar[$id]['nilai'],
-                'diusulkan' => $daftar[$id]['diusulkan'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ])->all());
-            $kelasKuliah->update(['remidi_dikunci_at' => now(), 'remidi_dikunci_oleh' => $request->user()->id]);
-        });
+        UsulanRemidi::kunci($kelasKuliah, $dipilih, $daftar, $request->user());
 
         return back()->with('success', $dipilih->isEmpty()
             ? 'Daftar remidi dikunci tanpa peserta.'

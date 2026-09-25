@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
-import { JENIS_UJIAN, STATUS_UJIAN, labelMode, type JenisUjian, type ModeUjian } from '@/lib/ujian';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { JENIS_UJIAN, MODE_UJIAN, STATUS_UJIAN, labelMode, type JenisUjian, type ModeUjian } from '@/lib/ujian';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { CalendarPlus, Pencil, Plus, Search, Send, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
@@ -45,6 +45,14 @@ const prodi = ref<number | string>(props.filter.prodi_id ?? 'all');
 const jenis = ref<string>(props.filter.jenis ?? 'all');
 const status = ref<string>(props.filter.status ?? 'all');
 const search = ref(props.filter.search);
+const massalRemidiOpen = ref(false);
+const formRemidi = useForm({ tanggal: '', jam_mulai: '', jam_akhir: '', mode: 'online_berkas' });
+// Tahun akademik diambil saat dikirim, mengikuti filter yang sedang dipilih.
+const buatRemidiMassal = () =>
+    formRemidi
+        .transform((data) => ({ ...data, tahun_akademik_id: props.filter.tahun_akademik_id }))
+        .post(route('admin.ujian.remidi-massal'), { preserveScroll: true, onSuccess: () => (massalRemidiOpen.value = false) });
+
 const kirim = () =>
     router.get(
         route('admin.ujian.index'),
@@ -124,8 +132,9 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                     class="flex flex-wrap items-center gap-3 rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
                 >
                     <span>{{ props.remidiSiap }} kelas punya peserta remidi yang sudah lunas tetapi belum dijadwalkan remidinya.</span>
+                    <Button size="sm" variant="outline" class="bg-white" @click="massalRemidiOpen = true">Buat semua jadwal remidi</Button>
                     <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: 'remidi' })">
-                        <Button size="sm" variant="outline" class="bg-white">Jadwalkan remidi</Button>
+                        <Button size="sm" variant="outline" class="bg-white">Jadwalkan satu kelas</Button>
                     </Link>
                 </div>
 
@@ -260,6 +269,45 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                     @cancel="pendingHapus = null"
                 />
             </div>
+        </div>
+
+        <div
+            v-if="massalRemidiOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+            @click.self="massalRemidiOpen = false"
+        >
+            <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="buatRemidiMassal">
+                <h3 class="text-lg font-semibold">Buat semua jadwal remidi</h3>
+                <p class="mt-1 text-sm text-[#615d59]">
+                    {{ props.remidiSiap }} kelas yang siap mendapat jadwal remidi berstatus draf dengan waktu dan mode yang sama. Setelahnya sunting
+                    yang perlu berbeda, lalu terbitkan.
+                </p>
+                <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                    <label class="grid content-start gap-1 text-sm"
+                        ><span class="font-medium">Tanggal</span><Input v-model="formRemidi.tanggal" type="date" class="h-10" required
+                    /></label>
+                    <label class="grid content-start gap-1 text-sm"
+                        ><span class="font-medium">Jam mulai</span><Input v-model="formRemidi.jam_mulai" type="time" class="h-10" required
+                    /></label>
+                    <label class="grid content-start gap-1 text-sm"
+                        ><span class="font-medium">Jam selesai</span><Input v-model="formRemidi.jam_akhir" type="time" class="h-10" required
+                    /></label>
+                    <label class="grid content-start gap-1 text-sm sm:col-span-3">
+                        <span class="font-medium">Mode</span>
+                        <select v-model="formRemidi.mode" class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]">
+                            <option v-for="m in MODE_UJIAN" :key="m.value" :value="m.value">{{ m.label }}</option>
+                        </select>
+                        <span v-if="formRemidi.mode === 'tatap_muka'" class="text-xs text-[#a39e98]">Ruang diisi per kelas sebelum diterbitkan.</span>
+                    </label>
+                </div>
+                <p v-for="(pesan, k) in formRemidi.errors" :key="k" class="mt-2 text-xs text-[#dd5b00]">{{ pesan }}</p>
+                <div class="mt-6 flex justify-end gap-2">
+                    <Button type="button" variant="outline" class="rounded-full" @click="massalRemidiOpen = false">Batal</Button>
+                    <Button type="submit" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="formRemidi.processing"
+                        >Buat Draf</Button
+                    >
+                </div>
+            </form>
         </div>
     </AppLayout>
 </template>

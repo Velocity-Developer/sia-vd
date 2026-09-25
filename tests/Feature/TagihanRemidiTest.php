@@ -182,3 +182,27 @@ it('blocks reopening the remidi list once bills exist, and shows the admin page'
         ->assertInertia(fn ($page) => $page->has('tagihan.data', 2)->where('ringkasan.belum_bayar', 2)->where('ringkasan.belum_ditagih', 0));
     $this->actingAs(User::factory()->mahasiswa()->create())->get(route('admin.tagihan-remidi.index'))->assertForbidden();
 });
+
+it('lists final classes whose remidi list is not locked and locks them all with the automatic proposal', function () {
+    [$sudah] = kelasTagihanRemidi();
+    [$belum, $mhs] = kelasTagihanRemidi(kunci: false);
+    RemidiPeserta::where('kelas_id', $belum->id)->delete();
+    Krs::create(['mahasiswa_id' => User::factory()->mahasiswa()->create()->mahasiswaProfile->id, 'kelas_id' => $belum->id, 'nilai' => 'A']);
+    // Kelas belum final dan kelas tanpa mahasiswa tidak ikut.
+    $belumFinal = createMateriKelasKuliah($sudah->tahunAkademik);
+    Krs::create(['mahasiswa_id' => User::factory()->mahasiswa()->create()->mahasiswaProfile->id, 'kelas_id' => $belumFinal->id, 'nilai' => 'E']);
+    $kosong = createMateriKelasKuliah($sudah->tahunAkademik);
+    $kosong->update(['nilai_final_at' => now()]);
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->get(route('admin.tagihan-remidi.index', ['tahun_akademik_id' => $sudah->tahun_akademik_id]))
+        ->assertInertia(fn ($page) => $page->has('kelasBelumKunci', 1)->where('kelasBelumKunci.0.id', $belum->id));
+
+    $this->actingAs($admin)->post(route('admin.tagihan-remidi.kunci-massal'), ['tahun_akademik_id' => $sudah->tahun_akademik_id])
+        ->assertSessionHas('success', '1 daftar remidi dikunci memakai usulan otomatis (2 peserta).');
+
+    expect($belum->fresh()->remidi_dikunci_oleh)->toBe($admin->id)
+        ->and(RemidiPeserta::where('kelas_id', $belum->id)->pluck('mahasiswa_id')->sort()->values()->all())
+        ->toBe(collect($mhs)->map(fn ($u) => $u->mahasiswaProfile->id)->sort()->values()->all())
+        ->and($belumFinal->fresh()->remidi_dikunci_at)->toBeNull();
+});

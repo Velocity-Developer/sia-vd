@@ -9,7 +9,7 @@ import { formatTanggal } from '@/lib/presensi';
 import { rupiah, STATUS_TAGIHAN_REMIDI, type Rincian, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Search } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 type Baris = {
     id: number;
@@ -33,13 +33,13 @@ const props = defineProps<{
     tagihan: { data: Baris[]; links: { url: string | null; label: string; active: boolean }[]; from: number | null; total: number };
     ringkasan: {
         kelas_dikunci: number;
-        kelas_belum_kunci: number;
         belum_ditagih: number;
         belum_bayar: number;
         menunggu: number;
         ditolak: number;
         lunas: number;
     };
+    kelasBelumKunci: { id: number; kode_kelas: string; matkul: string | null; dosen: string | null }[];
     filter: { tahun_akademik_id: number | null; status: string; search: string };
     batasBayar: string | null;
     batasLewat: boolean;
@@ -75,6 +75,16 @@ watch(
         search.value = baru.search;
     },
 );
+
+const kunciMassalOpen = ref(false);
+const kunciMassal = () =>
+    router.post(
+        route('admin.tagihan-remidi.kunci-massal'),
+        { tahun_akademik_id: tahunAkademikId.value },
+        { preserveScroll: true, onFinish: () => (kunciMassalOpen.value = false) },
+    );
+const lihatSemuaKelas = ref(false);
+const kelasTampil = computed(() => (lihatSemuaKelas.value ? props.kelasBelumKunci : props.kelasBelumKunci.slice(0, 5)));
 
 const terbitOpen = ref(false);
 const terbitkan = () =>
@@ -163,8 +173,29 @@ const deskripsiLunas = (baris: Baris | null) =>
                     {{ props.ringkasan.menunggu }} bukti bayar menunggu verifikasi. Verifikasi sebelum ujian remidi berlangsung; mahasiswa baru bisa
                     ikut remidi setelah dinyatakan lunas.
                 </div>
-                <div v-if="props.ringkasan.kelas_belum_kunci" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#615d59]">
-                    {{ props.ringkasan.kelas_belum_kunci }} kelas sudah final tetapi daftar remidinya belum dikunci dosen, jadi belum bisa ditagih.
+                <div v-if="props.kelasBelumKunci.length" class="rounded-xl border border-[#f1d9a0] bg-[#fff6e0] px-4 py-3 text-sm text-[#8a5a00]">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <span
+                            >{{ props.kelasBelumKunci.length }} kelas sudah final tetapi daftar remidinya belum dikunci dosen, jadi belum bisa
+                            ditagih.</span
+                        >
+                        <Button size="sm" variant="outline" class="bg-white" @click="kunciMassalOpen = true"
+                            >Kunci semua pakai usulan otomatis</Button
+                        >
+                    </div>
+                    <ul class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                        <li v-for="k in kelasTampil" :key="k.id">
+                            <Link :href="route('admin.kelas-kuliah.show', k.id)" class="font-medium hover:underline">{{ k.kode_kelas }}</Link>
+                            <span class="text-[#a37b2a]">
+                                · {{ k.matkul }}<template v-if="k.dosen"> · {{ k.dosen }}</template></span
+                            >
+                        </li>
+                        <li v-if="props.kelasBelumKunci.length > 5 && !lihatSemuaKelas">
+                            <button type="button" class="font-medium hover:underline" @click="lihatSemuaKelas = true">
+                                +{{ props.kelasBelumKunci.length - 5 }} lainnya
+                            </button>
+                        </li>
+                    </ul>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -304,6 +335,16 @@ const deskripsiLunas = (baris: Baris | null) =>
             </div>
         </div>
 
+        <AlertModal
+            :open="kunciMassalOpen"
+            title="Kunci semua daftar remidi?"
+            :description="`${props.kelasBelumKunci.length} kelas akan dikunci memakai usulan otomatis (huruf tidak lulus/boleh diulang yang ikut UAS), tanpa tambahan atau coretan dosen.`"
+            confirm-text="Kunci Semua"
+            cancel-text="Batal"
+            @update:open="kunciMassalOpen = $event"
+            @confirm="kunciMassal"
+            @cancel="kunciMassalOpen = false"
+        />
         <AlertModal
             :open="terbitOpen"
             title="Terbitkan tagihan remidi?"

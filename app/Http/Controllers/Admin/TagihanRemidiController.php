@@ -9,9 +9,11 @@ use App\Models\RemidiPeserta;
 use App\Models\TagihanRemidi;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
+use App\UsulanRemidi;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -69,6 +71,12 @@ class TagihanRemidiController extends Controller
         return Inertia::render('Admin/TagihanRemidi', [
             'tagihan' => $tagihan,
             'ringkasan' => $this->ringkasan($tahunAkademik),
+            'kelasBelumKunci' => $this->kelasBelumKunci($tahunAkademik)->map(fn (KelasKuliah $k): array => [
+                'id' => $k->id,
+                'kode_kelas' => $k->kode_kelas,
+                'matkul' => $k->mataKuliah?->nama_matkul,
+                'dosen' => $k->dosen?->user?->name,
+            ])->values(),
             'filter' => ['tahun_akademik_id' => $taId, 'status' => $status ?: 'all', 'search' => $search],
             'batasBayar' => $tahunAkademik?->batas_bayar_remidi?->toDateString(),
             'batasLewat' => $tahunAkademik?->batas_bayar_remidi?->copy()->endOfDay()->isPast() ?? false,
@@ -180,11 +188,6 @@ class TagihanRemidiController extends Controller
 
         return [
             'kelas_dikunci' => (clone $kelas)->whereNotNull('remidi_dikunci_at')->count(),
-            // Kelas yang nilainya sudah final tapi daftar remidinya belum dikunci dosen.
-            'kelas_belum_kunci' => (clone $kelas)->whereNull('remidi_dikunci_at')
-                ->when(! ($tahunAkademik?->batas_input_nilai?->copy()->endOfDay()->isPast() ?? false), fn (Builder $q) => $q->where(fn (Builder $w) => $w
-                    ->whereNotNull('nilai_final_at')->orWhere('nilai_dibuka_sampai', '<', now()->toDateString())))
-                ->count(),
             'belum_ditagih' => RemidiPeserta::query()->whereDoesntHave('tagihan')
                 ->whereHas('kelasKuliah', fn (Builder $q) => $q->where('tahun_akademik_id', $taId)->whereNotNull('remidi_dikunci_at'))->count(),
             'belum_bayar' => (int) ($perStatus[TagihanRemidi::BELUM_BAYAR] ?? 0),
@@ -192,6 +195,48 @@ class TagihanRemidiController extends Controller
             'ditolak' => (int) ($perStatus[TagihanRemidi::DITOLAK] ?? 0),
             'lunas' => (int) ($perStatus[TagihanRemidi::LUNAS] ?? 0),
         ];
+    }
+
+    /**
+     * Kunci daftar remidi semua kelas final yang belum dikunci dosen, memakai usulan otomatis apa adanya.
+     */
+    public function kunciMassal(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['tahun_akademik_id' => ['required', 'integer', Rule::exists('tahun_akademik', 'id')]]);
+        $kelas = $this->kelasBelumKunci(TahunAkademik::query()->findOrFail($data['tahun_akademik_id']));
+        $peserta = 0;
+
+        foreach ($kelas as $k) {
+            $daftar = collect(UsulanRemidi::susun($k)['mahasiswa'])->keyBy('mahasiswa_id');
+            $dipilih = $daftar->where('diusulkan', true)->keys()->map(fn ($id): int => (int) $id);
+            UsulanRemidi::kunci($k, $dipilih, $daftar, $request->user());
+            $peserta += $dipilih->count();
+        }
+
+        return back()->with('success', "{$kelas->count()} daftar remidi dikunci memakai usulan otomatis ({$peserta} peserta).");
+    }
+
+    /**
+     * Kelas yang nilainya sudah final (difinalisasi atau lewat batas input nilai) tetapi daftar remidinya belum dikunci.
+     *
+     * @return Collection<int, KelasKuliah>
+     */
+    private function kelasBelumKunci(?TahunAkademik $tahunAkademik): Collection
+    {
+        if ($tahunAkademik === null) {
+            return collect();
+        }
+
+        return KelasKuliah::query()
+            ->where('tahun_akademik_id', $tahunAkademik->id)
+            ->whereNull('remidi_dikunci_at')
+            ->whereHas('krs')
+            ->with(['mataKuliah:id,nama_matkul', 'dosen:id,user_id', 'dosen.user:id,name'])
+            ->orderBy('kode_kelas')
+            ->get()
+            ->each(fn (KelasKuliah $k) => $k->setRelation('tahunAkademik', $tahunAkademik))
+            ->filter(fn (KelasKuliah $k): bool => $k->nilaiFinal())
+            ->values();
     }
 
     private function tahunAkademikTerpilih(Request $request): ?TahunAkademik

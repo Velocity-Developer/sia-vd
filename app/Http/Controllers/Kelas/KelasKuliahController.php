@@ -118,7 +118,7 @@ class KelasKuliahController extends Controller
 
         $kelasKuliah->finalisasiNilai(request()->user());
 
-        return back()->with('success', 'Nilai kelas berhasil difinalisasi dan kini terkunci.');
+        return back()->with('success', 'Nilai kelas difinalisasi dan kini terkunci. Langkah berikutnya: periksa lalu kunci Daftar Remidi di bawah.');
     }
 
     /**

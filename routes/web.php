@@ -159,6 +159,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::delete('tagihan/{mahasiswa}/kunci-krs', [TagihanController::class, 'bukaKunciKrs'])->name('admin.tagihan.buka-kunci-krs');
         Route::get('tagihan-remidi', [TagihanRemidiController::class, 'index'])->name('admin.tagihan-remidi.index');
         Route::post('tagihan-remidi/terbitkan', [TagihanRemidiController::class, 'terbitkan'])->name('admin.tagihan-remidi.terbitkan');
+        Route::post('tagihan-remidi/kunci-massal', [TagihanRemidiController::class, 'kunciMassal'])->name('admin.tagihan-remidi.kunci-massal');
         Route::post('tagihan-remidi/{tagihanRemidi}/lunas', [TagihanRemidiController::class, 'lunas'])->name('admin.tagihan-remidi.lunas');
         Route::post('tagihan-remidi/{tagihanRemidi}/tolak', [TagihanRemidiController::class, 'tolak'])->name('admin.tagihan-remidi.tolak');
     });
@@ -168,6 +169,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('ujian/create', [AdminUjianController::class, 'create'])->name('admin.ujian.create');
         Route::post('ujian', [AdminUjianController::class, 'store'])->name('admin.ujian.store');
         Route::post('ujian/buat-massal', [AdminUjianController::class, 'buatMassal'])->name('admin.ujian.buat-massal');
+        Route::post('ujian/remidi-massal', [AdminUjianController::class, 'buatRemidiMassal'])->name('admin.ujian.remidi-massal');
         Route::put('ujian/terbitkan', [AdminUjianController::class, 'terbitkan'])->name('admin.ujian.terbitkan');
         Route::get('ujian/{ujian}/edit', [AdminUjianController::class, 'edit'])->name('admin.ujian.edit');
         Route::put('ujian/{ujian}', [AdminUjianController::class, 'update'])->name('admin.ujian.update');

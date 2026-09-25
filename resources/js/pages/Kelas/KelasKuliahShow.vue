@@ -9,7 +9,7 @@ import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { STATUS_TAGIHAN_REMIDI, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Copy, Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 const page = usePage<{
     flash: {
@@ -210,11 +210,16 @@ const saveGrade = (krs: KrsShow) =>
     );
 
 const finalisasiOpen = ref(false);
+// Setelah finalisasi, langkah berikutnya (kunci daftar remidi) langsung didekatkan ke dosen.
 const finalisasi = () =>
     router.post(
         rute('kelas-kuliah.finalisasi-nilai', props.kelasKuliah.id),
         {},
-        { preserveScroll: true, onFinish: () => (finalisasiOpen.value = false) },
+        {
+            preserveScroll: true,
+            onFinish: () => (finalisasiOpen.value = false),
+            onSuccess: () => nextTick(() => document.getElementById('daftar-remidi')?.scrollIntoView({ behavior: 'smooth', block: 'start' })),
+        },
     );
 const pesanFinalisasi = computed(() => {
     const kosong = props.statusNilai.tanpa_nilai;
@@ -1182,6 +1187,7 @@ const formatTenggat = (value: string | null | undefined): string => {
 
                 <section
                     v-if="props.remidi"
+                    id="daftar-remidi"
                     class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
