@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Collection;
@@ -39,6 +41,28 @@ class PresensiMahasiswa extends Model
         return [
             'waktu_presensi' => 'datetime',
         ];
+    }
+
+    /**
+     * Hanya presensi mahasiswa yang masih terdaftar (ber-KRS) di kelas pertemuannya, agar rekap, rata-rata
+     * kelas, dan laporan tidak ikut menghitung mahasiswa yang sudah pindah atau batal dari kelas itu.
+     * Mengembalikan closure untuk whereExists, bisa dipakai di query Eloquent maupun DB::table.
+     */
+    public static function syaratPesertaAktif(): Closure
+    {
+        return fn ($query) => $query->selectRaw('1')
+            ->from('krs')
+            ->join('pertemuans as pertemuan_krs', 'pertemuan_krs.kelas_id', '=', 'krs.kelas_id')
+            ->whereColumn('pertemuan_krs.id', 'presensi_mahasiswas.pertemuan_id')
+            ->whereColumn('krs.mahasiswa_id', 'presensi_mahasiswas.mahasiswa_id');
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public function scopePesertaAktif(Builder $query): void
+    {
+        $query->whereExists(self::syaratPesertaAktif());
     }
 
     public function pertemuan(): BelongsTo
@@ -111,6 +135,7 @@ class PresensiMahasiswa extends Model
     public static function rekapKelas(int $kelasId): Collection
     {
         return static::query()
+            ->pesertaAktif()
             ->whereHas('pertemuan', fn ($query) => $query->where('kelas_id', $kelasId)->dihitung())
             ->selectRaw('mahasiswa_id, status, COUNT(*) as jumlah')
             ->groupBy('mahasiswa_id', 'status')

@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\AksesPresensi;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
+use App\Models\KelasKuliah;
 use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
@@ -13,6 +14,7 @@ use App\SyaratUjian;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -38,9 +40,38 @@ class PertemuanController extends Controller
             $pertemuan->siapkanPeserta();
         }
 
-        $kelas->load(['mataKuliah:id,kode_matkul,nama_matkul', 'dosen:id,user_id', 'dosen.user:id,name', 'tahunAkademik:id,tahun,semester,status']);
-        $pertemuan->load(['ruang:id,kode_ruang,nama_ruang', 'dosen:id,user_id,nidn', 'dosen.user:id,name']);
+        // Data berat dibungkus closure: saat layar dosen memuat ulang daftar hadir (partial reload "presensi"),
+        // hanya closure itu yang dihitung, bukan seluruh isi halaman.
+        return Inertia::render('Kelas/PresensiPertemuan', [
+            'peran' => $this->peran(),
+            'kelasKuliah' => fn () => $kelas->load(['mataKuliah:id,kode_matkul,nama_matkul', 'dosen:id,user_id', 'dosen.user:id,name', 'tahunAkademik:id,tahun,semester,status']),
+            'pertemuan' => fn () => $pertemuan->load(['ruang:id,kode_ruang,nama_ruang', 'dosen:id,user_id,nidn', 'dosen.user:id,name']),
+            'presensi' => fn () => $this->daftarHadir($pertemuan, $kelas),
+            'jumlahPeserta' => fn () => $kelas->krs()->count(),
+            'bisaKelola' => fn () => $this->bolehKelolaPertemuan($pertemuan),
+            'bisaAturJadwal' => fn () => $this->pengampu($kelas),
+            'bisaDimulai' => fn () => $this->bolehKelolaPertemuan($pertemuan) && $this->bisaDimulai($pertemuan),
+            // Hitung mundur di layar memakai jam server, bukan jam perangkat.
+            'detikSampaiMulai' => fn () => $pertemuan->status === Pertemuan::DIJADWALKAN && now()->lt($pertemuan->mulaiAt())
+                ? (int) now()->diffInSeconds($pertemuan->mulaiAt(), true)
+                : null,
+            'mandiriTerbuka' => fn () => $pertemuan->mandiriTerbuka(),
+            'durasiMandiri' => fn () => PengaturanAkademik::current()->durasi_presensi_mandiri_menit,
+            'terkunci' => fn () => $this->nilaiTerkunci($kelas),
+            'dosenOptions' => fn () => $this->peran() === 'admin'
+                ? DosenProfile::with('user:id,name')->orderBy('nidn')->get(['id', 'user_id', 'nidn'])
+                    ->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => ($dosen->user?->name ?? '-').' — '.$dosen->nidn])
+                : [],
+        ]);
+    }
 
+    /**
+     * Daftar hadir pertemuan beserta tanda perangkat sama, syarat ujian (UTS/UAS), dan pengajuan izin.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function daftarHadir(Pertemuan $pertemuan, KelasKuliah $kelas): Collection
+    {
         $baris = $pertemuan->presensiMahasiswas()
             ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name', 'pengubah:id,name'])
             ->get();
@@ -52,7 +83,7 @@ class PertemuanController extends Controller
         // Satu perangkat yang dipakai presensi mandiri oleh lebih dari satu mahasiswa: kemungkinan titip absen.
         $perangkatBersama = $baris->whereNotNull('perangkat')->countBy('perangkat')->filter(fn (int $jumlah): bool => $jumlah > 1);
 
-        $presensi = $baris
+        return $baris
             ->sortBy(fn (PresensiMahasiswa $baris) => $baris->mahasiswa?->nim)
             ->values()
             ->map(fn (PresensiMahasiswa $baris): array => [
@@ -68,28 +99,6 @@ class PertemuanController extends Controller
                 'memenuhi_syarat_ujian' => $syarat[$baris->mahasiswa_id][$pertemuan->jenis]['memenuhi'] ?? null,
                 'pengajuan' => $pengajuan[$baris->mahasiswa_id] ?? null,
             ]);
-
-        return Inertia::render('Kelas/PresensiPertemuan', [
-            'peran' => $this->peran(),
-            'kelasKuliah' => $kelas,
-            'pertemuan' => $pertemuan,
-            'presensi' => $presensi,
-            'jumlahPeserta' => $kelas->krs()->count(),
-            'bisaKelola' => $this->bolehKelolaPertemuan($pertemuan),
-            'bisaAturJadwal' => $this->pengampu($kelas),
-            'bisaDimulai' => $this->bolehKelolaPertemuan($pertemuan) && $this->bisaDimulai($pertemuan),
-            // Hitung mundur di layar memakai jam server, bukan jam perangkat.
-            'detikSampaiMulai' => $pertemuan->status === Pertemuan::DIJADWALKAN && now()->lt($pertemuan->mulaiAt())
-                ? (int) now()->diffInSeconds($pertemuan->mulaiAt(), true)
-                : null,
-            'mandiriTerbuka' => $pertemuan->mandiriTerbuka(),
-            'durasiMandiri' => PengaturanAkademik::current()->durasi_presensi_mandiri_menit,
-            'terkunci' => $this->nilaiTerkunci($kelas),
-            'dosenOptions' => $this->peran() === 'admin'
-                ? DosenProfile::with('user:id,name')->orderBy('nidn')->get(['id', 'user_id', 'nidn'])
-                    ->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => ($dosen->user?->name ?? '-').' — '.$dosen->nidn])
-                : [],
-        ]);
     }
 
     /**
@@ -306,14 +315,19 @@ class PertemuanController extends Controller
         $periode = Pertemuan::periodeKode();
         $kode = $pertemuan->kodeUntuk($periode);
 
+        // Jumlah hadir dan total peserta dalam satu query (endpoint ini diminta tiap 5 detik per layar).
+        $hitungan = $pertemuan->presensiMahasiswas()
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN status IN ('.implode(', ', array_fill(0, count(PresensiMahasiswa::DIHITUNG_HADIR), '?')).') THEN 1 ELSE 0 END) as hadir', PresensiMahasiswa::DIHITUNG_HADIR)
+            ->first();
+
         return response()->json([
             'terbuka' => true,
             'pin' => $kode['pin'],
             'url' => route('mahasiswa.presensi.masuk', ['pertemuan' => $pertemuan->id, 'k' => $kode['token']]),
             'sisa_detik' => ($periode + 1) * Pertemuan::PERIODE_KODE_DETIK - now()->getTimestamp(),
             'sampai' => $pertemuan->mandiri_sampai->toIso8601String(),
-            'hadir' => $pertemuan->presensiMahasiswas()->whereIn('status', PresensiMahasiswa::DIHITUNG_HADIR)->count(),
-            'total' => $pertemuan->presensiMahasiswas()->count(),
+            'hadir' => (int) $hitungan?->hadir,
+            'total' => (int) $hitungan?->total,
         ]);
     }
 

@@ -189,8 +189,13 @@ const mandiriForm = useForm({ menit: props.durasiMandiri });
 const bukaMandiri = () => mandiriForm.post(rute('presensi.pertemuan.mandiri.buka', props.pertemuan.id), { preserveScroll: true });
 const tutupMandiri = () => router.delete(rute('presensi.pertemuan.mandiri.tutup', props.pertemuan.id), { preserveScroll: true });
 // Muat ulang daftar hadir saat ada yang presensi, kecuali dosen sedang menyunting (perubahannya belum disimpan).
+// Hanya daftar hadir yang diminta ulang (server tidak menghitung bagian lain), dan tidak bertumpuk bila
+// beberapa mahasiswa presensi berdekatan.
+let sedangMemuat = false;
 const muatUlangPresensi = () => {
-    if (!berubah.value.length) router.reload({ only: ['presensi'] });
+    if (berubah.value.length || sedangMemuat) return;
+    sedangMemuat = true;
+    router.reload({ only: ['presensi'], onFinish: () => (sedangMemuat = false) });
 };
 const presensiTertutup = () => router.reload({ only: ['mandiriTerbuka', 'presensi'] });
 const judulLayar = computed(() => `${props.kelasKuliah.mata_kuliah?.nama_matkul ?? ''} · Pertemuan ${props.pertemuan.pertemuan_ke}`);

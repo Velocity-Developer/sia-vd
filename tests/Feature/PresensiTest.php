@@ -13,6 +13,7 @@ use App\Models\Ruang;
 use App\Models\User;
 use App\SyaratUjian;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -996,4 +997,111 @@ it('moves attendance history along when a class transfer is approved', function 
         ->and($rekap[$id]['persen'])->toBe(50.0)
         ->and(PresensiMahasiswa::rekapKelas($asal->id)->has($id))->toBeFalse()
         ->and(DispensasiUjian::where('mahasiswa_id', $id)->value('kelas_id'))->toBe($tujuan->id);
+});
+
+// ---- Optimasi ----
+
+/** Jumlah query yang dijalankan sebuah panggilan. */
+function hitungQuery(callable $panggil): int
+{
+    DB::flushQueryLog();
+    DB::enableQueryLog();
+    $panggil();
+    $jumlah = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    return $jumlah;
+}
+
+it('embeds only the used glyphs so presensi PDFs stay small', function () {
+    [$kelas] = kelasPresensi(3);
+    Pertemuan::generateUntuk($kelas);
+
+    expect(config('dompdf.options.enable_font_subsetting'))->toBeTrue();
+
+    $pdf = $this->actingAs($kelas->dosen->user)->get(route('dosen.presensi.ekspor', $kelas))->assertOk()->getContent();
+    expect(strlen($pdf))->toBeLessThan(150 * 1024);
+});
+
+it('loads the student presensi page with a query count that does not grow with the number of classes', function () {
+    $mahasiswa = User::factory()->mahasiswa()->create();
+    $ukur = function () use ($mahasiswa): int {
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+
+        return hitungQuery(fn () => $this->actingAs($mahasiswa)->get(route('mahasiswa.presensi'))->assertOk());
+    };
+    $tambahKelas = function () use ($mahasiswa): void {
+        $kelas = createMateriKelasKuliah();
+        Jadwal::create(['kelas_id' => $kelas->id, 'hari' => 'Senin', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => Ruang::firstOrCreate(['kode_ruang' => 'R-101'], ['nama_ruang' => 'Ruang 101', 'kapasitas' => 40])->id]);
+        Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id, 'status' => 'Aktif']);
+        Pertemuan::generateUntuk($kelas->fresh());
+        selesaikanPertemuan($kelas, 1, [$mahasiswa->mahasiswaProfile->id => 'hadir']);
+        DispensasiUjian::create(['kelas_id' => $kelas->id, 'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'jenis' => 'uts', 'alasan' => 'Uji']);
+    };
+
+    $tambahKelas();
+    $ukur(); // pemanasan: cache institusi/tampilan terisi di permintaan pertama
+    $satuKelas = $ukur();
+    foreach (range(1, 4) as $_) {
+        $tambahKelas();
+    }
+    $limaKelas = $ukur();
+
+    expect($limaKelas)->toBe($satuKelas)->and($limaKelas)->toBeLessThan(40);
+});
+
+it('recomputes only the attendance list when the lecturer screen reloads it', function () {
+    [$kelas] = kelasPresensi(5);
+    Pertemuan::generateUntuk($kelas);
+    $uts = pertemuanKe($kelas, 8);
+    $this->travelTo('2025-09-22 08:00:00');
+    $dosen = $kelas->dosen->user;
+    $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.mulai', $uts));
+
+    $penuh = hitungQuery(fn () => $this->actingAs($dosen)->get(route('dosen.presensi.pertemuan.show', $uts))->assertOk());
+    $headers = ['X-Inertia' => 'true', 'X-Inertia-Partial-Component' => 'Kelas/PresensiPertemuan', 'X-Inertia-Partial-Data' => 'presensi', 'X-Inertia-Version' => Inertia\Inertia::getVersion()];
+    $sebagian = hitungQuery(function () use ($dosen, $uts, $headers) {
+        $props = $this->actingAs($dosen)->get(route('dosen.presensi.pertemuan.show', $uts), $headers)->assertOk()->json('props');
+        expect($props)->toHaveKey('presensi')->not->toHaveKey('dosenOptions')->not->toHaveKey('kelasKuliah')
+            ->and($props['presensi'])->toHaveCount(5);
+    });
+
+    expect($sebagian)->toBeLessThan($penuh);
+});
+
+it('counts only students still enrolled in class averages, reports, and the lecturer dashboard', function () {
+    [$kelas, $mahasiswa] = kelasPresensi(2);
+    Pertemuan::generateUntuk($kelas);
+    [$tetap, $keluar] = array_map(fn (User $u) => $u->mahasiswaProfile->id, $mahasiswa);
+    foreach ([1, 2] as $ke) {
+        selesaikanPertemuan($kelas, $ke, [$tetap => 'hadir', $keluar => 'alpa']);
+    }
+    $kelas->tahunAkademik->update(['status' => true]);
+
+    // Sebelum batal: rata-rata 50%, satu mahasiswa di bawah batas.
+    $admin = User::factory()->admin()->create();
+    $laporan = fn () => $this->actingAs($admin)->get(route('admin.presensi.laporan-dosen', ['tahun_akademik_id' => $kelas->tahun_akademik_id]));
+    $laporan()->assertInertia(fn ($page) => $page->where('baris.0.rata_kehadiran', 50));
+
+    Krs::where('kelas_id', $kelas->id)->where('mahasiswa_id', $keluar)->first()->cancel();
+
+    $laporan()->assertInertia(fn ($page) => $page->where('baris.0.rata_kehadiran', 100));
+    $this->actingAs($admin)->get(route('admin.presensi.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
+        ->assertInertia(fn ($page) => $page->where('kelas.data.0.rata_kehadiran', 100));
+    expect(PresensiMahasiswa::rekapKelas($kelas->id)->keys()->all())->toBe([$tetap]);
+
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($kelas->dosen->user)->get(route('dosen.dashboard'))
+        ->assertInertia(fn ($page) => $page->where('presensiDosen.mahasiswaBerisiko', 0));
+});
+
+it('returns attendance counts for the QR screen', function () {
+    [$kelas, $mahasiswa, $pertemuan] = pertemuanMandiri(3);
+    $pertemuan->presensiMahasiswas()->where('mahasiswa_id', $mahasiswa[0]->mahasiswaProfile->id)->update(['status' => 'hadir']);
+    $pertemuan->presensiMahasiswas()->where('mahasiswa_id', $mahasiswa[1]->mahasiswaProfile->id)->update(['status' => 'terlambat']);
+
+    $this->actingAs($kelas->dosen->user)->getJson(route('dosen.presensi.pertemuan.kode', $pertemuan))
+        ->assertJson(['terbuka' => true, 'hadir' => 2, 'total' => 3]);
 });

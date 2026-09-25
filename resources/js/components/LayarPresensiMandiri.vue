@@ -64,19 +64,27 @@ const saatLayarPenuh = async () => {
     if (data.value?.url && kanvas.value) await QRCode.toCanvas(kanvas.value, data.value.url, { width: layarPenuh.value ? 520 : 280, margin: 1 });
 };
 
+// Tab yang tidak sedang dilihat tidak meminta kode ke server; begitu dibuka lagi, kode terbaru langsung diambil.
+const saatVisibilitasBerubah = () => {
+    if (document.visibilityState === 'visible') ambil();
+};
+
 onMounted(() => {
     ambil();
     document.addEventListener('fullscreenchange', saatLayarPenuh);
+    document.addEventListener('visibilitychange', saatVisibilitasBerubah);
     // Kode berganti saat hitung mundur habis; jumlah hadir diperbarui tiap 5 detik.
     detak = window.setInterval(() => {
         sisa.value = Math.max(sisa.value - 1, 0);
         sejakAmbil++;
+        if (document.visibilityState === 'hidden') return;
         if (sisa.value === 0 || sejakAmbil >= 5 || gagal.value) ambil();
     }, 1000);
 });
 onUnmounted(() => {
     window.clearInterval(detak);
     document.removeEventListener('fullscreenchange', saatLayarPenuh);
+    document.removeEventListener('visibilitychange', saatVisibilitasBerubah);
 });
 </script>
 

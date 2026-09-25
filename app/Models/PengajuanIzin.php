@@ -51,13 +51,16 @@ class PengajuanIzin extends Model
     /**
      * Pengajuan diterima sampai akhir hari ke-N sesudah tanggal pertemuan (N dari Pengaturan Akademik).
      */
-    public static function batasWaktu(Pertemuan $pertemuan): Carbon
+    public static function batasWaktu(Pertemuan $pertemuan, ?int $batasHari = null): Carbon
     {
-        return $pertemuan->tanggal->copy()->addDays(PengaturanAkademik::current()->batas_pengajuan_izin_hari)->endOfDay();
+        return $pertemuan->tanggal->copy()->addDays($batasHari ?? PengaturanAkademik::current()->batas_pengajuan_izin_hari)->endOfDay();
     }
 
-    public static function masihBisaDiajukan(Pertemuan $pertemuan): bool
+    /**
+     * @param  int|null  $batasHari  isi bila memeriksa banyak pertemuan sekaligus, agar pengaturan tidak dibaca berulang
+     */
+    public static function masihBisaDiajukan(Pertemuan $pertemuan, ?int $batasHari = null): bool
     {
-        return $pertemuan->status !== Pertemuan::DIBATALKAN && now()->lte(self::batasWaktu($pertemuan));
+        return $pertemuan->status !== Pertemuan::DIBATALKAN && now()->lte(self::batasWaktu($pertemuan, $batasHari));
     }
 }

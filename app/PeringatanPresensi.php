@@ -63,9 +63,21 @@ class PeringatanPresensi
             ->whereHas('tahunAkademik', fn ($q) => $q->where('status', true))
             ->pluck('id');
 
-        $berisiko = $kelasAktif->sum(fn (int $id): int => PresensiMahasiswa::rekapKelas($id)
-            ->filter(fn (array $r): bool => $r['persen'] !== null && $r['persen'] < $min)
-            ->count());
+        // Satu query untuk semua kelas aktif (bukan satu rekap per kelas), hanya peserta yang masih ber-KRS.
+        $hadir = PresensiMahasiswa::DIHITUNG_HADIR;
+        $berisiko = PresensiMahasiswa::query()
+            ->pesertaAktif()
+            ->join('pertemuans', 'pertemuans.id', '=', 'presensi_mahasiswas.pertemuan_id')
+            ->whereIn('pertemuans.kelas_id', $kelasAktif)
+            ->where('pertemuans.jenis', Pertemuan::KULIAH)
+            ->where('pertemuans.status', Pertemuan::SELESAI)
+            ->groupBy('pertemuans.kelas_id', 'presensi_mahasiswas.mahasiswa_id')
+            ->selectRaw('pertemuans.kelas_id, presensi_mahasiswas.mahasiswa_id, COUNT(*) as total, SUM(CASE WHEN presensi_mahasiswas.status IN ('
+                .implode(', ', array_fill(0, count($hadir), '?')).') THEN 1 ELSE 0 END) as hadir', $hadir)
+            ->get()
+            // Pembulatan sama dengan rekap kelas agar angkanya konsisten.
+            ->filter(fn ($baris): bool => round($baris->hadir / $baris->total * 100, 1) < $min)
+            ->count();
 
         return [
             'hariIni' => Pertemuan::query()

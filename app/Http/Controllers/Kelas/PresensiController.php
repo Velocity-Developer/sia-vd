@@ -435,6 +435,7 @@ class PresensiController extends Controller
             ->whereIn('pertemuans.kelas_id', $kelasIds)
             ->where('pertemuans.jenis', Pertemuan::KULIAH)
             ->where('pertemuans.status', Pertemuan::SELESAI)
+            ->whereExists(PresensiMahasiswa::syaratPesertaAktif())
             ->groupBy('pertemuans.kelas_id')
             ->selectRaw("pertemuans.kelas_id, SUM(CASE WHEN presensi_mahasiswas.status IN ({$hadir}) THEN 1 ELSE 0 END) as hadir, COUNT(*) as total")
             ->get()

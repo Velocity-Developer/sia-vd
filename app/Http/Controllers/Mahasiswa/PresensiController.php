@@ -54,14 +54,21 @@ class PresensiController extends Controller
             ->get(['id', 'kode_kelas', 'matkul_id', 'dosen_id', 'jumlah_pertemuan']);
 
         $rekap = PresensiMahasiswa::rekapMahasiswa($mahasiswa->id, $kelas->pluck('id')->all());
-        $minKehadiran = PengaturanAkademik::current()->min_kehadiran_ujian;
+        // Pengaturan dibaca sekali lalu dipakai di semua kelas dan pertemuan.
+        $pengaturan = PengaturanAkademik::current();
+        $minKehadiran = $pengaturan->min_kehadiran_ujian;
 
         $pertemuan = Pertemuan::query()
             ->whereIn('kelas_id', $kelas->pluck('id'))
-            ->with(['presensiMahasiswas' => fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id)->select(['id', 'pertemuan_id', 'mahasiswa_id', 'status', 'waktu_presensi', 'metode', 'keterangan'])])
+            ->with(['ruang:id,kode_ruang,nama_ruang', 'presensiMahasiswas' => fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id)->select(['id', 'pertemuan_id', 'mahasiswa_id', 'status', 'waktu_presensi', 'metode', 'keterangan'])])
             ->orderBy('pertemuan_ke')
-            ->get(['id', 'kelas_id', 'pertemuan_ke', 'tanggal', 'jam_mulai', 'jam_akhir', 'jenis', 'status', 'topik'])
+            ->get(['id', 'kelas_id', 'pertemuan_ke', 'tanggal', 'jam_mulai', 'jam_akhir', 'ruang_id', 'jenis', 'status', 'topik'])
             ->groupBy('kelas_id');
+        $ujian = SyaratUjian::untukMahasiswa(
+            $mahasiswa->id,
+            $kelas->mapWithKeys(fn (KelasKuliah $item): array => [$item->id => $pertemuan->get($item->id, collect())]),
+            $pengaturan,
+        );
 
         $pengajuan = PengajuanIzin::query()
             ->where('mahasiswa_id', $mahasiswa->id)
@@ -74,15 +81,15 @@ class PresensiController extends Controller
             'tahunAkademikId' => $tahunAkademik?->id,
             'minKehadiran' => $minKehadiran,
             'terbuka' => $this->pertemuanTerbuka($mahasiswa),
-            'batasIzinHari' => PengaturanAkademik::current()->batas_pengajuan_izin_hari,
-            'kelas' => $kelas->map(function (KelasKuliah $item) use ($rekap, $pertemuan, $minKehadiran, $pengajuan, $mahasiswa): array {
+            'batasIzinHari' => $pengaturan->batas_pengajuan_izin_hari,
+            'kelas' => $kelas->map(function (KelasKuliah $item) use ($rekap, $pertemuan, $minKehadiran, $pengajuan, $mahasiswa, $ujian, $pengaturan): array {
                 $daftar = $pertemuan->get($item->id, collect());
                 $rekapKelas = $rekap[$item->id] ?? null;
                 // Batas absen dari rencana pertemuan kuliah yang tidak dibatalkan.
                 $rencana = $daftar->where('jenis', Pertemuan::KULIAH)->where('status', '!=', Pertemuan::DIBATALKAN)->count();
                 $maksAbsen = (int) floor($rencana * (100 - $minKehadiran) / 100);
                 $absen = $rekapKelas ? $rekapKelas['dihitung'] - $rekapKelas['hadir'] - $rekapKelas['terlambat'] : 0;
-                $ujian = SyaratUjian::untukKelas($item, [$mahasiswa->id]);
+                $ujianKelas = $ujian[$item->id];
 
                 return [
                     'id' => $item->id,
@@ -94,10 +101,10 @@ class PresensiController extends Controller
                     'rencana' => $rencana,
                     'sisa_absen' => $maksAbsen - $absen,
                     'ujian' => [
-                        'aktif' => $ujian['aktif'],
-                        'uts' => KelasPresensiController::jadwalUjian($ujian['jadwal']['uts']),
-                        'uas' => KelasPresensiController::jadwalUjian($ujian['jadwal']['uas']),
-                        'syarat' => $ujian['peserta'][$mahasiswa->id] ?? null,
+                        'aktif' => $ujianKelas['aktif'],
+                        'uts' => KelasPresensiController::jadwalUjian($ujianKelas['jadwal']['uts']),
+                        'uas' => KelasPresensiController::jadwalUjian($ujianKelas['jadwal']['uas']),
+                        'syarat' => $ujianKelas['peserta'][$mahasiswa->id] ?? null,
                     ],
                     'pertemuan' => $daftar->map(fn (Pertemuan $p): array => [
                         'id' => $p->id,
@@ -111,7 +118,7 @@ class PresensiController extends Controller
                         'topik' => $p->topik,
                         'presensi' => $p->presensiMahasiswas->first()?->toArray(),
                         'pengajuan' => $pengajuan->get($p->id)?->only(['jenis', 'alasan', 'status', 'catatan_dosen']),
-                        'bisa_ajukan_izin' => $this->bisaAjukanIzin($p, $pengajuan->get($p->id)),
+                        'bisa_ajukan_izin' => $this->bisaAjukanIzin($p, $pengajuan->get($p->id), $pengaturan->batas_pengajuan_izin_hari),
                     ])->values(),
                 ];
             }),
@@ -256,13 +263,13 @@ class PresensiController extends Controller
         return back()->with('success', 'Pengajuan '.$data['jenis'].' untuk pertemuan ke-'.$pertemuan->pertemuan_ke.' dikirim ke dosen pengampu.');
     }
 
-    private function bisaAjukanIzin(Pertemuan $pertemuan, ?PengajuanIzin $lama): bool
+    private function bisaAjukanIzin(Pertemuan $pertemuan, ?PengajuanIzin $lama, ?int $batasHari = null): bool
     {
         $status = $pertemuan->relationLoaded('presensiMahasiswas')
             ? $pertemuan->presensiMahasiswas->first()?->status
             : null;
 
-        return PengajuanIzin::masihBisaDiajukan($pertemuan)
+        return PengajuanIzin::masihBisaDiajukan($pertemuan, $batasHari)
             && ($lama === null || $lama->status === PengajuanIzin::DITOLAK)
             && ! in_array($status, PresensiMahasiswa::DIHITUNG_HADIR, true);
     }
