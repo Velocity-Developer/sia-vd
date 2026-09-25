@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use App\SyaratUjian;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -30,12 +32,14 @@ class Ujian extends Model
 
     public const TERBIT = 'terbit';
 
-    protected $fillable = ['kelas_id', 'jenis', 'mode', 'tanggal', 'jam_mulai', 'jam_akhir', 'ruang_id', 'pengawas', 'petunjuk', 'status', 'dibuat_oleh'];
+    protected $fillable = ['kelas_id', 'jenis', 'mode', 'tanggal', 'jam_mulai', 'jam_akhir', 'ruang_id', 'pengawas', 'petunjuk', 'status', 'dibuat_oleh', 'soal_berkas', 'nilai_dirilis'];
 
     protected function casts(): array
     {
         return [
             'tanggal' => 'date:Y-m-d',
+            'soal_berkas' => 'array',
+            'nilai_dirilis' => 'boolean',
         ];
     }
 
@@ -49,6 +53,11 @@ class Ujian extends Model
         return $this->belongsTo(Ruang::class);
     }
 
+    public function jawabans(): HasMany
+    {
+        return $this->hasMany(UjianJawaban::class);
+    }
+
     /**
      * @param  Builder<self>  $query
      */
@@ -60,6 +69,60 @@ class Ujian extends Model
     public function online(): bool
     {
         return $this->mode !== self::TATAP_MUKA;
+    }
+
+    public function sudahMulai(): bool
+    {
+        return now()->gte($this->mulaiAt());
+    }
+
+    public function sudahSelesai(): bool
+    {
+        return now()->gt($this->akhirAt());
+    }
+
+    public function sedangBerlangsung(): bool
+    {
+        return $this->sudahMulai() && ! $this->sudahSelesai();
+    }
+
+    /**
+     * Mahasiswa peserta kelas yang boleh mengikuti ujian ini: syarat kehadiran dipenuhi, mendapat
+     * dispensasi, atau syarat belum diberlakukan.
+     */
+    public function bolehIkut(int $mahasiswaId): bool
+    {
+        $kelas = $this->kelasKuliah;
+
+        if (! $kelas->krs()->where('mahasiswa_id', $mahasiswaId)->exists()) {
+            return false;
+        }
+
+        return (SyaratUjian::untukKelas($kelas, [$mahasiswaId])['peserta'][$mahasiswaId][$this->jenis]['memenuhi'] ?? null) !== false;
+    }
+
+    /**
+     * Catat mahasiswa hadir di pertemuan UTS/UAS kelas saat ia mengerjakan ujian online (tidak ada
+     * presensi QR untuk ujian online). Pertemuan yang belum dibuka otomatis menjadi berlangsung.
+     */
+    public function catatHadir(int $mahasiswaId): void
+    {
+        $pertemuan = $this->pertemuan();
+
+        if ($pertemuan === null || $pertemuan->status === Pertemuan::DIBATALKAN) {
+            return;
+        }
+
+        if ($pertemuan->status === Pertemuan::DIJADWALKAN) {
+            $pertemuan->update(['status' => Pertemuan::BERLANGSUNG]);
+            $pertemuan->siapkanPeserta();
+        }
+
+        PresensiMahasiswa::query()
+            ->where('pertemuan_id', $pertemuan->id)
+            ->where('mahasiswa_id', $mahasiswaId)
+            ->whereNotIn('status', PresensiMahasiswa::DIHITUNG_HADIR)
+            ->update(['status' => PresensiMahasiswa::HADIR, 'metode' => 'ujian', 'waktu_presensi' => now()]);
     }
 
     public function mulaiAt(): Carbon

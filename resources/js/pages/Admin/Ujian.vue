@@ -200,6 +200,7 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-2 text-sm font-medium">
+                                            <Link :href="route('admin.ujian.show', u.id)" class="text-[#0075de] hover:underline">Detail</Link>
                                             <button
                                                 v-if="u.status === 'draf'"
                                                 type="button"

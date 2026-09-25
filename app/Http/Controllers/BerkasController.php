@@ -9,6 +9,8 @@ use App\Models\Materi;
 use App\Models\PengajuanIzin;
 use App\Models\PengumpulanTugas;
 use App\Models\Tugas;
+use App\Models\Ujian;
+use App\Models\UjianJawaban;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -60,6 +62,40 @@ class BerkasController extends Controller
         abort_unless($boleh, 403);
 
         return $this->kirim($this->berkasKe($pengajuanIzin->lampiran, $index));
+    }
+
+    /**
+     * Berkas soal ujian: dosen pengampu & admin kapan saja; mahasiswa peserta hanya setelah ujian dimulai
+     * dan bila boleh mengikuti ujian (syarat kehadiran).
+     */
+    public function soalUjian(Request $request, Ujian $ujian, int $index): StreamedResponse
+    {
+        $user = $request->user();
+        $staf = $user->hasPermission('admin.ujian')
+            || ($user->dosenProfile !== null && $ujian->kelasKuliah->dosen_id === $user->dosenProfile->id && $user->hasPermission('dosen.ujian'));
+        $mahasiswa = $user->mahasiswaProfile;
+        $peserta = $mahasiswa !== null && $user->hasPermission('mahasiswa.ujian') && $ujian->status === Ujian::TERBIT
+            && $ujian->sudahMulai() && $ujian->bolehIkut($mahasiswa->id);
+
+        abort_unless($staf || $peserta, 403);
+
+        return $this->kirim($this->berkasKe($ujian->soal_berkas, $index));
+    }
+
+    /**
+     * Berkas jawaban ujian: mahasiswa pemiliknya, dosen pengampu, dan admin.
+     */
+    public function jawabanUjian(Request $request, UjianJawaban $jawaban, int $index): StreamedResponse
+    {
+        $user = $request->user();
+        $kelas = $jawaban->ujian->kelasKuliah;
+        $boleh = ($user->mahasiswaProfile !== null && $jawaban->mahasiswa_id === $user->mahasiswaProfile->id)
+            || $user->hasPermission('admin.ujian')
+            || ($user->dosenProfile !== null && $kelas->dosen_id === $user->dosenProfile->id && $user->hasPermission('dosen.ujian'));
+
+        abort_unless($boleh, 403);
+
+        return $this->kirim($this->berkasKe($jawaban->berkas, $index));
     }
 
     public function infoKuliah(Request $request, InfoKuliah $infoKuliah): StreamedResponse

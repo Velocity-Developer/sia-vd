@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\MahasiswaProfile;
@@ -10,12 +11,17 @@ use App\Models\PengaturanInstitusi;
 use App\Models\Pertemuan;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
+use App\Models\UjianJawaban;
 use App\SyaratUjian;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -40,6 +46,100 @@ class UjianController extends Controller
             'tahunAkademikId' => $tahun?->id,
             'tahunAkademikOptions' => $tahunAkademiks->map(fn (TahunAkademik $t): array => ['id' => $t->id, 'name' => $t->tahun.' '.$t->semester]),
         ]);
+    }
+
+    /**
+     * Detail satu ujian untuk mahasiswa. Berkas soal baru dikirim saat ujian dimulai dan hanya untuk
+     * mahasiswa yang boleh ikut.
+     */
+    public function show(Request $request, Ujian $ujian): Response
+    {
+        $mahasiswa = $this->mahasiswa($request);
+        $this->pastikanPeserta($ujian, $mahasiswa);
+        $ujian->load(['ruang:id,kode_ruang,nama_ruang', 'kelasKuliah:id,kode_kelas,matkul_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul']);
+        $bolehIkut = $ujian->bolehIkut($mahasiswa->id);
+        $jawaban = $ujian->jawabans()->where('mahasiswa_id', $mahasiswa->id)->first();
+
+        return Inertia::render('Mahasiswa/UjianShow', [
+            'ujian' => [
+                ...$ujian->only(['id', 'jenis', 'mode', 'jam_mulai', 'jam_akhir', 'pengawas', 'petunjuk']),
+                'tanggal' => $ujian->tanggal->toDateString(),
+                'label_mode' => $ujian->labelMode(),
+                'ruang' => $ujian->ruang ? $ujian->ruang->kode_ruang.' — '.$ujian->ruang->nama_ruang : null,
+                'kode_kelas' => $ujian->kelasKuliah?->kode_kelas,
+                'nama_matkul' => $ujian->kelasKuliah?->mataKuliah?->nama_matkul,
+                // Nama berkas soal hanya dikirim setelah ujian dimulai.
+                'soal' => $bolehIkut && $ujian->sudahMulai() ? array_map(fn (string $p): string => basename($p), $ujian->soal_berkas ?? []) : [],
+            ],
+            'bolehIkut' => $bolehIkut,
+            'sudahMulai' => $ujian->sudahMulai(),
+            'sudahSelesai' => $ujian->sudahSelesai(),
+            // Hitung mundur memakai jam server.
+            'detikSampaiMulai' => $ujian->sudahMulai() ? null : (int) now()->diffInSeconds($ujian->mulaiAt(), true),
+            'detikSampaiSelesai' => $ujian->sedangBerlangsung() ? (int) now()->diffInSeconds($ujian->akhirAt(), true) : null,
+            'jawaban' => $jawaban === null ? null : [
+                'nama_berkas' => array_map(fn (string $p): string => basename($p), $jawaban->berkas ?? []),
+                'dikumpulkan_at' => $jawaban->dikumpulkan_at?->toIso8601String(),
+                'nilai' => $ujian->nilai_dirilis ? $jawaban->nilai : null,
+                'catatan_dosen' => $ujian->nilai_dirilis ? $jawaban->catatan_dosen : null,
+            ],
+            'nilaiDirilis' => $ujian->nilai_dirilis,
+        ]);
+    }
+
+    /**
+     * Kumpulkan (atau ganti) jawaban berkas. Hanya selama jam ujian; lewat batas ditolak total.
+     */
+    public function kumpulkan(Request $request, Ujian $ujian): RedirectResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+        $this->pastikanPeserta($ujian, $mahasiswa);
+        abort_unless($ujian->mode === Ujian::ONLINE_BERKAS, 404);
+
+        $request->validate([
+            'jawaban' => ['required', 'array', 'min:1', 'max:5'],
+            'jawaban.*' => ['file', 'max:20480', ...AllowedUpload::rules()],
+        ], [
+            'jawaban.*.extensions' => AllowedUpload::message(),
+            'jawaban.*.mimes' => AllowedUpload::messageIsi(),
+            'jawaban.*.max' => 'Ukuran berkas jawaban maksimal 20 MB.',
+            'jawaban.max' => 'Maksimal 5 berkas jawaban.',
+        ], ['jawaban' => 'Berkas jawaban', 'jawaban.*' => 'Berkas jawaban']);
+
+        // Waktu diperiksa sesudah unggahan diterima server, jadi berkas yang selesai terunggah lewat jam selesai ikut ditolak.
+        if (! $ujian->sudahMulai()) {
+            throw ValidationException::withMessages(['jawaban' => 'Ujian belum dimulai.']);
+        }
+
+        if ($ujian->sudahSelesai()) {
+            throw ValidationException::withMessages(['jawaban' => 'Waktu ujian sudah habis. Jawaban tidak bisa dikumpulkan lagi.']);
+        }
+
+        if (! $ujian->bolehIkut($mahasiswa->id)) {
+            throw ValidationException::withMessages(['jawaban' => 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.']);
+        }
+
+        $berkas = collect($request->file('jawaban'))->map(fn ($f): string => $f->storeAs(
+            'ujian/'.$ujian->id.'/jawaban',
+            $mahasiswa->nim.'-'.Str::lower(Str::random(8)).'.'.strtolower($f->getClientOriginalExtension()),
+            AllowedUpload::DISK,
+        ))->all();
+
+        DB::transaction(function () use ($ujian, $mahasiswa, $berkas): void {
+            $lama = $ujian->jawabans()->where('mahasiswa_id', $mahasiswa->id)->lockForUpdate()->first();
+
+            if ($lama !== null) {
+                Storage::disk(AllowedUpload::DISK)->delete($lama->berkas ?? []);
+            }
+
+            UjianJawaban::updateOrCreate(
+                ['ujian_id' => $ujian->id, 'mahasiswa_id' => $mahasiswa->id],
+                ['berkas' => $berkas, 'dikumpulkan_at' => now()],
+            );
+            $ujian->catatHadir($mahasiswa->id);
+        });
+
+        return back()->with('success', 'Jawaban terkumpul pukul '.now()->format('H.i').'. Anda masih bisa menggantinya sampai waktu ujian habis.');
     }
 
     /**
@@ -103,6 +203,14 @@ class UjianController extends Controller
             'sks' => $k->mataKuliah?->sks,
             'syarat' => $syarat[$k->id]['peserta'][$mahasiswa->id][$u->jenis] ?? null,
         ]))->sortBy(fn (array $u): string => $u['tanggal'].$u['jam_mulai'])->values();
+    }
+
+    /**
+     * Hanya peserta kelas yang bisa membuka ujian yang sudah terbit.
+     */
+    private function pastikanPeserta(Ujian $ujian, MahasiswaProfile $mahasiswa): void
+    {
+        abort_unless($ujian->status === Ujian::TERBIT && $ujian->kelasKuliah->krs()->where('mahasiswa_id', $mahasiswa->id)->exists(), 404);
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile

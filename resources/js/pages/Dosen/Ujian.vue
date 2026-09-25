@@ -3,7 +3,7 @@ import SelectFilter from '@/components/SelectFilter.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
 import { JENIS_UJIAN, STATUS_UJIAN, labelMode, type JenisUjian, type ModeUjian } from '@/lib/ujian';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 type Ujian = {
@@ -76,6 +76,9 @@ const gantiTahun = () => router.get(route('dosen.ujian.index'), { tahun_akademik
                     <p v-if="u.petunjuk" class="mt-3 whitespace-pre-line rounded-lg bg-[#f6f5f4] px-3 py-2 text-sm text-[#31302e]">
                         {{ u.petunjuk }}
                     </p>
+                    <Link :href="route('dosen.ujian.show', u.id)" class="mt-3 inline-block text-sm font-medium text-[#0075de] hover:underline">
+                        {{ u.mode === 'online_berkas' ? 'Siapkan soal & lihat jawaban' : 'Buka detail' }} →
+                    </Link>
                 </div>
 
                 <p

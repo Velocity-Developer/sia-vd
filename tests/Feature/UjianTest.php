@@ -8,6 +8,8 @@ use App\Models\Pertemuan;
 use App\Models\Ruang;
 use App\Models\Ujian;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Kelas (TA 2025/2026 Ganjil, jadwal Senin 08:00–10:00 di R-101) dengan pertemuan sudah dibuat.
@@ -171,4 +173,141 @@ it('removes the exam schedule together with an unused class', function () {
 
     $this->actingAs(User::factory()->admin()->create())->delete(route('admin.kelas-kuliah.destroy', $kelas))->assertSessionHas('success');
     expect(Ujian::count())->toBe(0);
+});
+
+// ---- Tahap 2: online unggah berkas ----
+
+/**
+ * Ujian UTS mode unggah berkas, terbit, Senin 6 Okt 2025 13:00–15:00.
+ *
+ * @return array{0: Ujian, 1: KelasKuliah, 2: list<User>}
+ */
+function ujianBerkas(int $jumlahMahasiswa = 2): array
+{
+    Storage::fake('local');
+    [$kelas, $mahasiswa] = kelasUjian($jumlahMahasiswa);
+    $ujian = Ujian::create([...isianUjian(['mode' => 'online_berkas', 'ruang_id' => null, 'status' => 'terbit']), 'kelas_id' => $kelas->id, 'jenis' => 'uts']);
+
+    return [$ujian, $kelas, $mahasiswa];
+}
+
+/**
+ * Ganti akun di tengah tes: sesi akun sebelumnya dibuang agar AuthenticateSession tidak mengeluarkan akun baru.
+ */
+function gantiAkun($test, User $user)
+{
+    app('session')->flush();
+    app('auth')->forgetGuards();
+
+    return $test->actingAs($user);
+}
+
+it('lets the lecturer manage question files only before the exam starts', function () {
+    [$ujian, $kelas] = ujianBerkas();
+    $dosen = $kelas->dosen->user;
+
+    $this->travelTo('2025-10-06 12:00:00');
+    $this->actingAs($dosen)->post(route('dosen.ujian.soal.unggah', $ujian), ['soal' => [UploadedFile::fake()->create('soal uts.pdf', 200, 'application/pdf')]])
+        ->assertSessionHas('success', '1 berkas soal diunggah.');
+    $this->actingAs($dosen)->post(route('dosen.ujian.soal.unggah', $ujian), ['soal' => [UploadedFile::fake()->create('lampiran.pdf', 10, 'application/pdf')]]);
+    expect($ujian->fresh()->soal_berkas)->toHaveCount(2);
+    Storage::disk('local')->assertExists($ujian->fresh()->soal_berkas[0]);
+
+    $this->actingAs($dosen)->delete(route('dosen.ujian.soal.hapus', [$ujian, 1]))->assertSessionHas('success');
+    expect($ujian->fresh()->soal_berkas)->toHaveCount(1);
+
+    $this->travelTo('2025-10-06 13:00:00');
+    $this->actingAs($dosen)->post(route('dosen.ujian.soal.unggah', $ujian), ['soal' => [UploadedFile::fake()->create('ralat.pdf', 10, 'application/pdf')]])
+        ->assertSessionHas('error', 'Ujian sudah dimulai; soal tidak bisa diubah lagi.');
+
+    $this->actingAs(createMateriKelasKuliah()->dosen->user)->get(route('dosen.ujian.show', $ujian))->assertForbidden();
+});
+
+it('keeps questions hidden from students until the exam starts', function () {
+    [$ujian, $kelas, $mahasiswa] = ujianBerkas(1);
+    $this->travelTo('2025-10-06 12:00:00');
+    $this->actingAs($kelas->dosen->user)->post(route('dosen.ujian.soal.unggah', $ujian), ['soal' => [UploadedFile::fake()->create('soal.pdf', 20, 'application/pdf')]]);
+    $url = route('berkas.ujian-soal', [$ujian, 0]);
+
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))
+        ->assertInertia(fn ($page) => $page->component('Mahasiswa/UjianShow')->where('ujian.soal', [])->where('detikSampaiMulai', 3600));
+    $this->actingAs($mahasiswa[0])->get($url)->assertForbidden();
+
+    $this->travelTo('2025-10-06 13:00:00');
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->has('ujian.soal', 1));
+    $this->actingAs($mahasiswa[0])->get($url)->assertOk();
+
+    // Bukan peserta atau jadwal masih draf: tidak bisa dibuka.
+    gantiAkun($this, User::factory()->mahasiswa()->create())->get(route('mahasiswa.ujian.show', $ujian))->assertNotFound();
+    $ujian->update(['status' => 'draf']);
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertNotFound();
+});
+
+it('accepts answers only during the exam and records attendance', function () {
+    [$ujian, $kelas, $mahasiswa] = ujianBerkas(1);
+    $id = $mahasiswa[0]->mahasiswaProfile->id;
+    $kirim = fn (string $nama = 'jawaban.pdf') => $this->actingAs($mahasiswa[0])->post(route('mahasiswa.ujian.kumpulkan', $ujian), ['jawaban' => [UploadedFile::fake()->create($nama, 50, 'application/pdf')]]);
+
+    $this->travelTo('2025-10-06 12:59:00');
+    $kirim()->assertSessionHasErrors(['jawaban' => 'Ujian belum dimulai.']);
+
+    $this->travelTo('2025-10-06 13:30:00');
+    $kirim()->assertSessionHas('success');
+    $pertama = $ujian->jawabans()->first()->berkas[0];
+
+    $this->travelTo('2025-10-06 14:59:00');
+    $kirim('revisi.pdf')->assertSessionHas('success');
+    $jawaban = $ujian->jawabans()->first();
+    expect($ujian->jawabans()->count())->toBe(1)->and($jawaban->dikumpulkan_at->format('H:i'))->toBe('14:59');
+    Storage::disk('local')->assertMissing($pertama);
+
+    $this->travelTo('2025-10-06 15:00:01');
+    $kirim('telat.pdf')->assertSessionHasErrors(['jawaban' => 'Waktu ujian sudah habis. Jawaban tidak bisa dikumpulkan lagi.']);
+    expect($ujian->jawabans()->first()->dikumpulkan_at->format('H:i'))->toBe('14:59');
+
+    $uts = $ujian->pertemuan()->fresh();
+    expect($uts->status)->toBe(Pertemuan::BERLANGSUNG)
+        ->and($uts->presensiMahasiswas()->where('mahasiswa_id', $id)->value('status'))->toBe('hadir')
+        ->and($uts->presensiMahasiswas()->where('mahasiswa_id', $id)->value('metode'))->toBe('ujian');
+});
+
+it('blocks students who do not meet the attendance requirement', function () {
+    [$ujian, $kelas, $mahasiswa] = ujianBerkas(1);
+    PengaturanAkademik::current()->update(['syarat_ujian_aktif' => true]);
+    $admin = User::factory()->admin()->create();
+    $p = Pertemuan::where('kelas_id', $kelas->id)->where('pertemuan_ke', 1)->first();
+    $this->actingAs($admin)->post(route('admin.presensi.pertemuan.mulai', $p));
+    $this->actingAs($admin)->post(route('admin.presensi.pertemuan.selesai', $p), ['topik' => 'x']); // tercatat alpa
+    $this->actingAs($admin)->post(route('admin.ujian.soal.unggah', $ujian), ['soal' => [UploadedFile::fake()->create('soal.pdf', 20, 'application/pdf')]]);
+
+    $this->travelTo('2025-10-06 13:30:00');
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('bolehIkut', false)->where('ujian.soal', []));
+    $this->actingAs($mahasiswa[0])->get(route('berkas.ujian-soal', [$ujian, 0]))->assertForbidden();
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.ujian.kumpulkan', $ujian), ['jawaban' => [UploadedFile::fake()->create('j.pdf', 10, 'application/pdf')]])
+        ->assertSessionHasErrors(['jawaban' => 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.']);
+});
+
+it('lets the lecturer grade after the exam and release the scores', function () {
+    [$ujian, $kelas, $mahasiswa] = ujianBerkas(2);
+    $dosen = $kelas->dosen->user;
+    $this->travelTo('2025-10-06 13:30:00');
+    $this->actingAs($mahasiswa[0])->post(route('mahasiswa.ujian.kumpulkan', $ujian), ['jawaban' => [UploadedFile::fake()->create('j.pdf', 10, 'application/pdf')]]);
+    $jawaban = $ujian->jawabans()->first();
+
+    // Berkas jawaban: pemilik, dosen pengampu; mahasiswa lain tidak.
+    $this->actingAs($mahasiswa[0])->get(route('berkas.ujian-jawaban', [$jawaban, 0]))->assertOk();
+    gantiAkun($this, $mahasiswa[1])->get(route('berkas.ujian-jawaban', [$jawaban, 0]))->assertForbidden();
+
+    gantiAkun($this, $dosen)->put(route('dosen.ujian.jawaban.nilai', [$ujian, $jawaban]), ['nilai' => 80])->assertSessionHas('error', 'Jawaban dinilai setelah ujian selesai.');
+
+    $this->travelTo('2025-10-06 15:30:00');
+    $this->actingAs($dosen)->get(route('dosen.ujian.show', $ujian))
+        ->assertInertia(fn ($page) => $page->component('Kelas/UjianKelas')->has('peserta', 2)->where('sudahSelesai', true));
+    $this->actingAs($dosen)->put(route('dosen.ujian.jawaban.nilai', [$ujian, $jawaban]), ['nilai' => 87.5, 'catatan_dosen' => 'Bagus'])->assertSessionHas('success');
+    $this->actingAs($dosen)->put(route('dosen.ujian.jawaban.nilai', [$ujian, $jawaban]), ['nilai' => 120])->assertSessionHasErrors('nilai');
+
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('jawaban.nilai', null));
+    gantiAkun($this, $dosen)->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
+    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))
+        ->assertInertia(fn ($page) => $page->where('jawaban.nilai', '87.50')->where('jawaban.catatan_dosen', 'Bagus'));
 });

@@ -24,6 +24,7 @@ use App\Http\Controllers\Kelas\PresensiController;
 use App\Http\Controllers\Kelas\QuizController;
 use App\Http\Controllers\Kelas\QuizPenilaianController;
 use App\Http\Controllers\Kelas\TugasController;
+use App\Http\Controllers\Kelas\UjianKelasController;
 use App\Http\Controllers\Mahasiswa\ContentController as MahasiswaContentController;
 use App\Http\Controllers\Mahasiswa\HasilStudiController;
 use App\Http\Controllers\Mahasiswa\InfoBiayaKuliahController;
@@ -46,6 +47,15 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
+
+// Detail ujian (soal, pengumpulan, nilai) sama untuk admin dan dosen pengampu.
+$ruteUjianKelas = function (string $peran): void {
+    Route::get('ujian/{ujian}', [UjianKelasController::class, 'show'])->name($peran.'.ujian.show');
+    Route::post('ujian/{ujian}/soal', [UjianKelasController::class, 'unggahSoal'])->name($peran.'.ujian.soal.unggah');
+    Route::delete('ujian/{ujian}/soal/{index}', [UjianKelasController::class, 'hapusSoal'])->whereNumber('index')->name($peran.'.ujian.soal.hapus');
+    Route::put('ujian/{ujian}/jawaban/{jawaban}/nilai', [UjianKelasController::class, 'nilai'])->name($peran.'.ujian.jawaban.nilai');
+    Route::put('ujian/{ujian}/rilis-nilai', [UjianKelasController::class, 'rilisNilai'])->name($peran.'.ujian.rilis-nilai');
+};
 
 // Rute presensi sama untuk admin dan dosen; bedanya hanya prefix nama dan izin grup.
 $rutePresensi = function (string $peran): void {
@@ -91,6 +101,8 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
+    Route::get('ujian-soal/{ujian}/{index}', [BerkasController::class, 'soalUjian'])->whereNumber('index')->name('berkas.ujian-soal');
+    Route::get('ujian-jawaban/{jawaban}/{index}', [BerkasController::class, 'jawabanUjian'])->whereNumber('index')->name('berkas.ujian-jawaban');
 });
 
 Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function () {
@@ -114,7 +126,7 @@ Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function (
     }
 });
 
-Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi): void {
+Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas): void {
     Route::middleware('can:admin.roles')->group(function (): void {
         Route::resource('roles', RoleController::class)->except('show')->names('admin.roles');
     });
@@ -141,7 +153,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::delete('tagihan/{mahasiswa}/kunci-krs', [TagihanController::class, 'bukaKunciKrs'])->name('admin.tagihan.buka-kunci-krs');
     });
 
-    Route::middleware('can:admin.ujian')->group(function (): void {
+    Route::middleware('can:admin.ujian')->group(function () use ($ruteUjianKelas): void {
         Route::get('ujian', [AdminUjianController::class, 'index'])->name('admin.ujian.index');
         Route::get('ujian/create', [AdminUjianController::class, 'create'])->name('admin.ujian.create');
         Route::post('ujian', [AdminUjianController::class, 'store'])->name('admin.ujian.store');
@@ -150,6 +162,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('ujian/{ujian}/edit', [AdminUjianController::class, 'edit'])->name('admin.ujian.edit');
         Route::put('ujian/{ujian}', [AdminUjianController::class, 'update'])->name('admin.ujian.update');
         Route::delete('ujian/{ujian}', [AdminUjianController::class, 'destroy'])->name('admin.ujian.destroy');
+        $ruteUjianKelas('admin');
     });
 
     Route::middleware('can:admin.pindah-kelas')->group(function (): void {
@@ -227,7 +240,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
     });
 });
 
-Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi) {
+Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas) {
     Route::middleware('can:dosen.dashboard')->group(function (): void {
         Route::get('/', fn (Request $request) => Inertia::render('Dashboard', [
             'presensiDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.presensi')
@@ -276,7 +289,10 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
         Route::redirect('jadwal-kuliah', '/dosen/kelas-kuliah', 301)->name('dosen.jadwal-kuliah');
     });
 
-    Route::middleware('can:dosen.ujian')->group(fn () => Route::get('ujian', [DosenUjianController::class, 'index'])->name('dosen.ujian.index'));
+    Route::middleware('can:dosen.ujian')->group(function () use ($ruteUjianKelas): void {
+        Route::get('ujian', [DosenUjianController::class, 'index'])->name('dosen.ujian.index');
+        $ruteUjianKelas('dosen');
+    });
 
     Route::middleware('can:dosen.mahasiswa-kelas')->group(function (): void {
         Route::get('mahasiswa-kelas', [MahasiswaKelasController::class, 'index'])->name('dosen.mahasiswa-kelas');
@@ -333,6 +349,8 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
     Route::middleware('can:mahasiswa.ujian')->group(function (): void {
         Route::get('ujian', [MahasiswaUjianController::class, 'index'])->name('mahasiswa.ujian');
         Route::get('ujian/kartu', [MahasiswaUjianController::class, 'kartu'])->name('mahasiswa.ujian.kartu');
+        Route::get('ujian/{ujian}', [MahasiswaUjianController::class, 'show'])->name('mahasiswa.ujian.show');
+        Route::post('ujian/{ujian}/jawaban', [MahasiswaUjianController::class, 'kumpulkan'])->middleware('throttle:20,1')->name('mahasiswa.ujian.kumpulkan');
     });
 
     Route::middleware('can:mahasiswa.pindah-kelas')->group(function (): void {
