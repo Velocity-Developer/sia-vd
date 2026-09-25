@@ -112,6 +112,24 @@ type StatusNilai = {
     tanpa_nilai: number;
 };
 
+type RemidiMahasiswa = {
+    mahasiswa_id: number;
+    nama: string | null;
+    nim: string | null;
+    nilai: string | null;
+    huruf_remidi: boolean;
+    ikut_uas: boolean | null;
+    diusulkan: boolean;
+    terpilih: boolean;
+};
+
+type RemidiInfo = {
+    dikunci_at: string | null;
+    dikunci_oleh: string | null;
+    ada_uas: boolean;
+    mahasiswa: RemidiMahasiswa[];
+};
+
 type OtherClass = { id: number; kode_kelas: string; nama_matkul?: string | null };
 
 const props = defineProps<{
@@ -121,6 +139,7 @@ const props = defineProps<{
     skalaNilai: string[];
     nilaiTerkunci: boolean;
     statusNilai: StatusNilai;
+    remidi: RemidiInfo | null;
 }>();
 const rute = rutePeran(props.peran);
 const { can } = usePermissions();
@@ -207,6 +226,21 @@ const bukaKunci = () =>
             onError: (errors) => (bukaError.value = errors.sampai ?? ''),
         },
     );
+
+const remidiDipilih = ref<number[]>((props.remidi?.mahasiswa ?? []).filter((m) => m.terpilih).map((m) => m.mahasiswa_id));
+const remidiDikunci = computed(() => !!props.remidi?.dikunci_at);
+const remidiTampil = computed(() =>
+    remidiDikunci.value ? (props.remidi?.mahasiswa ?? []).filter((m) => m.terpilih) : (props.remidi?.mahasiswa ?? []),
+);
+const kunciRemidiOpen = ref(false);
+const kunciRemidi = () =>
+    router.post(
+        rute('kelas-kuliah.remidi.kunci', props.kelasKuliah.id),
+        { mahasiswa_ids: remidiDipilih.value },
+        { preserveScroll: true, onFinish: () => (kunciRemidiOpen.value = false) },
+    );
+const bukaRemidi = () => router.post(route('admin.kelas-kuliah.remidi.buka', props.kelasKuliah.id), {}, { preserveScroll: true });
+const ketIkutUas = (m: RemidiMahasiswa) => (m.ikut_uas === null ? '—' : m.ikut_uas ? 'Ya' : 'Tidak');
 
 const pendingCancelKrs = ref<KrsShow | null>(null);
 const cancelKrs = (krs: KrsShow) => {
@@ -1115,6 +1149,93 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
+                <section
+                    v-if="props.remidi"
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Daftar Remidi</h2>
+                            <p v-if="remidiDikunci" class="mt-2 text-sm text-[#31302e]">
+                                <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Dikunci</span>
+                                {{ formatTanggal(props.remidi.dikunci_at) }}
+                                <template v-if="props.remidi.dikunci_oleh">oleh {{ props.remidi.dikunci_oleh }}</template>
+                                · {{ remidiTampil.length }} peserta
+                            </p>
+                            <p v-else class="mt-2 max-w-2xl text-sm text-[#615d59]">
+                                Mahasiswa dengan huruf akhir tidak lulus atau boleh diulang<template v-if="props.remidi.ada_uas">
+                                    yang ikut UAS</template
+                                >
+                                sudah dicentang otomatis. Tambah atau coret sesuai kebutuhan, lalu kunci daftar agar tagihan remidi bisa diterbitkan.
+                            </p>
+                            <p v-if="!props.remidi.ada_uas" class="mt-1 text-xs text-[#a39e98]">
+                                Kelas ini tidak punya jadwal UAS terbit di sistem, jadi keikutsertaan UAS tidak diperiksa.
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <Button
+                                v-if="!remidiDikunci"
+                                size="sm"
+                                class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
+                                @click="kunciRemidiOpen = true"
+                                >Kunci Daftar ({{ remidiDipilih.length }})</Button
+                            >
+                            <Button v-else-if="isAdmin" size="sm" variant="outline" class="rounded-full" @click="bukaRemidi"
+                                >Buka Kunci Daftar</Button
+                            >
+                        </div>
+                    </div>
+                    <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
+                        <div class="relative overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-left">
+                                <thead>
+                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                                        <th v-if="!remidiDikunci" class="w-10 px-4 py-3"></th>
+                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Mahasiswa</th>
+                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai</th>
+                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Ikut UAS</th>
+                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[#e6e6e6]">
+                                    <tr v-for="m in remidiTampil" :key="m.mahasiswa_id" class="hover:bg-[#f6f5f4]/60">
+                                        <td v-if="!remidiDikunci" class="px-4 py-3">
+                                            <input
+                                                :id="`remidi-${m.mahasiswa_id}`"
+                                                v-model="remidiDipilih"
+                                                type="checkbox"
+                                                :value="m.mahasiswa_id"
+                                                class="size-4 accent-[#0075de]"
+                                            />
+                                        </td>
+                                        <td class="px-4 py-3 text-sm font-medium text-black">
+                                            <label :for="`remidi-${m.mahasiswa_id}`">
+                                                {{ m.nama ?? '-' }} <span class="text-[#615d59]">({{ m.nim ?? '-' }})</span>
+                                            </label>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm font-semibold" :class="m.huruf_remidi ? 'text-[#dd5b00]' : ''">
+                                            {{ m.nilai ?? '-' }}
+                                        </td>
+                                        <td class="px-4 py-3 text-sm" :class="m.ikut_uas === false ? 'text-[#dd5b00]' : 'text-[#31302e]'">
+                                            {{ ketIkutUas(m) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-xs text-[#615d59]">
+                                            <span v-if="m.diusulkan">Usulan otomatis</span>
+                                            <span v-else-if="m.huruf_remidi && m.ikut_uas === false">Tidak ikut UAS</span>
+                                            <span v-else-if="remidiDipilih.includes(m.mahasiswa_id) || remidiDikunci">Ditambahkan manual</span>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="!remidiTampil.length">
+                                        <td colspan="5" class="px-4 py-8 text-center text-sm text-[#615d59]">
+                                            {{ remidiDikunci ? 'Tidak ada peserta remidi di kelas ini.' : 'Belum ada mahasiswa di kelas ini.' }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
                 <div
                     v-if="duplicateOpen"
                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
@@ -1143,6 +1264,16 @@ const formatTenggat = (value: string | null | undefined): string => {
                     @update:open="!$event && (pendingCancelKrs = null)"
                     @confirm="confirmCancelKrs"
                     @cancel="pendingCancelKrs = null"
+                />
+                <AlertModal
+                    :open="kunciRemidiOpen"
+                    title="Kunci daftar remidi?"
+                    :description="`${remidiDipilih.length} mahasiswa akan masuk daftar remidi. Setelah dikunci, daftar hanya bisa diubah bila admin membukanya kembali.`"
+                    confirm-text="Kunci"
+                    cancel-text="Batal"
+                    @update:open="kunciRemidiOpen = $event"
+                    @confirm="kunciRemidi"
+                    @cancel="kunciRemidiOpen = false"
                 />
                 <AlertModal
                     :open="finalisasiOpen"

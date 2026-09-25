@@ -13,6 +13,7 @@ use App\Models\Pertemuan;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
+use App\UsulanRemidi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -85,6 +86,11 @@ class KelasKuliahController extends Controller
             'skalaNilai' => SkalaNilai::huruf(),
             'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
             'statusNilai' => $this->statusNilai($kelasKuliah),
+            'remidi' => $kelasKuliah->nilaiFinal() ? [
+                'dikunci_at' => $kelasKuliah->remidi_dikunci_at?->toIso8601String(),
+                'dikunci_oleh' => $kelasKuliah->remidi_dikunci_at !== null ? $kelasKuliah->remidiDikunciOleh()->value('name') : null,
+                ...UsulanRemidi::susun($kelasKuliah),
+            ] : null,
         ]);
     }
 

@@ -15,7 +15,7 @@ class KelasKuliah extends Model
 
     protected $table = 'kelas_kuliah';
 
-    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai'];
+    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai', 'remidi_dikunci_at', 'remidi_dikunci_oleh'];
 
     /**
      * Kelas baru tanpa jumlah pertemuan memakai bawaan di Pengaturan Akademik.
@@ -34,6 +34,7 @@ class KelasKuliah extends Model
             'jumlah_pertemuan' => 'integer',
             'nilai_final_at' => 'datetime',
             'nilai_dibuka_sampai' => 'date:Y-m-d',
+            'remidi_dikunci_at' => 'datetime',
         ];
     }
 
@@ -74,6 +75,16 @@ class KelasKuliah extends Model
     public function finalOleh(): BelongsTo
     {
         return $this->belongsTo(User::class, 'nilai_final_oleh');
+    }
+
+    public function remidiDikunciOleh(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'remidi_dikunci_oleh');
+    }
+
+    public function remidiPesertas(): HasMany
+    {
+        return $this->hasMany(RemidiPeserta::class, 'kelas_id');
     }
 
     public function dosen(): BelongsTo
