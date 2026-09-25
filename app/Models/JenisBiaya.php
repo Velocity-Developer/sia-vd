@@ -16,9 +16,15 @@ class JenisBiaya extends Model
     /** Nominal dikali jumlah SKS yang diambil mahasiswa pada semester itu. */
     public const PER_SKS = 'per_sks';
 
+    /** Ikut tagihan semester. */
+    public const SEMESTER = 'semester';
+
+    /** Hanya untuk tagihan remidi per mata kuliah. */
+    public const REMIDI = 'remidi';
+
     protected $table = 'jenis_biaya';
 
-    protected $fillable = ['kode', 'nama', 'cara_hitung', 'keterangan', 'aktif', 'urutan'];
+    protected $fillable = ['kode', 'nama', 'cara_hitung', 'kategori', 'keterangan', 'aktif', 'urutan'];
 
     protected function casts(): array
     {

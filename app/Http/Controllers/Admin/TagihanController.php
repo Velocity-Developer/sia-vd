@@ -58,7 +58,7 @@ class TagihanController extends Controller
             'prodiOptions' => ProgramStudi::query()->orderBy('nama_prodi')->get()
                 ->map(fn (ProgramStudi $prodi): array => ['id' => $prodi->id, 'name' => $prodi->jenjang.' '.$prodi->nama_prodi])->all(),
             'angkatanOptions' => MahasiswaProfile::query()->whereNotNull('angkatan')->distinct()->orderByDesc('angkatan')->pluck('angkatan')->all(),
-            'adaJenisBiaya' => JenisBiaya::query()->where('aktif', true)->exists(),
+            'adaJenisBiaya' => JenisBiaya::query()->where('aktif', true)->where('kategori', JenisBiaya::SEMESTER)->exists(),
         ]);
     }
 
@@ -72,7 +72,7 @@ class TagihanController extends Controller
             'tahun_akademik_id' => ['required', 'integer', Rule::exists('tahun_akademik', 'id')],
         ], attributes: ['tahun_akademik_id' => 'Tahun akademik']);
 
-        $jenisBiaya = JenisBiaya::query()->where('aktif', true)->with('tarif')->orderBy('urutan')->get();
+        $jenisBiaya = JenisBiaya::query()->where('aktif', true)->where('kategori', JenisBiaya::SEMESTER)->with('tarif')->orderBy('urutan')->get();
 
         if ($jenisBiaya->isEmpty()) {
             return back()->with('error', 'Belum ada jenis biaya aktif. Isi dulu di menu Jenis Biaya.');

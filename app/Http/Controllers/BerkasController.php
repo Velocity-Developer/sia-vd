@@ -8,6 +8,7 @@ use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\PengajuanIzin;
 use App\Models\PengumpulanTugas;
+use App\Models\TagihanRemidi;
 use App\Models\Tugas;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
@@ -96,6 +97,20 @@ class BerkasController extends Controller
         abort_unless($boleh, 403);
 
         return $this->kirim($this->berkasKe($jawaban->berkas, $index));
+    }
+
+    /**
+     * Bukti bayar remidi: mahasiswa pemiliknya dan admin keuangan.
+     */
+    public function buktiRemidi(Request $request, TagihanRemidi $tagihanRemidi): StreamedResponse
+    {
+        $user = $request->user();
+        $boleh = ($user->mahasiswaProfile !== null && $tagihanRemidi->mahasiswa_id === $user->mahasiswaProfile->id)
+            || $user->hasPermission('admin.tagihan');
+
+        abort_unless($boleh, 403);
+
+        return $this->kirim($tagihanRemidi->bukti);
     }
 
     public function infoKuliah(Request $request, InfoKuliah $infoKuliah): StreamedResponse

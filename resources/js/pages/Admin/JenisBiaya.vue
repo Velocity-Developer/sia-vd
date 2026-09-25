@@ -9,6 +9,7 @@ type Jenis = {
     kode: string;
     nama: string;
     cara_hitung: string;
+    kategori: string;
     keterangan: string | null;
     aktif: boolean;
     urutan: number;
@@ -18,7 +19,14 @@ type Jenis = {
 const props = defineProps<{ jenisBiaya: Jenis[] }>();
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 
-const caraHitung = (nilai: string) => (nilai === 'per_sks' ? 'Per SKS' : 'Tetap per semester');
+const caraHitung = (jenis: { cara_hitung: string; kategori: string }) =>
+    jenis.kategori === 'remidi'
+        ? jenis.cara_hitung === 'per_sks'
+            ? 'Per SKS mata kuliah'
+            : 'Tetap per mata kuliah'
+        : jenis.cara_hitung === 'per_sks'
+          ? 'Per SKS'
+          : 'Tetap per semester';
 
 const hapus = (jenis: Jenis) => {
     if (!confirm(`Hapus jenis biaya "${jenis.nama}"? Tagihan yang sudah terbit tidak berubah.`)) return;
@@ -69,7 +77,14 @@ const hapus = (jenis: Jenis) => {
                                         <span class="block">{{ jenis.nama }}</span>
                                         <span v-if="jenis.keterangan" class="block text-xs text-[#a39e98]">{{ jenis.keterangan }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ caraHitung(jenis.cara_hitung) }}</td>
+                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                        {{ caraHitung(jenis) }}
+                                        <span
+                                            v-if="jenis.kategori === 'remidi'"
+                                            class="ml-1 rounded-full bg-[#fff4e5] px-2 py-0.5 text-xs font-medium text-[#dd5b00]"
+                                            >Remidi</span
+                                        >
+                                    </td>
                                     <td class="px-4 py-3 text-center text-[15px] text-[#31302e]">{{ jenis.tarif_count }}</td>
                                     <td class="px-4 py-3 text-[15px]">
                                         <span

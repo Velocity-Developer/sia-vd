@@ -16,6 +16,7 @@ const form = useForm({
     tanggal_krs_awal: props.tahunAkademik?.tanggal_krs_awal?.slice(0, 10) ?? '',
     tanggal_krs_akhir: props.tahunAkademik?.tanggal_krs_akhir?.slice(0, 10) ?? '',
     batas_input_nilai: props.tahunAkademik?.batas_input_nilai?.slice(0, 10) ?? '',
+    batas_bayar_remidi: props.tahunAkademik?.batas_bayar_remidi?.slice(0, 10) ?? '',
     status: props.tahunAkademik?.status ?? false,
 });
 const submit = () =>
@@ -78,6 +79,14 @@ const sel =
                                 Lewat tanggal ini nilai semua kelas terkunci untuk dosen. Kosongkan bila tanpa batas.
                             </p>
                             <InputError :message="form.errors.batas_input_nilai" />
+                        </div>
+                        <div class="grid content-start gap-2">
+                            <Label for="batas_bayar_remidi">Batas Bayar Remidi</Label>
+                            <DatePicker id="batas_bayar_remidi" v-model="form.batas_bayar_remidi" placeholder="Pilih batas bayar remidi" />
+                            <p class="text-xs text-[#a39e98]">
+                                Tagihan remidi yang belum lunas sampai tanggal ini gugur. Wajib diisi sebelum menerbitkan tagihan remidi.
+                            </p>
+                            <InputError :message="form.errors.batas_bayar_remidi" />
                         </div>
                         <div class="grid gap-2 sm:col-span-2">
                             <label class="flex items-center gap-2"><input v-model="form.status" type="checkbox" /> Aktif</label>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Http\Controllers\Controller;
 use App\Models\JenisBiaya;
 use App\Models\MahasiswaProfile;
+use App\Models\TagihanRemidi;
 use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
 use Illuminate\Http\Request;
@@ -38,7 +39,35 @@ class InfoBiayaKuliahController extends Controller
                 ->filter(fn (TagihanSemester $item) => $item->tahun_akademik_id !== $tahunAktif?->id)
                 ->map(fn (TagihanSemester $item) => $this->bentuk($item))
                 ->values(),
+            'tagihanRemidi' => $this->tagihanRemidi($mahasiswa),
         ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function tagihanRemidi(?MahasiswaProfile $mahasiswa): array
+    {
+        return TagihanRemidi::query()
+            ->where('mahasiswa_id', $mahasiswa?->id)
+            ->with(['kelasKuliah:id,kode_kelas,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,nama_matkul,sks', 'kelasKuliah.tahunAkademik'])
+            ->latest('id')
+            ->get()
+            ->map(fn (TagihanRemidi $t): array => [
+                'id' => $t->id,
+                'matkul' => $t->kelasKuliah?->mataKuliah?->nama_matkul,
+                'kelas' => $t->kelasKuliah?->kode_kelas,
+                'tahun_akademik' => $t->kelasKuliah?->tahunAkademik ? $t->kelasKuliah->tahunAkademik->tahun.' '.$t->kelasKuliah->tahunAkademik->semester : '-',
+                'rincian' => $t->rincian,
+                'total' => $t->total,
+                'status' => $t->statusTampil(),
+                'batas_bayar' => $t->batasBayar()?->toDateString(),
+                'boleh_unggah' => $t->bolehUnggah(),
+                'ada_bukti' => $t->bukti !== null,
+                'bukti_diunggah_at' => $t->bukti_diunggah_at?->toIso8601String(),
+                'alasan_tolak' => $t->alasan_tolak,
+            ])
+            ->all();
     }
 
     /**

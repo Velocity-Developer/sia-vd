@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Mahasiswa yang masuk daftar remidi satu kelas (remidi per mata kuliah, sekali).
@@ -32,5 +33,10 @@ class RemidiPeserta extends Model
     public function mahasiswa(): BelongsTo
     {
         return $this->belongsTo(MahasiswaProfile::class, 'mahasiswa_id');
+    }
+
+    public function tagihan(): HasOne
+    {
+        return $this->hasOne(TagihanRemidi::class, 'remidi_peserta_id');
     }
 }

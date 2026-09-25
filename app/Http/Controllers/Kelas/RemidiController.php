@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\RemidiPeserta;
+use App\Models\TagihanRemidi;
 use App\UsulanRemidi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -66,6 +67,10 @@ class RemidiController extends Controller
      */
     public function buka(KelasKuliah $kelasKuliah): RedirectResponse
     {
+        if (TagihanRemidi::query()->where('kelas_id', $kelasKuliah->id)->exists()) {
+            return back()->with('error', 'Tagihan remidi kelas ini sudah terbit, daftar tidak bisa dibuka lagi.');
+        }
+
         $kelasKuliah->update(['remidi_dikunci_at' => null, 'remidi_dikunci_oleh' => null]);
 
         return back()->with('success', 'Kunci daftar remidi dibuka.');
