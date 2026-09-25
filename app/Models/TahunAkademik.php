@@ -13,13 +13,14 @@ class TahunAkademik extends Model
 
     protected $table = 'tahun_akademik';
 
-    protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'status'];
+    protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'batas_input_nilai', 'status'];
 
     protected function casts(): array
     {
         return [
             'tanggal_mulai' => 'date',
             'tanggal_akhir' => 'date',
+            'batas_input_nilai' => 'date:Y-m-d',
             'status' => 'boolean',
         ];
     }

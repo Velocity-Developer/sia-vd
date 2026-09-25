@@ -83,6 +83,7 @@ class TahunAkademikController extends Controller
                 'tanggal_akhir' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
                 'tanggal_krs_awal' => ['required', 'date'],
                 'tanggal_krs_akhir' => ['required', 'date', 'after_or_equal:tanggal_krs_awal'],
+                'batas_input_nilai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
                 'status' => ['boolean'],
             ],
             [
@@ -96,6 +97,7 @@ class TahunAkademikController extends Controller
                 'tanggal_akhir' => 'tanggal akhir',
                 'tanggal_krs_awal' => 'tanggal KRS awal',
                 'tanggal_krs_akhir' => 'tanggal KRS akhir',
+                'batas_input_nilai' => 'batas input nilai',
                 'status' => 'status',
             ],
         );

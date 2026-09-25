@@ -12,6 +12,7 @@ use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
+use App\Models\Ujian;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,7 +84,49 @@ class KelasKuliahController extends Controller
                 ->map(fn (KelasKuliah $kelas): array => ['id' => $kelas->id, 'kode_kelas' => $kelas->kode_kelas, 'nama_matkul' => $kelas->mataKuliah?->nama_matkul]),
             'skalaNilai' => SkalaNilai::huruf(),
             'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
+            'statusNilai' => $this->statusNilai($kelasKuliah),
         ]);
+    }
+
+    /**
+     * Kunci nilai kelas: setelah difinalisasi dosen tidak bisa lagi mengubah nilai apa pun di kelas ini.
+     */
+    public function finalisasiNilai(KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $this->pastikanAksesKelas($kelasKuliah);
+
+        if (($pesan = $this->pesanNilaiTerkunci($kelasKuliah)) !== null || $kelasKuliah->nilai_final_at !== null) {
+            return back()->with('error', $pesan ?? 'Nilai kelas ini sudah difinalisasi.');
+        }
+
+        $uas = Ujian::query()->where('kelas_id', $kelasKuliah->id)->where('jenis', Pertemuan::UAS)->terbit()->first();
+
+        if ($uas !== null && ! $uas->sudahSelesai()) {
+            return back()->with('error', 'Nilai baru bisa difinalisasi setelah UAS kelas ini selesai.');
+        }
+
+        $kelasKuliah->finalisasiNilai(request()->user());
+
+        return back()->with('success', 'Nilai kelas berhasil difinalisasi dan kini terkunci.');
+    }
+
+    /**
+     * Admin membuka kembali kunci nilai. Bila batas input nilai tahun akademik sudah lewat, dosen perlu batas baru.
+     */
+    public function bukaKunciNilai(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $batasTahun = $kelasKuliah->loadMissing('tahunAkademik')->tahunAkademik?->batas_input_nilai;
+        $perluBatasBaru = $batasTahun !== null && $batasTahun->copy()->endOfDay()->isPast();
+
+        $validated = $request->validate(
+            ['sampai' => [$perluBatasBaru ? 'required' : 'nullable', 'date', 'after_or_equal:today']],
+            ['sampai.required' => 'Batas input nilai tahun akademik sudah lewat, isi tanggal batas baru untuk kelas ini.'],
+            ['sampai' => 'batas baru'],
+        );
+
+        $kelasKuliah->bukaKunciNilai($validated['sampai'] ?? null);
+
+        return back()->with('success', 'Kunci nilai kelas dibuka. Dosen bisa mengubah nilai kembali.');
     }
 
     public function updateGrade(Request $request, KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse
@@ -91,8 +134,8 @@ class KelasKuliahController extends Controller
         abort_if($krs->kelas_id !== $kelasKuliah->id, 404);
         $this->pastikanAksesKelas($kelasKuliah);
 
-        if ($this->nilaiTerkunci($kelasKuliah)) {
-            return back()->with('error', 'Nilai terkunci karena tahun akademik kelas ini sudah tidak aktif. Hubungi admin untuk perubahan nilai.');
+        if (($pesan = $this->pesanNilaiTerkunci($kelasKuliah)) !== null) {
+            return back()->with('error', $pesan);
         }
 
         $krs->update($request->validate(['nilai' => ['nullable', Rule::in(SkalaNilai::huruf())]]));
@@ -114,6 +157,25 @@ class KelasKuliahController extends Controller
         $krs->cancel();
 
         return back()->with('success', 'KRS mahasiswa berhasil dibatalkan.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function statusNilai(KelasKuliah $kelas): array
+    {
+        $uas = Ujian::query()->where('kelas_id', $kelas->id)->where('jenis', Pertemuan::UAS)->terbit()->first(['id', 'kelas_id', 'tanggal', 'jam_mulai', 'jam_akhir']);
+        $batasTahun = $kelas->tahunAkademik?->batas_input_nilai;
+
+        return [
+            'final' => $kelas->nilaiFinal(),
+            'final_at' => $kelas->nilai_final_at?->toIso8601String(),
+            'final_oleh' => $kelas->nilai_final_at !== null ? $kelas->finalOleh()->value('name') : null,
+            'batas' => $kelas->batasInputNilai()?->toDateString(),
+            'batas_tahun_lewat' => $batasTahun !== null && $batasTahun->copy()->endOfDay()->isPast(),
+            'uas_belum_selesai' => $uas !== null && ! $uas->sudahSelesai(),
+            'tanpa_nilai' => $kelas->krs->whereNull('nilai')->count(),
+        ];
     }
 
     public function edit(KelasKuliah $kelasKuliah): Response

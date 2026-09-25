@@ -34,7 +34,7 @@ type KelasKuliah = {
     mata_kuliah?: { nama_matkul: string } | null;
 };
 
-const props = defineProps<{ peran: Peran; kelasKuliah: KelasKuliah; tugas: Tugas }>();
+const props = defineProps<{ peran: Peran; kelasKuliah: KelasKuliah; tugas: Tugas; nilaiTerkunci: string | null }>();
 const rute = rutePeran(props.peran);
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const editing = ref<number | null>(null);
@@ -199,6 +199,7 @@ const saveGrade = (submission: Submission) => {
                                             ><Button size="sm" variant="outline" class="ml-2 rounded-full" @click="editing = null"
                                                 >Batal</Button
                                             ></template
+                                        ><span v-else-if="props.nilaiTerkunci" class="text-xs text-[#a39e98]">Nilai terkunci</span
                                         ><Button v-else size="sm" variant="outline" class="rounded-full" @click="editGrade(submission)"
                                             >Ubah Nilai</Button
                                         >

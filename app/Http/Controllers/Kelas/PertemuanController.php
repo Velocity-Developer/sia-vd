@@ -57,7 +57,7 @@ class PertemuanController extends Controller
                 : null,
             'mandiriTerbuka' => fn () => $pertemuan->mandiriTerbuka(),
             'durasiMandiri' => fn () => PengaturanAkademik::current()->durasi_presensi_mandiri_menit,
-            'terkunci' => fn () => $this->nilaiTerkunci($kelas),
+            'terkunci' => fn () => $this->tahunAkademikTerkunci($kelas),
             'dosenOptions' => fn () => $this->peran() === 'admin'
                 ? DosenProfile::with('user:id,name')->orderBy('nidn')->get(['id', 'user_id', 'nidn'])
                     ->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => ($dosen->user?->name ?? '-').' — '.$dosen->nidn])
@@ -400,7 +400,7 @@ class PertemuanController extends Controller
 
     private function bisaDimulai(Pertemuan $pertemuan): bool
     {
-        if ($this->nilaiTerkunci($pertemuan->kelasKuliah)) {
+        if ($this->tahunAkademikTerkunci($pertemuan->kelasKuliah)) {
             return false;
         }
 
@@ -412,6 +412,6 @@ class PertemuanController extends Controller
      */
     private function pastikanTidakTerkunci(Pertemuan $pertemuan): void
     {
-        abort_if($this->nilaiTerkunci($pertemuan->kelasKuliah), 403, 'Tahun akademik kelas ini sudah tidak aktif, presensi tidak dapat diubah lagi.');
+        abort_if($this->tahunAkademikTerkunci($pertemuan->kelasKuliah), 403, 'Tahun akademik kelas ini sudah tidak aktif, presensi tidak dapat diubah lagi.');
     }
 }

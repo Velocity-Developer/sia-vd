@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { formatTanggal } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Copy, Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
@@ -101,6 +102,16 @@ type KelasKuliahShowProps = {
     krs?: KrsShow[];
 };
 
+type StatusNilai = {
+    final: boolean;
+    final_at: string | null;
+    final_oleh: string | null;
+    batas: string | null;
+    batas_tahun_lewat: boolean;
+    uas_belum_selesai: boolean;
+    tanpa_nilai: number;
+};
+
 type OtherClass = { id: number; kode_kelas: string; nama_matkul?: string | null };
 
 const props = defineProps<{
@@ -109,6 +120,7 @@ const props = defineProps<{
     otherClasses: OtherClass[];
     skalaNilai: string[];
     nilaiTerkunci: boolean;
+    statusNilai: StatusNilai;
 }>();
 const rute = rutePeran(props.peran);
 const { can } = usePermissions();
@@ -162,6 +174,37 @@ const saveGrade = (krs: KrsShow) =>
             onSuccess: () => {
                 editingKrs.value = null;
             },
+        },
+    );
+
+const finalisasiOpen = ref(false);
+const finalisasi = () =>
+    router.post(
+        rute('kelas-kuliah.finalisasi-nilai', props.kelasKuliah.id),
+        {},
+        { preserveScroll: true, onFinish: () => (finalisasiOpen.value = false) },
+    );
+const pesanFinalisasi = computed(() => {
+    const kosong = props.statusNilai.tanpa_nilai;
+    const peringatan = kosong > 0 ? `Masih ada ${kosong} mahasiswa tanpa huruf akhir. ` : '';
+
+    return `${peringatan}Setelah difinalisasi, dosen tidak bisa lagi mengubah nilai akhir, nilai tugas, koreksi quiz, dan nilai ujian kelas ini. Hanya admin yang bisa membuka kembali.`;
+});
+const bukaOpen = ref(false);
+const bukaSampai = ref('');
+const bukaError = ref('');
+const bukaKunci = () =>
+    router.post(
+        route('admin.kelas-kuliah.buka-kunci-nilai', props.kelasKuliah.id),
+        { sampai: bukaSampai.value || null },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                bukaOpen.value = false;
+                bukaSampai.value = '';
+                bukaError.value = '';
+            },
+            onError: (errors) => (bukaError.value = errors.sampai ?? ''),
         },
     );
 
@@ -937,7 +980,46 @@ const formatTenggat = (value: string | null | undefined): string => {
                 <section
                     class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                 >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nilai Mahasiswa</h2>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nilai Mahasiswa</h2>
+                            <p v-if="props.statusNilai.final_at" class="mt-2 text-sm text-[#31302e]">
+                                <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Final</span>
+                                Difinalisasi {{ formatTanggal(props.statusNilai.final_at) }}
+                                <template v-if="props.statusNilai.final_oleh">oleh {{ props.statusNilai.final_oleh }}</template>
+                            </p>
+                            <p v-else-if="props.statusNilai.final" class="mt-2 text-sm text-[#31302e]">
+                                <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Terkunci</span>
+                                Batas input nilai {{ formatTanggal(props.statusNilai.batas) }} sudah lewat.
+                            </p>
+                            <p v-else-if="props.statusNilai.batas" class="mt-2 text-sm text-[#615d59]">
+                                Batas input nilai: <span class="font-medium text-black">{{ formatTanggal(props.statusNilai.batas) }}</span>
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <template v-if="!props.statusNilai.final && !props.nilaiTerkunci">
+                                <Button
+                                    size="sm"
+                                    class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
+                                    :disabled="props.statusNilai.uas_belum_selesai"
+                                    :title="props.statusNilai.uas_belum_selesai ? 'Tunggu sampai UAS selesai' : undefined"
+                                    @click="finalisasiOpen = true"
+                                    >Finalisasi Nilai</Button
+                                >
+                            </template>
+                            <Button
+                                v-if="isAdmin && props.statusNilai.final"
+                                size="sm"
+                                variant="outline"
+                                class="rounded-full"
+                                @click="bukaOpen = true"
+                                >Buka Kunci Nilai</Button
+                            >
+                        </div>
+                    </div>
+                    <p v-if="props.statusNilai.uas_belum_selesai && !props.statusNilai.final" class="mt-2 text-xs text-[#a39e98]">
+                        Nilai bisa difinalisasi setelah UAS selesai.
+                    </p>
                     <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div class="relative w-full sm:max-w-sm">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
@@ -1062,6 +1144,40 @@ const formatTenggat = (value: string | null | undefined): string => {
                     @confirm="confirmCancelKrs"
                     @cancel="pendingCancelKrs = null"
                 />
+                <AlertModal
+                    :open="finalisasiOpen"
+                    title="Finalisasi nilai?"
+                    :description="pesanFinalisasi"
+                    confirm-text="Finalisasi"
+                    cancel-text="Batal"
+                    @update:open="finalisasiOpen = $event"
+                    @confirm="finalisasi"
+                    @cancel="finalisasiOpen = false"
+                />
+                <div v-if="bukaOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="bukaOpen = false">
+                    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                        <h3 class="text-lg font-semibold">Buka kunci nilai</h3>
+                        <p class="mt-2 text-sm text-[#615d59]">
+                            Dosen bisa mengubah nilai kelas ini lagi sampai difinalisasi ulang atau sampai batas di bawah lewat.
+                        </p>
+                        <label class="mt-4 grid gap-2 text-sm">
+                            <span class="font-medium"
+                                >Batas baru untuk kelas ini<span v-if="!props.statusNilai.batas_tahun_lewat" class="font-normal text-[#a39e98]">
+                                    (opsional)</span
+                                ></span
+                            >
+                            <input v-model="bukaSampai" type="date" class="h-10 rounded-[4px] border border-[#dddddd] px-3 text-[15px]" />
+                            <span v-if="props.statusNilai.batas_tahun_lewat" class="text-xs text-[#a39e98]"
+                                >Batas input nilai tahun akademik sudah lewat, jadi kelas ini perlu batas sendiri.</span
+                            >
+                            <span v-if="bukaError" class="text-xs text-[#dd5b00]">{{ bukaError }}</span>
+                        </label>
+                        <div class="mt-6 flex justify-end gap-2">
+                            <Button variant="outline" class="rounded-full" @click="bukaOpen = false">Batal</Button>
+                            <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" @click="bukaKunci">Buka Kunci</Button>
+                        </div>
+                    </div>
+                </div>
                 <AlertModal
                     :open="confirmOpen"
                     description="Anda yakin ingin menghapus data ini?"

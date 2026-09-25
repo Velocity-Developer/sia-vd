@@ -55,6 +55,7 @@ class QuizPenilaianController extends Controller
                 'back' => route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz]),
             ],
             'breadcrumbKelas' => route($this->rute('kelas-kuliah.show'), $kelasKuliah),
+            'nilaiTerkunci' => $this->pesanNilaiTerkunci($kelasKuliah),
         ]);
     }
 

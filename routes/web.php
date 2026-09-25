@@ -206,6 +206,8 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
     Route::middleware('can:admin.kelas-kuliah')->group(function (): void {
         Route::resource('kelas-kuliah', KelasKuliahController::class)->parameters(['kelas_kuliah' => 'kelasKuliah'])->names('admin.kelas-kuliah');
         Route::put('kelas-kuliah/{kelasKuliah}/krs/{krs}/nilai', [KelasKuliahController::class, 'updateGrade'])->name('admin.kelas-kuliah.krs.nilai');
+        Route::post('kelas-kuliah/{kelasKuliah}/finalisasi-nilai', [KelasKuliahController::class, 'finalisasiNilai'])->name('admin.kelas-kuliah.finalisasi-nilai');
+        Route::post('kelas-kuliah/{kelasKuliah}/buka-kunci-nilai', [KelasKuliahController::class, 'bukaKunciNilai'])->name('admin.kelas-kuliah.buka-kunci-nilai');
         Route::delete('kelas-kuliah/{kelasKuliah}/krs/{krs}', [KelasKuliahController::class, 'destroyKrs'])->name('admin.kelas-kuliah.krs.destroy');
         Route::get('kelas-kuliah/{kelasKuliah}/jadwal/create', [JadwalController::class, 'create'])->name('admin.kelas-kuliah.jadwal.create');
         Route::post('kelas-kuliah/{kelasKuliah}/jadwal', [JadwalController::class, 'store'])->name('admin.kelas-kuliah.jadwal.store');
@@ -261,6 +263,7 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('kelas-kuliah', [KelasKuliahController::class, 'index'])->name('dosen.kelas-kuliah.index');
         Route::get('kelas-kuliah/{kelasKuliah}', [KelasKuliahController::class, 'show'])->name('dosen.kelas-kuliah.show');
         Route::put('kelas-kuliah/{kelasKuliah}/krs/{krs}/nilai', [KelasKuliahController::class, 'updateGrade'])->name('dosen.kelas-kuliah.krs.nilai');
+        Route::post('kelas-kuliah/{kelasKuliah}/finalisasi-nilai', [KelasKuliahController::class, 'finalisasiNilai'])->name('dosen.kelas-kuliah.finalisasi-nilai');
         Route::get('kelas-kuliah/{kelasKuliah}/materi/create', [MateriController::class, 'create'])->name('dosen.kelas-kuliah.materi.create');
         Route::post('kelas-kuliah/{kelasKuliah}/materi', [MateriController::class, 'store'])->name('dosen.kelas-kuliah.materi.store');
         Route::get('kelas-kuliah/{kelasKuliah}/materi/{materi}/edit', [MateriController::class, 'edit'])->name('dosen.kelas-kuliah.materi.edit');

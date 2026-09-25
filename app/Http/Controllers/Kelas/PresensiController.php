@@ -131,7 +131,7 @@ class PresensiController extends Controller
                 'uas' => self::jadwalUjian($ujian['jadwal']['uas']),
             ],
             'minKehadiran' => PengaturanAkademik::current()->min_kehadiran_ujian,
-            'terkunci' => $this->nilaiTerkunci($kelasKuliah),
+            'terkunci' => $this->tahunAkademikTerkunci($kelasKuliah),
             'ruangs' => Ruang::orderBy('kode_ruang')->get(['id', 'kode_ruang', 'nama_ruang'])
                 ->map(fn (Ruang $ruang): array => ['id' => $ruang->id, 'name' => $ruang->kode_ruang.' — '.$ruang->nama_ruang]),
         ]);
@@ -320,7 +320,7 @@ class PresensiController extends Controller
     public function susunUlang(KelasKuliah $kelasKuliah): RedirectResponse
     {
         $this->pastikanPengampu($kelasKuliah);
-        abort_if($this->nilaiTerkunci($kelasKuliah), 403);
+        abort_if($this->tahunAkademikTerkunci($kelasKuliah), 403);
         $hasil = Pertemuan::susunUlang($kelasKuliah);
 
         return back()->with('success', $hasil['diubah'] > 0

@@ -82,6 +82,7 @@ class TugasController extends Controller
             'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'tugas' => $tugas,
+            'nilaiTerkunci' => $this->pesanNilaiTerkunci($kelasKuliah),
         ]);
     }
 

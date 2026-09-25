@@ -29,17 +29,42 @@ trait KontenKelas
     }
 
     /**
-     * Nilai dikunci untuk dosen setelah tahun akademik kelas tidak aktif lagi; admin tetap bisa mengubah.
+     * Presensi dan izin dikunci untuk dosen setelah tahun akademik kelas tidak aktif lagi; admin tetap bisa mengubah.
      */
-    protected function nilaiTerkunci(KelasKuliah $kelasKuliah): bool
+    protected function tahunAkademikTerkunci(KelasKuliah $kelasKuliah): bool
     {
         return $this->peran() === 'dosen'
             && $kelasKuliah->loadMissing('tahunAkademik')->tahunAkademik?->status !== true;
     }
 
+    /**
+     * Nilai (huruf akhir, nilai tugas, koreksi quiz, nilai ujian) dikunci untuk dosen bila tahun akademik tidak
+     * aktif, nilai kelas sudah difinalisasi, atau batas input nilai sudah lewat. Admin tetap bisa mengubah.
+     */
+    protected function nilaiTerkunci(KelasKuliah $kelasKuliah): bool
+    {
+        return $this->pesanNilaiTerkunci($kelasKuliah) !== null;
+    }
+
+    protected function pesanNilaiTerkunci(KelasKuliah $kelasKuliah): ?string
+    {
+        if ($this->tahunAkademikTerkunci($kelasKuliah)) {
+            return 'Nilai terkunci karena tahun akademik kelas ini sudah tidak aktif. Hubungi admin untuk perubahan nilai.';
+        }
+
+        if ($this->peran() === 'dosen' && $kelasKuliah->nilaiFinal()) {
+            return $kelasKuliah->nilai_final_at !== null
+                ? 'Nilai kelas ini sudah difinalisasi. Hubungi admin bila perlu dibuka kembali.'
+                : 'Batas input nilai sudah lewat. Hubungi admin bila perlu dibuka kembali.';
+        }
+
+        return null;
+    }
+
     protected function pastikanNilaiTidakTerkunci(KelasKuliah $kelasKuliah): void
     {
-        abort_if($this->nilaiTerkunci($kelasKuliah), 403, 'Tahun akademik kelas ini sudah tidak aktif, nilai tidak dapat diubah lagi.');
+        $pesan = $this->pesanNilaiTerkunci($kelasKuliah);
+        abort_if($pesan !== null, 403, $pesan ?? '');
     }
 
     protected function keKelas(KelasKuliah $kelasKuliah): RedirectResponse

@@ -6,6 +6,7 @@ use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
 class KelasKuliah extends Model
@@ -14,7 +15,7 @@ class KelasKuliah extends Model
 
     protected $table = 'kelas_kuliah';
 
-    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id'];
+    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai'];
 
     /**
      * Kelas baru tanpa jumlah pertemuan memakai bawaan di Pengaturan Akademik.
@@ -31,12 +32,48 @@ class KelasKuliah extends Model
         return [
             'kapasitas' => 'integer',
             'jumlah_pertemuan' => 'integer',
+            'nilai_final_at' => 'datetime',
+            'nilai_dibuka_sampai' => 'date:Y-m-d',
         ];
+    }
+
+    /**
+     * Batas input nilai yang berlaku: batas pengganti dari admin, atau batas tahun akademik.
+     */
+    public function batasInputNilai(): ?Carbon
+    {
+        return $this->nilai_dibuka_sampai ?? $this->loadMissing('tahunAkademik')->tahunAkademik?->batas_input_nilai;
+    }
+
+    /**
+     * Nilai kelas sudah final: difinalisasi, atau batas input nilai sudah lewat (hari batas masih boleh).
+     */
+    public function nilaiFinal(): bool
+    {
+        return $this->nilai_final_at !== null || ($this->batasInputNilai()?->copy()->endOfDay()->isPast() ?? false);
+    }
+
+    public function finalisasiNilai(User $oleh): void
+    {
+        $this->update(['nilai_final_at' => now(), 'nilai_final_oleh' => $oleh->id]);
+    }
+
+    /**
+     * Admin membuka kunci: finalisasi dibatalkan dan, bila batas tahun akademik sudah lewat, diberi batas baru.
+     */
+    public function bukaKunciNilai(?string $sampai): void
+    {
+        $this->update(['nilai_final_at' => null, 'nilai_final_oleh' => null, 'nilai_dibuka_sampai' => $sampai]);
     }
 
     public function tahunAkademik(): BelongsTo
     {
         return $this->belongsTo(TahunAkademik::class, 'tahun_akademik_id');
+    }
+
+    public function finalOleh(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'nilai_final_oleh');
     }
 
     public function dosen(): BelongsTo

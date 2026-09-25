@@ -31,6 +31,7 @@ const props = defineProps<{
     items: Item[];
     urls: { grade: string; back: string };
     breadcrumbKelas: string;
+    nilaiTerkunci: string | null;
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -110,6 +111,9 @@ const submit = () => {
                     </dl>
                 </section>
 
+                <p v-if="props.nilaiTerkunci" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
+                    {{ props.nilaiTerkunci }}
+                </p>
                 <form class="flex flex-col gap-4" @submit.prevent="submit">
                     <article
                         v-for="(item, index) in props.items"
@@ -132,6 +136,7 @@ const submit = () => {
                                 <input
                                     :id="`poin-${item.question_id}`"
                                     v-model="form.points[item.question_id]"
+                                    :disabled="!!props.nilaiTerkunci"
                                     type="number"
                                     min="0"
                                     :max="item.points"
@@ -170,7 +175,7 @@ const submit = () => {
                         </template>
                     </article>
 
-                    <div v-if="essays.length" class="sticky bottom-4 flex justify-end">
+                    <div v-if="essays.length && !props.nilaiTerkunci" class="sticky bottom-4 flex justify-end">
                         <Button
                             type="submit"
                             class="rounded-lg bg-[#0075de] text-white shadow-md hover:bg-[#005bab]"
