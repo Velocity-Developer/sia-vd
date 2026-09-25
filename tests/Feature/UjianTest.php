@@ -483,3 +483,17 @@ it('lets the lecturer grade a face-to-face exam per student', function () {
     $this->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
     gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('jawaban.nilai', '78.00'));
 });
+
+it('records attendance even when the exam meeting was opened without participant rows', function () {
+    // Mensimulasikan request lain yang sudah membuka pertemuan tetapi belum selesai mengisi peserta.
+    [$ujian, , $mahasiswa] = ujianSoal(2);
+    $uts = $ujian->pertemuan();
+    $uts->update(['status' => Pertemuan::BERLANGSUNG]);
+    $mhs = $mahasiswa[0]->mahasiswaProfile->id;
+
+    $ujian->catatHadir($mhs);
+    $uts->siapkanPeserta();
+
+    expect(PresensiMahasiswa::where('pertemuan_id', $uts->id)->where('mahasiswa_id', $mhs)->value('status'))->toBe(PresensiMahasiswa::HADIR)
+        ->and(PresensiMahasiswa::where('pertemuan_id', $uts->id)->count())->toBe(2);
+});

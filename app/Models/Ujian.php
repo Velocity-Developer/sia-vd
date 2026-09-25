@@ -135,6 +135,17 @@ class Ujian extends Model
             $pertemuan->siapkanPeserta();
         }
 
+        // Baris milik mahasiswa ini dibuat dulu. Tanpa ini, bila beberapa mahasiswa mulai bersamaan, penandaan
+        // hadir bisa mendahului pengisian peserta oleh request lain lalu tertimpa baris Alpa.
+        PresensiMahasiswa::query()->insertOrIgnore([
+            'pertemuan_id' => $pertemuan->id,
+            'mahasiswa_id' => $mahasiswaId,
+            'status' => PresensiMahasiswa::ALPA,
+            'metode' => 'manual',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         PresensiMahasiswa::query()
             ->where('pertemuan_id', $pertemuan->id)
             ->where('mahasiswa_id', $mahasiswaId)

@@ -93,9 +93,46 @@ class PengaturanInstitusi extends Model
             return null;
         }
 
-        $mime = $disk->mimeType($this->logo) ?: 'image/png';
+        // Logo di kop PDF hanya selebar ±58 px, tetapi dompdf menyimpan gambar dalam ukuran aslinya (logo
+        // 600 px = ±120 KB per PDF). Versi kecil dibuat sekali per berkas logo; nama berkas logo berganti
+        // setiap diunggah ulang, jadi cache tidak perlu dibuang manual.
+        return Cache::rememberForever('logo-pdf:'.md5($this->logo), function () use ($disk): string {
+            $isi = $disk->get($this->logo);
 
-        return "data:{$mime};base64,".base64_encode($disk->get($this->logo));
+            return self::logoKecil($isi) ?? 'data:'.($disk->mimeType($this->logo) ?: 'image/png').';base64,'.base64_encode($isi);
+        });
+    }
+
+    /**
+     * Perkecil logo menjadi PNG (transparansi dipertahankan) dengan sisi terpanjang maksimal $sisi px.
+     * Null bila gambar tidak bisa dibaca GD, atau sudah cukup kecil.
+     */
+    private static function logoKecil(string $isi, int $sisi = 180): ?string
+    {
+        $gambar = function_exists('imagecreatefromstring') ? @imagecreatefromstring($isi) : false;
+
+        if ($gambar === false) {
+            return null;
+        }
+
+        [$lebar, $tinggi] = [imagesx($gambar), imagesy($gambar)];
+
+        if (max($lebar, $tinggi) <= $sisi) {
+            return null;
+        }
+
+        $skala = $sisi / max($lebar, $tinggi);
+        [$w, $h] = [max(1, (int) round($lebar * $skala)), max(1, (int) round($tinggi * $skala))];
+        $kecil = imagecreatetruecolor($w, $h);
+        imagealphablending($kecil, false);
+        imagesavealpha($kecil, true);
+        imagefill($kecil, 0, 0, imagecolorallocatealpha($kecil, 0, 0, 0, 127));
+        imagecopyresampled($kecil, $gambar, 0, 0, 0, 0, $w, $h, $lebar, $tinggi);
+
+        ob_start();
+        imagepng($kecil, null, 9);
+
+        return 'data:image/png;base64,'.base64_encode((string) ob_get_clean());
     }
 
     /**
