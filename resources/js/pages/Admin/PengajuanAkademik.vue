@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import {
+    HASIL_PENDADARAN,
     JENIS_PENGAJUAN,
     LABEL_LAMPIRAN,
     STATUS_PENGAJUAN,
+    type HasilPendadaran,
     type JadwalPendadaran,
     type JenisPengajuan,
     type StatusPengajuan,
@@ -32,7 +34,7 @@ type Baris = {
     pembimbing: string[];
     disetujui_pembimbing: string | null;
     disetujui_pembimbing_at: string | null;
-    jadwal: JadwalPendadaran | null;
+    jadwal: (JadwalPendadaran & HasilPendadaran) | null;
     status: StatusPengajuan;
     catatan: string | null;
     diproses_oleh: string | null;
@@ -234,6 +236,20 @@ const kembalikan = () => {
                                                 b.jadwal.jam_akhir
                                             }}
                                             · {{ b.jadwal.ruang }}</span
+                                        >
+                                        <span v-if="b.jadwal?.hasil" class="mt-1 block text-xs">
+                                            <span class="rounded-full px-2 py-0.5 font-medium" :class="HASIL_PENDADARAN[b.jadwal.hasil].kelas">{{
+                                                HASIL_PENDADARAN[b.jadwal.hasil].label
+                                            }}</span>
+                                            {{ b.jadwal.nilai_akhir }} ({{ b.jadwal.huruf }})
+                                        </span>
+                                        <a
+                                            v-if="b.jadwal?.nomor_surat"
+                                            :href="route('berkas.surat-pendadaran', b.jadwal.id)"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="mt-1 block text-xs font-medium text-[#0075de] hover:underline"
+                                            >Surat {{ b.jadwal.nomor_surat }}</a
                                         >
                                     </td>
                                     <td class="px-4 py-3">

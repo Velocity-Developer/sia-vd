@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Dosen;
 
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
+use App\Models\NilaiPendadaran;
 use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
+use App\Models\SkalaNilai;
 use App\Models\TugasAkhir;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -41,8 +43,9 @@ class BimbinganController extends Controller
 
         $jadwal = Pendadaran::query()
             ->where(fn (Builder $q) => $q->diuji($dosen->id)->orWhereIn('tugas_akhir_id', $bimbingan->pluck('id')))
-            ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name', 'tugasAkhir:id,judul', 'ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name', 'pengajuan:id,lampiran'])
-            ->orderByRaw('status = ? desc', [Pendadaran::DIJADWALKAN])
+            ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name', 'tugasAkhir:id,judul', 'ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name', 'pengajuan:id,lampiran', 'nilai'])
+            // Yang masih perlu ditindaklanjuti (dinilai/direvisi) di atas.
+            ->orderByRaw('status in (?, ?) desc', Pendadaran::AKTIF)
             ->orderBy('tanggal')
             ->orderBy('jam_mulai')
             ->get();
@@ -74,9 +77,23 @@ class BimbinganController extends Controller
                 'nama' => $p->mahasiswa?->user?->name,
                 'nim' => $p->mahasiswa?->nim,
                 'judul' => $p->tugasAkhir?->judul,
+                ...$p->ringkasanHasil(),
                 'peran' => $p->peranPenguji($dosen->id) ?? 'Pembimbing',
                 'pengajuan_id' => $p->pengajuan_id,
                 'lampiran' => array_keys($p->pengajuan?->lampiran ?? []),
+                'boleh_dinilai' => $p->peranPenguji($dosen->id) !== null && $p->bolehDinilai(),
+                'nilai_saya' => $p->nilai->firstWhere('dosen_id', $dosen->id)?->only(['nilai', 'catatan']),
+                'jumlah_nilai' => $p->nilai->count(),
+                // Rincian nilai dan usulan hasil hanya untuk ketua penguji, yang menetapkan hasil.
+                'ketua' => $ketua = $p->penguji_1_id === $dosen->id,
+                'nilai_penguji' => $ketua ? $p->nilai->map(fn (NilaiPendadaran $n): array => [
+                    'peran' => Pendadaran::PERAN_PENGUJI[$n->penguji_ke], 'nilai' => $n->nilai, 'catatan' => $n->catatan,
+                ])->values() : [],
+                'usulan' => $ketua && ($rata = $p->rataRata()) !== null ? [
+                    'rata_rata' => $rata,
+                    'huruf' => $huruf = SkalaNilai::dariAngka($rata),
+                    'lulus' => $huruf !== null && SkalaNilai::lulus($huruf),
+                ] : null,
             ]),
         ]);
     }

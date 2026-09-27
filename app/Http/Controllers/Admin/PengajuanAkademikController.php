@@ -54,7 +54,7 @@ class PengajuanAkademikController extends Controller
         if ($jenis === PengajuanAkademik::PENDADARAN) {
             $jadwal = Pendadaran::query()->whereIn('pengajuan_id', $pengajuan->getCollection()->pluck('id'))
                 ->with(['ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name'])->get()
-                ->mapWithKeys(fn (Pendadaran $p): array => [$p->pengajuan_id => $p->jadwal()])->all();
+                ->mapWithKeys(fn (Pendadaran $p): array => [$p->pengajuan_id => [...$p->jadwal(), ...$p->ringkasanHasil()]])->all();
         }
         $pengajuan->through(fn (PengajuanAkademik $p): array => [
             'id' => $p->id,
@@ -195,7 +195,7 @@ class PengajuanAkademikController extends Controller
                 return back()->with('error', 'Pendaftaran ini belum disetujui pembimbing atau sudah diproses.');
             }
             $tugasAkhir = $pengajuan->tugasAkhir;
-            if ($tugasAkhir?->status !== TugasAkhir::BERJALAN || Pendadaran::query()->where('tugas_akhir_id', $tugasAkhir->id)->where('status', Pendadaran::DIJADWALKAN)->exists()) {
+            if ($tugasAkhir?->status !== TugasAkhir::BERJALAN || Pendadaran::query()->where('tugas_akhir_id', $tugasAkhir->id)->whereIn('status', Pendadaran::AKTIF)->exists()) {
                 return back()->with('error', 'Tugas akhir mahasiswa ini tidak sedang menunggu pendadaran.');
             }
             // Diperiksa ulang: nilai atau KRS bisa berubah sejak pendaftaran dikirim.
@@ -225,6 +225,7 @@ class PengajuanAkademikController extends Controller
                 'pengajuan_id' => $pengajuan->id,
                 'tugas_akhir_id' => $tugasAkhir->id,
                 'mahasiswa_id' => $pengajuan->mahasiswa_id,
+                'nomor_surat' => Pendadaran::nomorSuratBaru(now()),
                 'tanggal' => $data['tanggal'],
                 'jam_mulai' => $data['jam_mulai'],
                 'jam_akhir' => $data['jam_akhir'],

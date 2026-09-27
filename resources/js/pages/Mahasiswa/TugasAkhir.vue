@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import {
+    HASIL_PENDADARAN,
     JENIS_PENGAJUAN,
     STATUS_PENGAJUAN,
     labelPeristiwa,
+    type HasilPendadaran,
     type JadwalPendadaran,
     type JenisPengajuan,
     type KeadaanForm,
@@ -44,7 +46,7 @@ type Riwayat = {
 const props = defineProps<{
     tugasAkhir: { judul: string; bidang: string; pembimbing: string[]; status: 'berjalan' | 'selesai'; disahkan_at: string | null } | null;
     pengajuanTa: Tahap;
-    pendaftaranPendadaran: Tahap & { jadwal: JadwalPendadaran | null };
+    pendaftaranPendadaran: Tahap & { jadwal: JadwalPendadaran | null; hasil: (HasilPendadaran & { id: number; tanggal: string }) | null };
     riwayat: Riwayat[];
     dosenOptions: { id: number; name: string }[];
 }>();
@@ -107,9 +109,25 @@ const keterangan: Record<KeadaanForm, string> = {
 };
 const tahapan = computed(() => [
     { no: 1, judul: 'Tugas Akhir', keterangan: props.tugasAkhir ? 'Disahkan' : keterangan[ta.value.keadaan], aktif: true },
-    { no: 2, judul: 'Pendadaran', keterangan: keterangan[pd.value.keadaan], aktif: pd.value.keadaan !== 'terkunci' },
+    {
+        no: 2,
+        judul: 'Pendadaran',
+        keterangan: pd.value.jadwal?.status === 'revisi' ? 'Revisi naskah' : keterangan[pd.value.keadaan],
+        aktif: pd.value.keadaan !== 'terkunci',
+    },
     { no: 3, judul: 'Wisuda', keterangan: 'Terbuka setelah lulus pendadaran', aktif: false },
 ]);
+
+const formRevisi = useForm({ naskah_revisi: null as File | null });
+const kirimRevisi = () =>
+    formRevisi.post(route('mahasiswa.tugas-akhir.revisi'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            formRevisi.naskah_revisi = null;
+            versiBerkas.value++;
+        },
+    });
 
 const menunggu = (t: Tahap) => (t.pengajuan?.status === 'menunggu_pembimbing' ? 'menunggu persetujuan pembimbing' : 'menunggu diproses admin');
 
@@ -308,14 +326,75 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                 <section v-if="pd.keadaan !== 'terkunci'" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
                     <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tahap 2 · Pendadaran</h2>
 
+                    <div v-if="pd.hasil?.hasil" class="mt-4 rounded-lg border border-[#e6e6e6] px-4 py-3 text-sm">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-medium text-black">Hasil pendadaran {{ formatTanggal(pd.hasil.tanggal, false) }}</span>
+                            <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="HASIL_PENDADARAN[pd.hasil.hasil].kelas">{{
+                                HASIL_PENDADARAN[pd.hasil.hasil].label
+                            }}</span>
+                            <span class="text-[#615d59]">Nilai {{ pd.hasil.nilai_akhir }} ({{ pd.hasil.huruf }})</span>
+                        </div>
+                        <p v-if="pd.hasil.catatan_hasil" class="mt-1 whitespace-pre-line text-[#31302e]">{{ pd.hasil.catatan_hasil }}</p>
+                        <p v-if="pd.hasil.revisi_disahkan_at" class="mt-1 text-[#1aae39]">
+                            Revisi disahkan {{ formatTanggal(pd.hasil.revisi_disahkan_at, false) }}. Tugas akhir selesai.
+                        </p>
+                        <p v-if="pd.hasil.hasil === 'tidak_lulus' && !pd.jadwal" class="mt-1 text-[#b42318]">
+                            Anda bisa mendaftar pendadaran ulang di bawah ini.
+                        </p>
+                    </div>
+
                     <template v-if="pd.jadwal">
-                        <div class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]" role="status">
+                        <div
+                            v-if="pd.jadwal.status === 'dijadwalkan'"
+                            class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
+                            role="status"
+                        >
                             Pendadaran Anda sudah dijadwalkan. Hadir tepat waktu dan bawa naskah.
                         </div>
                         <KartuJadwal class="mt-4" :jadwal="pd.jadwal" />
+
+                        <form
+                            v-if="pd.jadwal.status === 'revisi'"
+                            class="mt-5 grid gap-3 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] p-4"
+                            @submit.prevent="kirimRevisi"
+                        >
+                            <p class="text-sm font-medium text-[#b25000]">Revisi naskah</p>
+                            <p v-if="pd.hasil?.revisi_diunggah_at" class="text-sm text-[#31302e]">
+                                Naskah revisi dikirim {{ formatTanggal(pd.hasil.revisi_diunggah_at, false) }} dan menunggu pengesahan ketua penguji.
+                                <a
+                                    :href="route('berkas.naskah-revisi', pd.jadwal.id)"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="font-medium text-[#0075de] hover:underline"
+                                    >Lihat naskah</a
+                                >
+                            </p>
+                            <template v-else>
+                                <p v-if="pd.hasil?.catatan_revisi" class="text-sm text-[#b42318]">
+                                    <span class="font-medium">Revisi dikembalikan:</span> {{ pd.hasil.catatan_revisi }}
+                                </p>
+                                <InputBerkas
+                                    id="naskah_revisi"
+                                    :key="`naskah_revisi-${versiBerkas}`"
+                                    label="Naskah revisi (PDF, maks. 20 MB)"
+                                    accept="application/pdf,.pdf"
+                                    :wajib="true"
+                                    :error="formRevisi.errors.naskah_revisi"
+                                    @pilih="formRevisi.naskah_revisi = $event"
+                                />
+                                <div class="flex justify-end">
+                                    <Button
+                                        type="submit"
+                                        :disabled="formRevisi.processing"
+                                        class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]"
+                                        >Kirim Revisi</Button
+                                    >
+                                </div>
+                            </template>
+                        </form>
                     </template>
 
-                    <template v-else>
+                    <template v-else-if="pd.keadaan !== 'selesai'">
                         <DaftarSyarat class="mt-4" :syarat="pd.syarat" />
                         <div
                             v-if="pd.keadaan === 'belum_memenuhi'"

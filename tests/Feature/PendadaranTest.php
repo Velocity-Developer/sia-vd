@@ -7,6 +7,7 @@ use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
 use App\Models\PengaturanAkademik;
 use App\Models\Ruang;
+use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use App\Models\TugasAkhir;
 use App\Models\User;
@@ -265,4 +266,151 @@ it('rechecks the requirements before scheduling', function () {
     $this->actingAs($admin)->post(route('admin.pengajuan-akademik.setujui', $p), jadwalPendadaran($ruang, [User::factory()->dosen()->create(), User::factory()->dosen()->create(), User::factory()->dosen()->create()]))
         ->assertSessionHas('error');
     expect(Pendadaran::count())->toBe(0)->and($p->fresh()->status)->toBe(PengajuanAkademik::MENUNGGU);
+});
+
+/**
+ * Pendadaran terjadwal 6 Okt 2025 09:00–11:00 dengan pembimbing sebagai ketua penguji.
+ *
+ * @return array{0: Pendadaran, 1: list<User>, 2: User}
+ */
+function pendadaranTerjadwal(): array
+{
+    [$mhs, $pembimbing] = mahasiswaSiapPendadaran();
+    $penguji = [$pembimbing, User::factory()->dosen()->create(), User::factory()->dosen()->create()];
+    $ruang = Ruang::firstOrCreate(['kode_ruang' => 'R-SID'], ['nama_ruang' => 'Ruang Sidang', 'kapasitas' => 10]);
+    $p = pendaftaranMenungguAdmin($mhs, $pembimbing);
+    test()->actingAs(User::factory()->admin()->create())->post(route('admin.pengajuan-akademik.setujui', $p), jadwalPendadaran($ruang, $penguji));
+
+    return [Pendadaran::where('pengajuan_id', $p->id)->sole(), $penguji, $mhs];
+}
+
+/**
+ * @param  list<User>  $penguji
+ * @param  list<float|int>  $nilai
+ */
+function nilaiSemuaPenguji(Pendadaran $pendadaran, array $penguji, array $nilai): void
+{
+    foreach ($penguji as $i => $dosen) {
+        test()->actingAs($dosen)->post(route('dosen.pendadaran.nilai', $pendadaran), ['nilai' => $nilai[$i]])->assertSessionHas('success');
+    }
+}
+
+function nilaiSkripsi(User $mhs): ?string
+{
+    return Krs::where('mahasiswa_id', $mhs->mahasiswaProfile->id)->whereHas('kelasKuliah.mataKuliah', fn ($q) => $q->where('tugas_akhir', true))->value('nilai');
+}
+
+it('numbers the defence letter and serves it to the people involved', function () {
+    [$pendadaran, $penguji, $mhs] = pendadaranTerjadwal();
+
+    expect($pendadaran->nomor_surat)->toBe('001/PDD/X/2025');
+    $url = route('berkas.surat-pendadaran', $pendadaran);
+    foreach ([$mhs, $penguji[1], User::factory()->admin()->create()] as $boleh) {
+        $this->actingAs($boleh)->get($url)->assertOk()->assertHeader('content-type', 'application/pdf');
+    }
+    $this->actingAs(User::factory()->dosen()->create())->get($url)->assertForbidden();
+    $this->actingAs(User::factory()->mahasiswa()->create())->get($url)->assertForbidden();
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page->where('pendaftaranPendadaran.jadwal.nomor_surat', '001/PDD/X/2025'));
+});
+
+it('passes the defence and writes the grade to the TA course', function () {
+    [$pendadaran, $penguji, $mhs] = pendadaranTerjadwal();
+
+    $this->actingAs($penguji[1])->post(route('dosen.pendadaran.nilai', $pendadaran), ['nilai' => 80])
+        ->assertSessionHas('error', 'Nilai baru bisa diisi setelah pendadaran dimulai.');
+    $this->travelTo('2025-10-06 09:00:00');
+    $this->actingAs(User::factory()->dosen()->create())->post(route('dosen.pendadaran.nilai', $pendadaran), ['nilai' => 80])->assertNotFound();
+    $this->actingAs($penguji[1])->post(route('dosen.pendadaran.nilai', $pendadaran), ['nilai' => 101])->assertSessionHasErrors('nilai');
+
+    nilaiSemuaPenguji($pendadaran, array_slice($penguji, 0, 2), [90, 80]);
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.hasil', $pendadaran), ['hasil' => 'lulus'])->assertSessionHas('error', 'Belum semua penguji mengisi nilai.');
+    $this->actingAs($penguji[2])->post(route('dosen.pendadaran.nilai', $pendadaran), ['nilai' => 85.5]);
+
+    // Hanya ketua yang menetapkan; ketua melihat usulan dari rata-rata.
+    $this->actingAs($penguji[1])->post(route('dosen.pendadaran.hasil', $pendadaran), ['hasil' => 'lulus'])->assertNotFound();
+    $this->actingAs($penguji[0])->get(route('dosen.bimbingan.index'))->assertInertia(fn ($page) => $page
+        ->where('jadwalPendadaran.0.usulan', ['rata_rata' => 85.17, 'huruf' => 'A', 'lulus' => true])
+        ->has('jadwalPendadaran.0.nilai_penguji', 3));
+    $this->actingAs($penguji[1])->get(route('dosen.bimbingan.index'))->assertInertia(fn ($page) => $page
+        ->where('jadwalPendadaran.0.usulan', null)
+        ->has('jadwalPendadaran.0.nilai_penguji', 0)
+        ->where('jadwalPendadaran.0.nilai_saya.nilai', 80));
+
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.hasil', $pendadaran), ['hasil' => 'lulus'])->assertSessionHas('success');
+    $pendadaran->refresh();
+    expect($pendadaran->status)->toBe(Pendadaran::SELESAI)
+        ->and($pendadaran->nilai_akhir)->toBe(85.17)
+        ->and($pendadaran->huruf)->toBe('A')
+        ->and(TugasAkhir::sole()->status)->toBe(TugasAkhir::SELESAI)
+        ->and(nilaiSkripsi($mhs))->toBe('A');
+
+    $this->actingAs($penguji[1])->post(route('dosen.pendadaran.nilai', $pendadaran), ['nilai' => 50])
+        ->assertSessionHas('error', 'Hasil pendadaran sudah ditetapkan; nilai tidak bisa diubah.');
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page
+        ->where('pendaftaranPendadaran.keadaan', 'selesai')
+        ->where('pendaftaranPendadaran.hasil.hasil', 'lulus')
+        ->where('pendaftaranPendadaran.hasil.huruf', 'A'));
+});
+
+it('waits for the revision to be approved before finishing', function () {
+    [$pendadaran, $penguji, $mhs] = pendadaranTerjadwal();
+    $this->travelTo('2025-10-06 10:00:00');
+    nilaiSemuaPenguji($pendadaran, $penguji, [72, 75, 78]);
+
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.hasil', $pendadaran), ['hasil' => 'lulus_revisi'])->assertSessionHasErrors('catatan_hasil');
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.hasil', $pendadaran), ['hasil' => 'lulus_revisi', 'catatan_hasil' => 'Perbaiki bab 4.'])->assertSessionHas('success');
+    expect($pendadaran->fresh()->status)->toBe(Pendadaran::REVISI)->and(nilaiSkripsi($mhs))->toBeNull();
+
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.revisi.sahkan', $pendadaran))->assertSessionHas('error');
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.revisi'), ['naskah_revisi' => UploadedFile::fake()->create('r.pdf', 300, 'application/pdf')])->assertSessionHas('success');
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.revisi'), ['naskah_revisi' => UploadedFile::fake()->create('r.pdf', 300, 'application/pdf')])
+        ->assertSessionHas('error', 'Naskah revisi sedang menunggu pengesahan ketua penguji.');
+    $this->actingAs($penguji[2])->get(route('berkas.naskah-revisi', $pendadaran))->assertOk();
+
+    // Dikembalikan ketua, diunggah ulang (berkas lama diganti), lalu disahkan.
+    $lama = $pendadaran->fresh()->naskah_revisi;
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.revisi.tolak', $pendadaran), ['catatan' => 'Tabel 4.2 belum diperbaiki'])->assertSessionHas('success');
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page->where('pendaftaranPendadaran.hasil.catatan_revisi', 'Tabel 4.2 belum diperbaiki'));
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.revisi'), ['naskah_revisi' => UploadedFile::fake()->create('r2.pdf', 300, 'application/pdf')])->assertSessionHas('success');
+    Storage::disk('local')->assertMissing($lama);
+
+    $this->actingAs($penguji[1])->post(route('dosen.pendadaran.revisi.sahkan', $pendadaran))->assertNotFound();
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.revisi.sahkan', $pendadaran))->assertSessionHas('success');
+    expect($pendadaran->fresh()->status)->toBe(Pendadaran::SELESAI)
+        ->and(TugasAkhir::sole()->status)->toBe(TugasAkhir::SELESAI)
+        ->and(nilaiSkripsi($mhs))->toBe('B');
+});
+
+it('lets a failed student register again', function () {
+    [$pendadaran, $penguji, $mhs] = pendadaranTerjadwal();
+    $this->travelTo('2025-10-06 10:00:00');
+    nilaiSemuaPenguji($pendadaran, $penguji, [40, 45, 50]);
+
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.hasil', $pendadaran), ['hasil' => 'lulus'])
+        ->assertSessionHas('error', 'Rata-rata 45 bernilai E (tidak lulus), jadi hasilnya harus Tidak lulus.');
+    $this->actingAs($penguji[0])->post(route('dosen.pendadaran.hasil', $pendadaran), ['hasil' => 'tidak_lulus'])->assertSessionHas('success');
+
+    expect($pendadaran->fresh()->status)->toBe(Pendadaran::TIDAK_LULUS)
+        ->and(TugasAkhir::sole()->status)->toBe(TugasAkhir::BERJALAN)
+        ->and(nilaiSkripsi($mhs))->toBeNull();
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page
+        ->where('pendaftaranPendadaran.keadaan', 'baru')
+        ->where('pendaftaranPendadaran.jadwal', null)
+        ->where('pendaftaranPendadaran.hasil.hasil', 'tidak_lulus'));
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.ajukan-pendadaran'), isianPendadaran())->assertSessionHas('success');
+    expect(PengajuanAkademik::where('jenis', 'pendadaran')->latest('id')->first()->status)->toBe(PengajuanAkademik::MENUNGGU_PEMBIMBING);
+});
+
+it('converts scores with the configurable minimum per letter', function () {
+    $admin = User::factory()->admin()->create();
+    expect(SkalaNilai::dariAngka(79.99))->toBe('B')->and(SkalaNilai::dariAngka(80))->toBe('A')->and(SkalaNilai::dariAngka(0))->toBe('E');
+
+    $skala = SkalaNilai::orderByDesc('bobot')->get(['huruf', 'bobot', 'angka_minimal', 'lulus', 'boleh_diulang'])->toArray();
+    $skala[1]['angka_minimal'] = 85;
+    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.skala-nilai'), ['skala_nilai' => $skala])
+        ->assertSessionHasErrors(['skala_nilai' => 'Angka minimal B harus lebih rendah dari angka minimal A.']);
+
+    $skala[1]['angka_minimal'] = 65;
+    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.skala-nilai'), ['skala_nilai' => $skala])->assertSessionHasNoErrors();
+    expect(SkalaNilai::where('huruf', 'B')->value('angka_minimal'))->toEqual(65);
 });

@@ -32,7 +32,7 @@ class PengaturanAkademikController extends Controller
             'pindahKelasAktif' => PengaturanPindahKelas::current()->is_active,
             'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
-            'skalaNilai' => SkalaNilai::query()->orderByDesc('bobot')->orderBy('huruf')->get(['huruf', 'bobot', 'lulus', 'boleh_diulang'])
+            'skalaNilai' => SkalaNilai::query()->orderByDesc('bobot')->orderBy('huruf')->get(['huruf', 'bobot', 'angka_minimal', 'lulus', 'boleh_diulang'])
                 ->map(fn (SkalaNilai $nilai): array => [...$nilai->toArray(), 'dipakai' => $dipakai[$nilai->huruf] ?? 0]),
         ]);
     }
@@ -142,6 +142,7 @@ class PengaturanAkademikController extends Controller
             'skala_nilai' => ['required', 'array', 'min:1'],
             'skala_nilai.*.huruf' => ['required', 'string', 'max:2', 'regex:/^[A-Z][+-]?$/', 'distinct'],
             'skala_nilai.*.bobot' => ['required', 'numeric', 'min:0', 'max:4'],
+            'skala_nilai.*.angka_minimal' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'skala_nilai.*.lulus' => ['required', 'boolean'],
             'skala_nilai.*.boleh_diulang' => ['required', 'boolean'],
         ], [
@@ -151,7 +152,18 @@ class PengaturanAkademikController extends Controller
         ], [
             'skala_nilai.*.huruf' => 'Huruf',
             'skala_nilai.*.bobot' => 'Bobot',
+            'skala_nilai.*.angka_minimal' => 'Angka minimal',
         ]);
+
+        // Huruf berbobot lebih tinggi harus berangka minimal lebih tinggi, agar konversi angka → huruf tidak rancu.
+        $berangka = collect($data['skala_nilai'])->filter(fn (array $row): bool => ($row['angka_minimal'] ?? null) !== null)->sortByDesc('bobot')->values();
+        foreach ($berangka as $i => $row) {
+            if ($i > 0 && (float) $row['angka_minimal'] >= (float) $berangka[$i - 1]['angka_minimal']) {
+                throw ValidationException::withMessages([
+                    'skala_nilai' => "Angka minimal {$row['huruf']} harus lebih rendah dari angka minimal {$berangka[$i - 1]['huruf']}.",
+                ]);
+            }
+        }
 
         // Huruf yang sudah dipakai di nilai mahasiswa tidak boleh hilang, agar nilai lama tetap punya bobot.
         $hilang = collect($this->jumlahNilaiDipakai())->keys()->diff(collect($data['skala_nilai'])->pluck('huruf'));
@@ -175,6 +187,7 @@ class PengaturanAkademikController extends Controller
                 SkalaNilai::create([
                     'huruf' => $row['huruf'],
                     'bobot' => round((float) $row['bobot'], 2),
+                    'angka_minimal' => isset($row['angka_minimal']) ? round((float) $row['angka_minimal'], 2) : null,
                     'lulus' => (bool) $row['lulus'],
                     'boleh_diulang' => (bool) $row['boleh_diulang'],
                 ]);

@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\BimbinganController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
+use App\Http\Controllers\Dosen\PendadaranController as DosenPendadaranController;
 use App\Http\Controllers\Dosen\UjianController as DosenUjianController;
 use App\Http\Controllers\Kelas\JadwalController;
 use App\Http\Controllers\Kelas\KelasKuliahController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\Mahasiswa\TagihanSusulanController as MahasiswaTagihanS
 use App\Http\Controllers\Mahasiswa\TugasAkhirController as MahasiswaTugasAkhirController;
 use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
 use App\Http\Controllers\Mahasiswa\UjianSusulanController as MahasiswaUjianSusulanController;
+use App\Http\Controllers\PendadaranBerkasController;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
@@ -119,6 +121,8 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->name('berkas.bukti-susulan');
     Route::get('pengajuan-akademik/{pengajuanAkademik}/{kunci}', [BerkasController::class, 'pengajuanAkademik'])->where('kunci', '[a-z_]+')->name('berkas.pengajuan-akademik');
     Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->name('berkas.lampiran-susulan');
+    Route::get('surat-pendadaran/{pendadaran}', [PendadaranBerkasController::class, 'surat'])->name('berkas.surat-pendadaran');
+    Route::get('naskah-revisi/{pendadaran}', [PendadaranBerkasController::class, 'naskahRevisi'])->name('berkas.naskah-revisi');
     Route::get('ujian-soal/{ujian}/{index}', [BerkasController::class, 'soalUjian'])->whereNumber('index')->name('berkas.ujian-soal');
     Route::get('ujian-jawaban/{jawaban}/{index}', [BerkasController::class, 'jawabanUjian'])->whereNumber('index')->name('berkas.ujian-jawaban');
 });
@@ -353,6 +357,10 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
         Route::post('bimbingan/pendadaran/{pengajuanAkademik}/setujui', [BimbinganController::class, 'setujui'])->name('dosen.bimbingan.pendadaran.setujui');
         Route::post('bimbingan/pendadaran/{pengajuanAkademik}/perbaikan', [BimbinganController::class, 'perbaikan'])->name('dosen.bimbingan.pendadaran.perbaikan');
         Route::post('bimbingan/pendadaran/{pengajuanAkademik}/tolak', [BimbinganController::class, 'tolak'])->name('dosen.bimbingan.pendadaran.tolak');
+        Route::post('pendadaran/{pendadaran}/nilai', [DosenPendadaranController::class, 'nilai'])->name('dosen.pendadaran.nilai');
+        Route::post('pendadaran/{pendadaran}/hasil', [DosenPendadaranController::class, 'hasil'])->name('dosen.pendadaran.hasil');
+        Route::post('pendadaran/{pendadaran}/revisi/sahkan', [DosenPendadaranController::class, 'sahkanRevisi'])->name('dosen.pendadaran.revisi.sahkan');
+        Route::post('pendadaran/{pendadaran}/revisi/tolak', [DosenPendadaranController::class, 'tolakRevisi'])->name('dosen.pendadaran.revisi.tolak');
     });
 
     Route::middleware('can:dosen.mahasiswa-kelas')->group(function (): void {
@@ -428,6 +436,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('tugas-akhir', [MahasiswaTugasAkhirController::class, 'index'])->name('mahasiswa.tugas-akhir');
         Route::post('tugas-akhir/pengajuan-ta', [MahasiswaTugasAkhirController::class, 'ajukanTa'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-ta');
         Route::post('tugas-akhir/pendadaran', [MahasiswaTugasAkhirController::class, 'ajukanPendadaran'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-pendadaran');
+        Route::post('tugas-akhir/revisi', [MahasiswaTugasAkhirController::class, 'unggahRevisi'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.revisi');
     });
 
     Route::middleware('can:mahasiswa.pindah-kelas')->group(function (): void {

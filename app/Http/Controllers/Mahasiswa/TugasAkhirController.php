@@ -71,6 +71,12 @@ class TugasAkhirController extends Controller
                 'syarat' => $syaratPendadaran,
                 'pengajuan' => $pengajuanPendadaran ? $this->tampilkan($pengajuanPendadaran) : null,
                 'jadwal' => $pendadaran?->jadwal(),
+                // Hasil pendadaran terakhir (yang aktif, atau yang sudah selesai/tidak lulus).
+                'hasil' => ($terakhir = $this->pendadaranTerakhir($tugasAkhir)) && $terakhir->hasil !== null ? [
+                    'id' => $terakhir->id,
+                    'tanggal' => $terakhir->tanggal->toDateString(),
+                    ...$terakhir->ringkasanHasil(),
+                ] : null,
             ],
             'riwayat' => PengajuanAkademik::query()->where('mahasiswa_id', $mahasiswa->id)
                 ->with('riwayat.pengguna:id,name')->latest('id')->get()
@@ -247,10 +253,47 @@ class TugasAkhirController extends Controller
         };
     }
 
+    /**
+     * Unggah naskah revisi setelah pendadaran lulus dengan revisi; ketua penguji mengesahkannya.
+     */
+    public function unggahRevisi(Request $request): RedirectResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+        $request->validate(
+            ['naskah_revisi' => ['required', 'file', 'max:20480', 'extensions:pdf', 'mimes:pdf']],
+            ['naskah_revisi.extensions' => 'Naskah revisi harus berupa PDF.', 'naskah_revisi.mimes' => 'Isi berkas naskah revisi bukan PDF.', 'naskah_revisi.max' => 'Ukuran naskah revisi maksimal 20 MB.'],
+            ['naskah_revisi' => 'Naskah revisi'],
+        );
+
+        $pendadaran = $this->pendadaranAktif(TugasAkhir::milik($mahasiswa->id));
+        if ($pendadaran?->status !== Pendadaran::REVISI) {
+            return back()->with('error', 'Tidak ada revisi pendadaran yang perlu diunggah.');
+        }
+        if ($pendadaran->revisi_diunggah_at !== null) {
+            return back()->with('error', 'Naskah revisi sedang menunggu pengesahan ketua penguji.');
+        }
+
+        if ($pendadaran->naskah_revisi !== null) {
+            Storage::disk(AllowedUpload::DISK)->delete($pendadaran->naskah_revisi);
+        }
+        $pendadaran->update([
+            'naskah_revisi' => $request->file('naskah_revisi')->storeAs('pengajuan-akademik', Str::random(24).'.pdf', AllowedUpload::DISK),
+            'revisi_diunggah_at' => now(),
+            'catatan_revisi' => null,
+        ]);
+
+        return back()->with('success', 'Naskah revisi terkirim dan menunggu pengesahan ketua penguji.');
+    }
+
+    private function pendadaranTerakhir(?TugasAkhir $tugasAkhir): ?Pendadaran
+    {
+        return $tugasAkhir === null ? null : Pendadaran::query()->where('tugas_akhir_id', $tugasAkhir->id)->latest('id')->first();
+    }
+
     private function pendadaranAktif(?TugasAkhir $tugasAkhir): ?Pendadaran
     {
         return $tugasAkhir === null ? null
-            : Pendadaran::query()->where('tugas_akhir_id', $tugasAkhir->id)->where('status', Pendadaran::DIJADWALKAN)->latest('id')->first();
+            : Pendadaran::query()->where('tugas_akhir_id', $tugasAkhir->id)->whereIn('status', Pendadaran::AKTIF)->latest('id')->first();
     }
 
     /**

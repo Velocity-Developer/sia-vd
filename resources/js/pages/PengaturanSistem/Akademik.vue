@@ -9,7 +9,14 @@ import { Head, useForm } from '@inertiajs/vue3';
 import { Plus, Trash2 } from 'lucide-vue-next';
 
 type BatasSks = { ips_minimal: number | string; maks_sks: number | string };
-type SkalaNilai = { huruf: string; bobot: number | string; lulus: boolean; boleh_diulang: boolean; dipakai?: number };
+type SkalaNilai = {
+    huruf: string;
+    bobot: number | string;
+    angka_minimal: number | string | null;
+    lulus: boolean;
+    boleh_diulang: boolean;
+    dipakai?: number;
+};
 
 type Presensi = {
     jumlah_pertemuan: number;
@@ -38,7 +45,13 @@ const sksForm = useForm({
 });
 
 const nilaiForm = useForm({
-    skala_nilai: props.skalaNilai.map(({ huruf, bobot, lulus, boleh_diulang }) => ({ huruf, bobot, lulus, boleh_diulang })),
+    skala_nilai: props.skalaNilai.map(({ huruf, bobot, angka_minimal, lulus, boleh_diulang }) => ({
+        huruf,
+        bobot,
+        angka_minimal: angka_minimal ?? '',
+        lulus,
+        boleh_diulang,
+    })),
 });
 
 const dipakai = (huruf: string) => props.skalaNilai.find((row) => row.huruf === huruf.toUpperCase())?.dipakai ?? 0;
@@ -77,7 +90,12 @@ const daftarBagian = [
 const simpanKunciKrs = () => kunciForm.put(route('admin.pengaturan-akademik.kunci-krs'), { preserveScroll: true });
 
 const saveSks = () => sksForm.put(route('admin.pengaturan-akademik.batas-sks'), { preserveScroll: true });
-const saveNilai = () => nilaiForm.put(route('admin.pengaturan-akademik.skala-nilai'), { preserveScroll: true });
+const saveNilai = () =>
+    nilaiForm
+        .transform((data) => ({
+            skala_nilai: data.skala_nilai.map((row) => ({ ...row, angka_minimal: row.angka_minimal === '' ? null : row.angka_minimal })),
+        }))
+        .put(route('admin.pengaturan-akademik.skala-nilai'), { preserveScroll: true });
 
 const inp = 'h-9 rounded-lg border-[#dddddd]';
 </script>
@@ -221,7 +239,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                 <h2 class="text-lg font-semibold text-black">Skala Nilai</h2>
                 <p class="mt-1 text-sm text-[#615d59]">
                     Dipakai untuk pilihan nilai di kelas, IP/IPK, KHS, dan transkrip. Mengubah bobot akan mengubah IP/IPK semua mahasiswa yang
-                    memiliki nilai tersebut.
+                    memiliki nilai tersebut. Angka minimal (0–100) dipakai mengubah nilai angka pendadaran menjadi huruf.
                 </p>
 
                 <div class="relative mt-5 overflow-x-auto rounded-xl border border-[#e6e6e6]">
@@ -230,6 +248,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                             <tr>
                                 <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">Huruf</th>
                                 <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">Bobot</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">Angka min.</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-[#a39e98]">Lulus</th>
                                 <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-[#a39e98]">Boleh diulang</th>
                                 <th class="w-12 px-4 py-3"><span class="sr-only">Hapus</span></th>
@@ -244,6 +263,18 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                                 <td class="px-4 py-2">
                                     <Input v-model="row.bobot" type="number" min="0" max="4" step="0.01" :class="[inp, 'w-28']" aria-label="Bobot" />
                                     <InputError :message="errorOf(nilaiForm, `skala_nilai.${index}.bobot`)" />
+                                </td>
+                                <td class="px-4 py-2">
+                                    <Input
+                                        v-model="row.angka_minimal"
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        :class="[inp, 'w-28']"
+                                        aria-label="Angka minimal"
+                                    />
+                                    <InputError :message="errorOf(nilaiForm, `skala_nilai.${index}.angka_minimal`)" />
                                 </td>
                                 <td class="px-4 py-2 text-center">
                                     <input v-model="row.lulus" type="checkbox" class="size-4 accent-[#0075de]" aria-label="Lulus" />
@@ -274,7 +305,7 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                     variant="outline"
                     size="sm"
                     class="mt-3"
-                    @click="nilaiForm.skala_nilai.push({ huruf: '', bobot: '', lulus: true, boleh_diulang: false })"
+                    @click="nilaiForm.skala_nilai.push({ huruf: '', bobot: '', angka_minimal: '', lulus: true, boleh_diulang: false })"
                 >
                     <Plus class="size-4" /> Tambah nilai
                 </Button>

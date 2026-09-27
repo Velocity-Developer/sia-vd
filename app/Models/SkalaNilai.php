@@ -13,12 +13,13 @@ class SkalaNilai extends Model
 {
     use SerializesDatesInAppTimezone;
 
-    protected $fillable = ['huruf', 'bobot', 'lulus', 'boleh_diulang'];
+    protected $fillable = ['huruf', 'bobot', 'angka_minimal', 'lulus', 'boleh_diulang'];
 
     protected function casts(): array
     {
         return [
             'bobot' => 'float',
+            'angka_minimal' => 'float',
             'lulus' => 'boolean',
             'boleh_diulang' => 'boolean',
         ];
@@ -69,5 +70,18 @@ class SkalaNilai extends Model
         return $batas === null
             ? static::huruf()
             : static::semua()->filter(fn (self $nilai): bool => (float) $nilai->bobot <= (float) $batas)->keys()->all();
+    }
+
+    /**
+     * Huruf untuk nilai angka 0–100: huruf dengan angka minimal tertinggi yang masih terlampaui.
+     * Null bila tidak ada huruf yang angka minimalnya diatur.
+     */
+    public static function dariAngka(float $angka): ?string
+    {
+        return static::semua()
+            ->filter(fn (self $nilai): bool => $nilai->angka_minimal !== null && $angka >= $nilai->angka_minimal)
+            ->sortByDesc('angka_minimal')
+            ->keys()
+            ->first();
     }
 }

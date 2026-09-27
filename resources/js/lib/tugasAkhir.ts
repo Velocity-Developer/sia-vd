@@ -9,7 +9,26 @@ export type JadwalPendadaran = {
     jam_akhir: string;
     ruang: string | null;
     penguji: { peran: string; nama: string | null }[];
-    status: 'dijadwalkan' | 'selesai';
+    status: 'dijadwalkan' | 'revisi' | 'selesai' | 'tidak_lulus';
+    nomor_surat: string | null;
+};
+export type KodeHasil = 'lulus' | 'lulus_revisi' | 'tidak_lulus';
+export type HasilPendadaran = {
+    nilai_akhir: number | null;
+    huruf: string | null;
+    hasil: KodeHasil | null;
+    catatan_hasil: string | null;
+    hasil_ditetapkan_at: string | null;
+    ada_revisi: boolean;
+    revisi_diunggah_at: string | null;
+    catatan_revisi: string | null;
+    revisi_disahkan_at: string | null;
+};
+
+export const HASIL_PENDADARAN: Record<KodeHasil, { label: string; kelas: string }> = {
+    lulus: { label: 'Lulus', kelas: 'bg-[#eaf7ed] text-[#1aae39]' },
+    lulus_revisi: { label: 'Lulus dengan revisi', kelas: 'bg-[#fff3e0] text-[#b25000]' },
+    tidak_lulus: { label: 'Tidak lulus', kelas: 'bg-[#fdecea] text-[#b42318]' },
 };
 
 export const JENIS_PENGAJUAN: Record<JenisPengajuan, string> = {

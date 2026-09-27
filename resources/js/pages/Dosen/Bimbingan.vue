@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import InputError from '@/components/InputError.vue';
+import PenilaianPendadaran, { type JadwalDosen } from '@/components/tugas-akhir/PenilaianPendadaran.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
-import { LABEL_LAMPIRAN, type JadwalPendadaran } from '@/lib/tugasAkhir';
+import { LABEL_LAMPIRAN } from '@/lib/tugasAkhir';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
-import { Paperclip } from 'lucide-vue-next';
+import { FileText, Paperclip } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 type Bimbingan = {
@@ -23,14 +24,7 @@ type Bimbingan = {
     disahkan_at: string | null;
 };
 type Pendaftaran = { id: number; nama: string | null; nim: string | null; judul: string | null; lampiran: string[]; diajukan_at: string | null };
-type Jadwal = JadwalPendadaran & {
-    nama: string | null;
-    nim: string | null;
-    judul: string | null;
-    peran: string;
-    pengajuan_id: number;
-    lampiran: string[];
-};
+type Jadwal = JadwalDosen & { nim: string | null; judul: string | null; pengajuan_id: number; lampiran: string[] };
 
 const props = defineProps<{ bimbingan: Bimbingan[]; menungguPersetujuan: Pendaftaran[]; jadwalPendadaran: Jadwal[] }>();
 
@@ -135,7 +129,7 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                         <th :class="th">Waktu & Ruang</th>
                                         <th :class="th">Mahasiswa</th>
                                         <th :class="th">Penguji</th>
-                                        <th :class="th">Peran Anda</th>
+                                        <th :class="th">Peran & Penilaian</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-[#e6e6e6]">
@@ -143,6 +137,14 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                         <td class="px-4 py-3 text-sm text-black">
                                             <span class="block font-medium">{{ formatTanggal(j.tanggal) }}</span>
                                             <span class="block">{{ j.jam_mulai }}–{{ j.jam_akhir }} · {{ j.ruang }}</span>
+                                            <a
+                                                v-if="j.nomor_surat"
+                                                :href="route('berkas.surat-pendadaran', j.id)"
+                                                target="_blank"
+                                                rel="noopener"
+                                                class="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#0075de] hover:underline"
+                                                ><FileText class="size-3" /> Surat</a
+                                            >
                                         </td>
                                         <td class="max-w-[380px] px-4 py-3 text-sm text-[#31302e]">
                                             <span class="block font-medium text-black"
@@ -163,10 +165,8 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                                 >{{ p.nama }} <span class="text-xs text-[#a39e98]">· {{ p.peran }}</span></span
                                             >
                                         </td>
-                                        <td class="px-4 py-3 text-sm">
-                                            <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-medium text-[#0075de]">{{
-                                                j.peran
-                                            }}</span>
+                                        <td class="px-4 py-3">
+                                            <PenilaianPendadaran :jadwal="j" />
                                         </td>
                                     </tr>
                                     <tr v-if="!props.jadwalPendadaran.length">
