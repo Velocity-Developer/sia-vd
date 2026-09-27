@@ -6,6 +6,7 @@ use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\MahasiswaProfile;
+use App\Models\PengajuanSusulan;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\Pertemuan;
@@ -14,6 +15,7 @@ use App\Models\TahunAkademik;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\SyaratUjian;
+use App\UjianSusulan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -96,6 +98,7 @@ class UjianController extends Controller
                 'total_poin' => (int) $quiz->questions_sum_points,
                 'waktu_pengerjaan' => $quiz->waktu_pengerjaan,
             ],
+            'susulan' => $this->infoSusulan($ujian, $mahasiswa),
             'pengerjaan' => $attempt === null ? null : [
                 'selesai' => $attempt->submitted_at !== null,
                 'selesai_at' => $attempt->submitted_at?->toIso8601String(),
@@ -226,6 +229,35 @@ class UjianController extends Controller
             'sks' => $k->mataKuliah?->sks,
             'syarat' => $syarat[$k->id]['peserta'][$mahasiswa->id][$u->jenis] ?? null,
         ]))->sortBy(fn (array $u): string => $u['tanggal'].$u['jam_mulai'])->values();
+    }
+
+    /**
+     * Status pengajuan susulan terakhir untuk UTS/UAS ini, dan apakah pengajuan baru boleh dikirim.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function infoSusulan(Ujian $ujian, MahasiswaProfile $mahasiswa): ?array
+    {
+        if (! in_array($ujian->jenis, Ujian::JENIS, true)) {
+            return null;
+        }
+
+        $pengajuan = PengajuanSusulan::query()->where('ujian_id', $ujian->id)->where('mahasiswa_id', $mahasiswa->id)->latest('id')->first();
+        $alasan = UjianSusulan::alasanTidakBolehAjukan($ujian, $mahasiswa);
+
+        return [
+            'pengajuan' => $pengajuan === null ? null : [
+                'id' => $pengajuan->id,
+                'status' => $pengajuan->statusTampil(UjianSusulan::ikutUjianUtama($ujian, $mahasiswa->id)),
+                'alasan' => $pengajuan->alasan,
+                'jumlah_lampiran' => count($pengajuan->lampiran ?? []),
+                'catatan_admin' => $pengajuan->catatan_admin,
+                'diajukan_at' => $pengajuan->created_at?->toIso8601String(),
+            ],
+            'boleh_ajukan' => $alasan === null,
+            'alasan_tidak_boleh' => $alasan,
+            'batas' => UjianSusulan::batasPengajuan($ujian)->toIso8601String(),
+        ];
     }
 
     /**

@@ -24,6 +24,7 @@ const props = defineProps<{
     maksSksTanpaIps: number;
     kunciKrsAktif: boolean;
     hurufMaksRemidi: string | null;
+    susulan: { batas_pengajuan_susulan_hari: number; batas_bayar_susulan_hari: number };
     pindahKelasAktif: boolean;
     presensi: Presensi;
     batasSks: BatasSks[];
@@ -44,6 +45,9 @@ const errorOf = (form: { errors: object }, key: string) => (form.errors as Recor
 
 const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
 
+const susulanForm = useForm({ ...props.susulan });
+const simpanSusulan = () => susulanForm.put(route('admin.pengaturan-akademik.susulan'), { preserveScroll: true });
+
 const remidiForm = useForm({ huruf_maks_remidi: props.hurufMaksRemidi ?? '' });
 const simpanRemidi = () =>
     remidiForm
@@ -61,6 +65,7 @@ const daftarBagian = [
     { id: 'pindah-kelas', judul: 'Pindah Kelas' },
     { id: 'nilai', judul: 'Nilai' },
     { id: 'remidi', judul: 'Remidi' },
+    { id: 'susulan', judul: 'Ujian Susulan' },
     { id: 'presensi', judul: 'Presensi' },
 ];
 
@@ -304,6 +309,52 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                         class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
                     >
                         Simpan Pengaturan Remidi
+                    </Button>
+                </div>
+            </form>
+        </section>
+
+        <section id="susulan" class="flex scroll-mt-4 flex-col gap-4">
+            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Ujian Susulan</h2>
+            <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="simpanSusulan">
+                <h2 class="text-lg font-semibold text-black">Batas Waktu Ujian Susulan</h2>
+                <p class="mt-1 text-sm text-[#615d59]">
+                    Mahasiswa bisa mengajukan susulan sejak jadwal UTS/UAS terbit sampai beberapa hari sesudah ujian. Tagihan susulan harus dibayar
+                    dalam beberapa hari sejak diterbitkan; lewat batas itu hak susulan gugur.
+                </p>
+                <div class="mt-4 grid content-start gap-4 sm:grid-cols-2">
+                    <div class="grid content-start gap-2">
+                        <Label for="batas_pengajuan_susulan_hari">Batas pengajuan (hari sesudah ujian)</Label>
+                        <Input
+                            id="batas_pengajuan_susulan_hari"
+                            v-model="susulanForm.batas_pengajuan_susulan_hari"
+                            type="number"
+                            min="0"
+                            max="30"
+                            :class="inp"
+                        />
+                        <InputError :message="susulanForm.errors.batas_pengajuan_susulan_hari" />
+                    </div>
+                    <div class="grid content-start gap-2">
+                        <Label for="batas_bayar_susulan_hari">Batas bayar (hari sejak tagihan terbit)</Label>
+                        <Input
+                            id="batas_bayar_susulan_hari"
+                            v-model="susulanForm.batas_bayar_susulan_hari"
+                            type="number"
+                            min="1"
+                            max="30"
+                            :class="inp"
+                        />
+                        <InputError :message="susulanForm.errors.batas_bayar_susulan_hari" />
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end">
+                    <Button
+                        type="submit"
+                        :disabled="susulanForm.processing"
+                        class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
+                    >
+                        Simpan Pengaturan Susulan
                     </Button>
                 </div>
             </form>

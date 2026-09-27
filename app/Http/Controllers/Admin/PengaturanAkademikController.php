@@ -27,6 +27,7 @@ class PengaturanAkademikController extends Controller
             'maksSksTanpaIps' => $pengaturan->maks_sks_tanpa_ips,
             'kunciKrsAktif' => $pengaturan->kunci_krs_aktif,
             'hurufMaksRemidi' => $pengaturan->huruf_maks_remidi,
+            'susulan' => $pengaturan->only(['batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari']),
             'pindahKelasAktif' => PengaturanPindahKelas::current()->is_active,
             'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
@@ -180,6 +181,21 @@ class PengaturanAkademikController extends Controller
         });
 
         return back()->with('success', 'Skala nilai berhasil disimpan.');
+    }
+
+    public function updateSusulan(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'batas_pengajuan_susulan_hari' => ['required', 'integer', 'min:0', 'max:30'],
+            'batas_bayar_susulan_hari' => ['required', 'integer', 'min:1', 'max:30'],
+        ], attributes: [
+            'batas_pengajuan_susulan_hari' => 'Batas pengajuan susulan',
+            'batas_bayar_susulan_hari' => 'Batas bayar susulan',
+        ]);
+
+        PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
+
+        return back()->with('success', 'Pengaturan ujian susulan disimpan.');
     }
 
     public function updateRemidi(Request $request): RedirectResponse

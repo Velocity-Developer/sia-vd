@@ -17,7 +17,7 @@ class PengaturanAkademik extends Model
 
     protected $table = 'pengaturan_akademik';
 
-    protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif', 'huruf_maks_remidi', 'updated_by'];
+    protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif', 'huruf_maks_remidi', 'batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari', 'updated_by'];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
@@ -29,6 +29,8 @@ class PengaturanAkademik extends Model
         'durasi_presensi_mandiri_menit' => 15,
         'batas_pengajuan_izin_hari' => 1,
         'syarat_ujian_aktif' => false,
+        'batas_pengajuan_susulan_hari' => 3,
+        'batas_bayar_susulan_hari' => 3,
     ];
 
     protected function casts(): array
@@ -42,6 +44,8 @@ class PengaturanAkademik extends Model
             'durasi_presensi_mandiri_menit' => 'integer',
             'batas_pengajuan_izin_hari' => 'integer',
             'syarat_ujian_aktif' => 'boolean',
+            'batas_pengajuan_susulan_hari' => 'integer',
+            'batas_bayar_susulan_hari' => 'integer',
         ];
     }
 

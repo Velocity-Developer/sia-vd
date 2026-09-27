@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\TagihanController;
 use App\Http\Controllers\Admin\TagihanRemidiController;
 use App\Http\Controllers\Admin\TahunAkademikController;
 use App\Http\Controllers\Admin\UjianController as AdminUjianController;
+use App\Http\Controllers\Admin\UjianSusulanController as AdminUjianSusulanController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiContro
 use App\Http\Controllers\Mahasiswa\QuizAttemptController;
 use App\Http\Controllers\Mahasiswa\TagihanRemidiController as MahasiswaTagihanRemidiController;
 use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
+use App\Http\Controllers\Mahasiswa\UjianSusulanController as MahasiswaUjianSusulanController;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
@@ -108,6 +110,7 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
     Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
+    Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->name('berkas.lampiran-susulan');
     Route::get('ujian-soal/{ujian}/{index}', [BerkasController::class, 'soalUjian'])->whereNumber('index')->name('berkas.ujian-soal');
     Route::get('ujian-jawaban/{jawaban}/{index}', [BerkasController::class, 'jawabanUjian'])->whereNumber('index')->name('berkas.ujian-jawaban');
 });
@@ -167,6 +170,9 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:admin.ujian')->group(function () use ($ruteUjianKelas): void {
         Route::get('ujian', [AdminUjianController::class, 'index'])->name('admin.ujian.index');
+        Route::get('ujian-susulan', [AdminUjianSusulanController::class, 'index'])->name('admin.ujian-susulan.index');
+        Route::post('ujian-susulan/{pengajuanSusulan}/setujui', [AdminUjianSusulanController::class, 'setujui'])->name('admin.ujian-susulan.setujui');
+        Route::post('ujian-susulan/{pengajuanSusulan}/tolak', [AdminUjianSusulanController::class, 'tolak'])->name('admin.ujian-susulan.tolak');
         Route::get('ujian/create', [AdminUjianController::class, 'create'])->name('admin.ujian.create');
         Route::post('ujian', [AdminUjianController::class, 'store'])->name('admin.ujian.store');
         Route::post('ujian/buat-massal', [AdminUjianController::class, 'buatMassal'])->name('admin.ujian.buat-massal');
@@ -378,6 +384,8 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
     Route::middleware('can:mahasiswa.ujian')->group(function (): void {
         Route::get('ujian', [MahasiswaUjianController::class, 'index'])->name('mahasiswa.ujian');
         Route::get('ujian/kartu', [MahasiswaUjianController::class, 'kartu'])->name('mahasiswa.ujian.kartu');
+        Route::post('ujian/{ujian}/susulan', [MahasiswaUjianSusulanController::class, 'ajukan'])->middleware('throttle:10,1')->name('mahasiswa.ujian.susulan');
+        Route::delete('ujian-susulan/{pengajuanSusulan}', [MahasiswaUjianSusulanController::class, 'batalkan'])->name('mahasiswa.ujian-susulan.batalkan');
         Route::get('ujian/{ujian}', [MahasiswaUjianController::class, 'show'])->name('mahasiswa.ujian.show');
         Route::post('ujian/{ujian}/jawaban', [MahasiswaUjianController::class, 'kumpulkan'])->middleware('throttle:20,1')->name('mahasiswa.ujian.kumpulkan');
     });

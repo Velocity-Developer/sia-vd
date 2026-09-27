@@ -7,6 +7,7 @@ use App\Models\InfoKuliah;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\PengajuanIzin;
+use App\Models\PengajuanSusulan;
 use App\Models\PengumpulanTugas;
 use App\Models\TagihanRemidi;
 use App\Models\Tugas;
@@ -111,6 +112,20 @@ class BerkasController extends Controller
         abort_unless($boleh, 403);
 
         return $this->kirim($tagihanRemidi->bukti);
+    }
+
+    /**
+     * Lampiran pengajuan susulan: mahasiswa pengaju dan admin ujian.
+     */
+    public function lampiranSusulan(Request $request, PengajuanSusulan $pengajuanSusulan, int $index): StreamedResponse
+    {
+        $user = $request->user();
+        $boleh = ($user->mahasiswaProfile !== null && $pengajuanSusulan->mahasiswa_id === $user->mahasiswaProfile->id)
+            || $user->hasPermission('admin.ujian');
+
+        abort_unless($boleh, 403);
+
+        return $this->kirim($this->berkasKe($pengajuanSusulan->lampiran, $index));
     }
 
     public function infoKuliah(Request $request, InfoKuliah $infoKuliah): StreamedResponse

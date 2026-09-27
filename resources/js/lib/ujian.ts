@@ -15,3 +15,13 @@ export const STATUS_UJIAN: Record<'draf' | 'terbit', { label: string; kelas: str
     draf: { label: 'Draf', kelas: 'bg-[#f6f5f4] text-[#615d59]' },
     terbit: { label: 'Terbit', kelas: 'bg-[#e8f7ec] text-[#1a7f37]' },
 };
+
+export type StatusPengajuanSusulan = 'menunggu' | 'disetujui' | 'ditolak' | 'dibatalkan' | 'gugur';
+
+export const STATUS_PENGAJUAN_SUSULAN: Record<StatusPengajuanSusulan, { label: string; kelas: string }> = {
+    menunggu: { label: 'Menunggu', kelas: 'bg-[#f2f9ff] text-[#0075de]' },
+    disetujui: { label: 'Disetujui', kelas: 'bg-[#eaf7ed] text-[#1aae39]' },
+    ditolak: { label: 'Ditolak', kelas: 'bg-[#fdecea] text-[#b42318]' },
+    dibatalkan: { label: 'Dibatalkan', kelas: 'bg-[#f6f5f4] text-[#615d59]' },
+    gugur: { label: 'Gugur – ikut ujian utama', kelas: 'bg-[#f6f5f4] text-[#615d59]' },
+};

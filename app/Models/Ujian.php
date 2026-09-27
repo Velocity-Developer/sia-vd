@@ -68,6 +68,11 @@ class Ujian extends Model
     /**
      * Lembar soal (mode soal di sistem).
      */
+    public function pengajuanSusulan(): HasMany
+    {
+        return $this->hasMany(PengajuanSusulan::class);
+    }
+
     public function quiz(): HasOne
     {
         return $this->hasOne(Quiz::class);

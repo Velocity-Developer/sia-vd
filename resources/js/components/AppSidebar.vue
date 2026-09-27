@@ -74,6 +74,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Quiz', routeName: 'admin.quiz.index', icon: FileText, permission: 'admin.quiz' },
                     { title: 'Presensi', routeName: 'admin.presensi.index', icon: UserCheck, permission: 'admin.presensi' },
                     { title: 'Jadwal Ujian', routeName: 'admin.ujian.index', icon: NotebookPen, permission: 'admin.ujian' },
+                    { title: 'Ujian Susulan', routeName: 'admin.ujian-susulan.index', icon: NotebookPen, permission: 'admin.ujian' },
                 ],
             },
             {

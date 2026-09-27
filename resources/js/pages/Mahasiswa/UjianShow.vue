@@ -3,7 +3,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatJamDari, formatTanggal, jam } from '@/lib/presensi';
-import { JENIS_UJIAN, type JenisUjian, type ModeUjian } from '@/lib/ujian';
+import { JENIS_UJIAN, STATUS_PENGAJUAN_SUSULAN, type JenisUjian, type ModeUjian, type StatusPengajuanSusulan } from '@/lib/ujian';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { CircleCheck, FileUp, Paperclip } from 'lucide-vue-next';
 import { computed, onUnmounted, ref, watch } from 'vue';
@@ -33,6 +33,19 @@ const props = defineProps<{
     nilaiDirilis: boolean;
     lembarSoal: { id: number; siap: boolean; jumlah_soal: number; total_poin: number; waktu_pengerjaan: number | null } | null;
     pengerjaan: { selesai: boolean; selesai_at: string | null; skor: string | null; nilai: number | null } | null;
+    susulan: {
+        pengajuan: {
+            id: number;
+            status: StatusPengajuanSusulan;
+            alasan: string;
+            jumlah_lampiran: number;
+            catatan_admin: string | null;
+            diajukan_at: string | null;
+        } | null;
+        boleh_ajukan: boolean;
+        alasan_tidak_boleh: string | null;
+        batas: string;
+    } | null;
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -82,6 +95,27 @@ const kumpulkan = () =>
 const mulaiForm = useForm({});
 const mulaiUjian = () => props.lembarSoal && mulaiForm.post(route('mahasiswa.quiz.start', props.lembarSoal.id));
 
+// Pengajuan ujian susulan: alasan + bukti (PDF/JPG/PNG).
+const formSusulan = useForm<{ alasan: string; lampiran: File[] }>({ alasan: '', lampiran: [] });
+const kunciLampiran = ref(0);
+const bukaFormSusulan = ref(false);
+const pilihLampiran = (event: Event) => (formSusulan.lampiran = Array.from((event.target as HTMLInputElement).files ?? []));
+const ajukanSusulan = () =>
+    formSusulan.post(route('mahasiswa.ujian.susulan', props.ujian.id), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            formSusulan.reset();
+            kunciLampiran.value++;
+            bukaFormSusulan.value = false;
+        },
+    });
+const galatLampiran = computed(() => Object.entries(formSusulan.errors).find(([k]) => k.startsWith('lampiran'))?.[1]);
+const batalkanSusulan = () =>
+    props.susulan?.pengajuan &&
+    confirm('Batalkan pengajuan ujian susulan ini?') &&
+    router.delete(route('mahasiswa.ujian-susulan.batalkan', props.susulan.pengajuan.id), { preserveScroll: true });
+
 const galat = computed(() => Object.entries(form.errors).find(([k]) => k.startsWith('jawaban'))?.[1]);
 const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 </script>
@@ -113,6 +147,13 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     role="alert"
                 >
                     <CircleCheck class="size-4 shrink-0" /> {{ page.props.flash.success }}
+                </div>
+                <div
+                    v-if="page.props.flash?.error"
+                    class="rounded-xl border border-[#f4c3bd] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]"
+                    role="alert"
+                >
+                    {{ page.props.flash.error }}
                 </div>
 
                 <p
@@ -253,6 +294,92 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     <p v-else-if="props.sudahSelesai" class="mt-3 text-sm text-[#b42318]">
                         Waktu ujian sudah habis. Anda tidak mengerjakan ujian ini.
                     </p>
+                </section>
+
+                <section v-if="props.susulan && (props.susulan.pengajuan || props.susulan.boleh_ajukan)" :class="kartu">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <h2 class="text-lg font-semibold text-black">Ujian susulan</h2>
+                        <span
+                            v-if="props.susulan.pengajuan"
+                            class="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                            :class="STATUS_PENGAJUAN_SUSULAN[props.susulan.pengajuan.status].kelas"
+                            >{{ STATUS_PENGAJUAN_SUSULAN[props.susulan.pengajuan.status].label }}</span
+                        >
+                    </div>
+                    <template v-if="props.susulan.pengajuan">
+                        <p class="mt-2 text-sm text-[#31302e]">
+                            Diajukan {{ formatTanggal(props.susulan.pengajuan.diajukan_at) }}: {{ props.susulan.pengajuan.alasan }}
+                        </p>
+                        <p class="mt-1 flex flex-wrap gap-3 text-sm">
+                            <a
+                                v-for="i in props.susulan.pengajuan.jumlah_lampiran"
+                                :key="i"
+                                :href="route('berkas.lampiran-susulan', [props.susulan.pengajuan.id, i - 1])"
+                                target="_blank"
+                                rel="noopener"
+                                class="inline-flex items-center gap-1 font-medium text-[#0075de] hover:underline"
+                                ><Paperclip class="size-3.5" /> Lampiran {{ i }}</a
+                            >
+                        </p>
+                        <p v-if="props.susulan.pengajuan.catatan_admin" class="mt-2 text-sm text-[#b42318]">
+                            Catatan admin: {{ props.susulan.pengajuan.catatan_admin }}
+                        </p>
+                        <p v-if="props.susulan.pengajuan.status === 'menunggu'" class="mt-2 text-sm text-[#615d59]">
+                            Menunggu persetujuan admin. Bila Anda tetap mengikuti ujian ini, pengajuan otomatis dibatalkan.
+                            <button type="button" class="font-medium text-[#b42318] hover:underline" @click="batalkanSusulan">
+                                Batalkan pengajuan
+                            </button>
+                        </p>
+                        <p v-else-if="props.susulan.pengajuan.status === 'disetujui'" class="mt-2 text-sm text-[#615d59]">
+                            Disetujui. Tagihan ujian susulan akan muncul di menu Biaya Kuliah; jadwal susulan tampil setelah tagihan lunas.
+                        </p>
+                        <p v-else-if="props.susulan.pengajuan.status === 'gugur'" class="mt-2 text-sm text-[#615d59]">
+                            Anda tercatat mengikuti ujian utama, jadi hak ujian susulan gugur.
+                        </p>
+                    </template>
+                    <template v-if="props.susulan.boleh_ajukan">
+                        <p class="mt-2 text-sm text-[#615d59]">
+                            Tidak bisa mengikuti ujian ini? Ajukan ujian susulan paling lambat {{ formatTanggal(props.susulan.batas) }}, dengan alasan
+                            dan bukti.
+                        </p>
+                        <Button v-if="!bukaFormSusulan" variant="outline" class="mt-3 rounded-full" @click="bukaFormSusulan = true"
+                            >Ajukan ujian susulan</Button
+                        >
+                        <form v-else class="mt-3 grid gap-3" @submit.prevent="ajukanSusulan">
+                            <label class="grid gap-1 text-sm">
+                                <span class="font-medium text-black">Alasan</span>
+                                <textarea
+                                    v-model="formSusulan.alasan"
+                                    rows="3"
+                                    maxlength="1000"
+                                    required
+                                    class="rounded-lg border border-[#dddddd] px-3 py-2 text-sm focus:border-[#0075de] focus:outline-none"
+                                />
+                                <InputError :message="formSusulan.errors.alasan" />
+                            </label>
+                            <label class="grid gap-1 text-sm">
+                                <span class="font-medium text-black">Bukti (wajib, PDF/JPG/PNG, maks 3 berkas × 5 MB)</span>
+                                <input
+                                    :key="kunciLampiran"
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    class="text-sm"
+                                    @change="pilihLampiran"
+                                />
+                                <InputError :message="galatLampiran" />
+                            </label>
+                            <div class="flex gap-2">
+                                <Button
+                                    type="submit"
+                                    class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
+                                    :disabled="formSusulan.processing"
+                                    >Kirim pengajuan</Button
+                                >
+                                <Button type="button" variant="outline" class="rounded-full" @click="bukaFormSusulan = false">Batal</Button>
+                            </div>
+                        </form>
+                    </template>
                 </section>
             </div>
         </div>
