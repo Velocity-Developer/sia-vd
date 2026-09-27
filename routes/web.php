@@ -350,6 +350,9 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:dosen.bimbingan')->group(function (): void {
         Route::get('bimbingan', [BimbinganController::class, 'index'])->name('dosen.bimbingan.index');
+        Route::post('bimbingan/pendadaran/{pengajuanAkademik}/setujui', [BimbinganController::class, 'setujui'])->name('dosen.bimbingan.pendadaran.setujui');
+        Route::post('bimbingan/pendadaran/{pengajuanAkademik}/perbaikan', [BimbinganController::class, 'perbaikan'])->name('dosen.bimbingan.pendadaran.perbaikan');
+        Route::post('bimbingan/pendadaran/{pengajuanAkademik}/tolak', [BimbinganController::class, 'tolak'])->name('dosen.bimbingan.pendadaran.tolak');
     });
 
     Route::middleware('can:dosen.mahasiswa-kelas')->group(function (): void {
@@ -424,6 +427,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
     Route::middleware('can:mahasiswa.tugas-akhir')->group(function (): void {
         Route::get('tugas-akhir', [MahasiswaTugasAkhirController::class, 'index'])->name('mahasiswa.tugas-akhir');
         Route::post('tugas-akhir/pengajuan-ta', [MahasiswaTugasAkhirController::class, 'ajukanTa'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-ta');
+        Route::post('tugas-akhir/pendadaran', [MahasiswaTugasAkhirController::class, 'ajukanPendadaran'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-pendadaran');
     });
 
     Route::middleware('can:mahasiswa.pindah-kelas')->group(function (): void {

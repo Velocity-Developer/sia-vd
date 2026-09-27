@@ -8,6 +8,7 @@ use App\Models\MahasiswaProfile;
 use App\Models\PengaturanInstitusi;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
+use App\Transkrip;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -22,16 +23,10 @@ class HasilStudiController extends Controller
         $mahasiswa = $request->user()->mahasiswaProfile;
         abort_if($mahasiswa === null, 403);
 
-        $krs = Krs::query()
-            ->where('mahasiswa_id', $mahasiswa->id)
-            ->whereNotNull('nilai')
-            ->with(['kelasKuliah:id,matkul_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul,jenis,sks'])
-            ->get(['id', 'kelas_id', 'nilai']);
+        $krs = Transkrip::krs($mahasiswa->id)->whereNotNull('nilai');
         $jumlahPengambilan = $krs->countBy(fn (Krs $item): ?int => $item->kelasKuliah?->matkul_id);
         // Mata kuliah yang diulang hanya dihitung sekali, memakai nilai terbaiknya.
-        $transkrip = $krs->filter(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0)
-            ->groupBy(fn (Krs $item): int => $item->kelasKuliah->matkul_id)
-            ->map(fn (Collection $percobaan): Krs => $percobaan->sortByDesc(fn (Krs $item): float => SkalaNilai::bobot($item->nilai))->first())
+        $transkrip = Transkrip::terbaik($krs)
             ->map(fn (Krs $item): array => [
                 'id' => $item->id,
                 'kode' => $item->kelasKuliah->mataKuliah->kode_matkul,

@@ -124,7 +124,7 @@ it('lets the student fix and resend the same submission when asked for a revisio
         ->and($p->catatan)->toBeNull()
         ->and($p->isian['judul'])->toBe('Judul Diperbaiki')
         ->and($p->lampiran['proposal'])->toBe($proposalLama)
-        ->and($p->riwayat->pluck('status')->all())->toBe(['menunggu', 'perlu_perbaikan', 'menunggu']);
+        ->and($p->riwayat->pluck('status')->all())->toBe(['dikirim', 'perlu_perbaikan', 'dikirim']);
 
     // Proposal pengganti menghapus berkas lama.
     $this->actingAs($admin)->post(route('admin.pengajuan-akademik.perbaikan', $p), ['catatan' => 'Ganti proposal']);

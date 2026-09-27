@@ -6,6 +6,7 @@ use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
 use App\Models\MahasiswaProfile;
+use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
 use App\Models\RiwayatPengajuanAkademik;
 use App\Models\TugasAkhir;
@@ -21,12 +22,16 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Halaman Tugas Akhir & Wisuda mahasiswa: tahap 1 pengajuan TA/Skripsi.
+ * Halaman Tugas Akhir & Wisuda mahasiswa: tahap 1 pengajuan TA/Skripsi, tahap 2 pendaftaran pendadaran.
  */
 class TugasAkhirController extends Controller
 {
     /** Keadaan form satu tahap. */
+    public const TERKUNCI = 'terkunci';
+
     public const SELESAI = 'selesai';
+
+    public const TERJADWAL = 'terjadwal';
 
     public const MENUNGGU = 'menunggu';
 
@@ -36,12 +41,17 @@ class TugasAkhirController extends Controller
 
     public const BELUM_MEMENUHI = 'belum_memenuhi';
 
+    private const EKSTENSI_DOKUMEN = 'pdf,jpg,jpeg,png';
+
     public function index(Request $request): Response
     {
         $mahasiswa = $this->mahasiswa($request);
         $tugasAkhir = TugasAkhir::milik($mahasiswa->id)?->load(['pembimbing1.user:id,name', 'pembimbing2.user:id,name']);
-        $pengajuan = PengajuanAkademik::terakhir($mahasiswa->id, PengajuanAkademik::TUGAS_AKHIR);
-        $syarat = SyaratTugasAkhir::pengajuanTa($mahasiswa);
+        $pengajuanTa = PengajuanAkademik::terakhir($mahasiswa->id, PengajuanAkademik::TUGAS_AKHIR);
+        $pengajuanPendadaran = PengajuanAkademik::terakhir($mahasiswa->id, PengajuanAkademik::PENDADARAN);
+        $syaratTa = SyaratTugasAkhir::pengajuanTa($mahasiswa);
+        $syaratPendadaran = $tugasAkhir ? SyaratTugasAkhir::pendadaran($mahasiswa) : [];
+        $pendadaran = $this->pendadaranAktif($tugasAkhir)?->load(['ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name']);
 
         return Inertia::render('Mahasiswa/TugasAkhir', [
             'tugasAkhir' => $tugasAkhir ? [
@@ -52,9 +62,15 @@ class TugasAkhirController extends Controller
                 'disahkan_at' => $tugasAkhir->created_at?->toIso8601String(),
             ] : null,
             'pengajuanTa' => [
-                'keadaan' => $this->keadaanTa($tugasAkhir, $pengajuan, $syarat),
-                'syarat' => $syarat,
-                'pengajuan' => $pengajuan ? $this->tampilkan($pengajuan) : null,
+                'keadaan' => $this->keadaanTa($tugasAkhir, $pengajuanTa, $syaratTa),
+                'syarat' => $syaratTa,
+                'pengajuan' => $pengajuanTa ? $this->tampilkan($pengajuanTa) : null,
+            ],
+            'pendaftaranPendadaran' => [
+                'keadaan' => $this->keadaanPendadaran($tugasAkhir, $pendadaran, $pengajuanPendadaran, $syaratPendadaran),
+                'syarat' => $syaratPendadaran,
+                'pengajuan' => $pengajuanPendadaran ? $this->tampilkan($pengajuanPendadaran) : null,
+                'jadwal' => $pendadaran?->jadwal(),
             ],
             'riwayat' => PengajuanAkademik::query()->where('mahasiswa_id', $mahasiswa->id)
                 ->with('riwayat.pengguna:id,name')->latest('id')->get()
@@ -81,69 +97,123 @@ class TugasAkhirController extends Controller
     {
         $mahasiswa = $this->mahasiswa($request);
 
-        return DB::transaction(function () use ($request, $mahasiswa): RedirectResponse {
+        return $this->simpan($request, $mahasiswa, PengajuanAkademik::TUGAS_AKHIR, function (?PengajuanAkademik $pengajuan) use ($mahasiswa): string {
+            return $this->keadaanTa(TugasAkhir::milik($mahasiswa->id), $pengajuan, SyaratTugasAkhir::pengajuanTa($mahasiswa));
+        }, fn (bool $perbaikan): array => [
+            'judul' => ['required', 'string', 'max:300'],
+            'bidang' => ['required', 'string', 'max:150'],
+            'ringkasan' => ['required', 'string', 'max:5000'],
+            'usulan_pembimbing_1_id' => ['required', 'integer', 'exists:dosen_profiles,id'],
+            'usulan_pembimbing_2_id' => ['nullable', 'integer', 'exists:dosen_profiles,id', 'different:usulan_pembimbing_1_id'],
+            'proposal' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:10240', 'extensions:pdf', 'mimes:pdf'],
+        ], [
+            'proposal.extensions' => 'Proposal harus berupa PDF.',
+            'proposal.max' => 'Ukuran proposal maksimal 10 MB.',
+            'usulan_pembimbing_2_id.different' => 'Usulan pembimbing 2 harus berbeda dari pembimbing 1.',
+        ], [
+            'judul' => 'Judul',
+            'bidang' => 'Bidang',
+            'ringkasan' => 'Ringkasan proposal',
+            'usulan_pembimbing_1_id' => 'Usulan pembimbing 1',
+            'usulan_pembimbing_2_id' => 'Usulan pembimbing 2',
+            'proposal' => 'Proposal',
+        ], [
+            self::SELESAI => 'Tugas akhir Anda sudah disahkan.',
+            self::MENUNGGU => 'Pengajuan Anda masih menunggu diproses admin.',
+            self::BELUM_MEMENUHI => 'Anda belum memenuhi syarat pengajuan tugas akhir.',
+        ], 'tugas akhir');
+    }
+
+    /**
+     * Daftar pendadaran (atau kirim ulang perbaikannya) dengan naskah, lembar persetujuan, dan bukti bayar.
+     */
+    public function ajukanPendadaran(Request $request): RedirectResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+
+        return $this->simpan($request, $mahasiswa, PengajuanAkademik::PENDADARAN, function (?PengajuanAkademik $pengajuan) use ($mahasiswa): string {
+            $tugasAkhir = TugasAkhir::milik($mahasiswa->id);
+
+            return $this->keadaanPendadaran($tugasAkhir, $this->pendadaranAktif($tugasAkhir), $pengajuan, $tugasAkhir ? SyaratTugasAkhir::pendadaran($mahasiswa) : []);
+        }, fn (bool $perbaikan): array => [
+            'judul' => ['required', 'string', 'max:300'],
+            'naskah' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:20480', 'extensions:pdf', 'mimes:pdf'],
+            'persetujuan_pembimbing' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
+            'bukti_bayar' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
+        ], [
+            'naskah.extensions' => 'Naskah harus berupa PDF.',
+            'naskah.max' => 'Ukuran naskah maksimal 20 MB.',
+            '*.extensions' => ':attribute harus berupa PDF atau foto (JPG/PNG).',
+            '*.max' => 'Ukuran :attribute maksimal 5 MB.',
+        ], [
+            'judul' => 'Judul final',
+            'naskah' => 'Naskah',
+            'persetujuan_pembimbing' => 'Lembar persetujuan pembimbing',
+            'bukti_bayar' => 'Bukti bayar pendadaran',
+        ], [
+            self::TERKUNCI => 'Tugas akhir Anda belum disahkan.',
+            self::TERJADWAL => 'Pendadaran Anda sudah dijadwalkan.',
+            self::SELESAI => 'Pendadaran Anda sudah selesai.',
+            self::MENUNGGU => 'Pendaftaran Anda masih menunggu diproses.',
+            self::BELUM_MEMENUHI => 'Anda belum memenuhi syarat pendaftaran pendadaran.',
+        ], 'pendaftaran pendadaran');
+    }
+
+    /**
+     * Alur kirim bersama: kunci baris mahasiswa, tentukan keadaan form, validasi, simpan berkas, lalu kirim.
+     *
+     * @param  callable(?PengajuanAkademik): string  $keadaan
+     * @param  callable(bool): array<string, list<string>>  $aturan  menerima "sedang perbaikan"
+     * @param  array<string, string>  $pesan
+     * @param  array<string, string>  $atribut
+     * @param  array<string, string>  $pesanKeadaan  keadaan yang menolak kiriman => pesan
+     */
+    private function simpan(Request $request, MahasiswaProfile $mahasiswa, string $jenis, callable $keadaan, callable $aturan, array $pesan, array $atribut, array $pesanKeadaan, string $nama): RedirectResponse
+    {
+        return DB::transaction(function () use ($request, $mahasiswa, $jenis, $keadaan, $aturan, $pesan, $atribut, $pesanKeadaan, $nama): RedirectResponse {
             // Kunci baris mahasiswa agar dua kiriman bersamaan tidak membuat dua pengajuan.
             MahasiswaProfile::query()->whereKey($mahasiswa->id)->lockForUpdate()->first();
 
-            $pengajuan = PengajuanAkademik::terakhir($mahasiswa->id, PengajuanAkademik::TUGAS_AKHIR);
-            $keadaan = $this->keadaanTa(TugasAkhir::milik($mahasiswa->id), $pengajuan, SyaratTugasAkhir::pengajuanTa($mahasiswa));
-            $perbaikan = $keadaan === self::PERBAIKAN;
-
-            $pesan = match ($keadaan) {
-                self::SELESAI => 'Tugas akhir Anda sudah disahkan.',
-                self::MENUNGGU => 'Pengajuan Anda masih menunggu diproses admin.',
-                self::BELUM_MEMENUHI => 'Anda belum memenuhi syarat pengajuan tugas akhir.',
-                default => null,
-            };
-            if ($pesan !== null) {
-                throw ValidationException::withMessages(['judul' => $pesan]);
+            $pengajuan = PengajuanAkademik::terakhir($mahasiswa->id, $jenis);
+            $status = $keadaan($pengajuan);
+            if (isset($pesanKeadaan[$status])) {
+                throw ValidationException::withMessages(['judul' => $pesanKeadaan[$status]]);
             }
+            $perbaikan = $status === self::PERBAIKAN;
 
-            $data = $request->validate([
-                'judul' => ['required', 'string', 'max:300'],
-                'bidang' => ['required', 'string', 'max:150'],
-                'ringkasan' => ['required', 'string', 'max:5000'],
-                'usulan_pembimbing_1_id' => ['required', 'integer', 'exists:dosen_profiles,id'],
-                'usulan_pembimbing_2_id' => ['nullable', 'integer', 'exists:dosen_profiles,id', 'different:usulan_pembimbing_1_id'],
-                'proposal' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:10240', 'extensions:pdf', 'mimes:pdf'],
-            ], [
-                'proposal.extensions' => 'Proposal harus berupa PDF.',
-                'proposal.mimes' => 'Isi berkas proposal bukan PDF.',
-                'proposal.max' => 'Ukuran proposal maksimal 10 MB.',
-                'usulan_pembimbing_2_id.different' => 'Usulan pembimbing 2 harus berbeda dari pembimbing 1.',
-            ], [
-                'judul' => 'Judul',
-                'bidang' => 'Bidang',
-                'ringkasan' => 'Ringkasan proposal',
-                'usulan_pembimbing_1_id' => 'Usulan pembimbing 1',
-                'usulan_pembimbing_2_id' => 'Usulan pembimbing 2',
-                'proposal' => 'Proposal',
-            ]);
+            $aturanBerkas = $aturan($perbaikan);
+            $data = $request->validate($aturanBerkas, [...$pesan, '*.mimes' => 'Isi berkas :attribute tidak sesuai dengan formatnya.'], $atribut);
 
-            $isian = collect($data)->except('proposal')->all();
+            $kunciBerkas = collect($aturanBerkas)->filter(fn (array $r): bool => in_array('file', $r, true))->keys();
             $lampiran = $perbaikan ? $pengajuan->lampiran : [];
-            if ($request->file('proposal') instanceof UploadedFile) {
-                if ($perbaikan && isset($lampiran['proposal'])) {
-                    Storage::disk(AllowedUpload::DISK)->delete($lampiran['proposal']);
+            foreach ($kunciBerkas as $kunci) {
+                $berkas = $request->file($kunci);
+                if (! $berkas instanceof UploadedFile) {
+                    continue;
                 }
-                $lampiran['proposal'] = $this->simpanBerkas($request->file('proposal'));
+                if (isset($lampiran[$kunci])) {
+                    Storage::disk(AllowedUpload::DISK)->delete($lampiran[$kunci]);
+                }
+                $lampiran[$kunci] = $berkas->storeAs('pengajuan-akademik', Str::random(24).'.'.strtolower($berkas->getClientOriginalExtension()), AllowedUpload::DISK);
             }
 
+            $isian = collect($data)->except($kunciBerkas->all())->all();
             if ($perbaikan) {
                 $pengajuan->update(['isian' => $isian, 'lampiran' => $lampiran]);
             } else {
                 $pengajuan = PengajuanAkademik::query()->create([
                     'mahasiswa_id' => $mahasiswa->id,
-                    'jenis' => PengajuanAkademik::TUGAS_AKHIR,
+                    'jenis' => $jenis,
+                    'tugas_akhir_id' => $jenis === PengajuanAkademik::TUGAS_AKHIR ? null : TugasAkhir::milik($mahasiswa->id)?->id,
                     'isian' => $isian,
                     'lampiran' => $lampiran,
                 ]);
             }
-            $pengajuan->catat(PengajuanAkademik::MENUNGGU, null, $request->user()->id);
+            $pengajuan->kirim($request->user()->id);
 
-            return back()->with('success', $perbaikan
-                ? 'Perbaikan pengajuan tugas akhir terkirim dan menunggu diproses admin.'
-                : 'Pengajuan tugas akhir terkirim dan menunggu diproses admin.');
+            $tujuan = $pengajuan->status === PengajuanAkademik::MENUNGGU_PEMBIMBING ? 'pembimbing' : 'admin';
+
+            return back()->with('success', ($perbaikan ? 'Perbaikan ' : 'Pengajuan ').$nama.' terkirim dan menunggu diproses '.$tujuan.'.');
         });
     }
 
@@ -154,11 +224,33 @@ class TugasAkhirController extends Controller
     {
         return match (true) {
             $tugasAkhir !== null => self::SELESAI,
-            $pengajuan?->status === PengajuanAkademik::MENUNGGU => self::MENUNGGU,
+            $pengajuan?->sedangDiproses() === true => self::MENUNGGU,
             ! SyaratTugasAkhir::terpenuhi($syarat) => self::BELUM_MEMENUHI,
             $pengajuan?->status === PengajuanAkademik::PERLU_PERBAIKAN => self::PERBAIKAN,
             default => self::BARU,
         };
+    }
+
+    /**
+     * @param  list<array{terpenuhi: bool}>  $syarat
+     */
+    private function keadaanPendadaran(?TugasAkhir $tugasAkhir, ?Pendadaran $pendadaran, ?PengajuanAkademik $pengajuan, array $syarat): string
+    {
+        return match (true) {
+            $tugasAkhir === null => self::TERKUNCI,
+            $tugasAkhir->status === TugasAkhir::SELESAI => self::SELESAI,
+            $pendadaran !== null => self::TERJADWAL,
+            $pengajuan?->sedangDiproses() === true => self::MENUNGGU,
+            ! SyaratTugasAkhir::terpenuhi($syarat) => self::BELUM_MEMENUHI,
+            $pengajuan?->status === PengajuanAkademik::PERLU_PERBAIKAN => self::PERBAIKAN,
+            default => self::BARU,
+        };
+    }
+
+    private function pendadaranAktif(?TugasAkhir $tugasAkhir): ?Pendadaran
+    {
+        return $tugasAkhir === null ? null
+            : Pendadaran::query()->where('tugas_akhir_id', $tugasAkhir->id)->where('status', Pendadaran::DIJADWALKAN)->latest('id')->first();
     }
 
     /**
@@ -175,11 +267,6 @@ class TugasAkhirController extends Controller
             'diajukan_at' => $pengajuan->diajukan_at?->toIso8601String(),
             'diproses_at' => $pengajuan->diproses_at?->toIso8601String(),
         ];
-    }
-
-    private function simpanBerkas(UploadedFile $berkas): string
-    {
-        return $berkas->storeAs('pengajuan-akademik', Str::random(24).'.'.strtolower($berkas->getClientOriginalExtension()), AllowedUpload::DISK);
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * Selama berstatus menunggu, mahasiswa tidak bisa membatalkan maupun mengisi form baru untuk jenis yang
  * sama. "Perlu perbaikan" membuka form yang sama untuk dikirim ulang; "ditolak" membuka form baru.
+ * Pendaftaran pendadaran menunggu salah satu pembimbing dulu (menunggu_pembimbing), lalu admin (menunggu).
  */
 class PengajuanAkademik extends Model
 {
@@ -31,7 +32,19 @@ class PengajuanAkademik extends Model
         self::WISUDA => 'Wisuda',
     ];
 
+    /** Menunggu keputusan admin. */
     public const MENUNGGU = 'menunggu';
+
+    /** Pendadaran: menunggu persetujuan salah satu pembimbing sebelum naik ke admin. */
+    public const MENUNGGU_PEMBIMBING = 'menunggu_pembimbing';
+
+    /** Status yang mengunci form mahasiswa. */
+    public const SEDANG_DIPROSES = [self::MENUNGGU_PEMBIMBING, self::MENUNGGU];
+
+    /** Peristiwa di riwayat selain perubahan status biasa. */
+    public const DIKIRIM = 'dikirim';
+
+    public const DISETUJUI_PEMBIMBING = 'disetujui_pembimbing';
 
     public const PERLU_PERBAIKAN = 'perlu_perbaikan';
 
@@ -39,11 +52,11 @@ class PengajuanAkademik extends Model
 
     public const DITOLAK = 'ditolak';
 
-    public const STATUS = [self::MENUNGGU, self::PERLU_PERBAIKAN, self::DISETUJUI, self::DITOLAK];
+    public const STATUS = [self::MENUNGGU_PEMBIMBING, self::MENUNGGU, self::PERLU_PERBAIKAN, self::DISETUJUI, self::DITOLAK];
 
     protected $table = 'pengajuan_akademik';
 
-    protected $fillable = ['mahasiswa_id', 'jenis', 'isian', 'lampiran', 'status', 'catatan', 'diproses_oleh', 'diproses_at', 'diajukan_at'];
+    protected $fillable = ['mahasiswa_id', 'jenis', 'tugas_akhir_id', 'isian', 'lampiran', 'status', 'catatan', 'diproses_oleh', 'diproses_at', 'diajukan_at', 'disetujui_pembimbing_oleh', 'disetujui_pembimbing_at'];
 
     protected function casts(): array
     {
@@ -52,6 +65,7 @@ class PengajuanAkademik extends Model
             'lampiran' => 'array',
             'diproses_at' => 'datetime',
             'diajukan_at' => 'datetime',
+            'disetujui_pembimbing_at' => 'datetime',
         ];
     }
 
@@ -63,6 +77,16 @@ class PengajuanAkademik extends Model
     public function pemroses(): BelongsTo
     {
         return $this->belongsTo(User::class, 'diproses_oleh');
+    }
+
+    public function tugasAkhir(): BelongsTo
+    {
+        return $this->belongsTo(TugasAkhir::class);
+    }
+
+    public function pembimbingPenyetuju(): BelongsTo
+    {
+        return $this->belongsTo(DosenProfile::class, 'disetujui_pembimbing_oleh');
     }
 
     public function riwayat(): HasMany
@@ -83,21 +107,29 @@ class PengajuanAkademik extends Model
         return $this->status === self::MENUNGGU;
     }
 
-    /**
-     * Ubah status dan catat ke riwayat. Status menunggu = dikirim (ulang) oleh mahasiswa.
-     */
-    public function catat(string $status, ?string $catatan, ?int $oleh): void
+    public function sedangDiproses(): bool
     {
-        $diajukan = $status === self::MENUNGGU;
+        return in_array($this->status, self::SEDANG_DIPROSES, true);
+    }
 
-        $this->update([
-            'status' => $status,
-            'catatan' => $diajukan ? null : $catatan,
-            'diproses_oleh' => $diajukan ? null : $oleh,
-            'diproses_at' => $diajukan ? null : now(),
-            'diajukan_at' => $diajukan ? now() : $this->diajukan_at,
-        ]);
+    /**
+     * Mahasiswa mengirim (ulang) pengajuan. Pendadaran ke pembimbing dulu, kecuali pembimbing sudah
+     * menyetujuinya dan yang meminta perbaikan adalah admin.
+     */
+    public function kirim(int $oleh): void
+    {
+        $status = $this->jenis === self::PENDADARAN && $this->disetujui_pembimbing_at === null ? self::MENUNGGU_PEMBIMBING : self::MENUNGGU;
 
-        $this->riwayat()->create(['status' => $status, 'catatan' => $catatan, 'oleh' => $oleh]);
+        $this->update(['status' => $status, 'catatan' => null, 'diproses_oleh' => null, 'diproses_at' => null, 'diajukan_at' => now()]);
+        $this->riwayat()->create(['status' => self::DIKIRIM, 'oleh' => $oleh]);
+    }
+
+    /**
+     * Ubah status oleh pemroses (pembimbing/admin) dan catat ke riwayat.
+     */
+    public function catat(string $status, ?string $catatan, int $oleh, ?string $peristiwa = null): void
+    {
+        $this->update(['status' => $status, 'catatan' => $catatan, 'diproses_oleh' => $oleh, 'diproses_at' => now()]);
+        $this->riwayat()->create(['status' => $peristiwa ?? $status, 'catatan' => $catatan, 'oleh' => $oleh]);
     }
 }

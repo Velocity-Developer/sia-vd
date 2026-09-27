@@ -3,12 +3,20 @@ import InputError from '@/components/InputError.vue';
 import Pagination from '@/components/Pagination.vue';
 import SearchSelect from '@/components/SearchSelect.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
+import ModalJadwalPendadaran from '@/components/tugas-akhir/ModalJadwalPendadaran.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
-import { JENIS_PENGAJUAN, LABEL_LAMPIRAN, STATUS_PENGAJUAN, type JenisPengajuan, type StatusPengajuan } from '@/lib/tugasAkhir';
+import {
+    JENIS_PENGAJUAN,
+    LABEL_LAMPIRAN,
+    STATUS_PENGAJUAN,
+    type JadwalPendadaran,
+    type JenisPengajuan,
+    type StatusPengajuan,
+} from '@/lib/tugasAkhir';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { Paperclip, Search } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
@@ -21,6 +29,10 @@ type Baris = {
     isian: Record<string, any>;
     usulan_pembimbing: string[];
     lampiran: string[];
+    pembimbing: string[];
+    disetujui_pembimbing: string | null;
+    disetujui_pembimbing_at: string | null;
+    jadwal: JadwalPendadaran | null;
     status: StatusPengajuan;
     catatan: string | null;
     diproses_oleh: string | null;
@@ -34,6 +46,7 @@ const props = defineProps<{
     jenisTersedia: JenisPengajuan[];
     jumlahMenunggu: Partial<Record<JenisPengajuan, number>>;
     dosenOptions: { id: number; name: string }[];
+    ruangOptions: { id: number; name: string }[];
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -58,7 +71,13 @@ const terbuka = ref<number | null>(null);
 // Setujui TA: admin mengesahkan judul dan menetapkan pembimbing (awalnya diisi dari usulan mahasiswa).
 const setujuiItem = ref<Baris | null>(null);
 const setujuiForm = useForm({ judul: '', pembimbing_1_id: null as number | null, pembimbing_2_id: null as number | null });
+// Pendadaran disetujui sekaligus dijadwalkan lewat modal tersendiri.
+const jadwalkanItem = ref<Baris | null>(null);
 const bukaSetujui = (b: Baris) => {
+    if (props.filter.jenis === 'pendadaran') {
+        jadwalkanItem.value = b;
+        return;
+    }
     setujuiItem.value = b;
     setujuiForm.clearErrors();
     setujuiForm.judul = b.isian.judul ?? '';
@@ -166,11 +185,18 @@ const kembalikan = () => {
                                     </td>
                                     <td class="max-w-[440px] px-4 py-3 text-sm text-[#31302e]">
                                         <span class="block text-[15px] font-medium text-black">{{ b.isian.judul }}</span>
-                                        <span class="block text-xs text-[#615d59]">Bidang: {{ b.isian.bidang }}</span>
+                                        <span v-if="b.isian.bidang" class="block text-xs text-[#615d59]">Bidang: {{ b.isian.bidang }}</span>
                                         <span v-if="b.usulan_pembimbing.length" class="block text-xs text-[#615d59]"
                                             >Usulan pembimbing: {{ b.usulan_pembimbing.join(', ') }}</span
                                         >
+                                        <span v-if="b.pembimbing.length" class="block text-xs text-[#615d59]"
+                                            >Pembimbing: {{ b.pembimbing.join(', ') }}</span
+                                        >
+                                        <span v-if="b.disetujui_pembimbing" class="block text-xs text-[#1aae39]"
+                                            >Disetujui {{ b.disetujui_pembimbing }} · {{ formatTanggal(b.disetujui_pembimbing_at, false) }}</span
+                                        >
                                         <button
+                                            v-if="b.isian.ringkasan"
                                             type="button"
                                             class="mt-1 text-xs font-medium text-[#0075de] hover:underline"
                                             @click="terbuka = terbuka === b.id ? null : b.id"
@@ -203,6 +229,12 @@ const kembalikan = () => {
                                         <span v-if="b.diproses_oleh" class="mt-1 block text-xs text-[#a39e98]"
                                             >{{ formatTanggal(b.diproses_at, false) }} · {{ b.diproses_oleh }}</span
                                         >
+                                        <span v-if="b.jadwal" class="mt-1 block text-xs text-[#31302e]"
+                                            >Pendadaran {{ formatTanggal(b.jadwal.tanggal, false) }}, {{ b.jadwal.jam_mulai }}–{{
+                                                b.jadwal.jam_akhir
+                                            }}
+                                            · {{ b.jadwal.ruang }}</span
+                                        >
                                     </td>
                                     <td class="px-4 py-3">
                                         <div v-if="b.status === 'menunggu'" class="flex flex-wrap items-center justify-end gap-2">
@@ -224,6 +256,9 @@ const kembalikan = () => {
                                                 >Setujui</Button
                                             >
                                         </div>
+                                        <p v-else-if="b.status === 'menunggu_pembimbing'" class="text-right text-xs text-[#a39e98]">
+                                            Menunggu persetujuan pembimbing
+                                        </p>
                                     </td>
                                 </tr>
                                 <tr v-if="!props.pengajuan.data.length">
@@ -240,6 +275,13 @@ const kembalikan = () => {
             </div>
         </div>
 
+        <ModalJadwalPendadaran
+            v-if="jadwalkanItem"
+            :pengajuan="{ id: jadwalkanItem.id, nama: jadwalkanItem.nama, judul: jadwalkanItem.isian.judul, pembimbing: jadwalkanItem.pembimbing }"
+            :dosen-options="props.dosenOptions"
+            :ruang-options="props.ruangOptions"
+            @tutup="jadwalkanItem = null"
+        />
         <div v-if="setujuiItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="setujuiItem = null">
             <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="setujui">
                 <h3 class="text-lg font-semibold">Setujui tugas akhir</h3>

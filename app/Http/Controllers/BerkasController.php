@@ -6,6 +6,7 @@ use App\AllowedUpload;
 use App\Models\InfoKuliah;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
+use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
 use App\Models\PengajuanIzin;
 use App\Models\PengajuanSusulan;
@@ -146,7 +147,8 @@ class BerkasController extends Controller
     }
 
     /**
-     * Berkas pengajuan TA/pendadaran/wisuda: pemilik, admin pemroses, dan pembimbing TA mahasiswa itu.
+     * Berkas pengajuan TA/pendadaran/wisuda: pemilik, admin pemroses, pembimbing TA mahasiswa itu, dan
+     * penguji pendadaran dari pengajuan tersebut.
      */
     public function pengajuanAkademik(Request $request, PengajuanAkademik $pengajuanAkademik, string $kunci): StreamedResponse
     {
@@ -155,7 +157,8 @@ class BerkasController extends Controller
         $boleh = ($user->mahasiswaProfile !== null && $pengajuanAkademik->mahasiswa_id === $user->mahasiswaProfile->id)
             || $user->hasPermission('admin.pengajuan-akademik')
             || ($dosenId !== null && $user->hasPermission('dosen.bimbingan')
-                && TugasAkhir::milik($pengajuanAkademik->mahasiswa_id)?->dibimbingOleh($dosenId));
+                && (TugasAkhir::milik($pengajuanAkademik->mahasiswa_id)?->dibimbingOleh($dosenId)
+                    || Pendadaran::query()->where('pengajuan_id', $pengajuanAkademik->id)->diuji($dosenId)->exists()));
 
         abort_unless($boleh, 403);
 
