@@ -1,6 +1,6 @@
 # Flowchart Sistem SIA VD
 
-Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `127106e`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 17](system-flow.md#17-perlu-dikonfirmasi).
+Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `693048f`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 18](system-flow.md#18-perlu-dikonfirmasi).
 
 Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar dan diunduh): [system-flowchart.html](system-flowchart.html). Bangun ulang dengan `python3 docs/build-flowchart-html.py` setiap kali berkas ini berubah.
 
@@ -28,8 +28,11 @@ Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar
 20. [Ujian susulan dari awal sampai akhir](#20-ujian-susulan-dari-awal-sampai-akhir)
 21. [Status pengajuan susulan](#21-status-pengajuan-susulan)
 22. [Status tagihan susulan](#22-status-tagihan-susulan)
-23. [Pindah kelas](#23-pindah-kelas)
-24. [Hubungan data utama](#24-hubungan-data-utama)
+23. [Tugas akhir sampai wisuda](#23-tugas-akhir-sampai-wisuda)
+24. [Status pengajuan TA, pendadaran, dan wisuda](#24-status-pengajuan-ta-pendadaran-dan-wisuda)
+25. [Status pendadaran](#25-status-pendadaran)
+26. [Pindah kelas](#26-pindah-kelas)
+27. [Hubungan data utama](#27-hubungan-data-utama)
 
 ---
 
@@ -55,6 +58,7 @@ flowchart LR
         Ujian["Ujian UTS / UAS / remidi"]
         Nilai["Nilai akhir dan kunci nilai"]
         Remidi["Daftar remidi"]
+        TaMod["Tugas akhir, pendadaran, wisuda"]
     end
 
     subgraph Keuangan["Keuangan"]
@@ -76,6 +80,7 @@ flowchart LR
     Admin --> Ujian
     Admin --> Pindah
     Admin --> Info
+    Admin --> TaMod
     Admin -. "tidak pernah terkunci" .-> Nilai
 
     Dosen --> Konten
@@ -83,6 +88,7 @@ flowchart LR
     Dosen --> Ujian
     Dosen --> Nilai
     Dosen --> Remidi
+    Dosen -- "pembimbing, penguji" --> TaMod
 
     Mhs --> KRS
     Mhs --> Konten
@@ -93,6 +99,7 @@ flowchart LR
     Mhs --> Tagihan
     Mhs --> TagRem
     Mhs --> Info
+    Mhs --> TaMod
 ```
 
 ## 2. Siklus satu semester
@@ -111,6 +118,7 @@ flowchart TD
     G --> H["Perkuliahan: materi, tugas, quiz,<br/>presensi, izin/sakit, pindah kelas"]
     H --> I["Ujian UTS lalu UAS<br/>jadwal oleh admin, soal dan nilai oleh dosen"]
     I -.-> SUS["Tidak bisa ikut UTS/UAS:<br/>ujian susulan (diagram 20)"]
+    F -.-> TAK["Mengambil mata kuliah TA/Skripsi:<br/>tugas akhir sampai wisuda (diagram 23)"]
     I --> J["Dosen mengisi huruf akhir manual"]
     J --> K{"Finalisasi nilai atau<br/>batas input nilai lewat"}
     K --> L["Nilai kelas final dan terkunci untuk dosen"]
@@ -247,7 +255,7 @@ flowchart TD
         C4 -- Ya --> C5["Minta konfirmasi"] --> C1
         C4 -- Tidak --> C6["Catat krs_semester<br/>KRS terkunci untuk mahasiswa"]
         C6 --> C7{"Perlu diubah?"}
-        C7 -- "Ganti kelas paralel" --> C8["Pindah kelas (diagram 20)"]
+        C7 -- "Ganti kelas paralel" --> C8["Pindah kelas (diagram 26)"]
         C7 -- "Salah ambil mata kuliah" --> C9["Admin: Buka kunci KRS<br/>hapus krs_semester"]
         C9 --> C1
     end
@@ -618,7 +626,84 @@ stateDiagram-v2
     end note
 ```
 
-## 23. Pindah kelas
+## 23. Tugas akhir sampai wisuda
+
+```mermaid
+flowchart TD
+    A["Mahasiswa mengambil mata kuliah TA/Skripsi<br/>di KRS tahun aktif"] --> B["Pengajuan TA: judul, bidang, ringkasan,<br/>usulan pembimbing, proposal"]
+    B --> C{"Admin: TA & Wisuda"}
+    C -- "Perbaikan" --> B
+    C -- "Tolak" --> B0["Form baru"]
+    B0 --> B
+    C -- "Setujui + sahkan judul,<br/>tetapkan pembimbing (maks 2)" --> D["TA berjalan"]
+    D --> E{"Syarat pendadaran:<br/>SKS >= minimal, tanpa nilai E,<br/>semua mata kuliah lain dinilai"}
+    E -- "Belum" --> E1["Form terkunci + daftar syarat (PD-55)"]
+    E -- "Ya" --> F["Daftar pendadaran: judul final, naskah,<br/>lembar persetujuan, bukti bayar"]
+    F --> G{"Salah satu pembimbing"}
+    G -- "Perbaikan / tolak" --> F
+    G -- "Setujui" --> H{"Admin: setujui + jadwalkan<br/>tanggal, jam, ruang, 3 penguji"}
+    H -- "Ruang terpakai / penguji menguji<br/>pendadaran lain" --> H1["Ditolak, ubah jadwal"]
+    H -- "Penguji sedang mengajar" --> H2["Peringatan, Tetap Simpan"]
+    H2 --> I
+    H -- "Perbaikan (kembali ke admin)" --> F
+    H -- "Tidak bentrok" --> I["Pendadaran dijadwalkan<br/>surat tugas + undangan (PDF) bernomor"]
+    I --> J["Tiap penguji menilai 0-100 sejak jam mulai"]
+    J --> K{"Ketua penguji: rata-rata -> huruf<br/>(angka minimal skala nilai)"}
+    K -- "Lulus" --> L["TA selesai, huruf masuk KRS mata kuliah TA"]
+    K -- "Lulus dengan revisi" --> K1["Mahasiswa unggah naskah revisi"]
+    K1 --> K2{"Ketua"}
+    K2 -- "Kembalikan" --> K1
+    K2 -- "Sahkan" --> L
+    K -- "Tidak lulus" --> F
+    L --> M{"Syarat wisuda + periode dibuka dan kuota tersisa"}
+    M -- "Ya" --> N["Daftar wisuda: periode, data ijazah,<br/>toga, pas foto, naskah final, bebas pinjam, bukti bayar"]
+    N --> O{"Admin (kuota dicek ulang)"}
+    O -- "Perbaikan / tolak" --> N
+    O -- "Setujui" --> P["Daftar Mahasiswa Wisuda per periode"]
+    P --> Q(["Generate SKL: IPK, predikat, tanggal lulus dibekukan<br/>status mahasiswa menjadi Lulus"])
+
+    F -.- R["Biaya pendadaran/wisuda hanya informasi di Biaya Kuliah;<br/>bukti bayar diunggah di form"]
+```
+
+## 24. Status pengajuan TA, pendadaran, dan wisuda
+
+```mermaid
+stateDiagram-v2
+    state "menunggu (admin)" as menunggu
+    [*] --> menunggu_pembimbing: mahasiswa mengirim (pendadaran)
+    [*] --> menunggu: mahasiswa mengirim (TA, wisuda)
+    menunggu_pembimbing --> menunggu: salah satu pembimbing setujui
+    menunggu_pembimbing --> perlu_perbaikan: pembimbing minta perbaikan
+    menunggu_pembimbing --> ditolak: pembimbing tolak
+    menunggu --> perlu_perbaikan: admin minta perbaikan
+    menunggu --> ditolak: admin tolak
+    menunggu --> disetujui: admin setujui (syarat dicek ulang)
+    perlu_perbaikan --> menunggu_pembimbing: kirim ulang (perbaikan dari pembimbing)
+    perlu_perbaikan --> menunggu: kirim ulang (perbaikan dari admin / TA / wisuda)
+    ditolak --> [*]: form baru
+    disetujui --> [*]
+    note right of menunggu
+        Selama menunggu mahasiswa tidak bisa
+        membatalkan atau mengisi form baru.
+    end note
+```
+
+## 25. Status pendadaran
+
+```mermaid
+stateDiagram-v2
+    [*] --> dijadwalkan: admin setujui + jadwalkan (surat bernomor)
+    dijadwalkan --> dijadwalkan: penguji mengisi / mengubah nilai sejak jam mulai
+    dijadwalkan --> selesai: ketua tetapkan lulus
+    dijadwalkan --> revisi: ketua tetapkan lulus dengan revisi
+    dijadwalkan --> tidak_lulus: ketua tetapkan tidak lulus (wajib bila huruf tidak lulus)
+    revisi --> revisi: ketua kembalikan naskah revisi
+    revisi --> selesai: ketua sahkan revisi
+    selesai --> [*]: TA selesai, huruf masuk KRS mata kuliah TA
+    tidak_lulus --> [*]: mahasiswa mendaftar ulang
+```
+
+## 26. Pindah kelas
 
 ```mermaid
 flowchart TD
@@ -641,7 +726,7 @@ flowchart TD
     L --> M(["Status disetujui, pesan: jumlah dipindah dan tertinggal<br/>tanpa notifikasi ke mahasiswa"])
 ```
 
-## 24. Hubungan data utama
+## 27. Hubungan data utama
 
 ```mermaid
 erDiagram
@@ -673,4 +758,13 @@ erDiagram
     TAGIHAN_SEMESTER ||--o{ TAGIHAN_ITEM : rincian
     JENIS_BIAYA ||--o{ TARIF_BIAYA : tarif
     MAHASISWA ||--o{ PENGAJUAN_PINDAH_KELAS : mengajukan
+    MAHASISWA ||--o{ PENGAJUAN_AKADEMIK : "mengajukan TA, pendadaran, wisuda"
+    PENGAJUAN_AKADEMIK ||--o{ RIWAYAT_PENGAJUAN_AKADEMIK : mencatat
+    MAHASISWA ||--o| TUGAS_AKHIR : menulis
+    DOSEN ||--o{ TUGAS_AKHIR : membimbing
+    TUGAS_AKHIR ||--o{ PENDADARAN : diuji
+    DOSEN ||--o{ PENDADARAN : menguji
+    PENDADARAN ||--o{ NILAI_PENDADARAN : dinilai
+    PERIODE_WISUDA ||--o{ WISUDA : peserta
+    MAHASISWA ||--o| WISUDA : "diwisuda, SKL"
 ```

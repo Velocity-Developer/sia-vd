@@ -2,9 +2,9 @@
 
 Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **sesuai kode yang ada**, bukan rencana. Gambaran visualnya ada di [system-flowchart.md](system-flowchart.md).
 
-- Disusun dari kode di cabang `main` pada commit `127106e` (27 September 2026).
+- Disusun dari kode di cabang `main` pada commit `693048f` (27 September 2026).
 - Rujukan kode ditulis sebagai `Kelas::metode` atau path berkas. Nomor baris sengaja tidak dicantumkan karena cepat berubah.
-- Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 17](#17-perlu-dikonfirmasi).
+- Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 18](#18-perlu-dikonfirmasi).
 
 ## Daftar isi
 
@@ -21,10 +21,11 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 11. [Nilai akhir, kunci nilai, dan hasil studi](#11-nilai-akhir-kunci-nilai-dan-hasil-studi)
 12. [Remidi](#12-remidi)
 13. [Ujian susulan](#13-ujian-susulan)
-14. [Pindah kelas](#14-pindah-kelas)
-15. [Fitur pendukung](#15-fitur-pendukung)
-16. [Keterkaitan antarfitur dan daftar status](#16-keterkaitan-antarfitur-dan-daftar-status)
-17. [Perlu dikonfirmasi](#17-perlu-dikonfirmasi)
+14. [Tugas akhir, pendadaran, dan wisuda](#14-tugas-akhir-pendadaran-dan-wisuda)
+15. [Pindah kelas](#15-pindah-kelas)
+16. [Fitur pendukung](#16-fitur-pendukung)
+17. [Keterkaitan antarfitur dan daftar status](#17-keterkaitan-antarfitur-dan-daftar-status)
+18. [Perlu dikonfirmasi](#18-perlu-dikonfirmasi)
 
 ---
 
@@ -54,12 +55,12 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 
 | Kelompok | Permission |
 |---|---|
-| Administrasi | `admin.dashboard`, `admin.info-kuliah`, `admin.tahun-akademik`, `admin.fakultas`, `admin.program-studi`, `admin.mata-kuliah`, `admin.ruang`, `admin.kelas-kuliah`, `admin.jadwal`, `admin.materi`, `admin.tugas`, `admin.quiz`, `admin.presensi`, `admin.ujian`, `admin.pindah-kelas` |
+| Administrasi | `admin.dashboard`, `admin.info-kuliah`, `admin.tahun-akademik`, `admin.fakultas`, `admin.program-studi`, `admin.mata-kuliah`, `admin.ruang`, `admin.kelas-kuliah`, `admin.jadwal`, `admin.materi`, `admin.tugas`, `admin.quiz`, `admin.presensi`, `admin.ujian`, `admin.pindah-kelas`, `admin.pengajuan-akademik` (TA & Wisuda, Periode Wisuda) |
 | Keuangan | `admin.jenis-biaya`, `admin.tagihan` (termasuk Tagihan Remidi) |
 | Manajemen pengguna | `admin.users.dosen`, `admin.users.mahasiswa`, `admin.users.karyawan`, `admin.roles` |
 | Pengaturan sistem | `admin.institusi`, `admin.pengaturan-email`, `admin.pengaturan-akademik`, `admin.pengaturan-tampilan` |
-| Dosen | `dosen.dashboard`, `dosen.kelas-kuliah`, `dosen.jadwal`, `dosen.materi`, `dosen.tugas`, `dosen.quiz`, `dosen.presensi`, `dosen.ujian`, `dosen.mahasiswa-kelas` |
-| Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.info-biaya`, `mahasiswa.perpustakaan` |
+| Dosen | `dosen.dashboard`, `dosen.kelas-kuliah`, `dosen.jadwal`, `dosen.materi`, `dosen.tugas`, `dosen.quiz`, `dosen.presensi`, `dosen.ujian`, `dosen.mahasiswa-kelas`, `dosen.bimbingan` (Bimbingan TA) |
+| Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.tugas-akhir`, `mahasiswa.info-biaya`, `mahasiswa.perpustakaan` |
 
 - Permission berawalan `admin.` tidak terikat jenis pengguna, jadi bisa diberikan ke role jenis apa pun.
 - Permission `dosen.*` dan `mahasiswa.*` hanya berlaku untuk role dengan jenis yang sama.
@@ -215,10 +216,10 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 |---|---|---|
 | Institusi | `admin.institusi` | Nama PT (bawaan "SIA VD"), singkatan, logo (jpg/png/webp, maks 2 MB), NPSN, alamat, kontak, tahun berdiri. Dipakai di kop PDF dan tampilan. |
 | Email | `admin.pengaturan-email` | Mailer `log` atau `smtp`. Kata sandi SMTP disimpan terenkripsi dan tidak pernah dikirim ke browser. Ada tombol kirim surel uji (`throttle:6,1`). Nilai di database menimpa `.env`. |
-| Akademik | `admin.pengaturan-akademik` | Enam formulir, dijelaskan di bawah tabel ini. |
+| Akademik | `admin.pengaturan-akademik` | Delapan formulir, dijelaskan di bawah tabel ini. |
 | Tampilan | `admin.pengaturan-tampilan` | Nama aplikasi, favicon (png/ico/webp, SVG ditolak), halaman masuk (judul, teks, gambar, tata letak `panel`/`tengah`, sorotan fitur), sidebar bawaan (`lebar`/`ringkas`). |
 
-**Tujuh formulir di tab Akademik:**
+**Delapan formulir di tab Akademik:**
 
 1. **Kunci KRS oleh pembayaran**: sakelar `kunci_krs_aktif`, bawaan mati (lihat [6.4](#64-kunci-krs-oleh-pembayaran)).
 2. **Batas SKS**:
@@ -226,8 +227,9 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
    - tabel bertingkat IPS minimal → maks SKS, bawaan 3,00→24, 2,50→21, 2,00→18, 0,00→15;
    - wajib ada baris IPS minimal 0.
 3. **Skala nilai**:
-   - setiap baris berisi `huruf`, `bobot` 0–4, `lulus`, dan `boleh_diulang`;
-   - bawaan: A=4, B=3, C=2, D=1 (lulus, boleh diulang), E=0 (tidak lulus, boleh diulang);
+   - setiap baris berisi `huruf`, `bobot` 0–4, `angka_minimal` 0–100 (boleh kosong), `lulus`, dan `boleh_diulang`;
+   - bawaan: A=4, B=3, C=2, D=1 (lulus, boleh diulang), E=0 (tidak lulus, boleh diulang); angka minimal A 80, B 70, C 60, D 50, E 0;
+   - angka minimal dipakai mengonversi nilai pendadaran menjadi huruf ([14.4](#144-penilaian-dan-hasil-pendadaran)); huruf berbobot lebih tinggi wajib berangka minimal lebih tinggi;
    - huruf yang sudah dipakai di KRS tidak bisa dihapus.
 4. **Pindah kelas**: sakelar membuka atau menutup formulir pengajuan mahasiswa, bawaan tertutup.
 5. **Remidi**: `huruf_maks_remidi`, yaitu huruf tertinggi setelah remidi. Kosong berarti bebas.
@@ -235,7 +237,8 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 6. **Ujian susulan**:
    - `batas_pengajuan_susulan_hari` (bawaan 3): pengajuan dibuka sampai N hari setelah tanggal ujian;
    - `batas_bayar_susulan_hari` (bawaan 3): batas bayar tiap tagihan susulan = tanggal terbit + N hari.
-7. **Presensi**:
+7. **Tugas akhir**: `min_sks_pendadaran` (bawaan 138), SKS bernilai minimal di luar TA untuk mendaftar pendadaran dan wisuda.
+8. **Presensi**:
    - `jumlah_pertemuan` (bawaan 16, hanya untuk kelas baru);
    - `min_kehadiran_ujian` (75%);
    - `toleransi_terlambat_menit` (15);
@@ -290,9 +293,10 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 - **Field jenis biaya:**
   - `kode` (unik), `nama`;
   - `cara_hitung`: `tetap` atau `per_sks`;
-  - `kategori`: `semester`, `remidi`, atau `susulan` (bawaan `semester`);
+  - `kategori`: `semester`, `remidi`, `susulan`, `pendadaran`, atau `wisuda` (bawaan `semester`);
   - `aktif`, `urutan`.
 - Kategori `semester` dipakai tagihan semester. Kategori `remidi` hanya dipakai tagihan remidi ([bagian 12](#12-remidi)), dan `susulan` hanya dipakai tagihan ujian susulan ([bagian 13](#13-ujian-susulan)).
+- Kategori `pendadaran` dan `wisuda` **tidak pernah ditagihkan**: hanya ditampilkan sebagai informasi di Biaya Kuliah, dengan cara hitung selalu `tetap` ([14.6](#146-biaya-dan-pengingat)).
 - **Tarif** dicatat per jenis biaya, per prodi, dan per angkatan (keduanya boleh kosong, artinya berlaku untuk semua).
 - Tarif yang dipakai adalah **yang paling khusus**: prodi+angkatan, lalu prodi saja, lalu angkatan saja, lalu umum (`JenisBiaya::tarifUntuk`).
 - Menghapus jenis biaya tidak mengubah tagihan lama, karena nama dan nominalnya sudah disalin ke rincian.
@@ -384,7 +388,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 2. Bila SKS yang diambil masih di bawah batas, sistem meminta konfirmasi (`krs_konfirmasi`).
 3. Sistem mencatat baris `krs_semester` (waktu simpan). Sejak itu mahasiswa tidak bisa lagi menambah atau membatalkan kelas sendiri.
 4. Jalan keluar setelah KRS terkunci:
-   - **pindah kelas** ([bagian 14](#14-pindah-kelas));
+   - **pindah kelas** ([bagian 15](#15-pindah-kelas));
    - **admin membuka kunci KRS** dari menu Tagihan Mahasiswa, yang menghapus baris `krs_semester`. Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
 
 ---
@@ -598,6 +602,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 - Nilai akhir berupa **huruf** di `krs.nilai`, diisi **manual** oleh dosen pengampu atau admin di tabel **Nilai Mahasiswa** (`KelasKuliahController::updateGrade`).
 - Huruf harus ada di skala nilai. Nilai boleh dikosongkan, kecuali pada jalur remidi.
 - **Tidak ada perhitungan otomatis** huruf akhir dari tugas, quiz, UTS, UAS, atau presensi. Semua nilai komponen berdiri sendiri.
+- **Kecuali mata kuliah TA/Skripsi:** huruf pendadaran yang lulus ditulis otomatis ke KRS mata kuliah TA ([14.4](#144-penilaian-dan-hasil-pendadaran)).
 
 ### 11.2 Kunci nilai
 
@@ -834,11 +839,81 @@ Status `dibatalkan`/`gugur` ini **dihitung saat ditampilkan**, bukan disimpan.
 
 - **Finalisasi nilai** tertahan selama UAS susulan masih berjalan ([11.2](#112-kunci-nilai)).
 - **Usulan remidi** menganggap mengerjakan UAS susulan sebagai ikut UAS ([12.1](#121-daftar-peserta)).
-- **Beranda** mahasiswa dan dosen menampilkan pengingat susulan ([15.3](#153-beranda)).
+- **Beranda** mahasiswa dan dosen menampilkan pengingat susulan ([16.3](#163-beranda)).
 
 ---
 
-## 14. Pindah kelas
+## 14. Tugas akhir, pendadaran, dan wisuda
+
+Tiga pengajuan berurutan di menu **Tugas Akhir & Wisuda** (mahasiswa, izin `mahasiswa.tugas-akhir`): pengajuan TA/Skripsi → pendaftaran pendadaran → pendaftaran wisuda. Admin memproses di **Administrasi → TA & Wisuda** (izin `admin.pengajuan-akademik`), dosen di **Bimbingan TA** (izin `dosen.bimbingan`). Syarat tiap tahap ada di `App\SyaratTugasAkhir`.
+
+### 14.1 Aturan bersama pengajuan
+
+- Ketiga jenis disimpan di tabel `pengajuan_akademik` (`jenis`: `tugas_akhir`, `pendadaran`, `wisuda`). Isian form per jenis ada di `isian`, berkas per kolom di `lampiran`.
+- Di atas form tampil **daftar syarat** (✓/✗ dengan keterangan, mis. "Nilai E: Statistika."). Selama ada syarat yang belum terpenuhi, form **terkunci** dengan pesan "Anda belum memenuhi syarat…". Bukti bayar bukan syarat; diunggah di form.
+- **Status:** `menunggu_pembimbing` (khusus pendadaran) → `menunggu` (admin) → `disetujui` / `perlu_perbaikan` / `ditolak`.
+- Selama `menunggu`/`menunggu_pembimbing`, mahasiswa **tidak bisa membatalkan** dan **tidak bisa mengisi form baru** untuk jenis yang sama.
+- `perlu_perbaikan` membuka **form yang sama** berisi isian lama; berkas boleh tidak diganti. `ditolak` membuka **form baru**.
+- Perbaikan dan penolakan wajib bercatatan yang ditampilkan ke mahasiswa.
+- Setiap kiriman dan keputusan dicatat di `riwayat_pengajuan_akademik` (peristiwa `dikirim`, `disetujui_pembimbing`, `perlu_perbaikan`, `ditolak`, `disetujui`) dan tampil sebagai riwayat di halaman mahasiswa.
+- Persetujuan selalu **memeriksa ulang syarat**, karena KRS atau nilai bisa berubah sejak form dikirim.
+
+### 14.2 Pengajuan TA/Skripsi
+
+- **Syarat:** mengambil mata kuliah bertanda **TA/Skripsi** (`mata_kuliahs.tugas_akhir`, diatur di master Mata Kuliah) di KRS tahun akademik aktif.
+- **Form:** judul, bidang, ringkasan proposal, usulan pembimbing 1 (wajib) dan 2 (opsional, berbeda), proposal PDF (maks 10 MB).
+- **Admin menyetujui** sambil mengesahkan judul dan menetapkan pembimbing (maks 2, boleh berbeda dari usulan). Terbentuk baris `tugas_akhir` berstatus `berjalan`.
+- Pembimbing melihat mahasiswanya di menu **Bimbingan TA** beserta proposal.
+
+### 14.3 Pendaftaran pendadaran
+
+- **Syarat:**
+  - TA `berjalan`;
+  - mengambil mata kuliah TA/Skripsi di tahun aktif;
+  - SKS bernilai di transkrip (nilai terbaik per mata kuliah, **tanpa** mata kuliah TA) ≥ `min_sks_pendadaran` (Pengaturan Akademik, bawaan 138);
+  - tidak ada nilai **E** di transkrip (nilai terbaik);
+  - tidak ada mata kuliah (selain TA) yang **belum dinilai**, termasuk yang sedang diambil semester ini.
+- **Form:** judul final (terisi dari judul TA), naskah PDF (maks 20 MB), lembar persetujuan pembimbing dan **bukti bayar pendadaran** (PDF/JPG/PNG, maks 5 MB).
+- **Persetujuan pembimbing:** pendaftaran masuk `menunggu_pembimbing`. **Cukup satu** pembimbing yang menyetujui; pembimbing juga bisa meminta perbaikan atau menolak.
+- **Kiriman ulang setelah perbaikan:** bila perbaikan diminta **admin**, kiriman ulang langsung ke admin (persetujuan pembimbing tetap berlaku); bila diminta **pembimbing**, kembali ke pembimbing.
+- **Admin menyetujui sekaligus menjadwalkan:** tanggal (≥ hari ini), jam, ruang, dan **3 penguji** berbeda (penguji 1 = **ketua**; pembimbing boleh menjadi penguji). Judul final menjadi judul TA.
+- **Cek bentrok** (`App\JadwalPendadaran`):
+  - **ditolak:** ruang dipakai pendadaran lain, pertemuan kuliah, jadwal mingguan kelas yang belum punya pertemuan (di tahun akademik yang mencakup tanggal itu), atau ujian tatap muka pada jam beririsan;
+  - **ditolak:** seorang penguji sudah menguji pendadaran lain pada jam beririsan;
+  - **peringatan saja:** penguji sedang mengajar pada jam itu. Admin bisa menekan **Tetap Simpan**.
+- Terbentuk baris `pendadaran` (`dijadwalkan`) dengan **nomor surat** urut per tahun (`001/PDD/IX/2026`).
+- **Surat Tugas & Undangan Pendadaran** (PDF) memuat identitas, judul, pembimbing, jadwal, dan ketiga penguji dengan kolom tanda tangan. Bisa dibuka mahasiswa, admin, pembimbing, dan penguji.
+- Jadwal tampil di halaman mahasiswa, pembimbing, dan **masing-masing penguji** beserta perannya.
+
+### 14.4 Penilaian dan hasil pendadaran
+
+- Setiap penguji mengisi **nilai 0–100** (dan catatan opsional) **sejak jam mulai** sampai hasil ditetapkan (`nilai_pendadaran`).
+- Setelah ketiga nilai masuk, **ketua penguji** melihat rincian nilai, rata-rata, huruf, dan **usulan** (lulus bila hurufnya lulus), lalu menetapkan hasil:
+
+| Hasil | Akibat |
+|---|---|
+| `lulus` | Pendadaran `selesai`, TA `selesai`, huruf menjadi nilai KRS mata kuliah TA (KRS yang belum dinilai lebih dulu) |
+| `lulus_revisi` | Catatan revisi wajib. Status `revisi`: mahasiswa mengunggah naskah revisi (PDF), ketua **mengesahkan** (lalu sama seperti `lulus`) atau **mengembalikan** dengan catatan |
+| `tidak_lulus` | Status `tidak_lulus`; TA tetap `berjalan` dan mahasiswa bisa mendaftar pendadaran ulang dari awal |
+
+- **Konversi angka → huruf** memakai **angka minimal** per huruf di skala nilai (Pengaturan Akademik; bawaan A 80, B 70, C 60, D 50, E 0). Bila rata-ratanya jatuh di huruf tidak lulus, hasil **harus** `tidak_lulus`.
+
+### 14.5 Pendaftaran wisuda dan SKL
+
+- **Periode wisuda** (menu **Administrasi → Periode Wisuda**): nama, tanggal acara, tempat, batas daftar (≤ tanggal acara), kuota (kosong = tanpa batas). Periode **dibuka** sampai akhir hari batas daftar selama kuota tersisa. Periode berpendaftar tidak bisa dihapus; kuota tidak bisa diturunkan di bawah jumlah peserta.
+- **Syarat daftar:** TA `selesai` (lulus pendadaran, revisi sudah disahkan), SKS minimal (sama dengan pendadaran), tidak ada nilai E, **semua** mata kuliah termasuk TA sudah dinilai, dan ada periode yang dibuka.
+- **Form:** periode, **data ijazah** (nama, tempat dan tanggal lahir; terisi dari profil dan boleh dikoreksi), ukuran toga (S–XXL), pas foto (JPG/PNG, maks 2 MB), naskah final (PDF, maks 20 MB), bukti bebas pinjam dan **bukti bayar wisuda**.
+- Admin melihat data ijazah yang **berbeda dari profil** ditandai. Persetujuan memeriksa ulang kuota periode; mahasiswa masuk **Daftar Mahasiswa Wisuda** (`wisuda`, satu per mahasiswa). Daftar bisa dicetak (PDF).
+- **Generate SKL** (per mahasiswa atau massal) membekukan tanggal lulus (tanggal pendadaran), IPK dan total SKS dari transkrip, dan **predikat** (> 3,50 Dengan Pujian; > 3,00 Sangat Memuaskan; ≥ 2,76 Memuaskan; selain itu Cukup), memberi nomor urut per tahun (`001/SKL/IX/2026`), dan mengubah status mahasiswa menjadi **Lulus**. SKL (PDF) memakai data ijazah yang dikonfirmasi di form; bisa diunduh mahasiswa pemiliknya dan admin.
+
+### 14.6 Biaya dan pengingat
+
+- Biaya pendadaran dan wisuda **tidak ditagihkan**. Admin mengisinya sebagai jenis biaya kategori `pendadaran`/`wisuda` (nominal tetap, tarif per prodi/angkatan). Kartu **Biaya Pendadaran & Wisuda** selalu tampil di Biaya Kuliah, dan nominalnya ikut tampil di label bukti bayar form pendaftaran.
+- **Beranda** menampilkan kartu "Tugas akhir & wisuda" ([16.3](#163-beranda)).
+
+---
+
+## 15. Pindah kelas
 
 1. **Formulir pengajuan** hanya bisa dikirim bila admin membukanya di Pengaturan Akademik. Bila formulir tertutup, pengiriman ditolak 403; halaman riwayat tetap bisa dibuka.
 2. **Mahasiswa mengajukan** (`Mahasiswa\PindahKelasController::store`):
@@ -863,15 +938,15 @@ Status `dibatalkan`/`gugur` ini **dihitung saat ditampilkan**, bukan disimpan.
 
 ---
 
-## 15. Fitur pendukung
+## 16. Fitur pendukung
 
-### 15.1 Info kuliah
+### 16.1 Info kuliah
 
 - Admin membuat, mengubah, dan menghapus pengumuman: teks dan **satu lampiran wajib**.
 - Semua mahasiswa melihat semua pengumuman. Tidak ada target prodi atau kelas.
 - Dosen tidak punya menu info kuliah.
 
-### 15.2 Akses berkas privat
+### 16.2 Akses berkas privat
 
 Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diunduh lewat `BerkasController`.
 
@@ -883,36 +958,38 @@ Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diund
 | Soal ujian | admin ujian dan dosen pengampu kapan saja; mahasiswa hanya bila ujian terbit, sudah dimulai, dan boleh ikut |
 | Jawaban ujian | pemilik, dosen pengampu, admin ujian |
 | Bukti bayar remidi | pemilik, pemegang `admin.tagihan` |
+| Berkas pengajuan TA/pendadaran/wisuda | pemilik, pemegang `admin.pengajuan-akademik`, pembimbing TA-nya, penguji pendadaran dari pengajuan itu |
+| Surat pendadaran dan naskah revisi | mahasiswa pemilik, pemegang `admin.pengajuan-akademik`, pembimbing, penguji |
+| SKL | mahasiswa pemilik, pemegang `admin.pengajuan-akademik` |
 | Lampiran info kuliah | pemegang `admin.info-kuliah` atau `mahasiswa.info-kuliah` |
 
 - Jenis konten ditentukan dari ekstensi. Pdf dan gambar dibuka *inline*, selain itu diunduh.
 - Setiap respons berkas diberi header `nosniff` dan CSP `sandbox`.
 
-### 15.3 Beranda
+### 16.3 Beranda
 
-- **Admin:** hanya pola placeholder. Belum ada data.
-- **Dosen:** presensi hari ini, pengingat remidi, dan ujian susulan yang perlu disiapkan soalnya atau dinilai.
-- **Mahasiswa:** peringatan kehadiran, pengingat remidi, serta pengajuan susulan yang menunggu, tagihan susulan yang belum lunas, dan jadwal susulan mendatang.
+- **Admin:** pengingat tugas akhir (jumlah pengajuan TA/pendadaran/wisuda yang menunggu keputusan dan peserta wisuda yang belum ber-SKL). Selebihnya masih pola placeholder.
+- **Dosen:** presensi hari ini, pengingat remidi, ujian susulan yang perlu disiapkan soalnya atau dinilai, serta pengingat tugas akhir (pendaftaran pendadaran menunggu persetujuan, jadwal menguji, nilai yang perlu diisi, hasil yang perlu ditetapkan ketua, revisi yang perlu disahkan).
+- **Mahasiswa:** peringatan kehadiran, pengingat remidi, pengajuan susulan yang menunggu, tagihan susulan yang belum lunas, jadwal susulan mendatang, serta pengingat tugas akhir (pengajuan yang diminta perbaikan, jadwal pendadaran, revisi yang perlu diunggah, periode wisuda, SKL terbit).
 
-### 15.4 Fitur lain
+### 16.4 Fitur lain
 
 - **Jadwal Kuliah (mahasiswa):** kelas-kelas di tahun akademik aktif beserta jadwal dan ruang.
 - **Mahasiswa Kelas (dosen):** daftar mahasiswa di kelas yang diampu, dengan pencarian.
 
-### 15.5 Placeholder
+### 16.5 Placeholder
 
 Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
 - profil dosen dan profil mahasiswa;
 - Info Perkuliahan;
-- Pendaftaran Wisuda;
 - seluruh menu **Perpustakaan** (Katalog, Pinjaman Aktif, Riwayat Pinjaman).
 
 ---
 
-## 16. Keterkaitan antarfitur dan daftar status
+## 17. Keterkaitan antarfitur dan daftar status
 
-### 16.1 Keterkaitan utama
+### 17.1 Keterkaitan utama
 
 | Dari | Ke | Hubungan |
 |---|---|---|
@@ -933,9 +1010,15 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Daftar remidi dikunci | Tagihan remidi | Tagihan diterbitkan dari daftar yang dikunci |
 | Tagihan remidi lunas | Ujian remidi, huruf akhir | Hanya peserta lunas yang ikut remidi dan bisa diubah hurufnya |
 | Pindah kelas | KRS, nilai, presensi, izin, dispensasi | Semuanya dipindah ke kelas tujuan |
-| Skala nilai | KRS, IPK, remidi | `lulus`, `boleh_diulang`, dan bobot dipakai di semua bagian itu |
+| Skala nilai | KRS, IPK, remidi, pendadaran | `lulus`, `boleh_diulang`, dan bobot dipakai di semua bagian itu; angka minimal mengonversi nilai pendadaran |
+| KRS mata kuliah TA/Skripsi | Pengajuan TA, pendaftaran pendadaran | Mengambil mata kuliah TA di tahun aktif menjadi syarat keduanya |
+| Transkrip (nilai terbaik) | Pendadaran, wisuda | SKS minimal, tanpa nilai E, dan semua mata kuliah sudah dinilai |
+| TA disahkan | Pendaftaran pendadaran, bimbingan dosen | Pembimbing menyetujui pendaftaran dan melihat mahasiswanya |
+| Pendadaran lulus | KRS mata kuliah TA, TA selesai | Huruf pendadaran menjadi nilai akhir TA; TA selesai membuka pendaftaran wisuda |
+| Jadwal kuliah, pertemuan, ujian | Jadwal pendadaran | Ruang yang terpakai menolak jadwal; penguji yang sedang mengajar hanya diberi peringatan |
+| SKL terbit | Status mahasiswa | Status berubah menjadi `Lulus` |
 
-### 16.2 Daftar status
+### 17.2 Daftar status
 
 | Entitas | Nilai |
 |---|---|
@@ -950,12 +1033,16 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Pengajuan izin | `menunggu`, `disetujui`, `ditolak` |
 | Ujian | jenis: `uts`, `uas`, `remidi`, `uts_susulan`, `uas_susulan`. Mode: `tatap_muka`, `online_berkas`, `online_soal`. Status: `draf`, `terbit` |
 | Pengajuan pindah kelas | `pending`, `disetujui`, `ditolak` |
-| Jenis biaya | cara hitung: `tetap`, `per_sks`. Kategori: `semester`, `remidi`, `susulan` |
+| Jenis biaya | cara hitung: `tetap`, `per_sks`. Kategori: `semester`, `remidi`, `susulan`, `pendadaran` (info), `wisuda` (info) |
+| Pengajuan TA/pendadaran/wisuda | `menunggu_pembimbing` (pendadaran), `menunggu`, `perlu_perbaikan`, `disetujui`, `ditolak`. Riwayat: `dikirim`, `disetujui_pembimbing`, dan status keputusan |
+| Tugas akhir | `berjalan`, `selesai` |
+| Pendadaran | `dijadwalkan`, `revisi`, `selesai`, `tidak_lulus`. Hasil: `lulus`, `lulus_revisi`, `tidak_lulus` |
+| Peserta wisuda | tanpa status; SKL terbit bila `nomor_skl` terisi |
 | Penanda kelas | `nilai_final_at`, `nilai_dibuka_sampai`, `remidi_dikunci_at`, `remidi_final_at` |
 
 ---
 
-## 17. Perlu dikonfirmasi
+## 18. Perlu dikonfirmasi
 
 Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau belum bisa dipastikan maksudnya. Tidak ada kode yang diubah untuk dokumen ini.
 
@@ -1020,7 +1107,7 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 42. **Flash `pindah_kelas_error` dibaca di halaman mahasiswa** tetapi tidak pernah diisi controller.
 43. **Tidak ada notifikasi** (email atau lainnya) untuk hasil pindah kelas, tagihan, remidi, atau ujian susulan. Semuanya hanya lewat halaman dan pesan flash.
 44. **Info kuliah tanpa target** (prodi/kelas), dan dosen tidak punya akses.
-45. **Beranda admin dan `/dashboard` masih placeholder.** Begitu juga profil dosen dan mahasiswa, Info Perkuliahan, Pendaftaran Wisuda, dan Perpustakaan.
+45. **Beranda admin dan `/dashboard` sebagian besar masih placeholder** (admin hanya berisi pengingat tugas akhir). Begitu juga profil dosen dan mahasiswa, Info Perkuliahan, dan Perpustakaan.
 
 ### Ujian susulan
 
@@ -1031,3 +1118,17 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 50. **Batas tanggal susulan mengikuti batas input nilai saat dijadwalkan.** Bila kelas tidak punya batas input nilai, tidak ada batas akhir; bila batas diubah kemudian, jadwal yang sudah ada tidak diperiksa ulang.
 51. **Jadwal susulan massal tidak mengecek bentrok** ruang maupun mahasiswa, sama seperti jadwal remidi massal.
 
+### Tugas akhir, pendadaran, dan wisuda
+
+52. **Predikat kelulusan** hanya dihitung dari IPK (> 3,50 Dengan Pujian, > 3,00 Sangat Memuaskan, ≥ 2,76 Memuaskan, selain itu Cukup). Belum ada syarat lain seperti masa studi atau tanpa nilai mengulang untuk cum laude.
+53. **Batas angka minimal skala nilai** (A 80, B 70, C 60, D 50) adalah bawaan sistem, bukan dari kebijakan kampus.
+54. **SKS minimal wisuda memakai angka yang sama dengan pendadaran** (`min_sks_pendadaran`); tidak ada pengaturan terpisah.
+55. **"Semua mata kuliah sudah dinilai" mencakup semester berjalan**, sehingga mahasiswa yang masih mengambil mata kuliah lain bersamaan dengan Skripsi baru bisa mendaftar pendadaran setelah nilainya keluar.
+56. **Nilai E dicek sebagai huruf `E`**, bukan huruf bertanda tidak lulus di skala nilai.
+57. **Nilai pendadaran ditulis ke KRS tanpa melihat kunci nilai kelas Skripsi.** Dosen pengampu kelas Skripsi juga masih bisa mengubah huruf itu lewat tabel nilai kelas.
+58. **Nomor surat pendadaran dan SKL** dihitung dari jumlah nomor tahun itu + 1. Dua persetujuan yang benar-benar bersamaan bisa mendapat nomor surat yang sama (nomor SKL unik di database, sehingga yang kedua gagal).
+59. **Koreksi data ijazah tidak memperbarui profil.** SKL memakai data dari form wisuda, sedangkan profil mahasiswa tetap data lama.
+60. **Belum ada fitur mengubah** pembimbing setelah TA disahkan, jadwal/penguji pendadaran setelah terbit, peserta wisuda, atau membatalkan SKL (status Lulus).
+61. **Cek bentrok pendadaran** tidak mencakup pembimbing yang bukan penguji maupun jadwal kuliah mahasiswanya sendiri.
+62. **Tidak lulus pendadaran tidak mengisi nilai KRS Skripsi.** Bila semester berakhir, KRS itu tetap tanpa nilai dan mahasiswa harus mengambil Skripsi lagi di tahun aktif untuk mendaftar ulang.
+63. **Kelas Skripsi** diperlakukan seperti kelas lain (KRS, tagihan per SKS), tetapi tidak punya jadwal, pertemuan, atau ujian; data demo membuatnya tanpa jadwal.
