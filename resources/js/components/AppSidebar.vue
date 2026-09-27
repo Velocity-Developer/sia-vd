@@ -89,6 +89,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                         icon: GraduationCap,
                         permission: 'admin.pengajuan-akademik',
                     },
+                    { title: 'Periode Wisuda', routeName: 'admin.periode-wisuda.index', icon: CalendarRange, permission: 'admin.pengajuan-akademik' },
                 ],
             },
             {

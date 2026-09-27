@@ -22,7 +22,7 @@ import {
     type Syarat,
 } from '@/lib/tugasAkhir';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
-import { Lock } from 'lucide-vue-next';
+import { FileText, Lock } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Pengajuan = {
@@ -47,6 +47,20 @@ const props = defineProps<{
     tugasAkhir: { judul: string; bidang: string; pembimbing: string[]; status: 'berjalan' | 'selesai'; disahkan_at: string | null } | null;
     pengajuanTa: Tahap;
     pendaftaranPendadaran: Tahap & { jadwal: JadwalPendadaran | null; hasil: (HasilPendadaran & { id: number; tanggal: string }) | null };
+    pendaftaranWisuda: Tahap & {
+        periodeOptions: { id: number; nama: string; tanggal_acara: string; tempat: string | null; batas_daftar: string; sisa_kuota: number | null }[];
+        dataIjazah: { nama_ijazah: string | null; tempat_lahir: string | null; tanggal_lahir: string | null };
+        ukuranToga: string[];
+        wisuda: {
+            id: number;
+            periode: { nama: string; tanggal_acara: string; tempat: string | null } | null;
+            nomor_skl: string | null;
+            skl_terbit_at: string | null;
+            tanggal_lulus: string | null;
+            ipk: number | null;
+            predikat: string | null;
+        } | null;
+    };
     riwayat: Riwayat[];
     dosenOptions: { id: number; name: string }[];
 }>();
@@ -102,6 +116,7 @@ const keterangan: Record<KeadaanForm, string> = {
     terkunci: 'Terbuka setelah tahap sebelumnya selesai',
     selesai: 'Selesai',
     terjadwal: 'Sudah dijadwalkan',
+    terdaftar: 'Terdaftar sebagai peserta',
     menunggu: 'Sedang diproses',
     perbaikan: 'Perlu perbaikan',
     baru: 'Silakan ajukan',
@@ -115,7 +130,12 @@ const tahapan = computed(() => [
         keterangan: pd.value.jadwal?.status === 'revisi' ? 'Revisi naskah' : keterangan[pd.value.keadaan],
         aktif: pd.value.keadaan !== 'terkunci',
     },
-    { no: 3, judul: 'Wisuda', keterangan: 'Terbuka setelah lulus pendadaran', aktif: false },
+    {
+        no: 3,
+        judul: 'Wisuda',
+        keterangan: ws.value.wisuda?.nomor_skl ? 'SKL terbit' : keterangan[ws.value.keadaan],
+        aktif: ws.value.keadaan !== 'terkunci',
+    },
 ]);
 
 const formRevisi = useForm({ naskah_revisi: null as File | null });
@@ -128,6 +148,36 @@ const kirimRevisi = () =>
             versiBerkas.value++;
         },
     });
+
+const ws = computed(() => props.pendaftaranWisuda);
+const lamaWs = isianLama(props.pendaftaranWisuda)?.isian;
+// Data ijazah diisi dari profil; mahasiswa mengoreksinya di sini bila ada yang salah.
+const formWs = useForm({
+    periode_wisuda_id: (lamaWs?.periode_wisuda_id ?? props.pendaftaranWisuda.periodeOptions[0]?.id ?? null) as number | null,
+    nama_ijazah: lamaWs?.nama_ijazah ?? props.pendaftaranWisuda.dataIjazah.nama_ijazah ?? '',
+    tempat_lahir: lamaWs?.tempat_lahir ?? props.pendaftaranWisuda.dataIjazah.tempat_lahir ?? '',
+    tanggal_lahir: lamaWs?.tanggal_lahir ?? props.pendaftaranWisuda.dataIjazah.tanggal_lahir ?? '',
+    ukuran_toga: lamaWs?.ukuran_toga ?? '',
+    pas_foto: null as File | null,
+    naskah_final: null as File | null,
+    bebas_pinjam: null as File | null,
+    bukti_bayar: null as File | null,
+});
+const kirimWs = () =>
+    formWs.post(route('mahasiswa.tugas-akhir.ajukan-wisuda'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            formWs.pas_foto = formWs.naskah_final = formWs.bebas_pinjam = formWs.bukti_bayar = null;
+            versiBerkas.value++;
+        },
+    });
+const berkasWisuda = [
+    { kunci: 'pas_foto', label: 'Pas foto (JPG/PNG, maks. 2 MB)', accept: 'image/jpeg,image/png,.jpg,.jpeg,.png' },
+    { kunci: 'naskah_final', label: 'Naskah final (PDF, maks. 20 MB)', accept: 'application/pdf,.pdf' },
+    { kunci: 'bebas_pinjam', label: 'Bukti bebas pinjam perpustakaan', accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
+    { kunci: 'bukti_bayar', label: 'Bukti bayar wisuda', accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
+] as const;
 
 const menunggu = (t: Tahap) => (t.pengajuan?.status === 'menunggu_pembimbing' ? 'menunggu persetujuan pembimbing' : 'menunggu diproses admin');
 
@@ -477,6 +527,152 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                 <div v-if="terbuka(pd)" class="flex justify-end">
                                     <Button type="submit" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">
                                         {{ pd.keadaan === 'perbaikan' ? 'Kirim Perbaikan' : 'Daftar Pendadaran' }}
+                                    </Button>
+                                </div>
+                            </fieldset>
+                        </form>
+                    </template>
+                </section>
+
+                <!-- Tahap 3: wisuda -->
+                <section v-if="ws.keadaan !== 'terkunci'" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
+                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tahap 3 · Wisuda</h2>
+
+                    <template v-if="ws.wisuda">
+                        <div class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]" role="status">
+                            Anda terdaftar sebagai peserta {{ ws.wisuda.periode?.nama }} pada {{ formatTanggal(ws.wisuda.periode?.tanggal_acara)
+                            }}<span v-if="ws.wisuda.periode?.tempat">, {{ ws.wisuda.periode.tempat }}</span
+                            >.
+                        </div>
+                        <dl v-if="ws.wisuda.nomor_skl" class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
+                            <div>
+                                <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Surat Keterangan Lulus</dt>
+                                <dd class="mt-1">
+                                    <a
+                                        :href="route('berkas.skl', ws.wisuda.id)"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="inline-flex items-center gap-1 font-medium text-[#0075de] hover:underline"
+                                        ><FileText class="size-4" /> Unduh SKL</a
+                                    >
+                                    <span class="block text-xs text-[#a39e98]">No. {{ ws.wisuda.nomor_skl }}</span>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Tanggal lulus</dt>
+                                <dd class="mt-1 text-black">{{ formatTanggal(ws.wisuda.tanggal_lulus, false) }}</dd>
+                            </div>
+                            <div>
+                                <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">IPK & predikat</dt>
+                                <dd class="mt-1 text-black">{{ ws.wisuda.ipk?.toFixed(2) }} · {{ ws.wisuda.predikat }}</dd>
+                            </div>
+                        </dl>
+                        <p v-else class="mt-3 text-sm text-[#615d59]">Surat keterangan lulus (SKL) diterbitkan admin dan bisa diunduh di sini.</p>
+                    </template>
+
+                    <template v-else>
+                        <DaftarSyarat class="mt-4" :syarat="ws.syarat" />
+                        <div
+                            v-if="ws.keadaan === 'belum_memenuhi'"
+                            class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
+                            role="status"
+                        >
+                            Anda belum memenuhi syarat pendaftaran wisuda. Form terbuka setelah semua syarat di atas terpenuhi.
+                        </div>
+                        <div
+                            v-else-if="ws.keadaan === 'menunggu'"
+                            class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
+                            role="status"
+                        >
+                            Pendaftaran dikirim {{ formatTanggal(ws.pengajuan?.diajukan_at, false) }} dan sedang menunggu diproses admin.
+                        </div>
+                        <div
+                            v-else-if="ws.keadaan === 'perbaikan'"
+                            class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
+                            role="status"
+                        >
+                            <span class="font-medium">Diminta perbaikan:</span> {{ ws.pengajuan?.catatan }}
+                        </div>
+                        <div
+                            v-else-if="ws.pengajuan?.status === 'ditolak'"
+                            class="mt-4 rounded-lg border border-[#f3c5c0] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]"
+                            role="status"
+                        >
+                            <span class="font-medium">Pendaftaran sebelumnya ditolak:</span> {{ ws.pengajuan.catatan }} Anda bisa mendaftar lagi.
+                        </div>
+
+                        <form class="mt-5" @submit.prevent="kirimWs">
+                            <fieldset :disabled="!terbuka(ws) || formWs.processing" class="grid gap-4 disabled:opacity-60">
+                                <div class="grid gap-2">
+                                    <Label for="periode_wisuda_id">Periode wisuda</Label>
+                                    <select
+                                        id="periode_wisuda_id"
+                                        v-model="formWs.periode_wisuda_id"
+                                        class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]"
+                                        required
+                                    >
+                                        <option v-for="p in ws.periodeOptions" :key="p.id" :value="p.id">
+                                            {{ p.nama }} — {{ formatTanggal(p.tanggal_acara, false) }} (daftar s.d.
+                                            {{ formatTanggal(p.batas_daftar, false)
+                                            }}{{ p.sisa_kuota !== null ? `, sisa ${p.sisa_kuota} kursi` : '' }})
+                                        </option>
+                                    </select>
+                                    <InputError :message="formWs.errors.periode_wisuda_id" />
+                                </div>
+                                <div class="rounded-lg border border-[#e6e6e6] p-4">
+                                    <p class="text-sm font-medium text-black">Data ijazah</p>
+                                    <p class="text-xs text-[#615d59]">
+                                        Diisi dari profil Anda. Periksa dengan teliti dan koreksi bila ada yang salah.
+                                    </p>
+                                    <div class="mt-3 grid items-start gap-4 sm:grid-cols-3">
+                                        <div class="grid content-start gap-2">
+                                            <Label for="nama_ijazah">Nama lengkap</Label>
+                                            <Input id="nama_ijazah" v-model="formWs.nama_ijazah" :class="inp" maxlength="150" required />
+                                            <InputError :message="formWs.errors.nama_ijazah" />
+                                        </div>
+                                        <div class="grid content-start gap-2">
+                                            <Label for="tempat_lahir">Tempat lahir</Label>
+                                            <Input id="tempat_lahir" v-model="formWs.tempat_lahir" :class="inp" maxlength="100" required />
+                                            <InputError :message="formWs.errors.tempat_lahir" />
+                                        </div>
+                                        <div class="grid content-start gap-2">
+                                            <Label for="tanggal_lahir">Tanggal lahir</Label>
+                                            <Input id="tanggal_lahir" v-model="formWs.tanggal_lahir" type="date" :class="inp" required />
+                                            <InputError :message="formWs.errors.tanggal_lahir" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="grid gap-2 sm:w-48">
+                                    <Label for="ukuran_toga">Ukuran toga</Label>
+                                    <select
+                                        id="ukuran_toga"
+                                        v-model="formWs.ukuran_toga"
+                                        class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]"
+                                        required
+                                    >
+                                        <option value="" disabled>Pilih ukuran</option>
+                                        <option v-for="u in ws.ukuranToga" :key="u" :value="u">{{ u }}</option>
+                                    </select>
+                                    <InputError :message="formWs.errors.ukuran_toga" />
+                                </div>
+                                <div class="grid items-start gap-4 sm:grid-cols-2">
+                                    <InputBerkas
+                                        v-for="b in berkasWisuda"
+                                        :id="b.kunci"
+                                        :key="`${b.kunci}-${versiBerkas}`"
+                                        :label="b.label"
+                                        :accept="b.accept"
+                                        :pengajuan-id="ws.pengajuan?.id"
+                                        :sudah-ada="sudahAda(ws, b.kunci)"
+                                        :wajib="ws.keadaan === 'baru'"
+                                        :terkunci="!terbuka(ws)"
+                                        :error="formWs.errors[b.kunci]"
+                                        @pilih="formWs[b.kunci] = $event"
+                                    />
+                                </div>
+                                <div v-if="terbuka(ws)" class="flex justify-end">
+                                    <Button type="submit" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">
+                                        {{ ws.keadaan === 'perbaikan' ? 'Kirim Perbaikan' : 'Daftar Wisuda' }}
                                     </Button>
                                 </div>
                             </fieldset>

@@ -6,6 +6,7 @@ use App\Models\Krs;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\PengaturanAkademik;
+use App\Models\PeriodeWisuda;
 use App\Models\TugasAkhir;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 
@@ -40,14 +41,6 @@ class SyaratTugasAkhir
     {
         $tugasAkhir = TugasAkhir::milik($mahasiswa->id);
         $matkul = self::matkulTaDiambil($mahasiswa);
-        $minSks = PengaturanAkademik::current()->min_sks_pendadaran;
-
-        $krs = Transkrip::krs($mahasiswa->id)->reject(fn (Krs $k): bool => (bool) $k->kelasKuliah?->mataKuliah?->tugas_akhir);
-        $terbaik = Transkrip::terbaik($krs);
-        $sks = $terbaik->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks);
-        $nilaiE = $terbaik->filter(fn (Krs $k): bool => strtoupper((string) $k->nilai) === 'E');
-        $belumDinilai = Transkrip::belumDinilai($krs);
-        $nama = fn ($daftar): string => $daftar->map(fn (Krs $k): string => $k->kelasKuliah->mataKuliah->nama_matkul)->sort()->join(', ');
 
         return [
             [
@@ -60,6 +53,54 @@ class SyaratTugasAkhir
                 'terpenuhi' => $matkul !== null,
                 'keterangan' => $matkul?->nama_matkul ?? 'Mata kuliah TA/Skripsi belum ada di KRS semester ini.',
             ],
+            ...self::nilai($mahasiswa, false),
+        ];
+    }
+
+    /**
+     * Syarat mendaftar wisuda (selain bukti bayar yang diunggah di form). Kali ini nilai TA/Skripsi juga harus ada.
+     *
+     * @return list<array{label: string, terpenuhi: bool, keterangan: ?string}>
+     */
+    public static function wisuda(MahasiswaProfile $mahasiswa): array
+    {
+        $tugasAkhir = TugasAkhir::milik($mahasiswa->id);
+        $periode = PeriodeWisuda::query()->dibuka()->orderBy('tanggal_acara')->get()->filter(fn (PeriodeWisuda $p): bool => $p->bisaDidaftar());
+
+        return [
+            [
+                'label' => 'Lulus pendadaran (termasuk revisi yang sudah disahkan)',
+                'terpenuhi' => $tugasAkhir?->status === TugasAkhir::SELESAI,
+                'keterangan' => null,
+            ],
+            ...self::nilai($mahasiswa, true),
+            [
+                'label' => 'Ada periode wisuda yang dibuka dan kuotanya tersisa',
+                'terpenuhi' => $periode->isNotEmpty(),
+                'keterangan' => $periode->isEmpty() ? 'Belum ada periode wisuda yang menerima pendaftaran.' : $periode->pluck('nama')->join(', '),
+            ],
+        ];
+    }
+
+    /**
+     * Syarat nilai dari transkrip: SKS minimal (di luar TA), tidak ada E, dan semua mata kuliah sudah dinilai.
+     * Mata kuliah TA/Skripsi boleh belum dinilai kecuali $termasukTa.
+     *
+     * @return list<array{label: string, terpenuhi: bool, keterangan: ?string}>
+     */
+    private static function nilai(MahasiswaProfile $mahasiswa, bool $termasukTa): array
+    {
+        $minSks = PengaturanAkademik::current()->min_sks_pendadaran;
+        $semua = Transkrip::krs($mahasiswa->id);
+        $tanpaTa = $semua->reject(fn (Krs $k): bool => (bool) $k->kelasKuliah?->mataKuliah?->tugas_akhir);
+        $dicek = $termasukTa ? $semua : $tanpaTa;
+
+        $sks = Transkrip::terbaik($tanpaTa)->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks);
+        $nilaiE = Transkrip::terbaik($dicek)->filter(fn (Krs $k): bool => strtoupper((string) $k->nilai) === 'E');
+        $belumDinilai = Transkrip::belumDinilai($dicek);
+        $nama = fn ($daftar): string => $daftar->map(fn (Krs $k): string => $k->kelasKuliah->mataKuliah->nama_matkul)->sort()->join(', ');
+
+        return [
             [
                 'label' => "Menempuh minimal {$minSks} SKS (di luar TA/Skripsi)",
                 'terpenuhi' => $sks >= $minSks,

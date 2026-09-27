@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\AllowedUpload;
 use App\Models\Pendadaran;
 use App\Models\PengaturanInstitusi;
+use App\Models\Wisuda;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Surat pendadaran (PDF) dan naskah revisi, untuk mahasiswa, admin, pembimbing, dan penguji.
+ * Surat pendadaran (PDF) dan naskah revisi untuk mahasiswa, admin, pembimbing, dan penguji; SKL untuk
+ * mahasiswa pemiliknya dan admin.
  */
 class PendadaranBerkasController extends Controller
 {
@@ -29,6 +31,24 @@ class PendadaranBerkasController extends Controller
             'kontak' => $institusi->kontakKop(),
             'pendadaran' => $pendadaran,
         ])->stream('surat-pendadaran-'.$pendadaran->mahasiswa?->nim.'.pdf');
+    }
+
+    public function skl(Request $request, Wisuda $wisuda): Response
+    {
+        $user = $request->user();
+        abort_unless($user->mahasiswaProfile?->id === $wisuda->mahasiswa_id || $user->hasPermission('admin.pengajuan-akademik'), 403);
+        abort_if($wisuda->nomor_skl === null, 404);
+
+        $wisuda->load(['mahasiswa.user:id,name', 'mahasiswa.prodi.fakultas', 'tugasAkhir', 'pengajuan:id,isian']);
+        $institusi = PengaturanInstitusi::current();
+
+        return Pdf::loadView('pdf.skl', [
+            'institusi' => $institusi,
+            'logoSrc' => $institusi->logoDataUri(),
+            'kontak' => $institusi->kontakKop(),
+            'wisuda' => $wisuda,
+            'isian' => $wisuda->pengajuan?->isian ?? [],
+        ])->stream('skl-'.$wisuda->mahasiswa?->nim.'.pdf');
     }
 
     public function naskahRevisi(Request $request, Pendadaran $pendadaran): StreamedResponse

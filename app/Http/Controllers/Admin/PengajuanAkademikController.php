@@ -7,8 +7,10 @@ use App\JadwalPendadaran;
 use App\Models\DosenProfile;
 use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
+use App\Models\PeriodeWisuda;
 use App\Models\Ruang;
 use App\Models\TugasAkhir;
+use App\Models\Wisuda;
 use App\SyaratTugasAkhir;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -25,7 +27,7 @@ use Inertia\Response;
 class PengajuanAkademikController extends Controller
 {
     /** Jenis yang sudah bisa diproses; tab lain menyusul. */
-    public const JENIS_TERSEDIA = [PengajuanAkademik::TUGAS_AKHIR, PengajuanAkademik::PENDADARAN];
+    public const JENIS_TERSEDIA = PengajuanAkademik::JENIS;
 
     public function index(Request $request): Response
     {
@@ -43,7 +45,7 @@ class PengajuanAkademikController extends Controller
             ->when($filter['status'], fn (Builder $q, string $status) => $q->where('status', $status))
             ->when($filter['search'] !== '', fn (Builder $q) => $q->whereHas('mahasiswa', fn (Builder $m) => $m->where('nim', 'like', "%{$filter['search']}%")
                 ->orWhereHas('user', fn (Builder $u) => $u->where('name', 'like', "%{$filter['search']}%"))))
-            ->with(['mahasiswa:id,user_id,nim,prodi_id', 'mahasiswa.user:id,name', 'mahasiswa.prodi:id,nama_prodi,jenjang', 'pemroses:id,name',
+            ->with(['mahasiswa:id,user_id,nim,prodi_id,tempat_lahir,tanggal_lahir', 'mahasiswa.user:id,name', 'mahasiswa.prodi:id,nama_prodi,jenjang', 'pemroses:id,name',
                 'tugasAkhir.pembimbing1.user:id,name', 'tugasAkhir.pembimbing2.user:id,name', 'pembimbingPenyetuju.user:id,name'])
             // Yang menunggu keputusan tampil paling atas, yang paling lama menunggu lebih dulu.
             ->orderByRaw('status = ? desc', [PengajuanAkademik::MENUNGGU])
@@ -56,6 +58,7 @@ class PengajuanAkademikController extends Controller
                 ->with(['ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name'])->get()
                 ->mapWithKeys(fn (Pendadaran $p): array => [$p->pengajuan_id => [...$p->jadwal(), ...$p->ringkasanHasil()]])->all();
         }
+        $periode = $jenis === PengajuanAkademik::WISUDA ? PeriodeWisuda::query()->pluck('nama', 'id') : collect();
         $pengajuan->through(fn (PengajuanAkademik $p): array => [
             'id' => $p->id,
             'nama' => $p->mahasiswa?->user?->name,
@@ -71,6 +74,13 @@ class PengajuanAkademikController extends Controller
             'disetujui_pembimbing' => $p->pembimbingPenyetuju?->user?->name,
             'disetujui_pembimbing_at' => $p->disetujui_pembimbing_at?->toIso8601String(),
             'jadwal' => $jadwal[$p->id] ?? null,
+            'periode_wisuda' => $periode[$p->isian['periode_wisuda_id'] ?? 0] ?? null,
+            // Data ijazah yang berbeda dari profil (koreksi dari mahasiswa) ditandai untuk diperiksa admin.
+            'koreksi' => $jenis === PengajuanAkademik::WISUDA ? array_keys(array_filter([
+                'nama_ijazah' => ($p->isian['nama_ijazah'] ?? null) !== $p->mahasiswa?->user?->name,
+                'tempat_lahir' => ($p->isian['tempat_lahir'] ?? null) !== $p->mahasiswa?->tempat_lahir,
+                'tanggal_lahir' => ($p->isian['tanggal_lahir'] ?? null) !== $p->mahasiswa?->tanggal_lahir?->toDateString(),
+            ])) : [],
             'status' => $p->status,
             'catatan' => $p->catatan,
             'diproses_oleh' => $p->pemroses?->name,
@@ -97,6 +107,7 @@ class PengajuanAkademikController extends Controller
 
         return match ($pengajuanAkademik->jenis) {
             PengajuanAkademik::PENDADARAN => $this->setujuiPendadaran($request, $pengajuanAkademik),
+            PengajuanAkademik::WISUDA => $this->setujuiWisuda($request, $pengajuanAkademik),
             default => $this->setujuiTa($request, $pengajuanAkademik),
         };
     }
@@ -241,6 +252,43 @@ class PengajuanAkademikController extends Controller
             $pengajuan->catat(PengajuanAkademik::DISETUJUI, null, $request->user()->id);
 
             return back()->with('success', 'Pendaftaran pendadaran disetujui dan jadwalnya sudah terbit.');
+        });
+    }
+
+    /**
+     * Setujui pendaftaran wisuda: mahasiswa masuk daftar peserta periode yang dipilihnya. Kuota diperiksa ulang.
+     */
+    private function setujuiWisuda(Request $request, PengajuanAkademik $pengajuan): RedirectResponse
+    {
+        return DB::transaction(function () use ($request, $pengajuan): RedirectResponse {
+            $pengajuan = PengajuanAkademik::query()->lockForUpdate()->findOrFail($pengajuan->id);
+            $periode = PeriodeWisuda::query()->lockForUpdate()->find($pengajuan->isian['periode_wisuda_id'] ?? 0);
+
+            if (! $pengajuan->menunggu()) {
+                return back()->with('error', 'Pendaftaran ini sudah diproses.');
+            }
+            if (Wisuda::query()->where('mahasiswa_id', $pengajuan->mahasiswa_id)->exists()) {
+                return back()->with('error', 'Mahasiswa ini sudah terdaftar sebagai peserta wisuda.');
+            }
+            if ($periode === null || ($periode->kuota !== null && $periode->sisaKuota() === 0)) {
+                return back()->with('error', 'Kuota periode wisuda ini sudah penuh. Minta mahasiswa memperbaiki pilihan periodenya.');
+            }
+            $kurang = collect(SyaratTugasAkhir::wisuda($pengajuan->mahasiswa))->reject(fn (array $s): bool => $s['terpenuhi'])->pluck('label')
+                // Pendaftaran yang dikirim sebelum batas daftar tetap boleh disetujui sesudahnya.
+                ->reject(fn (string $label): bool => str_starts_with($label, 'Ada periode wisuda'));
+            if ($kurang->isNotEmpty()) {
+                return back()->with('error', 'Mahasiswa ini tidak lagi memenuhi syarat: '.$kurang->join(', ').'. Minta perbaikan atau tolak pendaftarannya.');
+            }
+
+            Wisuda::query()->create([
+                'pengajuan_id' => $pengajuan->id,
+                'periode_wisuda_id' => $periode->id,
+                'mahasiswa_id' => $pengajuan->mahasiswa_id,
+                'tugas_akhir_id' => $pengajuan->tugas_akhir_id,
+            ]);
+            $pengajuan->catat(PengajuanAkademik::DISETUJUI, null, $request->user()->id);
+
+            return back()->with('success', "Pendaftaran wisuda disetujui; mahasiswa masuk daftar peserta {$periode->nama}.");
         });
     }
 

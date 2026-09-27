@@ -8,8 +8,10 @@ use App\Models\DosenProfile;
 use App\Models\MahasiswaProfile;
 use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
+use App\Models\PeriodeWisuda;
 use App\Models\RiwayatPengajuanAkademik;
 use App\Models\TugasAkhir;
+use App\Models\Wisuda;
 use App\SyaratTugasAkhir;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +19,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -33,6 +36,8 @@ class TugasAkhirController extends Controller
 
     public const TERJADWAL = 'terjadwal';
 
+    public const TERDAFTAR = 'terdaftar';
+
     public const MENUNGGU = 'menunggu';
 
     public const PERBAIKAN = 'perbaikan';
@@ -43,6 +48,8 @@ class TugasAkhirController extends Controller
 
     private const EKSTENSI_DOKUMEN = 'pdf,jpg,jpeg,png';
 
+    public const UKURAN_TOGA = ['S', 'M', 'L', 'XL', 'XXL'];
+
     public function index(Request $request): Response
     {
         $mahasiswa = $this->mahasiswa($request);
@@ -52,6 +59,10 @@ class TugasAkhirController extends Controller
         $syaratTa = SyaratTugasAkhir::pengajuanTa($mahasiswa);
         $syaratPendadaran = $tugasAkhir ? SyaratTugasAkhir::pendadaran($mahasiswa) : [];
         $pendadaran = $this->pendadaranAktif($tugasAkhir)?->load(['ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name']);
+        $pengajuanWisuda = PengajuanAkademik::terakhir($mahasiswa->id, PengajuanAkademik::WISUDA);
+        $wisuda = Wisuda::query()->where('mahasiswa_id', $mahasiswa->id)->with('periode')->first();
+        $syaratWisuda = $tugasAkhir?->status === TugasAkhir::SELESAI ? SyaratTugasAkhir::wisuda($mahasiswa) : [];
+        $mahasiswa->loadMissing('user:id,name');
 
         return Inertia::render('Mahasiswa/TugasAkhir', [
             'tugasAkhir' => $tugasAkhir ? [
@@ -76,6 +87,29 @@ class TugasAkhirController extends Controller
                     'id' => $terakhir->id,
                     'tanggal' => $terakhir->tanggal->toDateString(),
                     ...$terakhir->ringkasanHasil(),
+                ] : null,
+            ],
+            'pendaftaranWisuda' => [
+                'keadaan' => $this->keadaanWisuda($tugasAkhir, $wisuda, $pengajuanWisuda, $syaratWisuda),
+                'syarat' => $syaratWisuda,
+                'pengajuan' => $pengajuanWisuda ? $this->tampilkan($pengajuanWisuda) : null,
+                'periodeOptions' => PeriodeWisuda::query()->dibuka()->orderBy('tanggal_acara')->get()
+                    ->filter(fn (PeriodeWisuda $p): bool => $p->bisaDidaftar())->map(fn (PeriodeWisuda $p): array => $p->ringkas())->values(),
+                // Data ijazah dari profil, untuk dikonfirmasi (atau dikoreksi) di form.
+                'dataIjazah' => [
+                    'nama_ijazah' => $mahasiswa->user?->name,
+                    'tempat_lahir' => $mahasiswa->tempat_lahir,
+                    'tanggal_lahir' => $mahasiswa->tanggal_lahir?->toDateString(),
+                ],
+                'ukuranToga' => self::UKURAN_TOGA,
+                'wisuda' => $wisuda ? [
+                    'id' => $wisuda->id,
+                    'periode' => $wisuda->periode?->ringkas(),
+                    'nomor_skl' => $wisuda->nomor_skl,
+                    'skl_terbit_at' => $wisuda->skl_terbit_at?->toIso8601String(),
+                    'tanggal_lulus' => $wisuda->tanggal_lulus?->toDateString(),
+                    'ipk' => $wisuda->ipk,
+                    'predikat' => $wisuda->predikat,
                 ] : null,
             ],
             'riwayat' => PengajuanAkademik::query()->where('mahasiswa_id', $mahasiswa->id)
@@ -163,6 +197,57 @@ class TugasAkhirController extends Controller
             self::MENUNGGU => 'Pendaftaran Anda masih menunggu diproses.',
             self::BELUM_MEMENUHI => 'Anda belum memenuhi syarat pendaftaran pendadaran.',
         ], 'pendaftaran pendadaran');
+    }
+
+    /**
+     * Daftar wisuda: pilih periode, konfirmasi data ijazah, ukuran toga, dan unggah berkas (termasuk bukti bayar).
+     */
+    public function ajukanWisuda(Request $request): RedirectResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+
+        return $this->simpan($request, $mahasiswa, PengajuanAkademik::WISUDA, function (?PengajuanAkademik $pengajuan) use ($mahasiswa): string {
+            $tugasAkhir = TugasAkhir::milik($mahasiswa->id);
+            $wisuda = Wisuda::query()->where('mahasiswa_id', $mahasiswa->id)->first();
+
+            return $this->keadaanWisuda($tugasAkhir, $wisuda, $pengajuan, $tugasAkhir?->status === TugasAkhir::SELESAI ? SyaratTugasAkhir::wisuda($mahasiswa) : []);
+        }, fn (bool $perbaikan): array => [
+            'periode_wisuda_id' => ['required', 'integer', function (string $atribut, mixed $nilai, \Closure $gagal): void {
+                if (! PeriodeWisuda::query()->find($nilai)?->bisaDidaftar()) {
+                    $gagal('Periode wisuda ini sudah ditutup atau kuotanya penuh.');
+                }
+            }],
+            'nama_ijazah' => ['required', 'string', 'max:150'],
+            'tempat_lahir' => ['required', 'string', 'max:100'],
+            'tanggal_lahir' => ['required', 'date_format:Y-m-d', 'before:today'],
+            'ukuran_toga' => ['required', Rule::in(self::UKURAN_TOGA)],
+            'pas_foto' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:2048', 'extensions:jpg,jpeg,png', 'mimes:jpg,jpeg,png'],
+            'naskah_final' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:20480', 'extensions:pdf', 'mimes:pdf'],
+            'bebas_pinjam' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
+            'bukti_bayar' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
+        ], [
+            'pas_foto.extensions' => 'Pas foto harus berupa JPG atau PNG.',
+            'pas_foto.max' => 'Ukuran pas foto maksimal 2 MB.',
+            'naskah_final.extensions' => 'Naskah final harus berupa PDF.',
+            'naskah_final.max' => 'Ukuran naskah final maksimal 20 MB.',
+            '*.extensions' => ':attribute harus berupa PDF atau foto (JPG/PNG).',
+            '*.max' => 'Ukuran :attribute maksimal 5 MB.',
+        ], [
+            'periode_wisuda_id' => 'Periode wisuda',
+            'nama_ijazah' => 'Nama di ijazah',
+            'tempat_lahir' => 'Tempat lahir',
+            'tanggal_lahir' => 'Tanggal lahir',
+            'ukuran_toga' => 'Ukuran toga',
+            'pas_foto' => 'Pas foto',
+            'naskah_final' => 'Naskah final',
+            'bebas_pinjam' => 'Bukti bebas pinjam perpustakaan',
+            'bukti_bayar' => 'Bukti bayar wisuda',
+        ], [
+            self::TERKUNCI => 'Anda belum lulus pendadaran.',
+            self::TERDAFTAR => 'Anda sudah terdaftar sebagai peserta wisuda.',
+            self::MENUNGGU => 'Pendaftaran Anda masih menunggu diproses admin.',
+            self::BELUM_MEMENUHI => 'Anda belum memenuhi syarat pendaftaran wisuda.',
+        ], 'pendaftaran wisuda');
     }
 
     /**
@@ -283,6 +368,21 @@ class TugasAkhirController extends Controller
         ]);
 
         return back()->with('success', 'Naskah revisi terkirim dan menunggu pengesahan ketua penguji.');
+    }
+
+    /**
+     * @param  list<array{terpenuhi: bool}>  $syarat
+     */
+    private function keadaanWisuda(?TugasAkhir $tugasAkhir, ?Wisuda $wisuda, ?PengajuanAkademik $pengajuan, array $syarat): string
+    {
+        return match (true) {
+            $tugasAkhir?->status !== TugasAkhir::SELESAI => self::TERKUNCI,
+            $wisuda !== null => self::TERDAFTAR,
+            $pengajuan?->sedangDiproses() === true => self::MENUNGGU,
+            ! SyaratTugasAkhir::terpenuhi($syarat) => self::BELUM_MEMENUHI,
+            $pengajuan?->status === PengajuanAkademik::PERLU_PERBAIKAN => self::PERBAIKAN,
+            default => self::BARU,
+        };
     }
 
     private function pendadaranTerakhir(?TugasAkhir $tugasAkhir): ?Pendadaran

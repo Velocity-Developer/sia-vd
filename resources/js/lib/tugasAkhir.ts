@@ -1,6 +1,6 @@
 export type JenisPengajuan = 'tugas_akhir' | 'pendadaran' | 'wisuda';
 export type StatusPengajuan = 'menunggu_pembimbing' | 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak';
-export type KeadaanForm = 'terkunci' | 'selesai' | 'terjadwal' | 'menunggu' | 'perbaikan' | 'baru' | 'belum_memenuhi';
+export type KeadaanForm = 'terkunci' | 'selesai' | 'terjadwal' | 'terdaftar' | 'menunggu' | 'perbaikan' | 'baru' | 'belum_memenuhi';
 export type Syarat = { label: string; terpenuhi: boolean; keterangan: string | null };
 export type JadwalPendadaran = {
     id: number;
@@ -61,4 +61,7 @@ export const LABEL_LAMPIRAN: Record<string, string> = {
     naskah: 'Naskah',
     persetujuan_pembimbing: 'Lembar persetujuan',
     bukti_bayar: 'Bukti bayar',
+    pas_foto: 'Pas foto',
+    naskah_final: 'Naskah final',
+    bebas_pinjam: 'Bebas pinjam perpustakaan',
 };

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AlertModal from '@/components/AlertModal.vue';
 import InputError from '@/components/InputError.vue';
 import Pagination from '@/components/Pagination.vue';
 import SearchSelect from '@/components/SearchSelect.vue';
@@ -35,6 +36,8 @@ type Baris = {
     disetujui_pembimbing: string | null;
     disetujui_pembimbing_at: string | null;
     jadwal: (JadwalPendadaran & HasilPendadaran) | null;
+    periode_wisuda: string | null;
+    koreksi: string[];
     status: StatusPengajuan;
     catatan: string | null;
     diproses_oleh: string | null;
@@ -75,9 +78,23 @@ const setujuiItem = ref<Baris | null>(null);
 const setujuiForm = useForm({ judul: '', pembimbing_1_id: null as number | null, pembimbing_2_id: null as number | null });
 // Pendadaran disetujui sekaligus dijadwalkan lewat modal tersendiri.
 const jadwalkanItem = ref<Baris | null>(null);
+// Wisuda cukup dikonfirmasi: mahasiswa masuk daftar peserta periode pilihannya.
+const wisudaItem = ref<Baris | null>(null);
+const setujuiWisuda = () => {
+    if (!wisudaItem.value) return;
+    router.post(
+        route('admin.pengajuan-akademik.setujui', wisudaItem.value.id),
+        {},
+        { preserveScroll: true, onFinish: () => (wisudaItem.value = null) },
+    );
+};
 const bukaSetujui = (b: Baris) => {
     if (props.filter.jenis === 'pendadaran') {
         jadwalkanItem.value = b;
+        return;
+    }
+    if (props.filter.jenis === 'wisuda') {
+        wisudaItem.value = b;
         return;
     }
     setujuiItem.value = b;
@@ -186,7 +203,28 @@ const kembalikan = () => {
                                         <span class="block text-xs text-[#a39e98]">{{ b.prodi }}</span>
                                     </td>
                                     <td class="max-w-[440px] px-4 py-3 text-sm text-[#31302e]">
-                                        <span class="block text-[15px] font-medium text-black">{{ b.isian.judul }}</span>
+                                        <template v-if="props.filter.jenis === 'wisuda'">
+                                            <span class="block text-[15px] font-medium text-black">{{ b.periode_wisuda }}</span>
+                                            <span class="block text-xs text-[#615d59]"
+                                                >Ijazah:
+                                                <span :class="{ 'font-medium text-[#b25000]': b.koreksi.includes('nama_ijazah') }">{{
+                                                    b.isian.nama_ijazah
+                                                }}</span
+                                                >,
+                                                <span :class="{ 'font-medium text-[#b25000]': b.koreksi.includes('tempat_lahir') }">{{
+                                                    b.isian.tempat_lahir
+                                                }}</span
+                                                >,
+                                                <span :class="{ 'font-medium text-[#b25000]': b.koreksi.includes('tanggal_lahir') }">{{
+                                                    formatTanggal(b.isian.tanggal_lahir, false)
+                                                }}</span>
+                                                · toga {{ b.isian.ukuran_toga }}</span
+                                            >
+                                            <span v-if="b.koreksi.length" class="block text-xs text-[#b25000]"
+                                                >Berbeda dari profil (koreksi mahasiswa) — periksa sebelum menyetujui.</span
+                                            >
+                                        </template>
+                                        <span v-else class="block text-[15px] font-medium text-black">{{ b.isian.judul }}</span>
                                         <span v-if="b.isian.bidang" class="block text-xs text-[#615d59]">Bidang: {{ b.isian.bidang }}</span>
                                         <span v-if="b.usulan_pembimbing.length" class="block text-xs text-[#615d59]"
                                             >Usulan pembimbing: {{ b.usulan_pembimbing.join(', ') }}</span
@@ -291,6 +329,18 @@ const kembalikan = () => {
             </div>
         </div>
 
+        <AlertModal
+            :open="!!wisudaItem"
+            title="Setujui pendaftaran wisuda?"
+            :description="
+                wisudaItem ? `${wisudaItem.nama} masuk daftar peserta ${wisudaItem.periode_wisuda}. SKL diterbitkan dari menu Periode Wisuda.` : ''
+            "
+            confirm-text="Setujui"
+            cancel-text="Batal"
+            @update:open="!$event && (wisudaItem = null)"
+            @confirm="setujuiWisuda"
+            @cancel="wisudaItem = null"
+        />
         <ModalJadwalPendadaran
             v-if="jadwalkanItem"
             :pengajuan="{ id: jadwalkanItem.id, nama: jadwalkanItem.nama, judul: jadwalkanItem.isian.judul, pembimbing: jadwalkanItem.pembimbing }"
