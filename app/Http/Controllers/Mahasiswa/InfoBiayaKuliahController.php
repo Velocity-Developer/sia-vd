@@ -43,6 +43,11 @@ class InfoBiayaKuliahController extends Controller
                 ->values(),
             'tagihanRemidi' => $this->tagihanRemidi($mahasiswa),
             'tagihanSusulan' => $this->tagihanSusulan($mahasiswa),
+            // Selalu tampil sebagai informasi; bukti bayarnya diunggah di form pendaftaran pendadaran/wisuda.
+            'biayaTugasAkhir' => [
+                'pendadaran' => JenisBiaya::infoUntuk($mahasiswa, JenisBiaya::PENDADARAN),
+                'wisuda' => JenisBiaya::infoUntuk($mahasiswa, JenisBiaya::WISUDA),
+            ],
         ]);
     }
 

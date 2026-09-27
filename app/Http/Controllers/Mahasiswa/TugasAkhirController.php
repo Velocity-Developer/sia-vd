@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
+use App\Models\JenisBiaya;
 use App\Models\MahasiswaProfile;
 use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
@@ -127,6 +128,10 @@ class TugasAkhirController extends Controller
                     ]),
                 ]),
             'dosenOptions' => DosenProfile::opsi(),
+            'biaya' => [
+                'pendadaran' => JenisBiaya::infoUntuk($mahasiswa, JenisBiaya::PENDADARAN),
+                'wisuda' => JenisBiaya::infoUntuk($mahasiswa, JenisBiaya::WISUDA),
+            ],
         ]);
     }
 

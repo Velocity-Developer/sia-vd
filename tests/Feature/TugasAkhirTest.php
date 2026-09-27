@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\JenisBiaya;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\PengajuanAkademik;
@@ -242,4 +243,37 @@ it('saves the minimum credits for the defence', function () {
     $this->actingAs($admin)->put(route('admin.pengaturan-akademik.tugas-akhir'), ['min_sks_pendadaran' => 144])->assertSessionHas('success');
     expect(PengaturanAkademik::current()->min_sks_pendadaran)->toBe(144);
     $this->actingAs($admin)->put(route('admin.pengaturan-akademik.tugas-akhir'), ['min_sks_pendadaran' => -1])->assertSessionHasErrors('min_sks_pendadaran');
+});
+
+it('reminds the student and the admin on the dashboard', function () {
+    [, $mhs] = kelasTa();
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin)->get(route('admin.dashboard'))->assertInertia(fn ($page) => $page->where('pengingatTugasAkhir', null));
+
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.ajukan-ta'), isianTa());
+    $this->actingAs($admin)->get(route('admin.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('pengingatTugasAkhir.pesan.0.teks', '1 pengajuan tugas akhir menunggu keputusan.'));
+
+    $this->actingAs($admin)->post(route('admin.pengajuan-akademik.perbaikan', PengajuanAkademik::sole()), ['catatan' => 'Perjelas metode']);
+    $this->actingAs($mhs)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('pengingatTugasAkhir.pesan.0', ['teks' => 'Pengajuan tugas akhir diminta perbaikan: Perjelas metode', 'penting' => true])
+        ->where('pengingatTugasAkhir.tautan', route('mahasiswa.tugas-akhir')));
+    $this->actingAs($admin)->get(route('admin.dashboard'))->assertInertia(fn ($page) => $page->where('pengingatTugasAkhir', null));
+});
+
+it('shows the defence and graduation fees as information only', function () {
+    [$kelas, $mhs] = kelasTa();
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->post(route('admin.jenis-biaya.store'), [
+        'kode' => 'PDD', 'nama' => 'Biaya Pendadaran', 'cara_hitung' => 'per_sks', 'kategori' => 'pendadaran', 'aktif' => true,
+        'tarif' => [['prodi_id' => null, 'angkatan' => null, 'nominal' => 750000], ['prodi_id' => $kelas->mataKuliah->prodi_id, 'angkatan' => null, 'nominal' => 900000]],
+    ])->assertSessionHasNoErrors();
+    expect(JenisBiaya::where('kode', 'PDD')->value('cara_hitung'))->toBe('tetap');
+
+    $mhs->mahasiswaProfile->update(['prodi_id' => $kelas->mataKuliah->prodi_id]);
+    $this->actingAs($mhs)->get(route('mahasiswa.info-biaya-kuliah'))->assertInertia(fn ($page) => $page
+        ->where('biayaTugasAkhir.pendadaran', [['nama' => 'Biaya Pendadaran', 'nominal' => 900000, 'keterangan' => null]])
+        ->where('biayaTugasAkhir.wisuda', []));
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page->where('biaya.pendadaran.0.nominal', 900000));
 });

@@ -9,11 +9,14 @@ use App\Models\JenisBiaya;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
+use App\Models\MataKuliah;
+use App\Models\PengajuanAkademik;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengajuanSusulan;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengumpulanTugas;
+use App\Models\PeriodeWisuda;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
 use App\Models\ProgramStudi;
@@ -27,9 +30,11 @@ use App\Models\TagihanItem;
 use App\Models\TagihanRemidi;
 use App\Models\TahunAkademik;
 use App\Models\Tugas;
+use App\Models\TugasAkhir;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
+use App\SyaratTugasAkhir;
 use App\UjianSusulan;
 use App\UserType;
 use App\UsulanRemidi;
@@ -146,7 +151,9 @@ it('seeds schedules without room, dosen, or student clashes', function () {
 it('seeds quiz and tugas content in the format the application produces', function () {
     $this->seed();
 
-    $kelasAktif = KelasKuliah::where('tahun_akademik_id', TahunAkademik::where('status', true)->value('id'))->count();
+    // Kelas Skripsi berupa bimbingan, tanpa quiz dan tugas.
+    $kelasAktif = KelasKuliah::where('tahun_akademik_id', TahunAkademik::where('status', true)->value('id'))
+        ->whereHas('mataKuliah', fn ($q) => $q->where('tugas_akhir', false))->count();
 
     expect(Quiz::count())->toBe($kelasAktif)
         ->and(Question::count())->toBe(Quiz::count() * 3)
@@ -174,8 +181,9 @@ it('seeds quiz and tugas content in the format the application produces', functi
 it('seeds meetings and attendance that follow the presensi rules', function () {
     $this->seed();
 
-    // Setiap kelas punya pertemuan sebanyak jumlah_pertemuan-nya, dengan satu UTS dan satu UAS.
-    foreach (KelasKuliah::withCount(['pertemuans', 'krs'])->get() as $kelas) {
+    // Setiap kelas punya pertemuan sebanyak jumlah_pertemuan-nya, dengan satu UTS dan satu UAS (kecuali kelas
+    // Skripsi yang berupa bimbingan).
+    foreach (KelasKuliah::withCount(['pertemuans', 'krs'])->whereHas('mataKuliah', fn ($q) => $q->where('tugas_akhir', false))->get() as $kelas) {
         expect($kelas->pertemuans_count)->toBe($kelas->jumlah_pertemuan)
             ->and($kelas->pertemuans()->where('jenis', Pertemuan::UTS)->count())->toBe(1)
             ->and($kelas->pertemuans()->where('jenis', Pertemuan::UAS)->count())->toBe(1);
@@ -293,4 +301,29 @@ it('seeds susulan examples that follow the susulan rules', function () {
     }
 
     expect(TagihanItem::whereIn('jenis_biaya_id', JenisBiaya::where('kategori', JenisBiaya::SUSULAN)->select('id'))->exists())->toBeFalse();
+});
+
+it('seeds tugas akhir examples that follow the TA rules', function () {
+    $this->seed();
+
+    // Mata kuliah Skripsi per prodi, bertanda TA, tidak masuk paket semester yang ditempuh.
+    expect(MataKuliah::where('tugas_akhir', true)->count())->toBe(ProgramStudi::count());
+
+    $pengajuan = PengajuanAkademik::where('jenis', PengajuanAkademik::TUGAS_AKHIR)->with('mahasiswa')->orderBy('id')->get();
+    expect($pengajuan->pluck('status')->all())->toBe([PengajuanAkademik::MENUNGGU, PengajuanAkademik::DISETUJUI]);
+    foreach ($pengajuan as $p) {
+        // Pengaju memenuhi syarat: mengambil Skripsi di tahun aktif.
+        expect(SyaratTugasAkhir::terpenuhi(SyaratTugasAkhir::pengajuanTa($p->mahasiswa)))->toBeTrue()
+            ->and($p->lampiran)->toHaveKey('proposal');
+    }
+
+    $ta = TugasAkhir::sole();
+    expect($ta->mahasiswa_id)->toBe($pengajuan[1]->mahasiswa_id)
+        ->and($ta->status)->toBe(TugasAkhir::BERJALAN)
+        ->and($ta->pembimbing_1_id)->not->toBeNull();
+
+    // Biaya pendadaran/wisuda hanya informasi: tidak masuk tagihan semester.
+    expect(JenisBiaya::whereIn('kategori', JenisBiaya::INFO)->count())->toBe(2)
+        ->and(TagihanItem::whereIn('jenis_biaya_id', JenisBiaya::whereIn('kategori', JenisBiaya::INFO)->select('id'))->exists())->toBeFalse()
+        ->and(PeriodeWisuda::sole()->bisaDidaftar())->toBeTrue();
 });

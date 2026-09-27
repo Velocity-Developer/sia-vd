@@ -2,7 +2,7 @@
 import DaftarTagihanBerbukti, { type TagihanBerbukti } from '@/components/DaftarTagihanBerbukti.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type Rincian, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 
 type Item = { nama: string; cara_hitung: string; nominal_satuan: number; jumlah: number; subtotal: number };
 type Tagihan = { id: number; tahun_akademik: string; status: string; total: number; tanggal_lunas: string | null; items: Item[] };
@@ -40,7 +40,12 @@ const props = defineProps<{
     dasar: Dasar | null;
     tagihanRemidi: TagihanRemidi[];
     tagihanSusulan: TagihanBerbukti[];
+    biayaTugasAkhir: Record<'pendadaran' | 'wisuda', { nama: string; nominal: number; keterangan: string | null }[]>;
 }>();
+const biayaInfo = [
+    { kunci: 'pendadaran', judul: 'Pendadaran' },
+    { kunci: 'wisuda', judul: 'Wisuda' },
+] as const;
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nilai || 0);
@@ -187,6 +192,30 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                     pesan-gugur="Batas bayar sudah lewat, hak ujian susulan Anda gugur."
                     pesan-dibatalkan="Anda tercatat mengikuti ujian utama, jadi tagihan susulan ini dibatalkan."
                 />
+
+                <section class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
+                    <h2 class="text-lg font-semibold text-black">Biaya Pendadaran & Wisuda</h2>
+                    <p class="mt-1 text-sm text-[#615d59]">
+                        Informasi saja, tidak ditagihkan di sini. Bayar sesuai nominal, lalu unggah bukti bayarnya di form pendaftaran pendadaran atau
+                        wisuda (menu
+                        <Link :href="route('mahasiswa.tugas-akhir')" class="font-medium text-[#0075de] hover:underline">Tugas Akhir & Wisuda</Link>).
+                    </p>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div v-for="b in biayaInfo" :key="b.kunci" class="rounded-lg border border-[#e6e6e6] p-4">
+                            <p class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">{{ b.judul }}</p>
+                            <template v-if="props.biayaTugasAkhir[b.kunci].length">
+                                <div v-for="item in props.biayaTugasAkhir[b.kunci]" :key="item.nama" class="mt-2">
+                                    <p class="flex justify-between gap-2 text-sm">
+                                        <span class="text-[#31302e]">{{ item.nama }}</span>
+                                        <span class="font-semibold text-black">{{ rupiah(item.nominal) }}</span>
+                                    </p>
+                                    <p v-if="item.keterangan" class="text-xs text-[#a39e98]">{{ item.keterangan }}</p>
+                                </div>
+                            </template>
+                            <p v-else class="mt-2 text-sm text-[#615d59]">Belum ada informasi biaya. Hubungi bagian keuangan.</p>
+                        </div>
+                    </div>
+                </section>
 
                 <div v-if="props.riwayat.length" class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
                     <div class="border-b border-[#e6e6e6] px-5 py-4">

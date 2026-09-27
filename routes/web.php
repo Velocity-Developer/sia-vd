@@ -54,6 +54,7 @@ use App\Models\Quiz;
 use App\Models\User;
 use App\PengingatRemidi;
 use App\PengingatSusulan;
+use App\PengingatTugasAkhir;
 use App\PeringatanPresensi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -103,7 +104,10 @@ Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::get('admin', fn () => Inertia::render('Dashboard', ['role' => 'admin']))
+Route::get('admin', fn (Request $request) => Inertia::render('Dashboard', [
+    'role' => 'admin',
+    'pengingatTugasAkhir' => $request->user()->hasPermission('admin.pengajuan-akademik') ? PengingatTugasAkhir::untukAdmin() : null,
+]))
     ->middleware(['auth', 'verified', 'can:admin.dashboard'])
     ->name('admin.dashboard');
 
@@ -311,6 +315,9 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
             'susulanDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.ujian')
                 ? PengingatSusulan::untukDosen($request->user()->dosenProfile)
                 : null,
+            'pengingatTugasAkhir' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.bimbingan')
+                ? PengingatTugasAkhir::untukDosen($request->user()->dosenProfile)
+                : null,
         ]))->name('dosen.dashboard');
         Route::get('profile', fn () => Inertia::render('DosenPlaceholder', ['title' => 'Profile']))->name('dosen.profile');
     });
@@ -389,6 +396,9 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
                 : null,
             'susulanMahasiswa' => $request->user()->mahasiswaProfile
                 ? PengingatSusulan::untukMahasiswa($request->user()->mahasiswaProfile, $request->user()->hasPermission('mahasiswa.info-biaya'), $request->user()->hasPermission('mahasiswa.ujian'))
+                : null,
+            'pengingatTugasAkhir' => $request->user()->mahasiswaProfile && $request->user()->hasPermission('mahasiswa.tugas-akhir')
+                ? PengingatTugasAkhir::untukMahasiswa($request->user()->mahasiswaProfile)
                 : null,
         ]))->name('mahasiswa.dashboard');
 

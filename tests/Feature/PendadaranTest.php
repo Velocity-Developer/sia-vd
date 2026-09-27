@@ -414,3 +414,22 @@ it('converts scores with the configurable minimum per letter', function () {
     $this->actingAs($admin)->put(route('admin.pengaturan-akademik.skala-nilai'), ['skala_nilai' => $skala])->assertSessionHasNoErrors();
     expect(SkalaNilai::where('huruf', 'B')->value('angka_minimal'))->toEqual(65);
 });
+
+it('reminds supervisors and examiners of their next step', function () {
+    [$pendadaran, $penguji] = pendadaranTerjadwal();
+    [$mhs2, $pembimbing2] = mahasiswaSiapPendadaran();
+    $this->actingAs($mhs2)->post(route('mahasiswa.tugas-akhir.ajukan-pendadaran'), isianPendadaran());
+
+    $this->actingAs($pembimbing2)->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('pengingatTugasAkhir.pesan.0.teks', '1 pendaftaran pendadaran menunggu persetujuan Anda sebagai pembimbing.'));
+    $this->actingAs($penguji[1])->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('pengingatTugasAkhir.pesan.0.penting', false));
+
+    $this->travelTo('2025-10-06 10:00:00');
+    $this->actingAs($penguji[1])->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('pengingatTugasAkhir.pesan.0.teks', 'Isi nilai pendadaran '.$pendadaran->mahasiswa->user->name.'.'));
+    nilaiSemuaPenguji($pendadaran, $penguji, [80, 80, 80]);
+    $this->actingAs($penguji[1])->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page->where('pengingatTugasAkhir', null));
+    $this->actingAs($penguji[0])->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('pengingatTugasAkhir.pesan.0.teks', 'Semua penguji sudah menilai; tetapkan hasil pendadaran '.$pendadaran->mahasiswa->user->name.'.'));
+});

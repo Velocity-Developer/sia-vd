@@ -47,15 +47,21 @@ const form = useForm({
 const perSks = computed(() => form.cara_hitung === 'per_sks');
 // Remidi dan susulan ditagih per mata kuliah/ujian, bukan per semester.
 const perMatkul = computed(() => form.kategori === 'remidi' || form.kategori === 'susulan');
+// Biaya pendadaran/wisuda hanya informasi di Biaya Kuliah, nominalnya tetap.
+const info = computed(() => form.kategori === 'pendadaran' || form.kategori === 'wisuda');
 const keteranganKategori = computed(
     () =>
         ({
             semester: 'Ikut dihitung saat menerbitkan tagihan semester.',
             remidi: 'Hanya dipakai saat menerbitkan tagihan remidi.',
             susulan: 'Hanya dipakai saat menerbitkan tagihan ujian susulan.',
+            pendadaran:
+                'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pendaftaran pendadaran.',
+            wisuda: 'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pendaftaran wisuda.',
         })[form.kategori as string] ?? '',
 );
 const keteranganHitung = computed(() => {
+    if (info.value) return 'Nominal tetap sesuai tarif prodi/angkatan mahasiswa.';
     if (perMatkul.value)
         return perSks.value
             ? 'Nominal tarif dikali SKS mata kuliahnya.'
@@ -129,13 +135,15 @@ const inp =
                                     <option value="semester">Tagihan semester</option>
                                     <option value="remidi">Remidi (per mata kuliah)</option>
                                     <option value="susulan">Ujian susulan (per ujian)</option>
+                                    <option value="pendadaran">Pendadaran (informasi)</option>
+                                    <option value="wisuda">Wisuda (informasi)</option>
                                 </SelectFilter>
                                 <p class="text-xs text-[#615d59]">
                                     {{ keteranganKategori }}
                                 </p>
                                 <InputError :message="form.errors.kategori" />
                             </div>
-                            <div class="grid content-start gap-2">
+                            <div v-if="!info" class="grid content-start gap-2">
                                 <Label for="cara_hitung">Cara Hitung</Label>
                                 <SelectFilter v-model="form.cara_hitung" label="Cara hitung" penuh>
                                     <option value="tetap">

@@ -15,6 +15,8 @@ use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\Materi;
+use App\Models\Pendadaran;
+use App\Models\PengajuanAkademik;
 use App\Models\PengajuanIzin;
 use App\Models\PengajuanPindahKelas;
 use App\Models\PengajuanSusulan;
@@ -22,6 +24,7 @@ use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengaturanPindahKelas;
 use App\Models\PengumpulanTugas;
+use App\Models\PeriodeWisuda;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
 use App\Models\ProgramStudi;
@@ -40,9 +43,11 @@ use App\Models\TagihanSusulan;
 use App\Models\TahunAkademik;
 use App\Models\TarifBiaya;
 use App\Models\Tugas;
+use App\Models\TugasAkhir;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
+use App\Models\Wisuda;
 use App\PermissionCatalog;
 use App\UserType;
 use App\UsulanRemidi;
@@ -111,6 +116,8 @@ class DemoSeeder extends Seeder
         $this->bersihkanSisaDemoLama($dosen, $mahasiswa, $prodi, $mataKuliah, $ruang);
         $this->kelasDanJadwal($tahunAkademik, $prodi, $mataKuliah, $dosen, $ruang);
         $this->krsDanNilai($tahunAkademik, $mahasiswa);
+        // KRS Skripsi disusun sebelum presensi dan tagihan semester dibuat dari KRS.
+        $this->tugasAkhir($tahunAkademik->last(), $mataKuliah);
         $this->kontenKelas($tahunAkademik->last(), $mahasiswa);
         $this->presensi($tahunAkademik);
         $this->pengajuanIzin($tahunAkademik->last());
@@ -125,6 +132,11 @@ class DemoSeeder extends Seeder
 
     private function bersihkan(): void
     {
+        Wisuda::query()->delete();
+        PeriodeWisuda::query()->delete();
+        Pendadaran::query()->delete();
+        PengajuanAkademik::query()->delete();
+        TugasAkhir::query()->delete();
         TagihanSusulan::query()->delete();
         PengajuanSusulan::query()->delete();
         TagihanRemidi::query()->delete();
@@ -308,10 +320,19 @@ class DemoSeeder extends Seeder
                         'sks' => 4,
                         'semester' => $semester,
                         'jenis' => $urut === 3 ? 'Pilihan' : 'Wajib',
+                        'tugas_akhir' => false,
                         'prodi_id' => $item->id,
                     ],
                 ));
             }
+        }
+
+        // Mata kuliah TA/Skripsi semester 8 per prodi; tidak masuk paket semester biasa.
+        foreach ($prodi as $item) {
+            $mataKuliah->push(MataKuliah::updateOrCreate(
+                ['kode_matkul' => substr($item->kode_prodi, 0, 2).'801'],
+                ['nama_matkul' => 'Skripsi', 'sks' => 6, 'semester' => 8, 'jenis' => 'Wajib', 'tugas_akhir' => true, 'prodi_id' => $item->id],
+            ));
         }
 
         return $mataKuliah;
@@ -575,6 +596,8 @@ class DemoSeeder extends Seeder
     {
         $kelasSemua = KelasKuliah::query()
             ->whereIn('tahun_akademik_id', $tahunAkademik->pluck('id'))
+            // Kelas Skripsi berupa bimbingan, tanpa pertemuan kuliah.
+            ->whereHas('mataKuliah', fn ($q) => $q->where('tugas_akhir', false))
             ->with('tahunAkademik', 'jadwals', 'mataKuliah:id,nama_matkul', 'krs:id,kelas_id,mahasiswa_id')
             ->get();
 
@@ -694,6 +717,7 @@ class DemoSeeder extends Seeder
     {
         $kelasAktif = KelasKuliah::query()
             ->where('tahun_akademik_id', $tahunAktif->id)
+            ->whereHas('mataKuliah', fn ($q) => $q->where('tugas_akhir', false))
             ->with('dosen:id,user_id', 'mataKuliah:id,nama_matkul', 'krs:id,kelas_id,mahasiswa_id')
             ->get();
 
@@ -1124,6 +1148,82 @@ class DemoSeeder extends Seeder
                 'bukti_diunggah_at' => now(),
                 'diterbitkan_oleh' => $admin->id,
             ]);
+        }
+    }
+
+    /**
+     * Contoh tugas akhir di tahun aktif: dua mahasiswa semester teratas prodi pertama mengambil Skripsi
+     * (melepas mata kuliah pilihan bila SKS-nya tidak muat); satu pengajuan TA menunggu admin, satu sudah
+     * disahkan. Kelas Skripsi berupa bimbingan, jadi tanpa jadwal mingguan, pertemuan, atau konten kelas. Data demo belum
+     * punya mahasiswa yang memenuhi syarat pendadaran (138 SKS), jadi pendadaran dan wisuda tidak dicontohkan,
+     * hanya info biayanya dan satu periode wisuda yang dibuka.
+     *
+     * @param  Collection<int, MataKuliah>  $mataKuliah
+     */
+    private function tugasAkhir(TahunAkademik $tahunAktif, Collection $mataKuliah): void
+    {
+        foreach ([[JenisBiaya::PENDADARAN, 'PENDADARAN', 'Biaya Pendadaran', 750_000], [JenisBiaya::WISUDA, 'WISUDA', 'Biaya Wisuda', 1_500_000]] as $urut => [$kategori, $kode, $nama, $nominal]) {
+            JenisBiaya::query()->create(['kode' => $kode, 'nama' => $nama, 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => $kategori, 'keterangan' => 'Dibayar sebelum mendaftar; bukti bayar diunggah di form pendaftaran.', 'aktif' => true, 'urutan' => 5 + $urut])
+                ->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => $nominal]);
+        }
+        PeriodeWisuda::query()->create([
+            'nama' => 'Wisuda Periode I '.today()->addMonths(3)->year,
+            'tanggal_acara' => today()->addMonths(3),
+            'tempat' => 'Auditorium Kampus',
+            'batas_daftar' => today()->addMonths(2),
+            'kuota' => 200,
+        ]);
+
+        $skripsi = $mataKuliah->first(fn (MataKuliah $m): bool => $m->tugas_akhir);
+        $dosen = DosenProfile::query()->where('prodi_id', $skripsi->prodi_id)->orderBy('id')->get();
+        $kelas = KelasKuliah::query()->create([
+            'kode_kelas' => $skripsi->kode_matkul.'-A',
+            'tahun_akademik_id' => $tahunAktif->id,
+            'kapasitas' => 30,
+            'dosen_id' => $dosen->first()->id,
+            'matkul_id' => $skripsi->id,
+        ]);
+
+        $peserta = MahasiswaProfile::query()->where('prodi_id', $skripsi->prodi_id)->orderByDesc('semester')->orderBy('nim')->take(2)->get();
+
+        $admin = User::query()->where('username', 'admin')->firstOrFail();
+        foreach ($peserta as $urut => $m) {
+            $maks = PengaturanAkademik::maksSksUntuk($m->ipsSemesterSebelum($tahunAktif)['ips'] ?? null);
+            $krs = Krs::query()->where('mahasiswa_id', $m->id)->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahunAktif->id))
+                ->with('kelasKuliah.mataKuliah:id,sks,jenis')->get()
+                // Mata kuliah pilihan dilepas lebih dulu.
+                ->sortBy(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->jenis === 'Pilihan' ? 0 : 1)->values();
+            while ($krs->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks) + $skripsi->sks > $maks && $krs->isNotEmpty()) {
+                $krs->shift()->delete();
+            }
+            Krs::create(['mahasiswa_id' => $m->id, 'kelas_id' => $kelas->id, 'status' => 'Aktif', 'nilai' => null]);
+            $pengajuan = PengajuanAkademik::query()->create([
+                'mahasiswa_id' => $m->id,
+                'jenis' => PengajuanAkademik::TUGAS_AKHIR,
+                'isian' => [
+                    'judul' => ['Sistem Rekomendasi Mata Kuliah Pilihan Berbasis Riwayat Nilai', 'Aplikasi Presensi Kuliah dengan Kode QR Dinamis'][$urut],
+                    'bidang' => ['Sistem Cerdas', 'Rekayasa Perangkat Lunak'][$urut],
+                    'ringkasan' => 'Latar belakang, rumusan masalah, tujuan, dan metode penelitian secara ringkas.',
+                    'usulan_pembimbing_1_id' => $dosen[1]->id,
+                    'usulan_pembimbing_2_id' => $dosen[2]->id,
+                ],
+                'lampiran' => ['proposal' => $this->berkasDemo('pengajuan-akademik', 'proposal', 'Proposal tugas akhir')],
+            ]);
+            $pengajuan->kirim($m->user_id);
+
+            if ($urut === 1) {
+                TugasAkhir::query()->create([
+                    'mahasiswa_id' => $m->id,
+                    'pengajuan_id' => $pengajuan->id,
+                    'judul' => $pengajuan->isian['judul'],
+                    'bidang' => $pengajuan->isian['bidang'],
+                    'pembimbing_1_id' => $dosen[1]->id,
+                    'pembimbing_2_id' => $dosen[2]->id,
+                    'status' => TugasAkhir::BERJALAN,
+                    'disahkan_oleh' => $admin->id,
+                ]);
+                $pengajuan->catat(PengajuanAkademik::DISETUJUI, null, $admin->id);
+            }
         }
     }
 

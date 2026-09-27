@@ -63,7 +63,11 @@ const props = defineProps<{
     };
     riwayat: Riwayat[];
     dosenOptions: { id: number; name: string }[];
+    biaya: Record<'pendadaran' | 'wisuda', { nama: string; nominal: number }[]>;
 }>();
+const rupiah = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
+const infoBiaya = (kunci: 'pendadaran' | 'wisuda') =>
+    props.biaya[kunci].length ? ' — ' + props.biaya[kunci].map((b) => `${b.nama} ${rupiah(b.nominal)}`).join(', ') : '';
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 
@@ -176,7 +180,7 @@ const berkasWisuda = [
     { kunci: 'pas_foto', label: 'Pas foto (JPG/PNG, maks. 2 MB)', accept: 'image/jpeg,image/png,.jpg,.jpeg,.png' },
     { kunci: 'naskah_final', label: 'Naskah final (PDF, maks. 20 MB)', accept: 'application/pdf,.pdf' },
     { kunci: 'bebas_pinjam', label: 'Bukti bebas pinjam perpustakaan', accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
-    { kunci: 'bukti_bayar', label: 'Bukti bayar wisuda', accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
+    { kunci: 'bukti_bayar', label: `Bukti bayar wisuda${infoBiaya('wisuda')}`, accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
 ] as const;
 
 const menunggu = (t: Tahap) => (t.pengajuan?.status === 'menunggu_pembimbing' ? 'menunggu persetujuan pembimbing' : 'menunggu diproses admin');
@@ -511,7 +515,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                     <InputBerkas
                                         id="bukti_bayar"
                                         :key="`bukti_bayar-${versiBerkas}`"
-                                        label="Bukti bayar pendadaran"
+                                        :label="`Bukti bayar pendadaran${infoBiaya('pendadaran')}`"
                                         :accept="dokumen"
                                         :pengajuan-id="pd.pengajuan?.id"
                                         :sudah-ada="sudahAda(pd, 'bukti_bayar')"

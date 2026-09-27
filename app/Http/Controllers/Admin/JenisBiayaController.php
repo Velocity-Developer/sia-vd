@@ -93,7 +93,8 @@ class JenisBiayaController extends Controller
             $jenis->fill([
                 'kode' => $data['kode'],
                 'nama' => $data['nama'],
-                'cara_hitung' => $data['cara_hitung'],
+                // Biaya informasi selalu nominal tetap.
+                'cara_hitung' => in_array($data['kategori'] ?? null, JenisBiaya::INFO, true) ? JenisBiaya::TETAP : $data['cara_hitung'],
                 'kategori' => $data['kategori'] ?? JenisBiaya::SEMESTER,
                 'keterangan' => $data['keterangan'] ?? null,
                 'aktif' => $data['aktif'],

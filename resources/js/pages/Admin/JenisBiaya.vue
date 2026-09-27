@@ -21,11 +21,12 @@ const page = usePage<{ flash?: { success?: string; error?: string } }>();
 
 const caraHitung = (jenis: { cara_hitung: string; kategori: string }) => {
     if (jenis.kategori === 'semester') return jenis.cara_hitung === 'per_sks' ? 'Per SKS' : 'Tetap per semester';
+    if (jenis.kategori === 'pendadaran' || jenis.kategori === 'wisuda') return 'Tetap';
     if (jenis.cara_hitung === 'per_sks') return 'Per SKS mata kuliah';
 
     return jenis.kategori === 'susulan' ? 'Tetap per ujian' : 'Tetap per mata kuliah';
 };
-const LABEL_KATEGORI: Record<string, string> = { remidi: 'Remidi', susulan: 'Susulan' };
+const LABEL_KATEGORI: Record<string, string> = { remidi: 'Remidi', susulan: 'Susulan', pendadaran: 'Info pendadaran', wisuda: 'Info wisuda' };
 
 const hapus = (jenis: Jenis) => {
     if (!confirm(`Hapus jenis biaya "${jenis.nama}"? Tagihan yang sudah terbit tidak berubah.`)) return;

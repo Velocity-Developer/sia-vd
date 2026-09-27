@@ -25,7 +25,16 @@ class JenisBiaya extends Model
     /** Hanya untuk tagihan ujian susulan per ujian. */
     public const SUSULAN = 'susulan';
 
-    public const KATEGORI = [self::SEMESTER, self::REMIDI, self::SUSULAN];
+    /** Informasi biaya pendadaran: tidak ditagihkan, bukti bayar diunggah di form pendaftaran. */
+    public const PENDADARAN = 'pendadaran';
+
+    /** Informasi biaya wisuda: tidak ditagihkan, bukti bayar diunggah di form pendaftaran. */
+    public const WISUDA = 'wisuda';
+
+    public const KATEGORI = [self::SEMESTER, self::REMIDI, self::SUSULAN, self::PENDADARAN, self::WISUDA];
+
+    /** Kategori yang hanya ditampilkan sebagai informasi di Biaya Kuliah. */
+    public const INFO = [self::PENDADARAN, self::WISUDA];
 
     protected $table = 'jenis_biaya';
 
@@ -39,6 +48,19 @@ class JenisBiaya extends Model
     public function tarif(): HasMany
     {
         return $this->hasMany(TarifBiaya::class, 'jenis_biaya_id');
+    }
+
+    /**
+     * Biaya informasi (pendadaran/wisuda) yang berlaku untuk mahasiswa, menurut tarif prodi/angkatannya.
+     *
+     * @return list<array{nama: string, nominal: int, keterangan: ?string}>
+     */
+    public static function infoUntuk(?MahasiswaProfile $mahasiswa, string $kategori): array
+    {
+        return static::query()->where('aktif', true)->where('kategori', $kategori)->with('tarif')->orderBy('urutan')->get()
+            ->map(fn (self $jenis): ?array => ($tarif = $jenis->tarifUntuk($mahasiswa?->prodi_id, $mahasiswa?->angkatan)) === null ? null
+                : ['nama' => $jenis->nama, 'nominal' => (int) $tarif->nominal, 'keterangan' => $jenis->keterangan])
+            ->filter()->values()->all();
     }
 
     /**

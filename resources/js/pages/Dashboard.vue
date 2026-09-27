@@ -45,6 +45,8 @@ const props = defineProps<{
     } | null;
     /** Beranda dosen: ujian susulan yang perlu disiapkan atau dinilai. */
     susulanDosen?: { siapkan: UjianSusulanRingkas[]; nilai: UjianSusulanRingkas[] } | null;
+    /** Beranda semua peran: langkah tugas akhir, pendadaran, dan wisuda yang perlu ditindaklanjuti. */
+    pengingatTugasAkhir?: { pesan: { teks: string; penting: boolean }[]; tautan: string } | null;
     /** Beranda dosen: kelas yang menunggu langkah remidi. */
     remidiDosen?: {
         kunci_daftar: KelasRingkas[];
@@ -82,6 +84,19 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                 </ul>
                 <Link :href="route('mahasiswa.presensi')" class="mt-2 inline-block text-sm font-medium text-[#0075de] hover:underline"
                     >Lihat riwayat presensi</Link
+                >
+            </section>
+
+            <section v-if="props.pengingatTugasAkhir" :class="kartu">
+                <h2 class="font-semibold text-black">Tugas akhir & wisuda</h2>
+                <ul class="mt-3 divide-y divide-[#e6e6e6]">
+                    <li v-for="(p, i) in props.pengingatTugasAkhir.pesan" :key="i" class="flex items-start gap-2 py-2.5 text-sm">
+                        <TriangleAlert v-if="p.penting" class="mt-0.5 size-4 shrink-0 text-[#dd5b00]" />
+                        <span :class="p.penting ? 'text-black' : 'text-[#31302e]'">{{ p.teks }}</span>
+                    </li>
+                </ul>
+                <Link :href="props.pengingatTugasAkhir.tautan" class="mt-2 inline-block text-sm font-medium text-[#0075de] hover:underline"
+                    >Buka halaman tugas akhir</Link
                 >
             </section>
 
