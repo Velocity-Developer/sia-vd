@@ -18,6 +18,7 @@ type MataKuliah = {
     sks: number;
     semester: number;
     jenis: string;
+    tugas_akhir: boolean;
     prodi?: { nama_prodi?: string; fakultas?: { nama_fakultas?: string } | null } | null;
 };
 type Pagination = { data: MataKuliah[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
@@ -144,6 +145,11 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                                         <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium" :class="jenisBadge(item.jenis)">{{
                                             item.jenis
                                         }}</span>
+                                        <span
+                                            v-if="item.tugas_akhir"
+                                            class="ml-1 inline-flex rounded-full bg-[#1aae39]/10 px-2.5 py-0.5 text-xs font-medium text-[#137a2a]"
+                                            >TA/Skripsi</span
+                                        >
                                     </td>
                                     <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
                                         <span class="block">{{ item.prodi?.nama_prodi ?? '-' }}</span>

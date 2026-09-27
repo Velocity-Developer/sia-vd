@@ -6,12 +6,14 @@ use App\AllowedUpload;
 use App\Models\InfoKuliah;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
+use App\Models\PengajuanAkademik;
 use App\Models\PengajuanIzin;
 use App\Models\PengajuanSusulan;
 use App\Models\PengumpulanTugas;
 use App\Models\TagihanRemidi;
 use App\Models\TagihanSusulan;
 use App\Models\Tugas;
+use App\Models\TugasAkhir;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
@@ -141,6 +143,25 @@ class BerkasController extends Controller
         abort_unless($boleh, 403);
 
         return $this->kirim($this->berkasKe($pengajuanSusulan->lampiran, $index));
+    }
+
+    /**
+     * Berkas pengajuan TA/pendadaran/wisuda: pemilik, admin pemroses, dan pembimbing TA mahasiswa itu.
+     */
+    public function pengajuanAkademik(Request $request, PengajuanAkademik $pengajuanAkademik, string $kunci): StreamedResponse
+    {
+        $user = $request->user();
+        $dosenId = $user->dosenProfile?->id;
+        $boleh = ($user->mahasiswaProfile !== null && $pengajuanAkademik->mahasiswa_id === $user->mahasiswaProfile->id)
+            || $user->hasPermission('admin.pengajuan-akademik')
+            || ($dosenId !== null && $user->hasPermission('dosen.bimbingan')
+                && TugasAkhir::milik($pengajuanAkademik->mahasiswa_id)?->dibimbingOleh($dosenId));
+
+        abort_unless($boleh, 403);
+
+        $path = $pengajuanAkademik->lampiran[$kunci] ?? null;
+
+        return $this->kirim(is_string($path) ? $path : null);
     }
 
     public function infoKuliah(Request $request, InfoKuliah $infoKuliah): StreamedResponse

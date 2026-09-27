@@ -45,4 +45,16 @@ class DosenProfile extends Model
     {
         return $this->hasMany(ProgramStudi::class, 'kaprodi');
     }
+
+    /**
+     * Pilihan dosen untuk isian form (pembimbing, penguji), urut nama.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public static function opsi(): array
+    {
+        return static::query()->with('user:id,name')->get(['id', 'user_id'])
+            ->map(fn (self $dosen): array => ['id' => $dosen->id, 'name' => (string) $dosen->user?->name])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
+    }
 }

@@ -13,13 +13,14 @@ class MataKuliah extends Model
 
     protected $table = 'mata_kuliahs';
 
-    protected $fillable = ['kode_matkul', 'nama_matkul', 'sks', 'semester', 'jenis', 'prodi_id'];
+    protected $fillable = ['kode_matkul', 'nama_matkul', 'sks', 'semester', 'jenis', 'tugas_akhir', 'prodi_id'];
 
     protected function casts(): array
     {
         return [
             'sks' => 'integer',
             'semester' => 'integer',
+            'tugas_akhir' => 'boolean',
         ];
     }
 

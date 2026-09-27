@@ -25,6 +25,7 @@ const props = defineProps<{
     kunciKrsAktif: boolean;
     hurufMaksRemidi: string | null;
     susulan: { batas_pengajuan_susulan_hari: number; batas_bayar_susulan_hari: number };
+    minSksPendadaran: number;
     pindahKelasAktif: boolean;
     presensi: Presensi;
     batasSks: BatasSks[];
@@ -48,6 +49,9 @@ const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
 const susulanForm = useForm({ ...props.susulan });
 const simpanSusulan = () => susulanForm.put(route('admin.pengaturan-akademik.susulan'), { preserveScroll: true });
 
+const tugasAkhirForm = useForm({ min_sks_pendadaran: props.minSksPendadaran });
+const simpanTugasAkhir = () => tugasAkhirForm.put(route('admin.pengaturan-akademik.tugas-akhir'), { preserveScroll: true });
+
 const remidiForm = useForm({ huruf_maks_remidi: props.hurufMaksRemidi ?? '' });
 const simpanRemidi = () =>
     remidiForm
@@ -66,6 +70,7 @@ const daftarBagian = [
     { id: 'nilai', judul: 'Nilai' },
     { id: 'remidi', judul: 'Remidi' },
     { id: 'susulan', judul: 'Ujian Susulan' },
+    { id: 'tugas-akhir', judul: 'Tugas Akhir' },
     { id: 'presensi', judul: 'Presensi' },
 ];
 
@@ -355,6 +360,33 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                         class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
                     >
                         Simpan Pengaturan Susulan
+                    </Button>
+                </div>
+            </form>
+        </section>
+
+        <section id="tugas-akhir" class="flex scroll-mt-4 flex-col gap-4">
+            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tugas Akhir</h2>
+            <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="simpanTugasAkhir">
+                <h2 class="text-lg font-semibold text-black">Syarat Pendadaran</h2>
+                <p class="mt-1 text-sm text-[#615d59]">
+                    SKS yang sudah bernilai di transkrip (tanpa mata kuliah TA/Skripsi yang sedang berjalan) minimal untuk mendaftar pendadaran. Mata
+                    kuliah TA/Skripsi ditandai di Master Akademik → Mata Kuliah.
+                </p>
+                <div class="mt-4 grid content-start gap-4 sm:grid-cols-2">
+                    <div class="grid content-start gap-2">
+                        <Label for="min_sks_pendadaran">SKS minimal</Label>
+                        <Input id="min_sks_pendadaran" v-model="tugasAkhirForm.min_sks_pendadaran" type="number" min="0" max="300" :class="inp" />
+                        <InputError :message="tugasAkhirForm.errors.min_sks_pendadaran" />
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end">
+                    <Button
+                        type="submit"
+                        :disabled="tugasAkhirForm.processing"
+                        class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
+                    >
+                        Simpan Pengaturan Tugas Akhir
                     </Button>
                 </div>
             </form>

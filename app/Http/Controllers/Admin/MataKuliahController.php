@@ -95,9 +95,10 @@ class MataKuliahController extends Controller
             'sks' => ['required', 'integer', 'min:1', 'max:6'],
             'semester' => ['required', 'integer', 'min:1', 'max:14'],
             'jenis' => ['required', 'in:Wajib,Pilihan'],
+            'tugas_akhir' => ['boolean'],
             'prodi_id' => ['required', 'exists:program_studis,id'],
         ], $this->messages(), $this->attributes());
-        $model->fill($data)->save();
+        $model->fill([...$data, 'tugas_akhir' => $request->boolean('tugas_akhir')])->save();
     }
 
     /**
@@ -122,6 +123,7 @@ class MataKuliahController extends Controller
             'sks' => 'SKS',
             'semester' => 'Semester',
             'jenis' => 'Jenis',
+            'tugas_akhir' => 'Mata kuliah TA/Skripsi',
             'prodi_id' => 'Program Studi',
         ];
     }

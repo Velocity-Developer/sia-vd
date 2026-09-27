@@ -32,6 +32,7 @@ const form = useForm({
     sks: props.mataKuliah?.sks ?? '',
     semester: props.mataKuliah?.semester ?? '',
     jenis: props.mataKuliah?.jenis ?? '',
+    tugas_akhir: Boolean(props.mataKuliah?.tugas_akhir),
     prodi_id: props.mataKuliah?.prodi_id ?? '',
 });
 
@@ -124,6 +125,17 @@ const sel =
                                 <InputError :message="form.errors.jenis" />
                             </div>
                         </div>
+                        <label class="mt-4 flex items-start gap-3 rounded-lg border border-[#e6e6e6] px-4 py-3">
+                            <input v-model="form.tugas_akhir" type="checkbox" class="mt-0.5 size-4 accent-[#0075de]" />
+                            <span class="grid gap-0.5">
+                                <span class="text-sm font-medium text-black">Mata kuliah TA/Skripsi</span>
+                                <span class="text-xs text-[#615d59]"
+                                    >Mahasiswa yang mengambil mata kuliah ini di semester aktif boleh mengajukan tugas akhir dan mendaftar
+                                    pendadaran.</span
+                                >
+                            </span>
+                        </label>
+                        <InputError :message="form.errors.tugas_akhir" />
                     </section>
 
                     <div class="flex justify-end pt-2">

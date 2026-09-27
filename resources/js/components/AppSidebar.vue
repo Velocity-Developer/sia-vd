@@ -83,6 +83,12 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 items: [
                     { title: 'Info Kuliah', routeName: 'admin.info-kuliah.index', icon: FileText, permission: 'admin.info-kuliah' },
                     { title: 'Pindah Kelas', routeName: 'admin.pindah-kelas.index', icon: ArrowLeftRight, permission: 'admin.pindah-kelas' },
+                    {
+                        title: 'TA & Wisuda',
+                        routeName: 'admin.pengajuan-akademik.index',
+                        icon: GraduationCap,
+                        permission: 'admin.pengajuan-akademik',
+                    },
                 ],
             },
             {
@@ -120,6 +126,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Presensi', routeName: 'dosen.presensi.index', icon: UserCheck, permission: 'dosen.presensi' },
                     { title: 'Ujian', routeName: 'dosen.ujian.index', icon: NotebookPen, permission: 'dosen.ujian' },
                     { title: 'Mahasiswa Kelas', href: '/dosen/mahasiswa-kelas', icon: Users, permission: 'dosen.mahasiswa-kelas' },
+                    { title: 'Bimbingan TA', routeName: 'dosen.bimbingan.index', icon: GraduationCap, permission: 'dosen.bimbingan' },
                 ],
             },
             {
@@ -147,6 +154,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Jadwal Kuliah', href: '/mahasiswa/jadwal', icon: CalendarDays, permission: 'mahasiswa.jadwal-kuliah' },
                     { title: 'Presensi', routeName: 'mahasiswa.presensi', icon: UserCheck, permission: 'mahasiswa.presensi' },
                     { title: 'Jadwal Ujian', routeName: 'mahasiswa.ujian', icon: NotebookPen, permission: 'mahasiswa.ujian' },
+                    { title: 'Tugas Akhir & Wisuda', routeName: 'mahasiswa.tugas-akhir', icon: GraduationCap, permission: 'mahasiswa.tugas-akhir' },
                 ],
             },
             {

@@ -10,6 +10,7 @@ type MataKuliahShowProps = {
     sks: number;
     semester: number;
     jenis: string;
+    tugas_akhir: boolean;
     prodi?: {
         id: number;
         kode_prodi: string;
@@ -76,7 +77,9 @@ const prodi = () => (props.mataKuliah as any).prodi ?? null;
                         </div>
                         <div class="space-y-1">
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Jenis</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.mataKuliah.jenis) }}</dd>
+                            <dd class="break-words text-[15px] font-medium leading-5 text-black">
+                                {{ v(props.mataKuliah.jenis) }}<span v-if="props.mataKuliah.tugas_akhir"> · TA/Skripsi</span>
+                            </dd>
                         </div>
                     </dl>
                 </section>

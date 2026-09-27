@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JenisBiayaController;
 use App\Http\Controllers\Admin\MataKuliahController;
+use App\Http\Controllers\Admin\PengajuanAkademikController as AdminPengajuanAkademikController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
 use App\Http\Controllers\Admin\ProgramStudiController;
 use App\Http\Controllers\Admin\RoleController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Admin\UjianController as AdminUjianController;
 use App\Http\Controllers\Admin\UjianSusulanController as AdminUjianSusulanController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
+use App\Http\Controllers\Dosen\BimbinganController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
 use App\Http\Controllers\Dosen\UjianController as DosenUjianController;
 use App\Http\Controllers\Kelas\JadwalController;
@@ -40,6 +42,7 @@ use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiContro
 use App\Http\Controllers\Mahasiswa\QuizAttemptController;
 use App\Http\Controllers\Mahasiswa\TagihanRemidiController as MahasiswaTagihanRemidiController;
 use App\Http\Controllers\Mahasiswa\TagihanSusulanController as MahasiswaTagihanSusulanController;
+use App\Http\Controllers\Mahasiswa\TugasAkhirController as MahasiswaTugasAkhirController;
 use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
 use App\Http\Controllers\Mahasiswa\UjianSusulanController as MahasiswaUjianSusulanController;
 use App\Models\KelasKuliah;
@@ -114,6 +117,7 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
     Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
     Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->name('berkas.bukti-susulan');
+    Route::get('pengajuan-akademik/{pengajuanAkademik}/{kunci}', [BerkasController::class, 'pengajuanAkademik'])->where('kunci', '[a-z_]+')->name('berkas.pengajuan-akademik');
     Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->name('berkas.lampiran-susulan');
     Route::get('ujian-soal/{ujian}/{index}', [BerkasController::class, 'soalUjian'])->whereNumber('index')->name('berkas.ujian-soal');
     Route::get('ujian-jawaban/{jawaban}/{index}', [BerkasController::class, 'jawabanUjian'])->whereNumber('index')->name('berkas.ujian-jawaban');
@@ -197,6 +201,13 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('pindah-kelas', [AdminPindahKelasController::class, 'index'])->name('admin.pindah-kelas.index');
         Route::put('pindah-kelas/{pengajuan}/approve', [AdminPindahKelasController::class, 'approve'])->name('admin.pindah-kelas.approve');
         Route::put('pindah-kelas/{pengajuan}/reject', [AdminPindahKelasController::class, 'reject'])->name('admin.pindah-kelas.reject');
+    });
+
+    Route::middleware('can:admin.pengajuan-akademik')->group(function (): void {
+        Route::get('pengajuan-akademik', [AdminPengajuanAkademikController::class, 'index'])->name('admin.pengajuan-akademik.index');
+        Route::post('pengajuan-akademik/{pengajuanAkademik}/setujui', [AdminPengajuanAkademikController::class, 'setujui'])->name('admin.pengajuan-akademik.setujui');
+        Route::post('pengajuan-akademik/{pengajuanAkademik}/perbaikan', [AdminPengajuanAkademikController::class, 'perbaikan'])->name('admin.pengajuan-akademik.perbaikan');
+        Route::post('pengajuan-akademik/{pengajuanAkademik}/tolak', [AdminPengajuanAkademikController::class, 'tolak'])->name('admin.pengajuan-akademik.tolak');
     });
 
     Route::middleware('can:admin.fakultas')->group(function (): void {
@@ -337,6 +348,10 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
         $ruteUjianKelas('dosen');
     });
 
+    Route::middleware('can:dosen.bimbingan')->group(function (): void {
+        Route::get('bimbingan', [BimbinganController::class, 'index'])->name('dosen.bimbingan.index');
+    });
+
     Route::middleware('can:dosen.mahasiswa-kelas')->group(function (): void {
         Route::get('mahasiswa-kelas', [MahasiswaKelasController::class, 'index'])->name('dosen.mahasiswa-kelas');
     });
@@ -404,6 +419,11 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::delete('ujian-susulan/{pengajuanSusulan}', [MahasiswaUjianSusulanController::class, 'batalkan'])->name('mahasiswa.ujian-susulan.batalkan');
         Route::get('ujian/{ujian}', [MahasiswaUjianController::class, 'show'])->name('mahasiswa.ujian.show');
         Route::post('ujian/{ujian}/jawaban', [MahasiswaUjianController::class, 'kumpulkan'])->middleware('throttle:20,1')->name('mahasiswa.ujian.kumpulkan');
+    });
+
+    Route::middleware('can:mahasiswa.tugas-akhir')->group(function (): void {
+        Route::get('tugas-akhir', [MahasiswaTugasAkhirController::class, 'index'])->name('mahasiswa.tugas-akhir');
+        Route::post('tugas-akhir/pengajuan-ta', [MahasiswaTugasAkhirController::class, 'ajukanTa'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-ta');
     });
 
     Route::middleware('can:mahasiswa.pindah-kelas')->group(function (): void {
