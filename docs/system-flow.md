@@ -2,9 +2,9 @@
 
 Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **sesuai kode yang ada**, bukan rencana. Gambaran visualnya ada di [system-flowchart.md](system-flowchart.md).
 
-- Disusun dari kode di cabang `main` pada commit `2cc9dba` (27 September 2026).
+- Disusun dari kode di cabang `main` pada commit `127106e` (27 September 2026).
 - Rujukan kode ditulis sebagai `Kelas::metode` atau path berkas. Nomor baris sengaja tidak dicantumkan karena cepat berubah.
-- Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 16](#16-perlu-dikonfirmasi).
+- Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 17](#17-perlu-dikonfirmasi).
 
 ## Daftar isi
 
@@ -20,10 +20,11 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 10. [Ujian UTS dan UAS](#10-ujian-uts-dan-uas)
 11. [Nilai akhir, kunci nilai, dan hasil studi](#11-nilai-akhir-kunci-nilai-dan-hasil-studi)
 12. [Remidi](#12-remidi)
-13. [Pindah kelas](#13-pindah-kelas)
-14. [Fitur pendukung](#14-fitur-pendukung)
-15. [Keterkaitan antarfitur dan daftar status](#15-keterkaitan-antarfitur-dan-daftar-status)
-16. [Perlu dikonfirmasi](#16-perlu-dikonfirmasi)
+13. [Ujian susulan](#13-ujian-susulan)
+14. [Pindah kelas](#14-pindah-kelas)
+15. [Fitur pendukung](#15-fitur-pendukung)
+16. [Keterkaitan antarfitur dan daftar status](#16-keterkaitan-antarfitur-dan-daftar-status)
+17. [Perlu dikonfirmasi](#17-perlu-dikonfirmasi)
 
 ---
 
@@ -217,7 +218,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 | Akademik | `admin.pengaturan-akademik` | Enam formulir, dijelaskan di bawah tabel ini. |
 | Tampilan | `admin.pengaturan-tampilan` | Nama aplikasi, favicon (png/ico/webp, SVG ditolak), halaman masuk (judul, teks, gambar, tata letak `panel`/`tengah`, sorotan fitur), sidebar bawaan (`lebar`/`ringkas`). |
 
-**Enam formulir di tab Akademik:**
+**Tujuh formulir di tab Akademik:**
 
 1. **Kunci KRS oleh pembayaran**: sakelar `kunci_krs_aktif`, bawaan mati (lihat [6.4](#64-kunci-krs-oleh-pembayaran)).
 2. **Batas SKS**:
@@ -231,7 +232,10 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 4. **Pindah kelas**: sakelar membuka atau menutup formulir pengajuan mahasiswa, bawaan tertutup.
 5. **Remidi**: `huruf_maks_remidi`, yaitu huruf tertinggi setelah remidi. Kosong berarti bebas.
    - Bila huruf itu dihapus dari skala, isian ini ikut dikosongkan.
-6. **Presensi**:
+6. **Ujian susulan**:
+   - `batas_pengajuan_susulan_hari` (bawaan 3): pengajuan dibuka sampai N hari setelah tanggal ujian;
+   - `batas_bayar_susulan_hari` (bawaan 3): batas bayar tiap tagihan susulan = tanggal terbit + N hari.
+7. **Presensi**:
    - `jumlah_pertemuan` (bawaan 16, hanya untuk kelas baru);
    - `min_kehadiran_ujian` (75%);
    - `toleransi_terlambat_menit` (15);
@@ -286,9 +290,9 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 - **Field jenis biaya:**
   - `kode` (unik), `nama`;
   - `cara_hitung`: `tetap` atau `per_sks`;
-  - `kategori`: `semester` atau `remidi` (bawaan `semester`);
+  - `kategori`: `semester`, `remidi`, atau `susulan` (bawaan `semester`);
   - `aktif`, `urutan`.
-- Kategori `semester` dipakai tagihan semester. Kategori `remidi` hanya dipakai tagihan remidi ([bagian 12](#12-remidi)).
+- Kategori `semester` dipakai tagihan semester. Kategori `remidi` hanya dipakai tagihan remidi ([bagian 12](#12-remidi)), dan `susulan` hanya dipakai tagihan ujian susulan ([bagian 13](#13-ujian-susulan)).
 - **Tarif** dicatat per jenis biaya, per prodi, dan per angkatan (keduanya boleh kosong, artinya berlaku untuk semua).
 - Tarif yang dipakai adalah **yang paling khusus**: prodi+angkatan, lalu prodi saja, lalu angkatan saja, lalu umum (`JenisBiaya::tarifUntuk`).
 - Menghapus jenis biaya tidak mengubah tagihan lama, karena nama dan nominalnya sudah disalin ke rincian.
@@ -380,7 +384,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 2. Bila SKS yang diambil masih di bawah batas, sistem meminta konfirmasi (`krs_konfirmasi`).
 3. Sistem mencatat baris `krs_semester` (waktu simpan). Sejak itu mahasiswa tidak bisa lagi menambah atau membatalkan kelas sendiri.
 4. Jalan keluar setelah KRS terkunci:
-   - **pindah kelas** ([bagian 13](#13-pindah-kelas));
+   - **pindah kelas** ([bagian 14](#14-pindah-kelas));
    - **admin membuka kunci KRS** dari menu Tagihan Mahasiswa, yang menghapus baris `krs_semester`. Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
 
 ---
@@ -527,7 +531,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 
 ### 10.1 Penjadwalan oleh admin
 
-**Satu jadwal ujian per kelas per jenis** (`uts`/`uas`). Kombinasi kelas dan jenis unik.
+**Satu jadwal ujian per kelas per jenis** (`uts`/`uas`). Kombinasi kelas dan jenis unik. Jadwal remidi dan ujian susulan memakai tabel yang sama dengan jenis `remidi`, `uts_susulan`, dan `uas_susulan` ([bagian 12](#12-remidi) dan [13](#13-ujian-susulan)).
 
 **Field:**
 
@@ -562,6 +566,8 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 ### 10.3 Mahasiswa mengerjakan ujian
 
 - Mahasiswa hanya melihat ujian `terbit` dari kelas di KRS-nya, beserta status syarat kehadirannya.
+- Mahasiswa yang **pengajuan susulannya disetujui** untuk ujian itu tidak bisa mengerjakan ujian utama online, dan di daftar jadwal ujian utamanya berlabel "Ikut jadwal susulan" ([13.5](#135-mengikuti-ujian-utama-padahal-mengajukan-susulan)).
+- Semua penolakan ikut ujian memakai satu sumber pesan (`Ujian::alasanTidakBolehIkut`): bukan peserta kelas, bukan peserta remidi/susulan yang lunas, terdaftar susulan, atau belum memenuhi syarat kehadiran.
 - **Halaman detail ujian:**
   - hitung mundur memakai jam server;
   - nama berkas soal baru dikirim setelah ujian dimulai, dan hanya bagi yang boleh ikut.
@@ -616,6 +622,7 @@ Yang **tidak** terkunci: presensi (hanya terkunci bila tahun akademik nonaktif),
 **Finalisasi nilai** (dosen atau admin):
 
 - Ditolak bila ada **UAS terbit yang belum selesai**.
+- Ditolak selama masih ada **UAS susulan yang berjalan** (`UjianSusulan::uasSusulanTertunda`): pemohon UAS susulan yang disetujui dan tidak ikut UAS utama, yang tagihannya belum terbit, belum lunas tetapi belum gugur, atau sudah lunas tetapi UAS susulannya belum dijadwalkan atau belum selesai. Pemohon yang tagihannya gugur tidak menahan finalisasi. Halaman kelas menampilkan jumlahnya.
 - Mencatat waktu dan siapa yang memfinalisasi.
 - Antarmuka memperingatkan jumlah mahasiswa yang belum punya huruf akhir, tetapi tidak memblokir.
 
@@ -644,10 +651,10 @@ Remidi dilakukan **per mata kuliah (per kelas), paling banyak satu kali**. Alurn
 1. Bagian **Daftar Remidi** muncul di halaman kelas setelah nilai kelas **final**.
 2. **Usulan otomatis** (`UsulanRemidi::susun`) mengambil mahasiswa yang memenuhi dua syarat:
    - huruf akhirnya bertanda **tidak lulus** atau **boleh diulang** (dengan skala bawaan: D dan E);
-   - ia **ikut UAS**. Arti "ikut UAS" per mode:
+   - ia **ikut UAS**, termasuk bila ia mengerjakan **UAS susulan**. Arti "ikut" per mode ujian:
      - `online_soal`: sudah memulai lembar soal;
      - `online_berkas`: mengumpulkan berkas;
-     - `tatap_muka`: nilai UAS-nya terisi.
+     - `tatap_muka`: nilai ujiannya terisi.
    - Bila kelas tidak punya UAS terbit, semua mahasiswa dianggap ikut.
    - Mahasiswa tanpa huruf akhir tidak diusulkan.
 3. **Mengunci daftar:** dosen atau admin mencentang atau mencoret mahasiswa, lalu menekan **Kunci Daftar**.
@@ -747,7 +754,91 @@ Mahasiswa lain mendapat 404, sehingga tidak tahu remidi itu ada. Peserta yang ba
 
 ---
 
-## 13. Pindah kelas
+## 13. Ujian susulan
+
+Ujian susulan untuk mahasiswa yang tidak bisa mengikuti **UTS atau UAS**. Alurnya: mahasiswa mengajukan → admin menyetujui → admin menerbitkan tagihan → mahasiswa membayar → admin memverifikasi → jadwal susulan muncul. Aturan inti ada di `App\UjianSusulan`.
+
+### 13.1 Siapa yang dianggap sudah ikut ujian utama
+
+`UjianSusulan::pesertaUjianUtama` menentukan siapa yang **ikut** UTS/UAS:
+
+- `online_soal`: sudah memulai lembar soal;
+- `online_berkas`: mengumpulkan berkas jawaban;
+- `tatap_muka`: tercatat `hadir`/`terlambat` di pertemuan UTS/UAS, **atau** nilai ujiannya sudah diisi.
+
+Definisi ini dipakai di semua langkah susulan.
+
+### 13.2 Pengajuan
+
+1. Di halaman detail UTS/UAS, mahasiswa menekan **Ajukan ujian susulan**, mengisi alasan (maks 1000 karakter), dan melampirkan **bukti wajib** (1–3 berkas PDF/JPG/PNG, maks 5 MB). Rute dibatasi 10 permintaan per menit.
+2. **Syarat mengajukan** (`UjianSusulan::alasanTidakBolehAjukan`):
+   - ujiannya UTS/UAS berstatus `terbit`;
+   - mahasiswa peserta KRS kelas itu;
+   - sekarang belum lewat akhir hari **tanggal ujian + `batas_pengajuan_susulan_hari`** (bawaan 3). Pengajuan boleh dikirim **sebelum** ujian, sejak jadwal terbit;
+   - belum punya pengajuan aktif (`menunggu`/`disetujui`) untuk ujian itu;
+   - belum ikut ujian utama.
+3. Status awal `menunggu`. Selama masih `menunggu`, mahasiswa bisa **membatalkan** (status `dibatalkan`, lampiran dihapus). Setelah dibatalkan atau ditolak, ia boleh mengajukan lagi selama masih dalam batas waktu.
+4. Admin memproses di **Perkuliahan → Ujian Susulan** (izin `admin.ujian`):
+   - **Setujui**: sistem memeriksa ulang apakah mahasiswa ternyata sudah ikut ujian utama. Kalau ya, persetujuan ditolak.
+   - **Tolak**: alasan wajib dan ditampilkan ke mahasiswa.
+   - Pengajuan yang menunggu tampil paling atas, lengkap dengan lampiran.
+5. Lampiran hanya bisa dibuka pengaju dan pemegang `admin.ujian`.
+
+### 13.3 Tagihan susulan
+
+**Syarat terbit** (**Keuangan → Tagihan Susulan → Terbitkan Tagihan**, izin `admin.tagihan`):
+
+- ada jenis biaya aktif berkategori `susulan`.
+
+**Proses terbit:**
+
+- Tagihan dibuat untuk setiap pengajuan `disetujui` di tahun akademik itu yang belum punya tagihan. Pengajuan yang mahasiswanya ternyata ikut ujian utama **dilewati**.
+- **Nominal:** `tetap` = per ujian; `per_sks` = tarif × SKS mata kuliah. Tarif dipilih yang paling khusus, rincian dibekukan.
+- **Batas bayar per tagihan** = tanggal terbit + `batas_bayar_susulan_hari` (bawaan 3).
+- **Total 0 langsung `lunas`.**
+
+**Pembayaran** memakai mekanisme yang sama dengan tagihan remidi (trait `TagihanBerbukti`, concern `VerifikasiBuktiBayar`): mahasiswa mengunggah bukti di **Biaya Kuliah**, admin menandai lunas atau menolak dengan alasan, dan tagihan yang belum lunas saat batas lewat menjadi **gugur**.
+
+**Bila mahasiswa ternyata ikut ujian utama:**
+
+- tagihan yang belum lunas tampil **`dibatalkan`**: bukti tidak bisa diunggah dan admin tidak bisa menandainya lunas;
+- tagihan yang sudah lunas tetap `lunas`, tetapi diberi tanda **"Sudah ikut ujian utama – pengembalian dana di luar sistem"**.
+
+### 13.4 Jadwal ujian susulan
+
+- Dibuat **admin** di menu Jadwal Ujian dengan jenis **UTS Susulan** / **UAS Susulan** (`uts_susulan`/`uas_susulan`). Satu per kelas per jenis.
+- **Syarat kelas siap:** ujian utamanya terbit, dan ada pemohon yang **disetujui, lunas, dan tidak ikut ujian utama**.
+- **Tanggal:** tidak boleh sebelum tanggal ujian utama, dan paling lambat **batas input nilai** kelas (bila ada), supaya dosen masih sempat menilai.
+- **Jadwal susulan massal:** satu tanggal, jam, dan mode untuk semua kelas yang siap, dibuat sebagai draf. Kelas yang tanggalnya tidak cocok dilewati dan dilaporkan jumlahnya.
+- Halaman Jadwal Ujian menampilkan pengingat per jenis: "n kelas punya pemohon susulan … yang sudah lunas tetapi belum dijadwalkan".
+- Susulan **tidak** membuat pertemuan dan **tidak** mengubah presensi.
+- **Peserta susulan** (`UjianSusulan::pesertaSusulan`) = pengajuan disetujui + tagihan lunas + tidak ikut ujian utama. Hanya mereka yang:
+  - melihat jadwal, detail, dan kartu PDF susulan;
+  - mengunduh soal, mengumpulkan jawaban, dan memulai lembar soal;
+  - tampil di daftar peserta dosen dan daftar hadir PDF.
+  Mahasiswa lain mendapat 404.
+- **Syarat kehadiran** jenis utamanya (UTS/UAS) tetap berlaku, kecuali ada dispensasi.
+- Dosen menyiapkan soal dan memberi nilai (0–100) dengan mekanisme yang sama seperti UTS/UAS, dan tunduk pada kunci nilai kelas.
+
+### 13.5 Mengikuti ujian utama padahal mengajukan susulan
+
+| Kondisi | Akibat |
+|---|---|
+| Pengajuan masih `menunggu`, mahasiswa ikut ujian utama | Pengajuan tampil **dibatalkan** dan tidak bisa disetujui |
+| Pengajuan `disetujui`, ujian utama **online** | Mahasiswa **tidak bisa** mengerjakan ujian utama ("Anda terdaftar ujian susulan…") |
+| Pengajuan `disetujui`, ujian utama **tatap muka**, dosen mencatat hadir atau mengisi nilai utama | Hak susulan **gugur**: jadwal susulan tidak tampil; tagihan belum lunas **dibatalkan**; tagihan lunas ditandai untuk pengembalian dana di luar sistem. Nilai yang dipakai adalah nilai ujian utama. |
+
+Status `dibatalkan`/`gugur` ini **dihitung saat ditampilkan**, bukan disimpan.
+
+### 13.6 Keterkaitan dengan fitur lain
+
+- **Finalisasi nilai** tertahan selama UAS susulan masih berjalan ([11.2](#112-kunci-nilai)).
+- **Usulan remidi** menganggap mengerjakan UAS susulan sebagai ikut UAS ([12.1](#121-daftar-peserta)).
+- **Beranda** mahasiswa dan dosen menampilkan pengingat susulan ([15.3](#153-beranda)).
+
+---
+
+## 14. Pindah kelas
 
 1. **Formulir pengajuan** hanya bisa dikirim bila admin membukanya di Pengaturan Akademik. Bila formulir tertutup, pengiriman ditolak 403; halaman riwayat tetap bisa dibuka.
 2. **Mahasiswa mengajukan** (`Mahasiswa\PindahKelasController::store`):
@@ -772,15 +863,15 @@ Mahasiswa lain mendapat 404, sehingga tidak tahu remidi itu ada. Peserta yang ba
 
 ---
 
-## 14. Fitur pendukung
+## 15. Fitur pendukung
 
-### 14.1 Info kuliah
+### 15.1 Info kuliah
 
 - Admin membuat, mengubah, dan menghapus pengumuman: teks dan **satu lampiran wajib**.
 - Semua mahasiswa melihat semua pengumuman. Tidak ada target prodi atau kelas.
 - Dosen tidak punya menu info kuliah.
 
-### 14.2 Akses berkas privat
+### 15.2 Akses berkas privat
 
 Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diunduh lewat `BerkasController`.
 
@@ -797,18 +888,18 @@ Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diund
 - Jenis konten ditentukan dari ekstensi. Pdf dan gambar dibuka *inline*, selain itu diunduh.
 - Setiap respons berkas diberi header `nosniff` dan CSP `sandbox`.
 
-### 14.3 Beranda
+### 15.3 Beranda
 
 - **Admin:** hanya pola placeholder. Belum ada data.
-- **Dosen:** presensi hari ini dan pengingat remidi.
-- **Mahasiswa:** peringatan kehadiran dan pengingat remidi.
+- **Dosen:** presensi hari ini, pengingat remidi, dan ujian susulan yang perlu disiapkan soalnya atau dinilai.
+- **Mahasiswa:** peringatan kehadiran, pengingat remidi, serta pengajuan susulan yang menunggu, tagihan susulan yang belum lunas, dan jadwal susulan mendatang.
 
-### 14.4 Fitur lain
+### 15.4 Fitur lain
 
 - **Jadwal Kuliah (mahasiswa):** kelas-kelas di tahun akademik aktif beserta jadwal dan ruang.
 - **Mahasiswa Kelas (dosen):** daftar mahasiswa di kelas yang diampu, dengan pencarian.
 
-### 14.5 Placeholder
+### 15.5 Placeholder
 
 Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
@@ -819,9 +910,9 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
 ---
 
-## 15. Keterkaitan antarfitur dan daftar status
+## 16. Keterkaitan antarfitur dan daftar status
 
-### 15.1 Keterkaitan utama
+### 16.1 Keterkaitan utama
 
 | Dari | Ke | Hubungan |
 |---|---|---|
@@ -834,13 +925,17 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Presensi | Syarat ujian | Persentase hadir menentukan boleh ikut ujian online (bila sakelar menyala) |
 | Ujian online | Presensi | Mengerjakan ujian mencatat hadir di pertemuan UTS/UAS |
 | UAS | Finalisasi nilai, usulan remidi | Finalisasi menunggu UAS selesai; "ikut UAS" menjadi syarat usulan |
+| Ikut ujian utama | Pengajuan & tagihan susulan | Yang ikut tidak bisa mengajukan; pengajuan menunggu tampil dibatalkan, yang disetujui gugur, tagihan belum lunas dibatalkan |
+| Pengajuan susulan disetujui | Ujian utama online | Pemohon tidak bisa mengerjakan ujian utama online |
+| Tagihan susulan lunas | Jadwal ujian susulan | Hanya pemohon lunas yang melihat dan mengikuti susulan |
+| UAS susulan | Finalisasi nilai, usulan remidi | Finalisasi menunggu UAS susulan selesai atau gugur; mengerjakan UAS susulan = ikut UAS |
 | Nilai final | Daftar remidi | Daftar remidi hanya bisa disusun setelah nilai final |
 | Daftar remidi dikunci | Tagihan remidi | Tagihan diterbitkan dari daftar yang dikunci |
 | Tagihan remidi lunas | Ujian remidi, huruf akhir | Hanya peserta lunas yang ikut remidi dan bisa diubah hurufnya |
 | Pindah kelas | KRS, nilai, presensi, izin, dispensasi | Semuanya dipindah ke kelas tujuan |
 | Skala nilai | KRS, IPK, remidi | `lulus`, `boleh_diulang`, dan bobot dipakai di semua bagian itu |
 
-### 15.2 Daftar status
+### 16.2 Daftar status
 
 | Entitas | Nilai |
 |---|---|
@@ -848,17 +943,19 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | KRS | `status`: `Aktif`. Nilai berupa huruf dari skala nilai. |
 | Tagihan semester | `belum_bayar`, `lunas` |
 | Tagihan remidi | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` |
+| Pengajuan susulan | `menunggu`, `disetujui`, `ditolak`, `dibatalkan`; tampilan `dibatalkan` (menunggu tetapi ikut ujian utama) dan `gugur` (disetujui tetapi ikut ujian utama) |
+| Tagihan susulan | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` (lewat batas) dan `dibatalkan` (ikut ujian utama sebelum lunas) |
 | Pertemuan | jenis: `kuliah`, `uts`, `uas`. Status: `dijadwalkan`, `berlangsung`, `selesai`, `dibatalkan`; tampilan "terlewat" |
 | Presensi mahasiswa | `hadir`, `terlambat`, `izin`, `sakit`, `alpa`. Metode: `manual`, `qr`, `pin`, `pengajuan`, `ujian` |
 | Pengajuan izin | `menunggu`, `disetujui`, `ditolak` |
-| Ujian | jenis: `uts`, `uas`, `remidi`. Mode: `tatap_muka`, `online_berkas`, `online_soal`. Status: `draf`, `terbit` |
+| Ujian | jenis: `uts`, `uas`, `remidi`, `uts_susulan`, `uas_susulan`. Mode: `tatap_muka`, `online_berkas`, `online_soal`. Status: `draf`, `terbit` |
 | Pengajuan pindah kelas | `pending`, `disetujui`, `ditolak` |
-| Jenis biaya | cara hitung: `tetap`, `per_sks`. Kategori: `semester`, `remidi` |
+| Jenis biaya | cara hitung: `tetap`, `per_sks`. Kategori: `semester`, `remidi`, `susulan` |
 | Penanda kelas | `nilai_final_at`, `nilai_dibuka_sampai`, `remidi_dikunci_at`, `remidi_final_at` |
 
 ---
 
-## 16. Perlu dikonfirmasi
+## 17. Perlu dikonfirmasi
 
 Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau belum bisa dipastikan maksudnya. Tidak ada kode yang diubah untuk dokumen ini.
 
@@ -921,6 +1018,16 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 40. **Persetujuan pindah kelas** tidak mengecek status KRS asal maupun apakah formulir masih dibuka.
 41. **Satu `force` melewati dua peringatan sekaligus.** Bila KRS asal sudah bernilai, peringatan bentrok tidak pernah sempat tampil.
 42. **Flash `pindah_kelas_error` dibaca di halaman mahasiswa** tetapi tidak pernah diisi controller.
-43. **Tidak ada notifikasi** (email atau lainnya) untuk hasil pindah kelas, tagihan, atau remidi. Semuanya hanya lewat halaman dan pesan flash.
+43. **Tidak ada notifikasi** (email atau lainnya) untuk hasil pindah kelas, tagihan, remidi, atau ujian susulan. Semuanya hanya lewat halaman dan pesan flash.
 44. **Info kuliah tanpa target** (prodi/kelas), dan dosen tidak punya akses.
 45. **Beranda admin dan `/dashboard` masih placeholder.** Begitu juga profil dosen dan mahasiswa, Info Perkuliahan, Pendaftaran Wisuda, dan Perpustakaan.
+
+### Ujian susulan
+
+46. **Pengembalian dana susulan ditangani di luar sistem.** Tagihan lunas milik mahasiswa yang ternyata ikut ujian utama hanya diberi tanda; tidak ada pencatatan refund.
+47. **Ujian utama tatap muka tidak bisa diblokir** bagi pemohon yang sudah disetujui. Hak susulan baru gugur bila dosen mencatat hadir atau mengisi nilai ujian utama; kalau keduanya tidak dilakukan, mahasiswa bisa mengikuti ujian utama dan susulan.
+48. **Syarat kehadiran tidak diperiksa saat mengajukan atau menerbitkan tagihan susulan.** Mahasiswa bisa membayar lalu ditolak saat mengerjakan susulan karena tidak memenuhi syarat kehadiran.
+49. **Admin masih bisa menandai lunas tagihan susulan yang sudah gugur** (sama dengan PD-36), sehingga pemohon itu kembali menjadi peserta susulan.
+50. **Batas tanggal susulan mengikuti batas input nilai saat dijadwalkan.** Bila kelas tidak punya batas input nilai, tidak ada batas akhir; bila batas diubah kemudian, jadwal yang sudah ada tidak diperiksa ulang.
+51. **Jadwal susulan massal tidak mengecek bentrok** ruang maupun mahasiswa, sama seperti jadwal remidi massal.
+

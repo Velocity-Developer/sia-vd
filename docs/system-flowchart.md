@@ -1,6 +1,6 @@
 # Flowchart Sistem SIA VD
 
-Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `2cc9dba`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 16](system-flow.md#16-perlu-dikonfirmasi).
+Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `127106e`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 17](system-flow.md#17-perlu-dikonfirmasi).
 
 Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar dan diunduh): [system-flowchart.html](system-flowchart.html). Bangun ulang dengan `python3 docs/build-flowchart-html.py` setiap kali berkas ini berubah.
 
@@ -25,8 +25,11 @@ Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar
 17. [Remidi dari awal sampai akhir](#17-remidi-dari-awal-sampai-akhir)
 18. [Status tagihan remidi](#18-status-tagihan-remidi)
 19. [Huruf akhir peserta remidi](#19-huruf-akhir-peserta-remidi)
-20. [Pindah kelas](#20-pindah-kelas)
-21. [Hubungan data utama](#21-hubungan-data-utama)
+20. [Ujian susulan dari awal sampai akhir](#20-ujian-susulan-dari-awal-sampai-akhir)
+21. [Status pengajuan susulan](#21-status-pengajuan-susulan)
+22. [Status tagihan susulan](#22-status-tagihan-susulan)
+23. [Pindah kelas](#23-pindah-kelas)
+24. [Hubungan data utama](#24-hubungan-data-utama)
 
 ---
 
@@ -107,6 +110,7 @@ flowchart TD
     F --> G["Generate pertemuan dari jadwal<br/>UTS = pertemuan n/2, UAS = pertemuan n"]
     G --> H["Perkuliahan: materi, tugas, quiz,<br/>presensi, izin/sakit, pindah kelas"]
     H --> I["Ujian UTS lalu UAS<br/>jadwal oleh admin, soal dan nilai oleh dosen"]
+    I -.-> SUS["Tidak bisa ikut UTS/UAS:<br/>ujian susulan (diagram 20)"]
     I --> J["Dosen mengisi huruf akhir manual"]
     J --> K{"Finalisasi nilai atau<br/>batas input nilai lewat"}
     K --> L["Nilai kelas final dan terkunci untuk dosen"]
@@ -415,7 +419,7 @@ flowchart TD
 
     B --> E["Mahasiswa buka ujian terbit<br/>hitung mundur jam server"]
     C --> E
-    E --> F{"Boleh ikut?<br/>ber-KRS dan (syarat kehadiran mati<br/>atau memenuhi atau dispensasi)"}
+    E --> F{"Boleh ikut?<br/>ber-KRS, tidak terdaftar susulan<br/>untuk ujian ini, dan (syarat kehadiran mati<br/>atau memenuhi atau dispensasi)"}
     F -- Tidak --> F1["Tidak bisa mengerjakan"]
     F -- Ya --> G{"Sedang berlangsung?"}
     G -- Tidak --> G1["Belum mulai / waktu habis: ditolak"]
@@ -451,7 +455,9 @@ flowchart TD
     subgraph Final["Finalisasi dan buka kunci"]
         F1["Dosen/admin: Finalisasi Nilai"] --> F2{"Ada UAS terbit belum selesai?"}
         F2 -- Ya --> F3["Ditolak"]
-        F2 -- Tidak --> F4["nilai_final_at, nilai_final_oleh"]
+        F2 -- Tidak --> F5{"Ada UAS susulan berjalan?<br/>disetujui, tidak ikut UAS, tagihan belum<br/>terbit / belum lunas belum gugur /<br/>lunas tetapi susulan belum selesai"}
+        F5 -- Ya --> F3
+        F5 -- Tidak --> F4["nilai_final_at, nilai_final_oleh"]
         G1["Admin: Buka Kunci Nilai"] --> G2{"Batas input nilai TA sudah lewat?"}
         G2 -- Ya --> G3["Wajib batas baru khusus kelas<br/>(nilai_dibuka_sampai)"]
         G2 -- Tidak --> G4["Batas baru opsional"]
@@ -466,7 +472,7 @@ flowchart TD
 flowchart TD
     A["Nilai kelas final"] --> B["Daftar Remidi muncul di halaman kelas"]
     B --> C["Usulan otomatis:<br/>huruf tidak lulus atau boleh diulang (D, E)<br/>DAN ikut UAS"]
-    C --> C1{"Ikut UAS menurut mode UAS"}
+    C --> C1{"Ikut UAS (atau UAS susulan)<br/>menurut mode ujiannya"}
     C1 -- "online_soal" --> C2["Sudah memulai lembar soal"]
     C1 -- "online_berkas" --> C3["Mengumpulkan berkas"]
     C1 -- "tatap_muka" --> C4["Nilai UAS terisi"]
@@ -542,7 +548,77 @@ flowchart TD
     A -.- G["Admin tidak melalui pemeriksaan ini (PD-38)"]
 ```
 
-## 20. Pindah kelas
+## 20. Ujian susulan dari awal sampai akhir
+
+```mermaid
+flowchart TD
+    A["UTS/UAS terbit"] --> B["Mahasiswa: Ajukan ujian susulan<br/>alasan + bukti wajib (PDF/JPG/PNG)"]
+    B --> C{"Boleh mengajukan?<br/>peserta KRS, belum lewat tanggal ujian + N hari,<br/>tidak ada pengajuan aktif, belum ikut ujian utama"}
+    C -- Tidak --> C1["Ditolak dengan pesan"]
+    C -- Ya --> D["Pengajuan menunggu<br/>mahasiswa bisa membatalkan"]
+    D --> E{"Admin: Ujian Susulan"}
+    E -- Tolak --> E1["Ditolak, alasan tampil ke mahasiswa<br/>boleh mengajukan lagi dalam batas waktu"]
+    E -- Setujui --> F{"Cek ulang: sudah ikut ujian utama?"}
+    F -- Ya --> F1["Persetujuan ditolak"]
+    F -- Tidak --> G["Disetujui<br/>ujian utama online diblokir bagi mahasiswa ini"]
+    G --> H["Admin: Tagihan Susulan > Terbitkan<br/>butuh jenis biaya kategori susulan aktif"]
+    H --> I["Tagihan per pengajuan<br/>tetap per ujian / per SKS matkul, total 0 langsung lunas<br/>batas bayar = terbit + N hari"]
+    I --> J["Siklus pembayaran (diagram 22)"]
+    J --> K["Admin: jadwalkan UTS/UAS Susulan (satuan / massal draf)<br/>syarat: ada pemohon lunas yang tidak ikut ujian utama<br/>tanggal tidak sebelum ujian utama s.d. batas input nilai"]
+    K --> L["Hanya pemohon lunas: jadwal, kartu PDF, soal, jawaban<br/>syarat kehadiran jenis utama tetap berlaku<br/>tanpa pertemuan dan tanpa mengubah presensi"]
+    L --> M["Dosen menyiapkan soal dan menilai 0-100, lalu merilis"]
+    M --> N(["Mengerjakan UAS susulan = ikut UAS untuk usulan remidi<br/>finalisasi nilai menunggu UAS susulan selesai atau gugur"])
+
+    G -.- P["Ujian utama tatap muka tidak bisa diblokir (PD-47):<br/>bila tercatat hadir atau nilai utama terisi, hak susulan gugur"]
+    I -.- Q["Pengingat beranda: mahasiswa (pengajuan, tagihan, jadwal),<br/>dosen (siapkan soal, isi nilai)"]
+```
+
+## 21. Status pengajuan susulan
+
+```mermaid
+stateDiagram-v2
+    state "dibatalkan (tampilan)" as dibatalkan_tampilan
+    state "gugur (tampilan)" as gugur_tampilan
+    [*] --> menunggu: mahasiswa mengajukan dengan bukti
+    menunggu --> dibatalkan: mahasiswa membatalkan
+    menunggu --> ditolak: admin tolak (alasan wajib)
+    menunggu --> disetujui: admin setujui (dicek ulang belum ikut ujian utama)
+    ditolak --> [*]: boleh mengajukan lagi dalam batas waktu
+    dibatalkan --> [*]: boleh mengajukan lagi dalam batas waktu
+    menunggu --> dibatalkan_tampilan: ternyata ikut ujian utama
+    disetujui --> gugur_tampilan: tercatat ikut ujian utama (tatap muka)
+    disetujui --> [*]: tagihan lunas, ikut jadwal susulan
+    note right of gugur_tampilan
+        Status tampilan dihitung saat ditampilkan,
+        tidak disimpan di database.
+    end note
+```
+
+## 22. Status tagihan susulan
+
+```mermaid
+stateDiagram-v2
+    state "lunas, ditandai sudah ikut ujian utama" as lunas_ditandai
+    [*] --> belum_bayar: admin terbitkan (total lebih dari 0)
+    [*] --> lunas: admin terbitkan (total 0)
+    belum_bayar --> menunggu_verifikasi: mahasiswa unggah bukti sebelum batas bayar
+    ditolak --> menunggu_verifikasi: unggah ulang sebelum batas bayar
+    menunggu_verifikasi --> lunas: admin tandai lunas
+    menunggu_verifikasi --> ditolak: admin tolak (alasan wajib)
+    belum_bayar --> lunas: admin tandai lunas tanpa bukti
+    belum_bayar --> gugur: batas bayar tagihan lewat (tampilan)
+    ditolak --> gugur: batas bayar tagihan lewat (tampilan)
+    belum_bayar --> dibatalkan: mahasiswa ikut ujian utama (tampilan)
+    menunggu_verifikasi --> dibatalkan: mahasiswa ikut ujian utama (tampilan)
+    lunas --> lunas_ditandai: ikut ujian utama, refund di luar sistem (PD-46)
+    lunas --> [*]: menjadi peserta ujian susulan
+    note right of dibatalkan
+        Dibatalkan: bukti tidak bisa diunggah
+        dan admin tidak bisa menandai lunas.
+    end note
+```
+
+## 23. Pindah kelas
 
 ```mermaid
 flowchart TD
@@ -565,7 +641,7 @@ flowchart TD
     L --> M(["Status disetujui, pesan: jumlah dipindah dan tertinggal<br/>tanpa notifikasi ke mahasiswa"])
 ```
 
-## 21. Hubungan data utama
+## 24. Hubungan data utama
 
 ```mermaid
 erDiagram
@@ -588,6 +664,9 @@ erDiagram
     KELAS_KULIAH ||--o{ UJIAN : "uts, uas, remidi"
     UJIAN ||--o| QUIZ : lembar_soal
     UJIAN ||--o{ UJIAN_JAWABAN : menerima
+    UJIAN ||--o{ PENGAJUAN_SUSULAN : "disusul (UTS/UAS)"
+    MAHASISWA ||--o{ PENGAJUAN_SUSULAN : mengajukan
+    PENGAJUAN_SUSULAN ||--o| TAGIHAN_SUSULAN : ditagih
     KELAS_KULIAH ||--o{ REMIDI_PESERTA : daftar_remidi
     REMIDI_PESERTA ||--|| TAGIHAN_REMIDI : ditagih
     MAHASISWA ||--o{ TAGIHAN_SEMESTER : ditagih

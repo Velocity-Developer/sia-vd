@@ -1,4 +1,4 @@
-"""Bangun docs/system-flowchart.html dari docs/system-flowchart.md (+ bagian 16 docs/system-flow.md).
+"""Bangun docs/system-flowchart.html dari docs/system-flowchart.md (+ bagian "Perlu dikonfirmasi" docs/system-flow.md).
 
 Diagram dirender lebih dulu menjadi SVG statis dengan label teks SVG murni (htmlLabels: false) agar teks
 tidak terpotong dan halaman bisa dibuka tanpa internet.
@@ -133,8 +133,8 @@ for i, blok in enumerate(bagian[1:], 1):
     svg, lebar, tinggi = rapikan_svg(svg_semua[i - 1], i)
     diagram.append(dict(no=i, judul=judul, deskripsi=deskripsi, pd=pd, jenis=jenis, svg=svg, lebar=lebar, tinggi=tinggi))
 
-# --- Butir "Perlu dikonfirmasi" dari system-flow.md bagian 16 ---
-b16 = flow.split('## 16. Perlu dikonfirmasi', 1)[1]
+# --- Butir "Perlu dikonfirmasi" dari system-flow.md (bagian terakhir, nomornya bisa bergeser) ---
+b16 = re.split(r'^## \d+\. Perlu dikonfirmasi\n', flow, maxsplit=1, flags=re.M)[1]
 pd_html = []
 for kelompok in re.split(r'\n### ', b16)[1:]:
     judul_k, *isi = kelompok.split('\n')
@@ -282,7 +282,7 @@ footer {{ margin-top: 32px; color: var(--faint); font-size: .88rem; }}
       {''.join(kartu)}
       <section class="card pd" id="perlu-dikonfirmasi">
         <h2>Perlu dikonfirmasi</h2>
-        <p class="desc">Perilaku di kode yang ambigu, tampak tidak konsisten, atau belum bisa dipastikan maksudnya (dari <code>docs/system-flow.md</code> bagian 16).</p>
+        <p class="desc">Perilaku di kode yang ambigu, tampak tidak konsisten, atau belum bisa dipastikan maksudnya (dari bagian terakhir <code>docs/system-flow.md</code>).</p>
         {''.join(pd_html)}
       </section>
       <footer>Disusun dari kode SIA VD commit <code>{commit_kode}</code>. Perbarui halaman ini bila alur di kode berubah.</footer>
