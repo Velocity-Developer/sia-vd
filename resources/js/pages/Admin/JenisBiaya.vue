@@ -19,14 +19,13 @@ type Jenis = {
 const props = defineProps<{ jenisBiaya: Jenis[] }>();
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 
-const caraHitung = (jenis: { cara_hitung: string; kategori: string }) =>
-    jenis.kategori === 'remidi'
-        ? jenis.cara_hitung === 'per_sks'
-            ? 'Per SKS mata kuliah'
-            : 'Tetap per mata kuliah'
-        : jenis.cara_hitung === 'per_sks'
-          ? 'Per SKS'
-          : 'Tetap per semester';
+const caraHitung = (jenis: { cara_hitung: string; kategori: string }) => {
+    if (jenis.kategori === 'semester') return jenis.cara_hitung === 'per_sks' ? 'Per SKS' : 'Tetap per semester';
+    if (jenis.cara_hitung === 'per_sks') return 'Per SKS mata kuliah';
+
+    return jenis.kategori === 'susulan' ? 'Tetap per ujian' : 'Tetap per mata kuliah';
+};
+const LABEL_KATEGORI: Record<string, string> = { remidi: 'Remidi', susulan: 'Susulan' };
 
 const hapus = (jenis: Jenis) => {
     if (!confirm(`Hapus jenis biaya "${jenis.nama}"? Tagihan yang sudah terbit tidak berubah.`)) return;
@@ -80,9 +79,9 @@ const hapus = (jenis: Jenis) => {
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">
                                         {{ caraHitung(jenis) }}
                                         <span
-                                            v-if="jenis.kategori === 'remidi'"
+                                            v-if="LABEL_KATEGORI[jenis.kategori]"
                                             class="ml-1 rounded-full bg-[#fff4e5] px-2 py-0.5 text-xs font-medium text-[#dd5b00]"
-                                            >Remidi</span
+                                            >{{ LABEL_KATEGORI[jenis.kategori] }}</span
                                         >
                                     </td>
                                     <td class="px-4 py-3 text-center text-[15px] text-[#31302e]">{{ jenis.tarif_count }}</td>

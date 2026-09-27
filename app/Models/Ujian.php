@@ -25,7 +25,22 @@ class Ujian extends Model
     /** Remidi mata kuliah: satu per kelas, tanpa pertemuan, hanya untuk peserta remidi yang lunas. */
     public const REMIDI = 'remidi';
 
-    public const SEMUA_JENIS = [Pertemuan::UTS, Pertemuan::UAS, self::REMIDI];
+    /** Ujian susulan UTS/UAS: satu per kelas per jenis, hanya untuk pemohon susulan yang lunas. */
+    public const UTS_SUSULAN = 'uts_susulan';
+
+    public const UAS_SUSULAN = 'uas_susulan';
+
+    public const JENIS_SUSULAN = [self::UTS_SUSULAN, self::UAS_SUSULAN];
+
+    public const SEMUA_JENIS = [Pertemuan::UTS, Pertemuan::UAS, self::REMIDI, self::UTS_SUSULAN, self::UAS_SUSULAN];
+
+    /**
+     * Jenis ujian susulan untuk jenis ujian utama (uts -> uts_susulan).
+     */
+    public static function jenisSusulanUntuk(string $jenisUtama): string
+    {
+        return $jenisUtama.'_susulan';
+    }
 
     public const TATAP_MUKA = 'tatap_muka';
 

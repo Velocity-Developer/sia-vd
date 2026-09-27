@@ -6,6 +6,7 @@ use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Pengajuan ujian susulan oleh mahasiswa yang tidak mengikuti UTS/UAS (ujian utama).
@@ -54,6 +55,11 @@ class PengajuanSusulan extends Model
     public function mahasiswa(): BelongsTo
     {
         return $this->belongsTo(MahasiswaProfile::class, 'mahasiswa_id');
+    }
+
+    public function tagihan(): HasOne
+    {
+        return $this->hasOne(TagihanSusulan::class, 'pengajuan_susulan_id');
     }
 
     public function pemroses(): BelongsTo

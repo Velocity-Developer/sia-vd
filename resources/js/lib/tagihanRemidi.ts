@@ -1,6 +1,6 @@
 export type Rincian = { nama: string; cara_hitung: string; nominal_satuan: number; jumlah: number; subtotal: number };
 
-export type StatusTagihanRemidi = 'belum_bayar' | 'menunggu_verifikasi' | 'lunas' | 'ditolak' | 'gugur';
+export type StatusTagihanRemidi = 'belum_bayar' | 'menunggu_verifikasi' | 'lunas' | 'ditolak' | 'gugur' | 'dibatalkan';
 
 export const STATUS_TAGIHAN_REMIDI: Record<StatusTagihanRemidi, { label: string; kelas: string }> = {
     belum_bayar: { label: 'Belum Bayar', kelas: 'bg-[#fdf1e9] text-[#dd5b00]' },
@@ -8,6 +8,7 @@ export const STATUS_TAGIHAN_REMIDI: Record<StatusTagihanRemidi, { label: string;
     lunas: { label: 'Lunas', kelas: 'bg-[#eaf7ed] text-[#1aae39]' },
     ditolak: { label: 'Ditolak', kelas: 'bg-[#fdecea] text-[#b42318]' },
     gugur: { label: 'Gugur', kelas: 'bg-[#f6f5f4] text-[#615d59]' },
+    dibatalkan: { label: 'Dibatalkan', kelas: 'bg-[#f6f5f4] text-[#615d59]' },
 };
 
 export const rupiah = (nilai: number) =>

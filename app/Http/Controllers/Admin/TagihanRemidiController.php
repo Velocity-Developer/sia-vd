@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\VerifikasiBuktiBayar;
 use App\Http\Controllers\Controller;
 use App\Models\JenisBiaya;
 use App\Models\KelasKuliah;
@@ -24,6 +25,8 @@ use Inertia\Response;
  */
 class TagihanRemidiController extends Controller
 {
+    use VerifikasiBuktiBayar;
+
     public function index(Request $request): Response
     {
         $tahunAkademik = $this->tahunAkademikTerpilih($request);
@@ -141,36 +144,12 @@ class TagihanRemidiController extends Controller
      */
     public function lunas(Request $request, TagihanRemidi $tagihanRemidi): RedirectResponse
     {
-        if ($tagihanRemidi->status === TagihanRemidi::LUNAS) {
-            return back()->with('error', 'Tagihan ini sudah lunas.');
-        }
-
-        $tagihanRemidi->update([
-            'status' => TagihanRemidi::LUNAS,
-            'alasan_tolak' => null,
-            'diverifikasi_oleh' => $request->user()->id,
-            'diverifikasi_at' => now(),
-        ]);
-
-        return back()->with('success', 'Tagihan remidi ditandai lunas.');
+        return $this->prosesTandaiLunas($request, $tagihanRemidi, 'Tagihan remidi ditandai lunas.');
     }
 
     public function tolak(Request $request, TagihanRemidi $tagihanRemidi): RedirectResponse
     {
-        $data = $request->validate(['alasan' => ['required', 'string', 'max:255']], attributes: ['alasan' => 'Alasan']);
-
-        if ($tagihanRemidi->status !== TagihanRemidi::MENUNGGU) {
-            return back()->with('error', 'Hanya bukti yang menunggu verifikasi yang bisa ditolak.');
-        }
-
-        $tagihanRemidi->update([
-            'status' => TagihanRemidi::DITOLAK,
-            'alasan_tolak' => $data['alasan'],
-            'diverifikasi_oleh' => $request->user()->id,
-            'diverifikasi_at' => now(),
-        ]);
-
-        return back()->with('success', 'Bukti bayar ditolak. Mahasiswa bisa mengunggah ulang sebelum batas bayar.');
+        return $this->prosesTolakBukti($request, $tagihanRemidi);
     }
 
     /**

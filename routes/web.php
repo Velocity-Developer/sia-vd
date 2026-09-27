@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RuangController;
 use App\Http\Controllers\Admin\TagihanController;
 use App\Http\Controllers\Admin\TagihanRemidiController;
+use App\Http\Controllers\Admin\TagihanSusulanController;
 use App\Http\Controllers\Admin\TahunAkademikController;
 use App\Http\Controllers\Admin\UjianController as AdminUjianController;
 use App\Http\Controllers\Admin\UjianSusulanController as AdminUjianSusulanController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\Mahasiswa\PindahKelasController as MahasiswaPindahKelas
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
 use App\Http\Controllers\Mahasiswa\QuizAttemptController;
 use App\Http\Controllers\Mahasiswa\TagihanRemidiController as MahasiswaTagihanRemidiController;
+use App\Http\Controllers\Mahasiswa\TagihanSusulanController as MahasiswaTagihanSusulanController;
 use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
 use App\Http\Controllers\Mahasiswa\UjianSusulanController as MahasiswaUjianSusulanController;
 use App\Models\KelasKuliah;
@@ -110,6 +112,7 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
     Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
+    Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->name('berkas.bukti-susulan');
     Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->name('berkas.lampiran-susulan');
     Route::get('ujian-soal/{ujian}/{index}', [BerkasController::class, 'soalUjian'])->whereNumber('index')->name('berkas.ujian-soal');
     Route::get('ujian-jawaban/{jawaban}/{index}', [BerkasController::class, 'jawabanUjian'])->whereNumber('index')->name('berkas.ujian-jawaban');
@@ -163,6 +166,10 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::delete('tagihan/{mahasiswa}/kunci-krs', [TagihanController::class, 'bukaKunciKrs'])->name('admin.tagihan.buka-kunci-krs');
         Route::get('tagihan-remidi', [TagihanRemidiController::class, 'index'])->name('admin.tagihan-remidi.index');
         Route::post('tagihan-remidi/terbitkan', [TagihanRemidiController::class, 'terbitkan'])->name('admin.tagihan-remidi.terbitkan');
+        Route::get('tagihan-susulan', [TagihanSusulanController::class, 'index'])->name('admin.tagihan-susulan.index');
+        Route::post('tagihan-susulan/terbitkan', [TagihanSusulanController::class, 'terbitkan'])->name('admin.tagihan-susulan.terbitkan');
+        Route::post('tagihan-susulan/{tagihanSusulan}/lunas', [TagihanSusulanController::class, 'lunas'])->name('admin.tagihan-susulan.lunas');
+        Route::post('tagihan-susulan/{tagihanSusulan}/tolak', [TagihanSusulanController::class, 'tolak'])->name('admin.tagihan-susulan.tolak');
         Route::post('tagihan-remidi/kunci-massal', [TagihanRemidiController::class, 'kunciMassal'])->name('admin.tagihan-remidi.kunci-massal');
         Route::post('tagihan-remidi/{tagihanRemidi}/lunas', [TagihanRemidiController::class, 'lunas'])->name('admin.tagihan-remidi.lunas');
         Route::post('tagihan-remidi/{tagihanRemidi}/tolak', [TagihanRemidiController::class, 'tolak'])->name('admin.tagihan-remidi.tolak');
@@ -353,6 +360,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
     Route::middleware('can:mahasiswa.info-biaya')->group(function (): void {
         Route::get('info-biaya-kuliah', [InfoBiayaKuliahController::class, 'index'])->name('mahasiswa.info-biaya-kuliah');
         Route::post('tagihan-remidi/{tagihanRemidi}/bukti', [MahasiswaTagihanRemidiController::class, 'unggahBukti'])->name('mahasiswa.tagihan-remidi.bukti');
+        Route::post('tagihan-susulan/{tagihanSusulan}/bukti', [MahasiswaTagihanSusulanController::class, 'unggahBukti'])->name('mahasiswa.tagihan-susulan.bukti');
     });
 
     Route::middleware('can:mahasiswa.info-kuliah')->group(function (): void {

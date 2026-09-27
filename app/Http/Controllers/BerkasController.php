@@ -10,6 +10,7 @@ use App\Models\PengajuanIzin;
 use App\Models\PengajuanSusulan;
 use App\Models\PengumpulanTugas;
 use App\Models\TagihanRemidi;
+use App\Models\TagihanSusulan;
 use App\Models\Tugas;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
@@ -112,6 +113,20 @@ class BerkasController extends Controller
         abort_unless($boleh, 403);
 
         return $this->kirim($tagihanRemidi->bukti);
+    }
+
+    /**
+     * Bukti bayar susulan: mahasiswa pemiliknya dan admin keuangan.
+     */
+    public function buktiSusulan(Request $request, TagihanSusulan $tagihanSusulan): StreamedResponse
+    {
+        $user = $request->user();
+        $boleh = ($user->mahasiswaProfile !== null && $tagihanSusulan->mahasiswa_id === $user->mahasiswaProfile->id)
+            || $user->hasPermission('admin.tagihan');
+
+        abort_unless($boleh, 403);
+
+        return $this->kirim($tagihanSusulan->bukti);
     }
 
     /**

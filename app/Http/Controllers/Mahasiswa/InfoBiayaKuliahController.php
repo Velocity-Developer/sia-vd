@@ -7,7 +7,9 @@ use App\Models\JenisBiaya;
 use App\Models\MahasiswaProfile;
 use App\Models\TagihanRemidi;
 use App\Models\TagihanSemester;
+use App\Models\TagihanSusulan;
 use App\Models\TahunAkademik;
+use App\UjianSusulan;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -40,7 +42,39 @@ class InfoBiayaKuliahController extends Controller
                 ->map(fn (TagihanSemester $item) => $this->bentuk($item))
                 ->values(),
             'tagihanRemidi' => $this->tagihanRemidi($mahasiswa),
+            'tagihanSusulan' => $this->tagihanSusulan($mahasiswa),
         ]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function tagihanSusulan(?MahasiswaProfile $mahasiswa): array
+    {
+        return TagihanSusulan::query()
+            ->where('mahasiswa_id', $mahasiswa?->id)
+            ->with(['ujian:id,kelas_id,jenis,mode,tanggal', 'kelasKuliah:id,kode_kelas,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,nama_matkul', 'kelasKuliah.tahunAkademik'])
+            ->latest('id')
+            ->get()
+            ->map(function (TagihanSusulan $t): array {
+                $ikut = UjianSusulan::ikutUjianUtama($t->ujian, $t->mahasiswa_id);
+
+                return [
+                    'id' => $t->id,
+                    'judul' => 'Susulan '.strtoupper($t->ujian->jenis).' '.$t->kelasKuliah?->mataKuliah?->nama_matkul,
+                    'kelas' => $t->kelasKuliah?->kode_kelas,
+                    'tahun_akademik' => $t->kelasKuliah?->tahunAkademik ? $t->kelasKuliah->tahunAkademik->tahun.' '.$t->kelasKuliah->tahunAkademik->semester : '-',
+                    'rincian' => $t->rincian,
+                    'total' => $t->total,
+                    'status' => $t->statusSusulan($ikut),
+                    'batas_bayar' => $t->batas_bayar->toDateString(),
+                    'boleh_unggah' => ! $ikut && $t->bolehUnggah(),
+                    'ada_bukti' => $t->bukti !== null,
+                    'bukti_diunggah_at' => $t->bukti_diunggah_at?->toIso8601String(),
+                    'alasan_tolak' => $t->alasan_tolak,
+                ];
+            })
+            ->all();
     }
 
     /**

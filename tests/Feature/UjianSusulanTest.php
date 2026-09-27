@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Jadwal;
+use App\Models\JenisBiaya;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\PengajuanSusulan;
@@ -8,6 +9,7 @@ use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
 use App\Models\Ruang;
+use App\Models\TagihanSusulan;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
@@ -160,4 +162,104 @@ it('serves attachments to the applicant and exam admins only, and stores the set
     $this->actingAs($admin)->put(route('admin.pengaturan-akademik.susulan'), ['batas_pengajuan_susulan_hari' => 5, 'batas_bayar_susulan_hari' => 2])
         ->assertSessionHas('success');
     expect(PengaturanAkademik::current()->batas_pengajuan_susulan_hari)->toBe(5);
+});
+
+/**
+ * Pengajuan susulan disetujui untuk kedua mahasiswa kelasSusulan(); jam sekarang 7 Okt 2025 09:00.
+ *
+ * @return array{0: KelasKuliah, 1: list<User>, 2: Ujian, 3: User}
+ */
+function susulanDisetujui(string $mode = 'tatap_muka'): array
+{
+    [$kelas, $mhs, $ujian] = kelasSusulan($mode);
+    $admin = User::factory()->admin()->create();
+    test()->travelTo('2025-10-06 16:00:00');
+    foreach ($mhs as $m) {
+        test()->actingAs($m)->post(route('mahasiswa.ujian.susulan', $ujian), isianSusulan());
+    }
+    foreach (PengajuanSusulan::all() as $p) {
+        test()->actingAs($admin)->post(route('admin.ujian-susulan.setujui', $p));
+    }
+    test()->travelTo('2025-10-07 09:00:00');
+
+    return [$kelas, $mhs, $ujian, $admin];
+}
+
+function jenisBiayaSusulan(int $nominal = 100_000, string $cara = JenisBiaya::TETAP): JenisBiaya
+{
+    $jenis = JenisBiaya::create(['kode' => "SUSULAN-{$cara}-{$nominal}", 'nama' => 'Biaya Ujian Susulan', 'cara_hitung' => $cara, 'kategori' => JenisBiaya::SUSULAN, 'aktif' => true]);
+    $jenis->tarif()->create(['nominal' => $nominal]);
+
+    return $jenis;
+}
+
+it('issues susulan bills for approved applications with a per-bill deadline', function () {
+    [$kelas, $mhs, , $admin] = susulanDisetujui();
+
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id])
+        ->assertSessionHas('error');
+    jenisBiayaSusulan(50_000, JenisBiaya::PER_SKS);
+
+    $this->actingAs($admin)->get(route('admin.tagihan-susulan.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
+        ->assertInertia(fn ($page) => $page->where('ringkasan.belum_ditagih', 2));
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id])->assertSessionHas('success');
+
+    $t = TagihanSusulan::where('mahasiswa_id', $mhs[0]->mahasiswaProfile->id)->first();
+    expect($t->total)->toBe(50_000 * $kelas->mataKuliah->sks)
+        ->and($t->status)->toBe(TagihanSusulan::BELUM_BAYAR)
+        ->and($t->batas_bayar->toDateString())->toBe('2025-10-10');
+
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id])
+        ->assertSessionHas('success', 'Tidak ada pengajuan baru yang perlu ditagih.');
+    expect(TagihanSusulan::count())->toBe(2);
+});
+
+it('runs the payment cycle and lapses unpaid bills after their own deadline', function () {
+    [$kelas, $mhs, , $admin] = susulanDisetujui();
+    jenisBiayaSusulan();
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+    [$a, $b] = TagihanSusulan::orderBy('id')->get();
+    $bukti = fn () => ['bukti' => UploadedFile::fake()->create('bukti.pdf', 100, 'application/pdf')];
+
+    $this->actingAs($mhs[1])->post(route('mahasiswa.tagihan-susulan.bukti', $a), $bukti())->assertNotFound();
+    $this->actingAs($mhs[0])->post(route('mahasiswa.tagihan-susulan.bukti', $a), $bukti())->assertSessionHas('success');
+    expect($a->fresh()->status)->toBe(TagihanSusulan::MENUNGGU);
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.tolak', $a), ['alasan' => 'Buram'])->assertSessionHas('success');
+    $this->actingAs($mhs[0])->post(route('mahasiswa.tagihan-susulan.bukti', $a), $bukti())->assertSessionHas('success');
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.lunas', $a))->assertSessionHas('success');
+    expect($a->fresh()->status)->toBe(TagihanSusulan::LUNAS);
+
+    $this->actingAs($mhs[0])->get(route('berkas.bukti-susulan', $a))->assertOk();
+    $this->actingAs($mhs[1])->get(route('berkas.bukti-susulan', $a))->assertForbidden();
+
+    $this->travelTo('2025-10-11 08:00:00');
+    $this->actingAs($mhs[1])->post(route('mahasiswa.tagihan-susulan.bukti', $b), $bukti())->assertSessionHas('error', 'Batas bayar susulan sudah lewat.');
+    $this->actingAs($mhs[1])->get(route('mahasiswa.info-biaya-kuliah'))
+        ->assertInertia(fn ($page) => $page->where('tagihanSusulan.0.status', 'gugur')->where('tagihanSusulan.0.boleh_unggah', false));
+});
+
+it('cancels the bill of a student who sat the main exam, and flags a paid one', function () {
+    [$kelas, $mhs, , $admin] = susulanDisetujui();
+    jenisBiayaSusulan();
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+    [$a, $b] = TagihanSusulan::orderBy('id')->get();
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.lunas', $b));
+
+    // Keduanya ternyata tercatat hadir di pertemuan UTS (tatap muka).
+    $pertemuanUts = Pertemuan::where('kelas_id', $kelas->id)->where('jenis', 'uts')->first();
+    foreach ($mhs as $m) {
+        PresensiMahasiswa::create(['pertemuan_id' => $pertemuanUts->id, 'mahasiswa_id' => $m->mahasiswaProfile->id, 'status' => PresensiMahasiswa::HADIR, 'metode' => 'manual']);
+    }
+
+    $this->actingAs($mhs[0])->post(route('mahasiswa.tagihan-susulan.bukti', $a), ['bukti' => UploadedFile::fake()->create('b.pdf', 10, 'application/pdf')])
+        ->assertSessionHas('error', 'Anda sudah mengikuti ujian utama, jadi tagihan susulan ini dibatalkan.');
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.lunas', $a))->assertSessionHas('error');
+
+    $baris = collect($this->actingAs($admin)->get(route('admin.tagihan-susulan.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))->inertiaProps('tagihan.data'))->keyBy('id');
+    expect($baris[$a->id])->toMatchArray(['status' => 'dibatalkan', 'ikut_ujian_utama' => true])
+        ->and($baris[$b->id])->toMatchArray(['status' => 'lunas', 'ikut_ujian_utama' => true]);
+
+    // Susulan tidak ikut tagihan semester.
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'paksa' => true])
+        ->assertSessionHas('error', 'Belum ada jenis biaya aktif. Isi dulu di menu Jenis Biaya.');
 });

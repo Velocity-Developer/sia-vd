@@ -45,10 +45,21 @@ const form = useForm({
 });
 
 const perSks = computed(() => form.cara_hitung === 'per_sks');
-const remidi = computed(() => form.kategori === 'remidi');
+// Remidi dan susulan ditagih per mata kuliah/ujian, bukan per semester.
+const perMatkul = computed(() => form.kategori === 'remidi' || form.kategori === 'susulan');
+const keteranganKategori = computed(
+    () =>
+        ({
+            semester: 'Ikut dihitung saat menerbitkan tagihan semester.',
+            remidi: 'Hanya dipakai saat menerbitkan tagihan remidi.',
+            susulan: 'Hanya dipakai saat menerbitkan tagihan ujian susulan.',
+        })[form.kategori as string] ?? '',
+);
 const keteranganHitung = computed(() => {
-    if (remidi.value)
-        return perSks.value ? 'Nominal tarif dikali SKS mata kuliah yang diremidi.' : 'Nominal tarif ditagihkan per mata kuliah yang diremidi.';
+    if (perMatkul.value)
+        return perSks.value
+            ? 'Nominal tarif dikali SKS mata kuliahnya.'
+            : `Nominal tarif ditagihkan per ${form.kategori === 'susulan' ? 'ujian' : 'mata kuliah'}.`;
 
     return perSks.value
         ? 'Nominal tarif dikali jumlah SKS di KRS semester itu saat tagihan diterbitkan.'
@@ -117,19 +128,26 @@ const inp =
                                 <SelectFilter v-model="form.kategori" label="Kategori" penuh>
                                     <option value="semester">Tagihan semester</option>
                                     <option value="remidi">Remidi (per mata kuliah)</option>
+                                    <option value="susulan">Ujian susulan (per ujian)</option>
                                 </SelectFilter>
                                 <p class="text-xs text-[#615d59]">
-                                    {{
-                                        remidi ? 'Hanya dipakai saat menerbitkan tagihan remidi.' : 'Ikut dihitung saat menerbitkan tagihan semester.'
-                                    }}
+                                    {{ keteranganKategori }}
                                 </p>
                                 <InputError :message="form.errors.kategori" />
                             </div>
                             <div class="grid content-start gap-2">
                                 <Label for="cara_hitung">Cara Hitung</Label>
                                 <SelectFilter v-model="form.cara_hitung" label="Cara hitung" penuh>
-                                    <option value="tetap">{{ remidi ? 'Tetap per mata kuliah' : 'Tetap per semester' }}</option>
-                                    <option value="per_sks">{{ remidi ? 'Per SKS mata kuliah' : 'Per SKS yang diambil' }}</option>
+                                    <option value="tetap">
+                                        {{
+                                            perMatkul
+                                                ? form.kategori === 'susulan'
+                                                    ? 'Tetap per ujian'
+                                                    : 'Tetap per mata kuliah'
+                                                : 'Tetap per semester'
+                                        }}
+                                    </option>
+                                    <option value="per_sks">{{ perMatkul ? 'Per SKS mata kuliah' : 'Per SKS yang diambil' }}</option>
                                 </SelectFilter>
                                 <p class="text-xs text-[#615d59]">{{ keteranganHitung }}</p>
                                 <InputError :message="form.errors.cara_hitung" />

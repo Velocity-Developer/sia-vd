@@ -92,6 +92,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Jenis Biaya', routeName: 'admin.jenis-biaya.index', icon: Receipt, permission: 'admin.jenis-biaya' },
                     { title: 'Tagihan Mahasiswa', routeName: 'admin.tagihan.index', icon: Wallet, permission: 'admin.tagihan' },
                     { title: 'Tagihan Remidi', routeName: 'admin.tagihan-remidi.index', icon: Receipt, permission: 'admin.tagihan' },
+                    { title: 'Tagihan Susulan', routeName: 'admin.tagihan-susulan.index', icon: Receipt, permission: 'admin.tagihan' },
                 ],
             },
             {

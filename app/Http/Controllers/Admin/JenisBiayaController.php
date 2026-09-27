@@ -70,7 +70,7 @@ class JenisBiayaController extends Controller
             'kode' => ['required', 'string', 'max:30', Rule::unique('jenis_biaya', 'kode')->ignore($jenis)],
             'nama' => ['required', 'string', 'max:255'],
             'cara_hitung' => ['required', Rule::in([JenisBiaya::TETAP, JenisBiaya::PER_SKS])],
-            'kategori' => ['nullable', Rule::in([JenisBiaya::SEMESTER, JenisBiaya::REMIDI])],
+            'kategori' => ['nullable', Rule::in(JenisBiaya::KATEGORI)],
             'keterangan' => ['nullable', 'string', 'max:255'],
             'aktif' => ['required', 'boolean'],
             'urutan' => ['nullable', 'integer', 'min:0', 'max:999'],

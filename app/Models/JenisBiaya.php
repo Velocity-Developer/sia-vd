@@ -22,6 +22,11 @@ class JenisBiaya extends Model
     /** Hanya untuk tagihan remidi per mata kuliah. */
     public const REMIDI = 'remidi';
 
+    /** Hanya untuk tagihan ujian susulan per ujian. */
+    public const SUSULAN = 'susulan';
+
+    public const KATEGORI = [self::SEMESTER, self::REMIDI, self::SUSULAN];
+
     protected $table = 'jenis_biaya';
 
     protected $fillable = ['kode', 'nama', 'cara_hitung', 'kategori', 'keterangan', 'aktif', 'urutan'];
