@@ -1,0 +1,926 @@
+# Alur Proses Bisnis SIA VD
+
+Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **sesuai kode yang ada**, bukan rencana. Gambaran visualnya ada di [system-flowchart.md](system-flowchart.md).
+
+- Disusun dari kode di cabang `main` pada commit `2cc9dba` (27 September 2026).
+- Rujukan kode ditulis sebagai `Kelas::metode` atau path berkas. Nomor baris sengaja tidak dicantumkan karena cepat berubah.
+- Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 16](#16-perlu-dikonfirmasi).
+
+## Daftar isi
+
+1. [Aktor dan hak akses](#1-aktor-dan-hak-akses)
+2. [Autentikasi](#2-autentikasi)
+3. [Data master dan pengguna](#3-data-master-dan-pengguna)
+4. [Pengaturan sistem](#4-pengaturan-sistem)
+5. [Kelas kuliah dan jadwal](#5-kelas-kuliah-dan-jadwal)
+6. [Keuangan semester](#6-keuangan-semester)
+7. [KRS](#7-krs)
+8. [Materi, tugas, dan quiz](#8-materi-tugas-dan-quiz)
+9. [Presensi](#9-presensi)
+10. [Ujian UTS dan UAS](#10-ujian-uts-dan-uas)
+11. [Nilai akhir, kunci nilai, dan hasil studi](#11-nilai-akhir-kunci-nilai-dan-hasil-studi)
+12. [Remidi](#12-remidi)
+13. [Pindah kelas](#13-pindah-kelas)
+14. [Fitur pendukung](#14-fitur-pendukung)
+15. [Keterkaitan antarfitur dan daftar status](#15-keterkaitan-antarfitur-dan-daftar-status)
+16. [Perlu dikonfirmasi](#16-perlu-dikonfirmasi)
+
+---
+
+## 1. Aktor dan hak akses
+
+### 1.1 Jenis pengguna dan role
+
+- Ada tiga jenis pengguna (`App\UserType`): `admin` (label "Admin / Karyawan"), `dosen`, dan `mahasiswa`.
+- Jenis pengguna hanya menentukan tabel profil yang dipakai (`admin_profiles`, `dosen_profiles`, `mahasiswa_profiles`). Hak akses ditentukan oleh **role**.
+- Setiap pengguna punya **satu role** (`users.role_id`). Setiap role punya `user_type` dan sekumpulan **permission**.
+- `PermissionCatalog::sync()` membuat satu role sistem per jenis (slug `admin`, `dosen`, `mahasiswa`, `is_system = true`).
+  - Role sistem baru mendapat semua permission bawaan.
+  - Role sistem yang sudah ada hanya ditambah permission yang baru masuk katalog, sehingga perubahan dari admin tidak tertimpa.
+- Admin bisa membuat role tambahan di menu **Kelola Role**.
+
+### 1.2 Cara izin diperiksa
+
+- `Gate::before` meloloskan pengecekan bila `User::hasPermission($ability)` bernilai benar. Jadi setiap kunci permission langsung menjadi *ability*.
+- Rute dijaga dengan middleware `can:<permission>`. Tidak ada kelas Policy.
+- Frontend menerima `auth.permissions` lewat shared props dan menyembunyikan menu yang tidak diizinkan (`usePermissions().can()`, `AppSidebar.vue`).
+- Rute dikelompokkan per prefix `admin/…`, `dosen/…`, dan `mahasiswa/…`. Semuanya memakai middleware `auth` dan `verified`.
+- Halaman bersama (detail kelas, materi, tugas, quiz, presensi, ujian) melayani admin dan dosen sekaligus. Perannya ditentukan dari nama rute (`admin.*` atau `dosen.*`) lewat trait `Concerns\KontenKelas::peran()`.
+  - Dosen hanya boleh membuka kelas yang ia ampu (`pastikanAksesKelas`, 403 bila bukan).
+  - Pada daftar lintas kelas, filter dosen dipaksa ke dosen yang sedang masuk.
+
+### 1.3 Kelompok permission
+
+| Kelompok | Permission |
+|---|---|
+| Administrasi | `admin.dashboard`, `admin.info-kuliah`, `admin.tahun-akademik`, `admin.fakultas`, `admin.program-studi`, `admin.mata-kuliah`, `admin.ruang`, `admin.kelas-kuliah`, `admin.jadwal`, `admin.materi`, `admin.tugas`, `admin.quiz`, `admin.presensi`, `admin.ujian`, `admin.pindah-kelas` |
+| Keuangan | `admin.jenis-biaya`, `admin.tagihan` (termasuk Tagihan Remidi) |
+| Manajemen pengguna | `admin.users.dosen`, `admin.users.mahasiswa`, `admin.users.karyawan`, `admin.roles` |
+| Pengaturan sistem | `admin.institusi`, `admin.pengaturan-email`, `admin.pengaturan-akademik`, `admin.pengaturan-tampilan` |
+| Dosen | `dosen.dashboard`, `dosen.kelas-kuliah`, `dosen.jadwal`, `dosen.materi`, `dosen.tugas`, `dosen.quiz`, `dosen.presensi`, `dosen.ujian`, `dosen.mahasiswa-kelas` |
+| Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.info-biaya`, `mahasiswa.perpustakaan` |
+
+- Permission berawalan `admin.` tidak terikat jenis pengguna, jadi bisa diberikan ke role jenis apa pun.
+- Permission `dosen.*` dan `mahasiswa.*` hanya berlaku untuk role dengan jenis yang sama.
+
+### 1.4 Aturan eskalasi hak
+
+- `User::canAssignRole(role)`: aktor boleh memberikan sebuah role bila ia punya `admin.roles`, atau bila semua permission role itu juga ia miliki.
+- `User::canManage(target)`: aktor tidak bisa mengubah atau menghapus akun yang hak aksesnya lebih tinggi.
+- Pemegang terakhir `admin.roles` tidak bisa diganti role-nya atau dihapus (`User::isLastRoleManager`).
+- Permission `admin.roles` tidak bisa dicabut dari role milik aktor sendiri maupun dari role sistem Admin.
+- Pengguna tidak bisa menghapus akunnya sendiri.
+
+### 1.5 Daftar rute yang dikirim ke browser (Ziggy)
+
+`User::grupRute()` memilih grup rute Ziggy:
+
+- `staf` untuk pengguna yang punya permission `admin.*` atau `dosen.*`;
+- `mahasiswa` untuk pengguna lain yang sudah masuk;
+- `umum` untuk tamu.
+
+Karena daftar rute berbeda per grup, login dan logout memakai *full reload* (`Inertia::location`).
+
+---
+
+## 2. Autentikasi
+
+### 2.1 Login
+
+1. `/` langsung dialihkan ke halaman login.
+2. Pengguna mengisi `username`, `password`, dan opsi `remember`. Autentikasi hanya mencocokkan kolom `users.username`.
+   - Placeholder form menyebut "NIM, NIDN, atau username", tetapi tidak ada pencarian lewat NIM atau NIDN.
+3. Batas percobaan:
+   - 5 percobaan per kombinasi `username|IP` (`LoginRequest`), lalu terkunci sementara;
+   - `throttle:20,1` per IP pada rute `POST login`.
+4. Bila berhasil, sesi diregenerasi lalu dialihkan ke `User::homeRoute()`, dengan urutan:
+   - `<jenis>.dashboard` bila pengguna punya permission-nya;
+   - dashboard lain yang ia miliki (`admin`, lalu `dosen`, lalu `mahasiswa`);
+   - `/dashboard` sebagai cadangan.
+5. `AuthenticateSession` aktif. Mengganti kata sandi di pengaturan profil mengakhiri sesi di perangkat lain.
+
+### 2.2 Logout
+
+`POST logout` mengakhiri sesi, menghapus sesi, mengganti token, lalu memuat ulang ke `/`.
+
+### 2.3 Lupa dan atur ulang kata sandi
+
+1. Pengguna mengisi **email** di halaman lupa kata sandi (`throttle:6,1`).
+   - Balasan selalu sama, supaya keberadaan email tidak bisa ditebak.
+2. Sistem mengirim notifikasi `AturUlangKataSandi` (bahasa Indonesia, menyebut username).
+   - Tautan berlaku 60 menit. Permintaan ulang dibatasi 60 detik.
+3. Di halaman atur ulang, pengguna mengisi `token`, `email`, `password`, dan konfirmasinya. Aturan kata sandi memakai `Password::defaults()`.
+4. Setelah berhasil, `remember_token` diganti dan pengguna dialihkan ke login.
+
+### 2.4 Yang tidak ada atau tidak aktif
+
+- **Tidak ada registrasi mandiri.** Semua akun dibuat admin.
+- **Verifikasi email tidak aktif.**
+  - Model `User` tidak mengimplementasikan `MustVerifyEmail` (import-nya dikomentari), sehingga middleware `verified` tidak pernah memblokir.
+  - Rute `verification.*` ada, tetapi praktis tidak dipakai.
+- Rute konfirmasi kata sandi (`password.confirm`) ada, tetapi tidak dipakai rute mana pun.
+
+### 2.5 Profil pengguna
+
+- Menu **Pengaturan Profil** (`/settings`) berisi dua bagian: Profil dan Kata Sandi.
+- **Profil:** pengguna bisa mengubah `name` dan `email` (email unik dan huruf kecil).
+  - Nama **mahasiswa** tidak bisa diubah sendiri karena tercetak di KHS. Field itu diabaikan saat validasi.
+  - Mengganti email mengosongkan `email_verified_at`.
+- **Username** hanya bisa diubah admin.
+- Tidak ada fitur hapus akun sendiri.
+
+---
+
+## 3. Data master dan pengguna
+
+Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 baris.
+
+### 3.1 Tahun akademik
+
+**Field:**
+
+- `tahun`, `semester`;
+- `tanggal_mulai`, `tanggal_akhir`;
+- `tanggal_krs_awal`, `tanggal_krs_akhir`;
+- `batas_input_nilai`, `batas_bayar_remidi`, `batas_input_nilai_remidi`;
+- `status` (aktif atau tidak).
+
+**Validasi:**
+
+- `tahun` unik per `semester`.
+- Tanggal akhir ≥ tanggal mulai. Tanggal KRS akhir ≥ tanggal KRS awal.
+- `batas_input_nilai` ≥ `tanggal_mulai`.
+- `batas_bayar_remidi` harus **setelah** `batas_input_nilai` (bila keduanya diisi).
+- `batas_input_nilai_remidi` harus **setelah** `batas_bayar_remidi` (bila keduanya diisi).
+- Hanya boleh ada **satu tahun akademik aktif**. Mengaktifkan tahun kedua ditolak ("Sudah ada tahun akademik yang aktif."). Tahun lain tidak dinonaktifkan otomatis.
+
+**Efek samping:**
+
+- Mengubah `tanggal_mulai` menyusun ulang pertemuan (`Pertemuan::susunUlang`). Yang disusun ulang hanya pertemuan berstatus `dijadwalkan`, tidak dijadwal manual, dan tidak jatuh di masa lalu.
+- Tahun akademik yang sudah punya kelas tidak bisa dihapus.
+
+**Periode KRS dianggap aktif** bila hari ini berada di antara `tanggal_krs_awal` dan `tanggal_krs_akhir` (inklusif). Bila salah satunya kosong, periode dianggap tertutup.
+
+### 3.2 Fakultas, program studi, mata kuliah, ruang
+
+| Data | Field utama | Ditolak dihapus bila |
+|---|---|---|
+| Fakultas | `kode_fakultas` (unik), `nama_fakultas` (unik), `dekan_id`, tanggal berdiri, kontak | masih punya program studi |
+| Program studi | `fakultas_id`, `kode_prodi` (unik), `nama_prodi`, `jenjang`, akreditasi, `kaprodi`, `tahun_berdiri` | masih punya mata kuliah, mahasiswa, atau dosen |
+| Mata kuliah | `kode_matkul` (unik), `nama_matkul`, `sks` 1–6, `semester` 1–14, `jenis` (Wajib/Pilihan), `prodi_id` | dipakai kelas kuliah |
+| Ruang | `kode_ruang` (unik), `nama_ruang`, `kapasitas` 1–1000, `detail` | dipakai jadwal |
+
+### 3.3 Pengguna (Manage User)
+
+Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjenis `admin`). Masing-masing dijaga permission `admin.users.<tipe>`.
+
+**Field umum:**
+
+- `role_id` (harus sesuai jenis pengguna);
+- `name`, `username` (unik), `email` (unik);
+- kata sandi: minimal 8 karakter dan dikonfirmasi; wajib saat membuat, opsional saat mengubah;
+- data diri.
+
+**Field per jenis:**
+
+- Karyawan: `nomor_induk`.
+- Dosen: `nidn` (unik), jabatan fungsional, pendidikan, status kepegawaian, `prodi_id`.
+- Mahasiswa: `nim` (unik), `angkatan`, `semester`, `status`, `dosen_wali_id`, `prodi_id`, sekolah asal, `nisn` (10 digit, unik), `email_alternatif`, data orang tua.
+  - Pilihan `status`: `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`, `Transfer Masuk`.
+
+**Hapus pengguna ditolak bila:**
+
+- menghapus akun sendiri;
+- target punya hak lebih tinggi;
+- target pemegang terakhir `admin.roles`;
+- dosen masih mengampu kelas, menjabat dekan atau kaprodi, atau menjadi dosen wali;
+- mahasiswa sudah punya KRS, presensi, pengajuan izin, atau dispensasi.
+
+### 3.4 Kelola role
+
+- Field role: `name` (unik), `description`, `user_type`, dan daftar permission.
+- `user_type` tidak bisa diubah untuk role sistem maupun role yang sedang dipakai.
+- Permission yang tidak cocok dengan jenis role ditolak.
+- Role sistem dan role yang masih dipakai pengguna tidak bisa dihapus.
+
+---
+
+## 4. Pengaturan sistem
+
+- Menu **Pengaturan Sistem** berupa halaman bertab di `/pengaturan-sistem/{tab}`.
+- `/pengaturan-sistem` membuka tab pertama yang diizinkan. Bila tidak punya izin satu pun, hasilnya 403.
+
+| Tab | Permission | Isi |
+|---|---|---|
+| Institusi | `admin.institusi` | Nama PT (bawaan "SIA VD"), singkatan, logo (jpg/png/webp, maks 2 MB), NPSN, alamat, kontak, tahun berdiri. Dipakai di kop PDF dan tampilan. |
+| Email | `admin.pengaturan-email` | Mailer `log` atau `smtp`. Kata sandi SMTP disimpan terenkripsi dan tidak pernah dikirim ke browser. Ada tombol kirim surel uji (`throttle:6,1`). Nilai di database menimpa `.env`. |
+| Akademik | `admin.pengaturan-akademik` | Enam formulir, dijelaskan di bawah tabel ini. |
+| Tampilan | `admin.pengaturan-tampilan` | Nama aplikasi, favicon (png/ico/webp, SVG ditolak), halaman masuk (judul, teks, gambar, tata letak `panel`/`tengah`, sorotan fitur), sidebar bawaan (`lebar`/`ringkas`). |
+
+**Enam formulir di tab Akademik:**
+
+1. **Kunci KRS oleh pembayaran**: sakelar `kunci_krs_aktif`, bawaan mati (lihat [6.4](#64-kunci-krs-oleh-pembayaran)).
+2. **Batas SKS**:
+   - `maks_sks_tanpa_ips`, bawaan 20;
+   - tabel bertingkat IPS minimal → maks SKS, bawaan 3,00→24, 2,50→21, 2,00→18, 0,00→15;
+   - wajib ada baris IPS minimal 0.
+3. **Skala nilai**:
+   - setiap baris berisi `huruf`, `bobot` 0–4, `lulus`, dan `boleh_diulang`;
+   - bawaan: A=4, B=3, C=2, D=1 (lulus, boleh diulang), E=0 (tidak lulus, boleh diulang);
+   - huruf yang sudah dipakai di KRS tidak bisa dihapus.
+4. **Pindah kelas**: sakelar membuka atau menutup formulir pengajuan mahasiswa, bawaan tertutup.
+5. **Remidi**: `huruf_maks_remidi`, yaitu huruf tertinggi setelah remidi. Kosong berarti bebas.
+   - Bila huruf itu dihapus dari skala, isian ini ikut dikosongkan.
+6. **Presensi**:
+   - `jumlah_pertemuan` (bawaan 16, hanya untuk kelas baru);
+   - `min_kehadiran_ujian` (75%);
+   - `toleransi_terlambat_menit` (15);
+   - `durasi_presensi_mandiri_menit` (15);
+   - `batas_pengajuan_izin_hari` (1);
+   - `syarat_ujian_aktif` (bawaan mati).
+
+---
+
+## 5. Kelas kuliah dan jadwal
+
+### 5.1 Kelas kuliah
+
+- Hanya **admin** yang bisa membuat, mengubah, dan menghapus kelas. Dosen hanya melihat kelas yang ia ampu.
+- **Field:**
+  - `kode_kelas` (unik per tahun akademik);
+  - `tahun_akademik_id`;
+  - `dosen_id` (satu dosen pengampu);
+  - `matkul_id`;
+  - `kapasitas` 1–500;
+  - `jumlah_pertemuan` 1–32. Kelas baru tanpa isian ini memakai nilai bawaan dari Pengaturan Akademik.
+- Setelah kelas punya KRS, `matkul_id` dan `tahun_akademik_id` **tidak bisa diubah**.
+- **Mengubah jumlah pertemuan** (`KelasKuliah::ubahJumlahPertemuan`):
+  - ditolak bila pertemuan yang akan terbuang sudah berjalan atau punya presensi atau izin;
+  - UAS dipindah ke pertemuan terakhir, UTS ke pertemuan tengah (n/2);
+  - pertemuan baru dibuat otomatis.
+- **Hapus kelas** ditolak bila sudah ada KRS, pertemuan yang berjalan, presensi, izin, atau dispensasi. Bila boleh, pertemuan dan jadwal ujiannya ikut terhapus.
+- **Admin membatalkan KRS** mahasiswa dari halaman kelas hanya bila nilainya masih kosong.
+
+### 5.2 Jadwal mingguan
+
+- Dibuat admin per kelas. Field: `hari` (Senin–Sabtu), `jam_mulai`, `jam_akhir` (harus setelah jam mulai), `ruang_id`.
+- **Pengecekan bentrok** dalam tahun akademik yang sama:
+  - dengan jadwal lain kelas itu sendiri;
+  - dengan ruang yang sama;
+  - dengan dosen pengampu yang sama di kelas lain.
+- Bentrok jadwal **mahasiswa** tidak dicek di sini. Pengecekannya dilakukan saat KRS dan saat admin menyetujui pindah kelas.
+- Opsi `terapkan_ke_pertemuan` menyusun ulang pertemuan yang belum berjalan. Menghapus jadwal tidak mengubah pertemuan yang sudah ada.
+
+### 5.3 Halaman kelas
+
+- **Admin dan dosen** (`Kelas/KelasKuliahShow`) melihat: identitas kelas, jadwal, materi, tugas, quiz, tabel **Nilai Mahasiswa** (huruf akhir), dan bagian **Daftar Remidi** (muncul setelah nilai kelas final).
+- **Mahasiswa** melihat kelas hanya bila punya KRS di kelas itu. Isinya: jadwal, materi, tugas, dan quiz biasa (lembar soal ujian tidak termasuk).
+- Menu tersendiri **Jadwal**, **Materi**, **Tugas**, dan **Quiz** menampilkan data lintas kelas dengan filter tahun akademik (bawaan: tahun aktif), prodi, mata kuliah, kelas, dan dosen (khusus admin).
+
+---
+
+## 6. Keuangan semester
+
+### 6.1 Jenis biaya dan tarif
+
+- **Field jenis biaya:**
+  - `kode` (unik), `nama`;
+  - `cara_hitung`: `tetap` atau `per_sks`;
+  - `kategori`: `semester` atau `remidi` (bawaan `semester`);
+  - `aktif`, `urutan`.
+- Kategori `semester` dipakai tagihan semester. Kategori `remidi` hanya dipakai tagihan remidi ([bagian 12](#12-remidi)).
+- **Tarif** dicatat per jenis biaya, per prodi, dan per angkatan (keduanya boleh kosong, artinya berlaku untuk semua).
+- Tarif yang dipakai adalah **yang paling khusus**: prodi+angkatan, lalu prodi saja, lalu angkatan saja, lalu umum (`JenisBiaya::tarifUntuk`).
+- Menghapus jenis biaya tidak mengubah tagihan lama, karena nama dan nominalnya sudah disalin ke rincian.
+
+### 6.2 Menerbitkan tagihan semester
+
+Admin membuka menu **Keuangan → Tagihan Mahasiswa**, lalu **Terbitkan Tagihan Semester Ini** (`TagihanController::terbitkan`):
+
+1. Harus ada jenis biaya aktif berkategori `semester`. Bila tidak ada, penerbitan ditolak.
+2. Bila masih ada KRS tanpa nilai di tahun akademik sebelumnya, sistem meminta konfirmasi (`tagihan_konfirmasi`). Alasannya, kuota SKS sebagian mahasiswa akan memakai angka "tanpa IPS". Admin bisa lanjut (`paksa`) atau batal.
+3. Untuk setiap mahasiswa berstatus **`Aktif`**:
+   - tagihan yang sudah `lunas` dilewati;
+   - tagihan lain di-set `belum_bayar` lalu rinciannya disusun ulang (`TagihanSemester::susunRincian`).
+4. **Rumus rincian:**
+   - komponen `tetap` = nominal tarif × 1;
+   - komponen `per_sks` = nominal tarif × **kuota SKS**, yaitu batas SKS dari IPS semester sebelumnya, **bukan** SKS yang sudah diambil;
+   - komponen tanpa tarif atau bernominal 0 dilewati.
+   - Artinya tagihan terbit **sebelum** KRS diisi.
+5. Nama dan nominal setiap komponen dibekukan di `tagihan_item`, jadi perubahan tarif berikutnya tidak mengubah tagihan yang sudah terbit.
+
+### 6.3 Status dan pengelolaan tagihan
+
+- **Status tagihan:** `belum_bayar` dan `lunas`. Setiap mahasiswa punya satu tagihan per tahun akademik.
+- **Tandai lunas / belum bayar:** admin menekan tombol di daftar tagihan.
+  - Lunas mengisi `tanggal_lunas`; belum bayar mengosongkannya.
+  - Bisa dilakukan walau tagihan belum terbit. Sistem lalu membuat baris tagihan kosong.
+- **Rincian manual:** admin bisa mengetik ulang komponen tagihan. Total dihitung ulang, status tidak berubah.
+- **Mahasiswa**, di menu **Biaya Kuliah**, melihat:
+  - tagihan semester berjalan dan riwayatnya;
+  - panel "Dari Mana Angka Ini?" (tarif per SKS, kuota, SKS yang sudah diambil, sisa SKS yang sudah ditagih tetapi belum diambil);
+  - tagihan remidi.
+
+### 6.4 Kunci KRS oleh pembayaran
+
+- Middleware `tagihan.lunas` (`PastikanTagihanLunas`) dipasang di semua rute KRS mahasiswa.
+- Mahasiswa **dikunci** hanya bila semua syarat ini terpenuhi:
+  - sakelar `kunci_krs_aktif` menyala;
+  - ada tahun akademik aktif;
+  - tagihan tahun itu **sudah terbit**;
+  - tagihan itu belum `lunas`.
+- Akibatnya:
+  - permintaan GET menampilkan halaman **KRS Terkunci** (rincian tagihan dan batas KRS);
+  - permintaan lain ditolak dengan pesan "Tagihan semester ini belum lunas…".
+- Bila tagihan belum terbit, mahasiswa **tidak** dikunci.
+
+---
+
+## 7. KRS
+
+Mahasiswa mengisi KRS di menu **Rencana Studi (KRS)**. Semua rute KRS dijaga `can:mahasiswa.krs` dan `tagihan.lunas`.
+
+### 7.1 Syarat dasar
+
+- Status mahasiswa harus `Aktif` atau `Transfer Masuk` (`Krs::STATUS_MAHASISWA_BOLEH_KRS`).
+- Harus ada tahun akademik aktif dan periode KRS sedang berjalan. Di luar periode, daftar kelas tampil kosong.
+- **Batas SKS** (`PengaturanAkademik::maksSksUntuk`) diambil dari IPS semester sebelumnya (`MahasiswaProfile::ipsSemesterSebelum`):
+  - "semester sebelumnya" adalah tahun akademik **terakhir yang pernah diambil mahasiswa**;
+  - IPS bernilai kosong bila belum pernah kuliah, atau bila ada nilai semester itu yang belum lengkap. Batasnya lalu memakai `maks_sks_tanpa_ips`.
+- **Kelas yang ditawarkan:** mata kuliah dari prodi mahasiswa, pada semester yang sama dengan semester mahasiswa, ditambah mata kuliah yang boleh diulang.
+
+### 7.2 Mengambil kelas (`KrsController::store`)
+
+Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
+
+1. Mata kuliah dari prodi mahasiswa dan kelas di tahun akademik aktif (bila tidak, 404).
+2. Periode KRS sedang berjalan.
+3. KRS belum disimpan (belum terkunci).
+4. Status mahasiswa diizinkan.
+5. Dalam transaksi, baris mahasiswa dan kelas dikunci (`lockForUpdate`).
+6. Riwayat mata kuliah yang sama (`alasanTidakBolehAmbil`):
+   - sudah diambil di tahun ini, termasuk di kelas paralel → ditolak;
+   - pengambilan lama belum bernilai → ditolak;
+   - nilai lama tidak `boleh_diulang` → ditolak ("sudah lulus").
+7. Semester mata kuliah harus sama dengan semester mahasiswa, kecuali mata kuliah ulang.
+8. Tidak bentrok jadwal dengan kelas lain yang sudah diambil tahun ini (`Jadwal::bentrokUntukMahasiswa`).
+9. Kelas belum penuh (jumlah KRS < `kapasitas`).
+10. Total SKS tahun ini ditambah SKS kelas ini tidak melebihi batas SKS.
+11. Baris KRS dibuat dengan status `Aktif`. Pasangan mahasiswa–kelas unik.
+
+### 7.3 Membatalkan kelas
+
+- **Mahasiswa:** hanya KRS miliknya, selama periode KRS, sebelum KRS disimpan, dan nilainya masih kosong.
+  - Pembatalan juga menghapus pengajuan pindah kelas `pending` dari kelas itu (`Krs::cancel`).
+- **Admin**, dari halaman kelas: hanya mensyaratkan nilai kosong. Periode dan kunci KRS tidak dicek.
+
+### 7.4 Menyimpan (mengunci) KRS
+
+1. Mahasiswa menekan **Simpan KRS**. Syaratnya: periode berjalan, belum pernah disimpan, dan minimal satu kelas sudah diambil.
+2. Bila SKS yang diambil masih di bawah batas, sistem meminta konfirmasi (`krs_konfirmasi`).
+3. Sistem mencatat baris `krs_semester` (waktu simpan). Sejak itu mahasiswa tidak bisa lagi menambah atau membatalkan kelas sendiri.
+4. Jalan keluar setelah KRS terkunci:
+   - **pindah kelas** ([bagian 13](#13-pindah-kelas));
+   - **admin membuka kunci KRS** dari menu Tagihan Mahasiswa, yang menghapus baris `krs_semester`. Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
+
+---
+
+## 8. Materi, tugas, dan quiz
+
+### 8.1 Materi
+
+- Dibuat admin atau dosen pengampu. Field: `judul_materi`, `pertemuan_ke`, `jenis` (`Materi` atau `Pengumuman`), `catatan`, dan berkas (maks 5 × 10 MB).
+- Jenis berkas mengikuti whitelist `AllowedUpload`: dokumen office, pdf, txt, csv, gambar, arsip, mp3/mp4. Ekstensi dan isi berkas harus cocok.
+- Berkas disimpan di disk privat dan diunduh lewat `BerkasController`. Pdf dan gambar dibuka *inline*, lainnya diunduh.
+
+### 8.2 Tugas
+
+- **Field tugas:** `judul_tugas`, `tenggat_waktu` (opsional), `catatan`, dan berkas soal.
+- **Pengumpulan oleh mahasiswa** (`PengumpulanTugasController`):
+  - harus punya KRS di kelas itu;
+  - ditolak bila tenggat sudah lewat. Tanpa tenggat, tidak ada batas;
+  - berkas pdf/doc/docx/xls/xlsx/ppt/pptx/zip/jpg/jpeg/png, 1–5 × 10 MB;
+  - mengirim ulang mengganti semua berkas lama;
+  - pengumpulan yang **sudah dinilai terkunci**.
+- **Penilaian:** dosen atau admin mengisi nilai 0–100 per pengumpulan. Dosen tidak bisa menilai bila nilai kelas terkunci ([bagian 11.2](#112-kunci-nilai)).
+
+### 8.3 Quiz
+
+**Pengaturan quiz:**
+
+- Field: `nama_quiz`, `catatan`, `waktu_pengerjaan` (1–1440 menit, opsional), `tenggat_waktu` (opsional).
+- Jenis soal: `single_choice`, `multiple_choice`, `true_false`, `essay`. Poin 0–1000.
+- Soal selain esai wajib punya minimal satu jawaban benar.
+
+**Mengerjakan quiz:**
+
+1. **Mulai** (`QuizAttemptController::start`):
+   - mahasiswa harus ber-KRS dan tenggat belum lewat;
+   - setiap mahasiswa hanya punya **satu attempt** per quiz (`createOrFirst`, pasangan quiz–mahasiswa unik).
+2. **Batas waktu dihitung di server.** Batasnya adalah yang lebih dulu antara `mulai + waktu_pengerjaan` dan `tenggat_waktu`, dengan toleransi kirim 60 detik.
+3. **Soal hanya dikirim ke browser selama attempt berjalan.** Kunci jawaban tidak pernah dikirim.
+4. **Simpan otomatis** berlangsung setiap kali jawaban berubah (jeda 1,5 detik), dalam transaksi terkunci. Attempt yang sudah dikirim atau lewat waktu menolak simpanan baru.
+5. **Kirim:** jawaban divalidasi per jenis soal, lalu dinilai.
+   - Bila waktunya sudah habis, kiriman diabaikan dan yang dinilai adalah **draf terakhir**.
+6. **Tutup otomatis:** attempt yang lewat waktu ditutup (`auto_closed`) saat halaman dibuka, saat simpan, atau saat kirim. Tidak ada cron.
+
+**Penilaian:**
+
+- Soal pilihan bernilai poin penuh bila jawaban **persis sama** dengan kunci, selain itu 0. Esai menunggu koreksi.
+- Skor quiz adalah **jumlah poin mentah**, bukan skala 0–100.
+- **Koreksi esai** dilakukan admin atau dosen per attempt, dengan poin 0 sampai poin soal. Dosen tidak bisa mengoreksi bila nilai kelas terkunci.
+- **Mengubah atau menghapus soal** menilai ulang semua attempt. Poin esai yang sudah dikoreksi dipertahankan. Soal yang diubah menjadi esai dikosongkan poinnya.
+
+### 8.4 Duplikasi
+
+- Materi, tugas, dan quiz biasa bisa diduplikasi ke kelas lain. Berkas fisiknya ikut disalin.
+- Dosen hanya bisa menduplikasi ke kelas yang ia ampu.
+- Lembar soal ujian tidak bisa diduplikasi.
+
+---
+
+## 9. Presensi
+
+### 9.1 Pertemuan
+
+**Generate pertemuan** (`Pertemuan::generateUntuk`), oleh admin atau pengampu:
+
+- Slot diambil dari jadwal mingguan kelas, mulai `tanggal_mulai` tahun akademik. Kelas tanpa jadwal ditolak.
+- Pertemuan ke-⌊n/2⌋ menjadi **UTS** dan pertemuan ke-n menjadi **UAS** (bila n ≥ 4).
+- Pertemuan yang sudah ada tidak diubah. Ada peringatan bila tanggal melewati akhir tahun akademik.
+
+**Status pertemuan:**
+
+| Status | Arti |
+|---|---|
+| `dijadwalkan` | Awal. Bisa dijadwal ulang (dicek bentrok ruang, dosen, pertemuan lain) atau dibatalkan dengan catatan. |
+| `berlangsung` | Dibuka dosen atau admin. Semua peserta KRS otomatis dibuatkan baris presensi `alpa`. |
+| `selesai` | Ditutup dengan jurnal (`topik` wajib), atau ditutup otomatis. |
+| `dibatalkan` | Bisa diaktifkan kembali ke `dijadwalkan`. |
+
+- **Terlewat** bukan status tersimpan. Artinya pertemuan masih `dijadwalkan` padahal jam akhirnya sudah lewat.
+- **Siapa boleh membuka pertemuan:**
+  - dosen hanya antara jam mulai dan jam akhir;
+  - admin kapan saja setelah jam mulai (susulan).
+- **Tutup otomatis:** pertemuan `berlangsung` yang sudah lewat 60 menit dari jam akhir diubah ke `selesai` saat halaman presensi dibuka. Tidak ada cron.
+- **Dosen pengganti:** admin bisa mengganti dosen per pertemuan. Dosen pengganti hanya boleh mengelola pertemuan itu.
+- Dosen tidak bisa mengubah pertemuan di tahun akademik nonaktif (`tahunAkademikTerkunci`).
+
+### 9.2 Pencatatan kehadiran
+
+**Status presensi mahasiswa:**
+
+| Status | Dihitung hadir? |
+|---|---|
+| `hadir` | Ya |
+| `terlambat` | Ya |
+| `izin` | Tidak |
+| `sakit` | Tidak |
+| `alpa` | Tidak |
+
+**Tiga cara pencatatan:**
+
+1. **Manual oleh dosen/admin** saat pertemuan `berlangsung` atau `selesai` (metode `manual`).
+2. **Mandiri lewat QR atau PIN** (metode `qr` atau `pin`):
+   1. Dosen membuka presensi mandiri. Durasi bawaan 15 menit, bisa diperpanjang, dan tidak melewati jam akhir.
+   2. Layar dosen menampilkan kode yang berganti setiap **30 detik**: HMAC dari id pertemuan dan periode, sebagai PIN 6 digit dan token QR. Kode dua periode sebelumnya masih diterima.
+   3. Mahasiswa memindai QR atau mengetik PIN. Halaman QR hanya menampilkan konfirmasi; pencatatan terjadi saat mahasiswa menekan tombol (`throttle:10,1`).
+   4. Sistem mencatat `hadir` bila masuk paling lambat jam mulai + toleransi, selain itu `terlambat`. Bila dosen masuk terlambat, acuan jamnya adalah jam masuk dosen.
+   5. Status hadir yang sudah ada tidak ditimpa.
+   6. Tanda perangkat (cookie) dicatat. Dosen melihat penanda bila beberapa mahasiswa memakai perangkat yang sama.
+3. **Otomatis dari ujian online** (metode `ujian`), lihat [10.3](#103-mahasiswa-mengerjakan-ujian).
+
+**Rekap kehadiran** hanya menghitung pertemuan `kuliah` yang `selesai`, dan hanya untuk mahasiswa yang masih ber-KRS.
+
+### 9.3 Izin dan sakit
+
+1. Mahasiswa mengajukan `izin` atau `sakit` per pertemuan, dengan alasan dan lampiran opsional (pdf/jpg/png, maks 3 × 5 MB).
+   - Batas waktunya akhir hari tanggal pertemuan + `batas_pengajuan_izin_hari`.
+   - Pertemuannya tidak boleh dibatalkan, dan mahasiswa belum tercatat hadir.
+2. Status pengajuan: `menunggu` → `disetujui` atau `ditolak`. Menolak wajib disertai catatan.
+3. Pengajuan yang ditolak boleh diajukan ulang, dan statusnya kembali `menunggu`.
+4. Yang memproses adalah **dosen pengampu atau admin**. Dosen pengganti dan kaprodi tidak bisa.
+5. Bila disetujui, presensi pertemuan itu di-set `izin` atau `sakit` (metode `pengajuan`). Status hadir tidak diturunkan.
+
+### 9.4 Syarat kehadiran ujian dan dispensasi
+
+- Syarat berlaku bila sakelar `syarat_ujian_aktif` menyala. Batasnya `min_kehadiran_ujian` persen (bawaan 75).
+- **Dasar hitung** (`App\SyaratUjian`):
+  - UTS memakai pertemuan kuliah selesai **sebelum** pertemuan UTS;
+  - UAS memakai semua pertemuan kuliah yang sudah selesai.
+- Mahasiswa **memenuhi** syarat bila punya dispensasi, bila belum ada pertemuan yang dihitung, atau bila persentasenya ≥ batas.
+- **Dispensasi** per mahasiswa, per jenis ujian (`uts`/`uas`), dengan alasan. Hanya bisa diberikan **admin atau kaprodi**.
+- **Dampaknya:**
+  - ujian **online** memblokir mahasiswa yang tidak memenuhi syarat (`Ujian::bolehIkut`);
+  - ujian **tatap muka** hanya diberi penanda di daftar hadir dan PDF peserta ujian, tanpa memblokir.
+
+### 9.5 Laporan dan peringatan
+
+- **Ekspor presensi kelas** tersedia dalam PDF dan CSV.
+- **Laporan kehadiran dosen** (khusus admin) berisi pertemuan terlaksana, dibatalkan, terlewat, oleh pengganti, dosen masuk terlambat, tanpa jurnal, dan rata-rata hadir.
+- **Beranda mahasiswa:** mata kuliah dengan kehadiran di bawah batas, atau sisa jatah tidak hadir ≤ 1.
+- **Beranda dosen:** pertemuan hari ini, jumlah izin yang menunggu, dan jumlah mahasiswa di bawah batas kehadiran.
+
+---
+
+## 10. Ujian UTS dan UAS
+
+### 10.1 Penjadwalan oleh admin
+
+**Satu jadwal ujian per kelas per jenis** (`uts`/`uas`). Kombinasi kelas dan jenis unik.
+
+**Field:**
+
+- `mode`: `tatap_muka`, `online_berkas`, atau `online_soal`;
+- `tanggal`, `jam_mulai`, `jam_akhir`;
+- `ruang_id` (wajib untuk tatap muka, kosong untuk online);
+- `pengawas`, `petunjuk`;
+- `status`: `draf` atau `terbit`.
+
+**Dua cara membuat:**
+
+- **Satu per satu:**
+  - tanggal harus berada dalam rentang tahun akademik;
+  - dicek bentrok ruang dengan pertemuan dan ujian lain;
+  - dicek juga bentrok mahasiswa (mahasiswa kelas ini punya ujian lain di jam yang sama). Bentrok mahasiswa bisa dilewati dengan centang "Tetap simpan".
+- **Massal dari pertemuan:** jadwal dibuat sebagai `draf` bermode tatap muka untuk semua kelas yang belum punya, dengan tanggal, jam, dan ruang dari pertemuan UTS/UAS kelas itu.
+
+**Setelah disimpan:**
+
+- Pertemuan UTS/UAS kelas **mengikuti** tanggal, jam, dan ruang ujian, selama pertemuan itu masih `dijadwalkan` (`Ujian::sinkronkanPertemuan`).
+- **Terbitkan:** jadwal terpilih, atau semua draf satu tahun akademik, diubah menjadi `terbit`. Ujian tatap muka tanpa ruang dilewati. Hanya jadwal `terbit` yang terlihat mahasiswa.
+- Mode tidak bisa diganti, dan jadwal tidak bisa dihapus, setelah ada mahasiswa yang mengerjakan.
+
+### 10.2 Persiapan oleh dosen
+
+- Dosen melihat jadwal ujian kelas yang ia ampu, termasuk yang masih draf.
+- **Mode `online_berkas`:** dosen mengunggah berkas soal (maks 5 × 20 MB) **sebelum** ujian dimulai.
+- **Mode `online_soal`:** dosen membuat **lembar soal** memakai mesin quiz.
+  - Satu quiz per ujian. Tenggatnya dipaksa sama dengan jam selesai ujian.
+  - Soal tidak bisa diubah setelah ujian dimulai.
+
+### 10.3 Mahasiswa mengerjakan ujian
+
+- Mahasiswa hanya melihat ujian `terbit` dari kelas di KRS-nya, beserta status syarat kehadirannya.
+- **Halaman detail ujian:**
+  - hitung mundur memakai jam server;
+  - nama berkas soal baru dikirim setelah ujian dimulai, dan hanya bagi yang boleh ikut.
+- **Mode `online_berkas`:**
+  - kumpulkan 1–5 berkas jawaban **hanya selama jam ujian**. Unggahan yang selesai lewat jam selesai **ditolak**;
+  - boleh mengganti berkas selama ujian berlangsung.
+- **Mode `online_soal`:** mulai hanya bila ujian `terbit`, sedang berlangsung, dan mahasiswa boleh ikut. Soal dan opsi diacak per mahasiswa.
+- **Kehadiran otomatis:** mengumpulkan berkas atau memulai lembar soal otomatis mencatat **hadir** (metode `ujian`) di pertemuan UTS/UAS.
+  - Ujian tatap muka tidak mencatat kehadiran otomatis.
+- **Kartu ujian (PDF)** per jenis berisi jadwal ujian terbit, dan kolom syarat kehadiran bila syarat aktif.
+
+### 10.4 Penilaian ujian
+
+- **`tatap_muka` dan `online_berkas`:**
+  - dosen mengisi nilai 0–100 dan catatan per mahasiswa, **setelah ujian selesai**;
+  - mode berkas hanya bisa dinilai bagi yang mengumpulkan.
+- **`online_soal`:** dinilai lewat koreksi quiz. Skor dikonversi ke 0–100 (`skor / total poin × 100`, dibulatkan 2 desimal).
+- **Rilis nilai:** nilai baru bisa dirilis setelah ujian selesai. Mahasiswa melihat nilai ujian hanya bila sudah dirilis.
+- Nilai ujian adalah **angka per ujian**. Nilai ini **tidak** otomatis masuk ke huruf akhir ([bagian 11](#11-nilai-akhir-kunci-nilai-dan-hasil-studi)).
+- **Daftar hadir PDF:** UTS/UAS dari menu Presensi (tab Peserta Ujian); remidi dari halaman ujian remidi.
+
+---
+
+## 11. Nilai akhir, kunci nilai, dan hasil studi
+
+### 11.1 Nilai akhir
+
+- Nilai akhir berupa **huruf** di `krs.nilai`, diisi **manual** oleh dosen pengampu atau admin di tabel **Nilai Mahasiswa** (`KelasKuliahController::updateGrade`).
+- Huruf harus ada di skala nilai. Nilai boleh dikosongkan, kecuali pada jalur remidi.
+- **Tidak ada perhitungan otomatis** huruf akhir dari tugas, quiz, UTS, UAS, atau presensi. Semua nilai komponen berdiri sendiri.
+
+### 11.2 Kunci nilai
+
+**Untuk dosen, nilai kelas terkunci bila salah satu berlaku** (`KontenKelas::pesanNilaiTerkunci`):
+
+1. tahun akademik kelas **nonaktif**;
+2. nilai kelas **sudah difinalisasi** (`nilai_final_at` terisi);
+3. **batas input nilai sudah lewat**. Batasnya `nilai_dibuka_sampai` (batas pengganti dari admin) atau `batas_input_nilai` tahun akademik. Hari batas itu sendiri masih boleh.
+
+**Yang terkunci:**
+
+- huruf akhir;
+- nilai tugas;
+- koreksi esai quiz;
+- mengubah atau menghapus soal quiz (karena menilai ulang);
+- nilai ujian.
+
+Yang **tidak** terkunci: presensi (hanya terkunci bila tahun akademik nonaktif), serta membuat atau mengubah materi, tugas, dan quiz.
+
+**Admin tidak pernah terkunci.**
+
+**Finalisasi nilai** (dosen atau admin):
+
+- Ditolak bila ada **UAS terbit yang belum selesai**.
+- Mencatat waktu dan siapa yang memfinalisasi.
+- Antarmuka memperingatkan jumlah mahasiswa yang belum punya huruf akhir, tetapi tidak memblokir.
+
+**Buka kunci nilai (admin):**
+
+- Status final dibatalkan.
+- Bila batas input nilai tahun akademik sudah lewat, admin wajib memberi **batas baru khusus kelas itu**.
+- Huruf akhir peserta remidi tetap tidak bisa diubah dosen di luar jalur remidi ([12.6](#126-huruf-akhir-peserta-remidi)).
+
+### 11.3 Hasil studi
+
+- **KHS:** semua KRS di satu tahun akademik.
+  - IP = Σ(SKS × bobot) / ΣSKS, hanya atas mata kuliah yang sudah bernilai.
+  - Tersedia unduhan PDF bertanda tangan dosen wali.
+- **Transkrip:** nilai **terbaik** per mata kuliah, jumlah pengambilan, IPK, dan total SKS lulus (huruf bertanda `lulus`). Hanya tampil di layar; tidak ada PDF transkrip.
+- **Dampak ke semester berikutnya:** huruf akhir menentukan IPS, lalu batas SKS KRS, kuota SKS tagihan, dan boleh atau tidaknya mata kuliah diulang.
+
+---
+
+## 12. Remidi
+
+Remidi dilakukan **per mata kuliah (per kelas), paling banyak satu kali**. Alurnya melibatkan dosen, admin, dan mahasiswa. Tiga tanggal di tahun akademik mengatur urutannya: `batas_input_nilai` < `batas_bayar_remidi` < `batas_input_nilai_remidi`.
+
+### 12.1 Daftar peserta
+
+1. Bagian **Daftar Remidi** muncul di halaman kelas setelah nilai kelas **final**.
+2. **Usulan otomatis** (`UsulanRemidi::susun`) mengambil mahasiswa yang memenuhi dua syarat:
+   - huruf akhirnya bertanda **tidak lulus** atau **boleh diulang** (dengan skala bawaan: D dan E);
+   - ia **ikut UAS**. Arti "ikut UAS" per mode:
+     - `online_soal`: sudah memulai lembar soal;
+     - `online_berkas`: mengumpulkan berkas;
+     - `tatap_muka`: nilai UAS-nya terisi.
+   - Bila kelas tidak punya UAS terbit, semua mahasiswa dianggap ikut.
+   - Mahasiswa tanpa huruf akhir tidak diusulkan.
+3. **Mengunci daftar:** dosen atau admin mencentang atau mencoret mahasiswa, lalu menekan **Kunci Daftar**.
+   - Boleh menambah mahasiswa mana pun di kelas itu.
+   - Boleh dikunci tanpa peserta, artinya tidak ada remidi.
+   - Huruf akhir saat itu disimpan sebagai `nilai_awal`.
+4. **Admin** bisa membuka kembali kunci daftar, **kecuali** tagihan remidi kelas itu sudah terbit.
+5. **Kunci massal (admin):** di menu Tagihan Remidi tampil daftar kelas yang nilainya final tetapi daftar remidinya belum dikunci. Admin bisa menguncinya sekaligus dengan usulan otomatis.
+
+### 12.2 Tagihan remidi
+
+**Syarat terbit** (menu **Keuangan → Tagihan Remidi → Terbitkan Tagihan**):
+
+- `batas_bayar_remidi` sudah diisi dan belum lewat;
+- ada jenis biaya aktif berkategori `remidi`.
+
+**Proses terbit:**
+
+- Tagihan dibuat untuk setiap peserta dari kelas yang daftarnya dikunci dan belum punya tagihan. Tagihan yang sudah ada tidak diubah.
+- **Nominal:** `tetap` = per mata kuliah; `per_sks` = tarif × SKS mata kuliah. Tarif dipilih yang paling khusus.
+- Rincian dibekukan saat terbit.
+- **Total 0 langsung `lunas`.**
+
+**Status tagihan remidi:**
+
+| Status | Terjadi saat |
+|---|---|
+| `belum_bayar` | Tagihan terbit. |
+| `menunggu_verifikasi` | Mahasiswa mengunggah bukti bayar (pdf/jpg/png, maks 5 MB) sebelum batas bayar. Mengunggah ulang mengganti bukti lama. |
+| `lunas` | Admin menandai lunas, dengan atau tanpa bukti (mis. bayar di loket). |
+| `ditolak` | Admin menolak bukti dengan alasan. Mahasiswa bisa mengunggah ulang sebelum batas. |
+| *gugur* | **Status tampilan saja**, tidak disimpan. Berlaku untuk `belum_bayar` atau `ditolak` yang batas bayarnya sudah lewat. Bukti yang terkirim sebelum batas (`menunggu_verifikasi`) tetap bisa diverifikasi sesudahnya. |
+
+- Bukti bayar hanya bisa dibuka pemiliknya dan pemegang `admin.tagihan`.
+- Halaman admin menempatkan bukti yang menunggu verifikasi di urutan teratas, dan menampilkan tanggal ujian remidi di setiap baris yang belum lunas.
+
+### 12.3 Jadwal ujian remidi
+
+- Dibuat **admin** di menu Jadwal Ujian dengan jenis **Remidi**. Satu per kelas.
+- **Syarat kelas siap:**
+  - kedua batas remidi di tahun akademik terisi;
+  - daftar remidi dikunci;
+  - ada **peserta yang lunas**.
+- Tanggal harus **sesudah** batas bayar dan **paling lambat** batas input nilai remidi.
+- Mode sama dengan UTS/UAS. Remidi **tidak** membuat pertemuan, tidak mencatat presensi, dan tidak memakai syarat kehadiran.
+- **Jadwal remidi massal:** satu tanggal, jam, dan mode untuk semua kelas yang siap, dibuat sebagai draf. Ujian tatap muka perlu diisi ruangnya per kelas sebelum diterbitkan.
+- Form jadwal memperingatkan bila masih ada bukti bayar kelas itu yang menunggu verifikasi.
+
+### 12.4 Akses peserta
+
+Hanya **peserta yang tagihannya lunas** (`RemidiPeserta::lunas`) yang bisa:
+
+- melihat jadwal remidi dan halaman detailnya;
+- mengunduh kartu remidi (PDF);
+- mengunduh soal;
+- mengumpulkan jawaban dan memulai lembar soal;
+- tampil di daftar peserta dosen dan daftar hadir PDF.
+
+Mahasiswa lain mendapat 404, sehingga tidak tahu remidi itu ada. Peserta yang baru lunas setelah jadwal dibuat otomatis ikut.
+
+### 12.5 Nilai remidi
+
+- Dosen menyiapkan soal dan memberi **nilai remidi (0–100)** lewat halaman ujian, dengan mekanisme yang sama seperti UTS/UAS.
+- Semua itu **tetap bisa dilakukan walau nilai kelas sudah final**, selama **jendela remidi** masih terbuka:
+  - remidi belum difinalisasi;
+  - batas input nilai remidi belum lewat;
+  - tahun akademik masih aktif.
+
+### 12.6 Huruf akhir peserta remidi
+
+- **Setelah ujian remidi selesai**, dosen bisa mengubah huruf akhir **peserta yang lunas** lewat tombol **Ubah Nilai Remidi**, walau nilai kelas sudah final.
+  - Huruf **wajib** diisi.
+  - Pilihan huruf dibatasi `huruf_maks_remidi` (kosong berarti bebas).
+- **Peserta yang belum lunas, gugur, atau bukan peserta** tetap terkunci.
+- **Walau admin membuka kunci nilai kelas**, huruf peserta remidi hanya bisa diubah dosen setelah ujian remidinya selesai.
+- **Admin tidak terkena** batas huruf maupun kunci ini.
+
+### 12.7 Menutup remidi
+
+- Remidi terkunci lagi saat dosen atau admin menekan **Finalisasi Remidi** (hanya setelah ujian remidi selesai), atau saat batas input nilai remidi lewat.
+- Admin bisa **Buka Finalisasi Remidi**. Batas input nilai remidi yang sudah lewat tetap mengunci dosen.
+- Setelah dikunci, Daftar Remidi menampilkan per peserta:
+  - jadwal ujian;
+  - nilai awal;
+  - status tagihan;
+  - nilai remidi;
+  - huruf akhir terkini.
+
+### 12.8 Pengingat di beranda
+
+- **Mahasiswa:**
+  - tagihan remidi yang belum lunas (tidak termasuk yang gugur), beserta batas bayarnya;
+  - jadwal ujian remidi mendatang, bila sudah lunas.
+- **Dosen:**
+  - kelas yang nilainya final tetapi daftar remidinya belum dikunci;
+  - kelas yang ujian remidinya selesai tetapi remidinya belum difinalisasi.
+
+---
+
+## 13. Pindah kelas
+
+1. **Formulir pengajuan** hanya bisa dikirim bila admin membukanya di Pengaturan Akademik. Bila formulir tertutup, pengiriman ditolak 403; halaman riwayat tetap bisa dibuka.
+2. **Mahasiswa mengajukan** (`Mahasiswa\PindahKelasController::store`):
+   - memilih **kelas asal** dari KRS berstatus `Aktif` di tahun akademik aktif;
+   - memilih **kelas tujuan** yang berbeda, dengan **mata kuliah dan tahun akademik yang sama**;
+   - menulis alasan (maks 1000 karakter).
+   - Tidak boleh ada pengajuan `pending` lain untuk kelas asal yang sama.
+   - Kapasitas dan bentrok jadwal **tidak** dicek pada tahap ini.
+3. **Status pengajuan:** `pending` → `disetujui` atau `ditolak`.
+4. **Admin menyetujui** (`Admin\PindahKelasController::approve`):
+   - ditolak bila KRS asal tidak ada, mahasiswa sudah terdaftar di kelas tujuan, atau tahun akademiknya berbeda;
+   - **peringatan yang bisa dilewati** (admin menyetujui ulang dengan `force`):
+     - KRS asal **sudah bernilai**;
+     - jadwal kelas tujuan **bentrok** dengan kelas lain mahasiswa itu;
+   - **kapasitas kelas tujuan sengaja tidak dicek**, karena admin boleh menyetujui ke kelas penuh.
+5. **Dalam transaksi setelah disetujui:**
+   - baris KRS dipindahkan ke kelas tujuan, **beserta nilainya**;
+   - riwayat presensi dan pengajuan izin dipindah ke pertemuan dengan nomor yang sama di kelas tujuan, selama pertemuan tujuan tidak dibatalkan dan belum punya baris untuk mahasiswa itu. Pesan sukses menyebut jumlah yang dipindah dan yang tertinggal;
+   - dispensasi ujian ikut dipindah.
+6. **Admin menolak:** catatan wajib. KRS tidak berubah.
+7. **Tidak ada notifikasi.** Mahasiswa melihat hasilnya di riwayat pengajuan.
+
+---
+
+## 14. Fitur pendukung
+
+### 14.1 Info kuliah
+
+- Admin membuat, mengubah, dan menghapus pengumuman: teks dan **satu lampiran wajib**.
+- Semua mahasiswa melihat semua pengumuman. Tidak ada target prodi atau kelas.
+- Dosen tidak punya menu info kuliah.
+
+### 14.2 Akses berkas privat
+
+Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diunduh lewat `BerkasController`.
+
+| Berkas | Boleh diunduh oleh |
+|---|---|
+| Materi dan tugas | admin kelas, dosen pengampu, mahasiswa ber-KRS di kelas itu |
+| Jawaban tugas | pemilik, dosen pengampu, admin |
+| Lampiran izin | pengaju, dosen pengampu, admin presensi |
+| Soal ujian | admin ujian dan dosen pengampu kapan saja; mahasiswa hanya bila ujian terbit, sudah dimulai, dan boleh ikut |
+| Jawaban ujian | pemilik, dosen pengampu, admin ujian |
+| Bukti bayar remidi | pemilik, pemegang `admin.tagihan` |
+| Lampiran info kuliah | pemegang `admin.info-kuliah` atau `mahasiswa.info-kuliah` |
+
+- Jenis konten ditentukan dari ekstensi. Pdf dan gambar dibuka *inline*, selain itu diunduh.
+- Setiap respons berkas diberi header `nosniff` dan CSP `sandbox`.
+
+### 14.3 Beranda
+
+- **Admin:** hanya pola placeholder. Belum ada data.
+- **Dosen:** presensi hari ini dan pengingat remidi.
+- **Mahasiswa:** peringatan kehadiran dan pengingat remidi.
+
+### 14.4 Fitur lain
+
+- **Jadwal Kuliah (mahasiswa):** kelas-kelas di tahun akademik aktif beserta jadwal dan ruang.
+- **Mahasiswa Kelas (dosen):** daftar mahasiswa di kelas yang diampu, dengan pencarian.
+
+### 14.5 Placeholder
+
+Halaman berikut menampilkan "Halaman … sedang disiapkan.":
+
+- profil dosen dan profil mahasiswa;
+- Info Perkuliahan;
+- Pendaftaran Wisuda;
+- seluruh menu **Perpustakaan** (Katalog, Pinjaman Aktif, Riwayat Pinjaman).
+
+---
+
+## 15. Keterkaitan antarfitur dan daftar status
+
+### 15.1 Keterkaitan utama
+
+| Dari | Ke | Hubungan |
+|---|---|---|
+| Huruf akhir semester lalu | IPS → batas SKS KRS | `maksSksUntuk(ipsSemesterSebelum)` |
+| Batas SKS (kuota) | Tagihan semester | Komponen `per_sks` dikali kuota, bukan SKS diambil |
+| Tagihan semester | KRS | Bila `kunci_krs_aktif` menyala, tagihan terbit yang belum lunas mengunci KRS |
+| KRS | Kelas, presensi, ujian, remidi | Peserta setiap fitur kelas adalah mahasiswa ber-KRS |
+| Jadwal mingguan | Pertemuan | Pertemuan dibuat dan disusun ulang dari jadwal; UTS/UAS ada di pertemuan n/2 dan n |
+| Jadwal ujian UTS/UAS | Pertemuan UTS/UAS | Tanggal, jam, dan ruang pertemuan mengikuti ujian |
+| Presensi | Syarat ujian | Persentase hadir menentukan boleh ikut ujian online (bila sakelar menyala) |
+| Ujian online | Presensi | Mengerjakan ujian mencatat hadir di pertemuan UTS/UAS |
+| UAS | Finalisasi nilai, usulan remidi | Finalisasi menunggu UAS selesai; "ikut UAS" menjadi syarat usulan |
+| Nilai final | Daftar remidi | Daftar remidi hanya bisa disusun setelah nilai final |
+| Daftar remidi dikunci | Tagihan remidi | Tagihan diterbitkan dari daftar yang dikunci |
+| Tagihan remidi lunas | Ujian remidi, huruf akhir | Hanya peserta lunas yang ikut remidi dan bisa diubah hurufnya |
+| Pindah kelas | KRS, nilai, presensi, izin, dispensasi | Semuanya dipindah ke kelas tujuan |
+| Skala nilai | KRS, IPK, remidi | `lulus`, `boleh_diulang`, dan bobot dipakai di semua bagian itu |
+
+### 15.2 Daftar status
+
+| Entitas | Nilai |
+|---|---|
+| Status mahasiswa | `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`, `Transfer Masuk` |
+| KRS | `status`: `Aktif`. Nilai berupa huruf dari skala nilai. |
+| Tagihan semester | `belum_bayar`, `lunas` |
+| Tagihan remidi | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` |
+| Pertemuan | jenis: `kuliah`, `uts`, `uas`. Status: `dijadwalkan`, `berlangsung`, `selesai`, `dibatalkan`; tampilan "terlewat" |
+| Presensi mahasiswa | `hadir`, `terlambat`, `izin`, `sakit`, `alpa`. Metode: `manual`, `qr`, `pin`, `pengajuan`, `ujian` |
+| Pengajuan izin | `menunggu`, `disetujui`, `ditolak` |
+| Ujian | jenis: `uts`, `uas`, `remidi`. Mode: `tatap_muka`, `online_berkas`, `online_soal`. Status: `draf`, `terbit` |
+| Pengajuan pindah kelas | `pending`, `disetujui`, `ditolak` |
+| Jenis biaya | cara hitung: `tetap`, `per_sks`. Kategori: `semester`, `remidi` |
+| Penanda kelas | `nilai_final_at`, `nilai_dibuka_sampai`, `remidi_dikunci_at`, `remidi_final_at` |
+
+---
+
+## 16. Perlu dikonfirmasi
+
+Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau belum bisa dipastikan maksudnya. Tidak ada kode yang diubah untuk dokumen ini.
+
+### Autentikasi dan akses
+
+1. **Login lewat NIM/NIDN.** Placeholder form menyebut NIM/NIDN, tetapi login hanya lewat `username`. Apakah username mahasiswa dan dosen memang selalu diisi NIM/NIDN?
+2. **Verifikasi email dan konfirmasi kata sandi tidak aktif.** `MustVerifyEmail` dikomentari, rute `verification.*` dan `password.confirm` tidak dipakai, dan teks verifikasi di halaman profil masih berbahasa Inggris. Apakah memang tidak akan dipakai?
+3. **Pengguna tanpa role** (`role_id` kosong) masih mungkin ada, sisa migrasi lama. Apakah masih ada di data nyata?
+4. **Role mahasiswa yang diberi permission admin** masuk grup Ziggy `staf`. Apakah skenario ini memang didukung?
+
+### Pengaturan dan data master
+
+5. **Urutan tanggal tahun akademik belum lengkap.** Tanggal KRS tidak divalidasi terhadap tanggal mulai dan akhir semester, dan `batas_input_nilai` tidak dibandingkan dengan `tanggal_akhir`.
+6. **Skala nilai boleh tanpa huruf "tidak lulus" sama sekali.** Tidak ada validasi yang mewajibkannya.
+7. **Pesan penyusunan ulang pertemuan tidak lengkap.** Saat `tanggal_mulai` diubah, pertemuan yang dilewati karena jatuh di masa lalu tidak disebut di pesan sukses.
+
+### Keuangan dan KRS
+
+8. **Mahasiswa `Transfer Masuk` tidak pernah ditagih**, karena tagihan hanya untuk status `Aktif`. Mereka juga tidak pernah terkunci oleh `tagihan.lunas`.
+9. **Tandai lunas sebelum tagihan terbit** membuat tagihan bernilai 0 tanpa rincian, dan penerbitan berikutnya melewatinya. Komentar kode mengatakan rincian "menyusul".
+10. **"Tandai Belum Bayar" tanpa tagihan terbit** membuat tagihan Rp0 yang tetap mengunci KRS bila sakelar menyala. Hal yang sama terjadi bila tidak ada tarif yang cocok.
+11. **Terbitkan ulang menimpa rincian yang diketik manual** pada tagihan yang belum lunas.
+12. **Dua definisi "semester sebelumnya".** Peringatan nilai belum lengkap memakai tahun akademik global sebelumnya; IPS memakai tahun terakhir yang diambil mahasiswa. Hasil keduanya bisa berbeda.
+13. **Label `per_sks` tidak cocok dengan rumus.** Label dan komentar menyebut "SKS yang diambil", padahal rumusnya memakai kuota SKS.
+14. **Konfirmasi awal tombol "Terbitkan Tagihan Semester Ini" kemungkinan terlewat.** Event klik diteruskan sebagai argumen `paksa` (`@click="terbitkan"`).
+15. **Teks spanduk tidak sesuai perilaku.** Spanduk menyebut "tagihan akan bernilai nol" bila belum ada jenis biaya, padahal server menolak penerbitan.
+16. **Admin membatalkan KRS tanpa cek periode atau kunci KRS.** Baris `krs_semester` tetap ada.
+17. **Tarif ganda bisa lolos.** Unique `(jenis_biaya_id, prodi_id, angkatan)` tidak mencegah dua tarif umum (kolom NULL). Duplikat lain memicu error database, bukan pesan validasi.
+18. **Filter status KRS tidak konsisten.** Sebagian perhitungan SKS memfilter status KRS `Aktif`, sebagian tidak. Belum berdampak karena semua KRS saat ini berstatus `Aktif`.
+19. **Urutan tahun akademik** di KHS dan Info Biaya berbasis teks (`semester`), sehingga urutan Ganjil/Genap perlu dicek.
+20. **Belum ada transkrip PDF.** Hanya KHS yang punya PDF.
+
+### Kelas, konten, dan presensi
+
+21. **Konten tetap bisa diubah di tahun akademik nonaktif.** Materi, tugas, dan quiz tidak mengecek kunci tahun akademik maupun nilai final. Mahasiswa juga masih bisa mengumpulkan tugas dan mengerjakan quiz (hanya dibatasi tenggat).
+22. **Menambah soal quiz tidak menilai ulang** attempt yang sudah ada dan tidak mengecek kunci nilai.
+23. **Dua whitelist unggahan berbeda.** Unggahan dosen memakai `AllowedUpload`; pengumpulan tugas mahasiswa memakai daftar yang lebih sempit.
+24. **Mengganti dosen kelas tidak mengubah dosen pertemuan yang sudah dibuat.** Dosen lama bisa terbaca sebagai "pengganti".
+25. **Kapasitas ruang tidak dibandingkan dengan kapasitas kelas.**
+26. **Duplikasi konten ke tahun akademik lain** hanya dibatasi di antarmuka, tidak di server.
+27. **Tutup otomatis bergantung pada kunjungan halaman** (tidak ada cron), sehingga pertemuan bisa `selesai` tanpa jurnal.
+28. **Izin/sakit bisa diajukan untuk pertemuan yang belum terjadi.** Tidak ada batas awal.
+29. **Peringatan kehadiran di beranda tetap memakai `min_kehadiran_ujian`** walau sakelar syarat ujian mati.
+
+### Ujian, nilai, dan remidi
+
+30. **Penerbitan jadwal ujian melewati ujian tatap muka tanpa ruang** tanpa menyebutkan mana saja.
+31. **Rilis nilai ujian dan pembuatan lembar soal hanya dibatasi di antarmuka.** Rilis nilai tidak mengecek kunci nilai; pembuatan lembar soal tidak mengecek apakah ujian sudah dimulai.
+32. **Status ujian bisa dikembalikan dari `terbit` ke `draf`** walau sudah ada yang mengerjakan.
+33. **Cakupan cek bentrok ujian.** Bentrok mahasiswa ikut menghitung ujian berstatus draf dan peserta remidi yang belum lunas. Jadwal remidi massal tidak dicek bentrok sama sekali.
+34. **Huruf akhir tidak dihitung dari komponen.** Apakah memang akan tetap diisi manual?
+35. **KHS dan transkrip menampilkan huruf sebelum nilai final.** Apakah mahasiswa memang boleh melihatnya?
+36. **Admin bisa menandai lunas tagihan yang sudah gugur**, sehingga peserta itu bisa ikut remidi lagi.
+37. **Finalisasi remidi tidak mencatat pelakunya** dan tidak mengecek tahun akademik nonaktif.
+38. **Admin tidak terkena batas huruf maksimal remidi** maupun kunci huruf peserta remidi. Apakah memang disengaja?
+
+### Pindah kelas dan lainnya
+
+39. **Pengajuan ke kelas penuh atau bentrok tetap bisa dikirim.** Saat disetujui, admin hanya diperingatkan soal bentrok, tidak soal kapasitas.
+40. **Persetujuan pindah kelas** tidak mengecek status KRS asal maupun apakah formulir masih dibuka.
+41. **Satu `force` melewati dua peringatan sekaligus.** Bila KRS asal sudah bernilai, peringatan bentrok tidak pernah sempat tampil.
+42. **Flash `pindah_kelas_error` dibaca di halaman mahasiswa** tetapi tidak pernah diisi controller.
+43. **Tidak ada notifikasi** (email atau lainnya) untuk hasil pindah kelas, tagihan, atau remidi. Semuanya hanya lewat halaman dan pesan flash.
+44. **Info kuliah tanpa target** (prodi/kelas), dan dosen tidak punya akses.
+45. **Beranda admin dan `/dashboard` masih placeholder.** Begitu juga profil dosen dan mahasiswa, Info Perkuliahan, Pendaftaran Wisuda, dan Perpustakaan.
