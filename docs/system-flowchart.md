@@ -2,6 +2,8 @@
 
 Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `2cc9dba`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 16](system-flow.md#16-perlu-dikonfirmasi).
 
+Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar dan diunduh): [system-flowchart.html](system-flowchart.html). Bangun ulang dengan `python3 docs/build-flowchart-html.py` setiap kali berkas ini berubah.
+
 ## Daftar diagram
 
 1. [Peta aktor dan modul](#1-peta-aktor-dan-modul)
