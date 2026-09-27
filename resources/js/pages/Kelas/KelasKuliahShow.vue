@@ -111,6 +111,7 @@ type StatusNilai = {
     batas: string | null;
     batas_tahun_lewat: boolean;
     uas_belum_selesai: boolean;
+    susulan_tertunda: number;
     tanpa_nilai: number;
 };
 
@@ -1067,8 +1068,12 @@ const formatTenggat = (value: string | null | undefined): string => {
                                 <Button
                                     size="sm"
                                     class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                                    :disabled="props.statusNilai.uas_belum_selesai"
-                                    :title="props.statusNilai.uas_belum_selesai ? 'Tunggu sampai UAS selesai' : undefined"
+                                    :disabled="props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda > 0"
+                                    :title="
+                                        props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda
+                                            ? 'Tunggu sampai UAS (dan susulannya) selesai'
+                                            : undefined
+                                    "
                                     @click="finalisasiOpen = true"
                                     >Finalisasi Nilai</Button
                                 >
@@ -1085,6 +1090,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                     <p v-if="props.statusNilai.uas_belum_selesai && !props.statusNilai.final" class="mt-2 text-xs text-[#a39e98]">
                         Nilai bisa difinalisasi setelah UAS selesai.
+                    </p>
+                    <p v-else-if="props.statusNilai.susulan_tertunda && !props.statusNilai.final" class="mt-2 text-xs text-[#a39e98]">
+                        Nilai bisa difinalisasi setelah UAS susulan {{ props.statusNilai.susulan_tertunda }} mahasiswa selesai atau gugur.
                     </p>
                     <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div class="relative w-full sm:max-w-sm">

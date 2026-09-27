@@ -37,6 +37,14 @@ const props = defineProps<{
         tagihan: { id: number; matkul: string | null; total: number; status: StatusTagihanRemidi; batas_bayar: string | null }[];
         ujian: { id: number; matkul: string | null; tanggal: string; jam_mulai: string; jam_akhir: string; label_mode: string }[];
     } | null;
+    /** Beranda mahasiswa: pengajuan, tagihan, dan jadwal ujian susulan. */
+    susulanMahasiswa?: {
+        pengajuan: { id: number; ujian_id: number; judul: string }[];
+        tagihan: { id: number; judul: string; total: number; status: StatusTagihanRemidi; batas_bayar: string }[];
+        ujian: { id: number; judul: string; tanggal: string; jam_mulai: string; jam_akhir: string; label_mode: string }[];
+    } | null;
+    /** Beranda dosen: ujian susulan yang perlu disiapkan atau dinilai. */
+    susulanDosen?: { siapkan: UjianSusulanRingkas[]; nilai: UjianSusulanRingkas[] } | null;
     /** Beranda dosen: kelas yang menunggu langkah remidi. */
     remidiDosen?: {
         kunci_daftar: KelasRingkas[];
@@ -45,6 +53,7 @@ const props = defineProps<{
 }>();
 
 type KelasRingkas = { id: number; kode_kelas: string; matkul: string | null };
+type UjianSusulanRingkas = { id: number; judul: string; kode_kelas: string | null; tanggal: string };
 
 const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 </script>
@@ -115,6 +124,86 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     class="mt-2 inline-block text-sm font-medium text-[#0075de] hover:underline"
                     >Unggah bukti bayar di Biaya Kuliah</Link
                 >
+            </section>
+
+            <section
+                v-if="props.susulanMahasiswa?.pengajuan.length || props.susulanMahasiswa?.tagihan.length || props.susulanMahasiswa?.ujian.length"
+                :class="kartu"
+            >
+                <h2 class="font-semibold text-black">Ujian susulan</h2>
+                <ul class="mt-3 divide-y divide-[#e6e6e6]">
+                    <li
+                        v-for="p in props.susulanMahasiswa.pengajuan"
+                        :key="`p${p.id}`"
+                        class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm"
+                    >
+                        <Link :href="route('mahasiswa.ujian.show', p.ujian_id)" class="font-medium text-[#0075de] hover:underline"
+                            >Pengajuan susulan {{ p.judul }}</Link
+                        >
+                        <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-medium text-[#0075de]">Menunggu persetujuan</span>
+                    </li>
+                    <li
+                        v-for="t in props.susulanMahasiswa.tagihan"
+                        :key="`t${t.id}`"
+                        class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm"
+                    >
+                        <span class="font-medium text-black"
+                            >Tagihan {{ t.judul }} <span class="font-normal text-[#615d59]">· {{ rupiah(t.total) }}</span></span
+                        >
+                        <span class="flex items-center gap-2">
+                            <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="STATUS_TAGIHAN_REMIDI[t.status].kelas">{{
+                                STATUS_TAGIHAN_REMIDI[t.status].label
+                            }}</span>
+                            <span v-if="t.status !== 'menunggu_verifikasi'" class="text-[#dd5b00]"
+                                >bayar sebelum {{ formatTanggal(t.batas_bayar, false) }}</span
+                            >
+                        </span>
+                    </li>
+                    <li
+                        v-for="u in props.susulanMahasiswa.ujian"
+                        :key="`u${u.id}`"
+                        class="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm"
+                    >
+                        <Link :href="route('mahasiswa.ujian.show', u.id)" class="font-medium text-[#0075de] hover:underline">{{ u.judul }}</Link>
+                        <span class="text-[#31302e]"
+                            >{{ formatTanggal(u.tanggal) }}, {{ jam(u.jam_mulai) }}–{{ jam(u.jam_akhir) }} · {{ u.label_mode }}</span
+                        >
+                    </li>
+                </ul>
+                <Link
+                    v-if="props.susulanMahasiswa.tagihan.length"
+                    :href="route('mahasiswa.info-biaya-kuliah')"
+                    class="mt-2 inline-block text-sm font-medium text-[#0075de] hover:underline"
+                    >Unggah bukti bayar di Biaya Kuliah</Link
+                >
+            </section>
+
+            <section v-if="props.susulanDosen?.siapkan.length || props.susulanDosen?.nilai.length" :class="kartu">
+                <h2 class="font-semibold text-black">Ujian susulan</h2>
+                <div v-if="props.susulanDosen.siapkan.length" class="mt-3 text-sm">
+                    <p class="text-[#615d59]">Terjadwal, siapkan soalnya:</p>
+                    <div class="mt-1 flex flex-wrap gap-2">
+                        <Link
+                            v-for="u in props.susulanDosen.siapkan"
+                            :key="u.id"
+                            :href="route('dosen.ujian.show', u.id)"
+                            class="rounded-full bg-[#f2f9ff] px-3 py-1 font-medium text-[#0075de] hover:underline"
+                            >{{ u.judul }} · {{ u.kode_kelas }} · {{ formatTanggal(u.tanggal, false) }}</Link
+                        >
+                    </div>
+                </div>
+                <div v-if="props.susulanDosen.nilai.length" class="mt-3 text-sm">
+                    <p class="text-[#615d59]">Sudah selesai, isi dan rilis nilainya:</p>
+                    <div class="mt-1 flex flex-wrap gap-2">
+                        <Link
+                            v-for="u in props.susulanDosen.nilai"
+                            :key="u.id"
+                            :href="route('dosen.ujian.show', u.id)"
+                            class="rounded-full bg-[#fff6e0] px-3 py-1 font-medium text-[#8a5a00] hover:underline"
+                            >{{ u.judul }} · {{ u.kode_kelas }}</Link
+                        >
+                    </div>
+                </div>
             </section>
 
             <section v-if="props.remidiDosen?.kunci_daftar.length || props.remidiDosen?.isi_nilai.length" :class="kartu">

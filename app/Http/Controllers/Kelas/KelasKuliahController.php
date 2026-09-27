@@ -13,6 +13,7 @@ use App\Models\Pertemuan;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
+use App\UjianSusulan;
 use App\UsulanRemidi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -114,6 +115,10 @@ class KelasKuliahController extends Controller
 
         if ($uas !== null && ! $uas->sudahSelesai()) {
             return back()->with('error', 'Nilai baru bisa difinalisasi setelah UAS kelas ini selesai.');
+        }
+
+        if (($tertunda = UjianSusulan::uasSusulanTertunda($kelasKuliah)->count()) > 0) {
+            return back()->with('error', "Masih ada {$tertunda} mahasiswa dengan UAS susulan yang belum selesai. Finalisasi setelah susulannya selesai atau gugur.");
         }
 
         $kelasKuliah->finalisasiNilai(request()->user());
@@ -238,6 +243,7 @@ class KelasKuliahController extends Controller
             'batas' => $kelas->batasInputNilai()?->toDateString(),
             'batas_tahun_lewat' => $batasTahun !== null && $batasTahun->copy()->endOfDay()->isPast(),
             'uas_belum_selesai' => $uas !== null && ! $uas->sudahSelesai(),
+            'susulan_tertunda' => UjianSusulan::uasSusulanTertunda($kelas)->count(),
             'tanpa_nilai' => $kelas->krs->whereNull('nilai')->count(),
         ];
     }

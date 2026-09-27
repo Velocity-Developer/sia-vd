@@ -10,6 +10,7 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
 use App\Models\PengajuanPindahKelas;
+use App\Models\PengajuanSusulan;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengumpulanTugas;
@@ -29,6 +30,7 @@ use App\Models\Tugas;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
+use App\UjianSusulan;
 use App\UserType;
 use App\UsulanRemidi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -267,4 +269,28 @@ it('seeds a finished remidi that follows the remidi rules', function () {
     // Biaya remidi tidak pernah masuk tagihan semester.
     expect(TagihanItem::whereIn('jenis_biaya_id', JenisBiaya::where('kategori', JenisBiaya::REMIDI)->select('id'))->exists())->toBeFalse()
         ->and(TagihanRemidi::whereNotNull('bukti')->count())->toBeGreaterThan(0);
+});
+
+it('seeds susulan examples that follow the susulan rules', function () {
+    $this->seed();
+
+    $pengajuan = PengajuanSusulan::with(['ujian.kelasKuliah', 'tagihan'])->get();
+    expect($pengajuan->pluck('status')->sort()->values()->all())->toBe([PengajuanSusulan::DISETUJUI, PengajuanSusulan::MENUNGGU]);
+
+    foreach ($pengajuan as $p) {
+        // Hanya untuk UTS/UAS terbit, oleh peserta kelas yang tidak ikut ujian utama, dengan bukti.
+        expect(in_array($p->ujian->jenis, Ujian::JENIS, true))->toBeTrue()
+            ->and($p->ujian->status)->toBe(Ujian::TERBIT)
+            ->and($p->ujian->kelasKuliah->krs()->where('mahasiswa_id', $p->mahasiswa_id)->exists())->toBeTrue()
+            ->and(UjianSusulan::ikutUjianUtama($p->ujian, $p->mahasiswa_id))->toBeFalse()
+            ->and($p->lampiran)->not->toBeEmpty();
+
+        // Tagihan hanya untuk yang disetujui, belum gugur.
+        expect($p->tagihan !== null)->toBe($p->status === PengajuanSusulan::DISETUJUI);
+        if ($p->tagihan) {
+            expect($p->tagihan->gugur())->toBeFalse()->and($p->tagihan->total)->toBe(150_000);
+        }
+    }
+
+    expect(TagihanItem::whereIn('jenis_biaya_id', JenisBiaya::where('kategori', JenisBiaya::SUSULAN)->select('id'))->exists())->toBeFalse();
 });

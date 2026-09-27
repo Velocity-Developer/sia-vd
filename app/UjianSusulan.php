@@ -2,6 +2,7 @@
 
 namespace App;
 
+use App\Models\KelasKuliah;
 use App\Models\MahasiswaProfile;
 use App\Models\PengajuanSusulan;
 use App\Models\PengaturanAkademik;
@@ -114,6 +115,44 @@ class UjianSusulan
             ->get()
             ->filter(fn (Ujian $u): bool => ! Ujian::query()->where('kelas_id', $u->kelas_id)->where('jenis', Ujian::jenisSusulanUntuk($u->jenis))->exists()
                 && self::pemohonLunas($u)->diff(self::pesertaUjianUtama($u))->isNotEmpty())
+            ->values();
+    }
+
+    /**
+     * Pemohon UAS susulan kelas ini yang susulannya masih berjalan, sehingga nilai kelas belum boleh difinalisasi:
+     * pengajuan disetujui dan tidak ikut UAS utama, lalu tagihannya belum terbit, belum lunas tetapi belum lewat
+     * batas bayar, atau sudah lunas tetapi UAS susulannya belum dijadwalkan/belum selesai. Yang gugur tidak dihitung.
+     *
+     * @return Collection<int, int> id mahasiswa
+     */
+    public static function uasSusulanTertunda(KelasKuliah $kelas): Collection
+    {
+        $uas = $kelas->ujianTerbit(Pertemuan::UAS);
+
+        if ($uas === null) {
+            return collect();
+        }
+
+        $ikutUtama = self::pesertaUjianUtama($uas)->flip();
+        $susulan = $kelas->ujianTerbit(Ujian::UAS_SUSULAN);
+        $susulanSelesai = $susulan !== null && $susulan->sudahSelesai();
+
+        return PengajuanSusulan::query()
+            ->where('ujian_id', $uas->id)
+            ->where('status', PengajuanSusulan::DISETUJUI)
+            ->with('tagihan')
+            ->get()
+            ->reject(fn (PengajuanSusulan $p): bool => $ikutUtama->has($p->mahasiswa_id))
+            ->filter(function (PengajuanSusulan $p) use ($susulanSelesai): bool {
+                $tagihan = $p->tagihan;
+
+                return match (true) {
+                    $tagihan === null => true,
+                    $tagihan->status === TagihanSusulan::LUNAS => ! $susulanSelesai,
+                    default => ! $tagihan->gugur(),
+                };
+            })
+            ->pluck('mahasiswa_id')
             ->values();
     }
 }

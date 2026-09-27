@@ -17,6 +17,7 @@ use App\Models\MataKuliah;
 use App\Models\Materi;
 use App\Models\PengajuanIzin;
 use App\Models\PengajuanPindahKelas;
+use App\Models\PengajuanSusulan;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengaturanPindahKelas;
@@ -35,6 +36,7 @@ use App\Models\SkalaNilai;
 use App\Models\TagihanItem;
 use App\Models\TagihanRemidi;
 use App\Models\TagihanSemester;
+use App\Models\TagihanSusulan;
 use App\Models\TahunAkademik;
 use App\Models\TarifBiaya;
 use App\Models\Tugas;
@@ -118,10 +120,13 @@ class DemoSeeder extends Seeder
         // Remidi mengubah sebagian huruf semester lalu, jadi dijalankan sebelum tagihan semester (kuota SKS dari IPS).
         $this->remidi($tahunAkademik->get(count($tahunAkademik) - 2));
         $this->keuangan($tahunAkademik, $mahasiswa);
+        $this->susulan($tahunAkademik->last());
     }
 
     private function bersihkan(): void
     {
+        TagihanSusulan::query()->delete();
+        PengajuanSusulan::query()->delete();
         TagihanRemidi::query()->delete();
         RemidiPeserta::query()->delete();
         UjianJawaban::query()->delete();
@@ -1058,6 +1063,67 @@ class DemoSeeder extends Seeder
             }
 
             $kelas->update(['remidi_final_at' => $ujian->tanggal->copy()->addDays(2)]);
+        }
+    }
+
+    /**
+     * Contoh ujian susulan di semester berjalan: satu pengajuan UTS masih menunggu persetujuan, satu lagi sudah
+     * disetujui dan tagihannya menunggu verifikasi bukti bayar. Jenis biaya Susulan Rp150.000 per ujian.
+     */
+    private function susulan(TahunAkademik $tahunAktif): void
+    {
+        $jenis = JenisBiaya::query()->create([
+            'kode' => 'SUSULAN',
+            'nama' => 'Biaya Ujian Susulan',
+            'cara_hitung' => JenisBiaya::TETAP,
+            'kategori' => JenisBiaya::SUSULAN,
+            'keterangan' => 'Per ujian susulan.',
+            'aktif' => true,
+            'urutan' => 4,
+        ]);
+        $jenis->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => 150_000]);
+
+        $admin = User::query()->where('username', 'admin')->firstOrFail();
+        $uts = Ujian::query()
+            ->where('jenis', Pertemuan::UTS)
+            ->terbit()
+            ->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahunAktif->id))
+            ->whereHas('kelasKuliah.krs')
+            ->with(['kelasKuliah.krs' => fn ($q) => $q->orderBy('id'), 'kelasKuliah.mataKuliah:id,sks'])
+            ->orderBy('id')
+            ->take(2)
+            ->get();
+
+        foreach ($uts as $urutan => $ujian) {
+            $krs = $ujian->kelasKuliah->krs->first();
+            $disetujui = $urutan === 1;
+            $pengajuan = PengajuanSusulan::query()->create([
+                'ujian_id' => $ujian->id,
+                'mahasiswa_id' => $krs->mahasiswa_id,
+                'alasan' => $disetujui ? 'Mengikuti lomba tingkat nasional mewakili kampus.' : 'Rawat inap karena demam berdarah.',
+                'lampiran' => [$this->berkasDemo('susulan', 'surat-keterangan', 'Surat keterangan')],
+                'status' => $disetujui ? PengajuanSusulan::DISETUJUI : PengajuanSusulan::MENUNGGU,
+                'diproses_oleh' => $disetujui ? $admin->id : null,
+                'diproses_at' => $disetujui ? now() : null,
+            ]);
+
+            if (! $disetujui) {
+                continue;
+            }
+
+            $profil = MahasiswaProfile::query()->findOrFail($krs->mahasiswa_id);
+            TagihanSusulan::query()->create([
+                'pengajuan_susulan_id' => $pengajuan->id,
+                'mahasiswa_id' => $krs->mahasiswa_id,
+                'ujian_id' => $ujian->id,
+                'kelas_id' => $ujian->kelas_id,
+                ...TagihanSusulan::hitung($profil, (int) $ujian->kelasKuliah->mataKuliah?->sks, JenisBiaya::query()->whereKey($jenis->id)->with('tarif')->get()),
+                'status' => TagihanSusulan::MENUNGGU,
+                'batas_bayar' => today()->addDays(PengaturanAkademik::current()->batas_bayar_susulan_hari),
+                'bukti' => $this->berkasDemo('bukti-bayar', 'bukti-susulan', 'Bukti transfer biaya susulan'),
+                'bukti_diunggah_at' => now(),
+                'diterbitkan_oleh' => $admin->id,
+            ]);
         }
     }
 

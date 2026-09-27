@@ -27,8 +27,9 @@ class UsulanRemidi
     }
 
     /**
-     * Mahasiswa yang ikut UAS kelas ini, atau null bila kelas tidak punya UAS terbit (semua dianggap ikut).
-     * Lembar soal: sudah mulai mengerjakan; unggah berkas: mengumpulkan; tatap muka: nilai UAS terisi.
+     * Mahasiswa yang ikut UAS kelas ini, termasuk yang mengikuti UAS susulan, atau null bila kelas tidak punya UAS
+     * terbit (semua dianggap ikut). Lembar soal: sudah mulai mengerjakan; unggah berkas: mengumpulkan; tatap muka:
+     * nilai UAS terisi.
      *
      * @return Collection<int, int>|null
      */
@@ -40,10 +41,20 @@ class UsulanRemidi
             return null;
         }
 
-        return match ($uas->mode) {
-            Ujian::ONLINE_SOAL => QuizAttempt::query()->whereHas('quiz', fn ($q) => $q->where('ujian_id', $uas->id))->pluck('mahasiswa_id'),
-            Ujian::ONLINE_BERKAS => UjianJawaban::query()->where('ujian_id', $uas->id)->whereNotNull('berkas')->pluck('mahasiswa_id'),
-            default => UjianJawaban::query()->where('ujian_id', $uas->id)->whereNotNull('nilai')->pluck('mahasiswa_id'),
+        $susulan = $kelas->ujianTerbit(Ujian::UAS_SUSULAN);
+
+        return self::mengerjakan($uas)->merge($susulan ? self::mengerjakan($susulan) : [])->unique()->values();
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private static function mengerjakan(Ujian $ujian): Collection
+    {
+        return match ($ujian->mode) {
+            Ujian::ONLINE_SOAL => QuizAttempt::query()->whereHas('quiz', fn ($q) => $q->where('ujian_id', $ujian->id))->pluck('mahasiswa_id'),
+            Ujian::ONLINE_BERKAS => UjianJawaban::query()->where('ujian_id', $ujian->id)->whereNotNull('berkas')->pluck('mahasiswa_id'),
+            default => UjianJawaban::query()->where('ujian_id', $ujian->id)->whereNotNull('nilai')->pluck('mahasiswa_id'),
         };
     }
 

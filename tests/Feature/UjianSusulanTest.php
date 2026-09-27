@@ -13,6 +13,7 @@ use App\Models\TagihanSusulan;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
+use App\UsulanRemidi;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -369,4 +370,82 @@ it('creates draft susulan schedules for all ready classes at once', function () 
     $this->actingAs($admin)->post(route('admin.ujian.susulan-massal'), [...$isian, 'tanggal' => '2025-10-13'])
         ->assertSessionHas('success', '1 jadwal susulan dibuat sebagai draf.');
     expect(Ujian::where('jenis', 'uts_susulan')->where('status', 'draf')->count())->toBe(1);
+});
+
+/**
+ * Kelas dengan UAS terbit 15 Des 2025; pengajuan UAS susulan mahasiswa pertama disetujui.
+ *
+ * @return array{0: KelasKuliah, 1: list<User>, 2: Ujian, 3: User}
+ */
+function uasDisusul(): array
+{
+    [$kelas, $mhs] = kelasSusulan();
+    $uas = Ujian::create([
+        'kelas_id' => $kelas->id, 'jenis' => 'uas', 'mode' => 'online_berkas', 'tanggal' => '2025-12-15', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'status' => 'terbit',
+    ]);
+    $admin = User::factory()->admin()->create();
+    test()->travelTo('2025-12-14 09:00:00');
+    test()->actingAs($mhs[0])->post(route('mahasiswa.ujian.susulan', $uas), isianSusulan());
+    test()->actingAs($admin)->post(route('admin.ujian-susulan.setujui', PengajuanSusulan::first()));
+
+    return [$kelas->fresh(), $mhs, $uas, $admin];
+}
+
+it('holds grade finalization until the approved UAS susulan is done or lapsed', function () {
+    [$kelas, $mhs, , $admin] = uasDisusul();
+    $dosen = $kelas->dosen->user;
+    $this->travelTo('2025-12-16 09:00:00');
+
+    // Belum ditagih: tertahan.
+    $this->actingAs($dosen)->post(route('dosen.kelas-kuliah.finalisasi-nilai', $kelas))->assertSessionHas('error');
+    $this->actingAs($dosen)->get(route('dosen.kelas-kuliah.show', $kelas))->assertInertia(fn ($page) => $page->where('statusNilai.susulan_tertunda', 1));
+
+    // Lunas tetapi susulan belum dijadwalkan: masih tertahan; setelah susulan selesai: boleh.
+    jenisBiayaSusulan();
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.lunas', TagihanSusulan::first()));
+    $this->actingAs($dosen)->post(route('dosen.kelas-kuliah.finalisasi-nilai', $kelas))->assertSessionHas('error');
+    Ujian::create(['kelas_id' => $kelas->id, 'jenis' => 'uas_susulan', 'mode' => 'online_berkas', 'tanggal' => '2025-12-18', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'status' => 'terbit']);
+    $this->actingAs($dosen)->post(route('dosen.kelas-kuliah.finalisasi-nilai', $kelas))->assertSessionHas('error');
+    $this->travelTo('2025-12-18 12:00:00');
+    $this->actingAs($dosen)->post(route('dosen.kelas-kuliah.finalisasi-nilai', $kelas))->assertSessionHas('success');
+});
+
+it('does not hold finalization for a lapsed susulan bill', function () {
+    [$kelas, , , $admin] = uasDisusul();
+    jenisBiayaSusulan();
+    $this->travelTo('2025-12-16 09:00:00');
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+
+    $this->travelTo('2025-12-20 09:00:00');
+    $this->actingAs($kelas->dosen->user)->post(route('dosen.kelas-kuliah.finalisasi-nilai', $kelas))->assertSessionHas('success');
+});
+
+it('counts sitting the UAS susulan as sitting the UAS for remidi proposals', function () {
+    [$kelas, $mhs] = uasDisusul();
+    $susulan = Ujian::create(['kelas_id' => $kelas->id, 'jenis' => 'uas_susulan', 'mode' => 'online_berkas', 'tanggal' => '2025-12-18', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'status' => 'terbit']);
+    Krs::query()->where('kelas_id', $kelas->id)->update(['nilai' => 'E']);
+    UjianJawaban::create(['ujian_id' => $susulan->id, 'mahasiswa_id' => $mhs[0]->mahasiswaProfile->id, 'berkas' => ['a.pdf'], 'dikumpulkan_at' => '2025-12-18 10:00:00']);
+
+    $usulan = collect(UsulanRemidi::susun($kelas)['mahasiswa'])->keyBy('mahasiswa_id');
+    expect($usulan[$mhs[0]->mahasiswaProfile->id]['diusulkan'])->toBeTrue()
+        ->and($usulan[$mhs[1]->mahasiswaProfile->id]['diusulkan'])->toBeFalse();
+});
+
+it('reminds students and lecturers about susulan on the dashboard', function () {
+    [$kelas, $mhs, , $admin] = susulanDisetujui();
+    jenisBiayaSusulan();
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.lunas', TagihanSusulan::where('mahasiswa_id', $mhs[0]->mahasiswaProfile->id)->first()));
+    Ujian::create(isianJadwalSusulan($kelas));
+
+    $this->actingAs($mhs[0])->get(route('mahasiswa.dashboard'))
+        ->assertInertia(fn ($page) => $page->has('susulanMahasiswa.ujian', 1)->has('susulanMahasiswa.tagihan', 0));
+    $this->actingAs($mhs[1])->get(route('mahasiswa.dashboard'))
+        ->assertInertia(fn ($page) => $page->has('susulanMahasiswa.tagihan', 1)->where('susulanMahasiswa.tagihan.0.batas_bayar', '2025-10-10')->has('susulanMahasiswa.ujian', 0));
+
+    $dosen = $kelas->dosen->user;
+    $this->actingAs($dosen)->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page->has('susulanDosen.siapkan', 1)->has('susulanDosen.nilai', 0));
+    $this->travelTo('2025-10-13 12:00:00');
+    $this->actingAs($dosen)->get(route('dosen.dashboard'))->assertInertia(fn ($page) => $page->has('susulanDosen.siapkan', 0)->has('susulanDosen.nilai', 1));
 });
