@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatJamDari, formatTanggal, jam } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
-import { JENIS_UJIAN, type JenisUjian, type ModeUjian } from '@/lib/ujian';
+import { JENIS_UJIAN, jenisKhusus, type JenisUjian, type ModeUjian } from '@/lib/ujian';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { FileUp, Paperclip, Trash2 } from 'lucide-vue-next';
 import { computed, reactive, ref } from 'vue';
@@ -137,6 +137,10 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     <p v-if="props.ujian.jenis === 'remidi'" class="text-sm text-[#615d59]">
                         Hanya peserta remidi yang tagihannya lunas.
                         <template v-if="props.batasNilaiRemidi">Nilai remidi bisa diisi sampai {{ formatTanggal(props.batasNilaiRemidi) }}.</template>
+                    </p>
+                    <p v-else-if="jenisKhusus(props.ujian.jenis)" class="text-sm text-[#615d59]">
+                        Hanya pemohon susulan yang disetujui, tagihannya lunas, dan tidak mengikuti ujian utama. Mengerjakan susulan tidak mengubah
+                        presensi.
                     </p>
                 </div>
 
@@ -404,10 +408,10 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                 </template>
 
                 <section v-if="props.ujian.mode === 'tatap_muka'" :class="kartu">
-                    <p v-if="props.ujian.jenis === 'remidi'" class="text-sm text-[#615d59]">
-                        Ujian remidi tatap muka:
+                    <p v-if="jenisKhusus(props.ujian.jenis)" class="text-sm text-[#615d59]">
+                        Ujian {{ JENIS_UJIAN[props.ujian.jenis].toLowerCase() }} tatap muka:
                         <a :href="rute('ujian.daftar-hadir', props.ujian.id)" class="text-[#0075de] hover:underline">unduh daftar hadir (PDF)</a>
-                        berisi peserta remidi yang sudah lunas.
+                        berisi pesertanya yang sudah lunas.
                     </p>
                     <p v-else class="text-sm text-[#615d59]">
                         Ujian tatap muka: daftar hadir dicetak dari halaman

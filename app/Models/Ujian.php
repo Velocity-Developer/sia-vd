@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\SyaratUjian;
+use App\UjianSusulan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -114,9 +115,54 @@ class Ujian extends Model
         return $this->jenis === self::REMIDI;
     }
 
+    /**
+     * Remidi dan susulan hanya terlihat oleh pesertanya sendiri; ujian utama terlihat seluruh kelas.
+     */
+    public function khusus(): bool
+    {
+        return $this->remidi() || $this->susulan();
+    }
+
+    /**
+     * Mahasiswa termasuk peserta remidi/susulan ini (tanpa memeriksa syarat kehadiran).
+     */
+    public function termasukPesertaKhusus(int $mahasiswaId): bool
+    {
+        return match (true) {
+            $this->remidi() => RemidiPeserta::query()->where('kelas_id', $this->kelas_id)->where('mahasiswa_id', $mahasiswaId)->lunas()->exists(),
+            $this->susulan() => UjianSusulan::pesertaSusulan($this)->contains($mahasiswaId),
+            default => true,
+        };
+    }
+
+    public function susulan(): bool
+    {
+        return in_array($this->jenis, self::JENIS_SUSULAN, true);
+    }
+
+    /**
+     * Jenis ujian utama: uts/uas untuk ujian susulannya, jenis sendiri untuk yang lain.
+     */
+    public function jenisUtama(): string
+    {
+        return $this->susulan() ? str_replace('_susulan', '', $this->jenis) : $this->jenis;
+    }
+
+    /**
+     * Ujian utama (UTS/UAS terbit) yang disusul oleh ujian susulan ini.
+     */
+    public function ujianUtama(): ?self
+    {
+        return $this->susulan() ? $this->kelasKuliah->ujianTerbit($this->jenisUtama()) : null;
+    }
+
     public function labelJenis(): string
     {
-        return $this->remidi() ? 'Remidi' : strtoupper($this->jenis);
+        return match (true) {
+            $this->remidi() => 'Remidi',
+            $this->susulan() => strtoupper($this->jenisUtama()).' Susulan',
+            default => strtoupper($this->jenis),
+        };
     }
 
     public function online(): bool
@@ -140,22 +186,46 @@ class Ujian extends Model
     }
 
     /**
-     * Mahasiswa peserta kelas yang boleh mengikuti ujian ini: syarat kehadiran dipenuhi, mendapat
-     * dispensasi, atau syarat belum diberlakukan. Ujian remidi: hanya peserta remidi yang lunas.
+     * Mahasiswa yang boleh mengikuti ujian ini (lihat alasanTidakBolehIkut).
      */
     public function bolehIkut(int $mahasiswaId): bool
     {
+        return $this->alasanTidakBolehIkut($mahasiswaId) === null;
+    }
+
+    /**
+     * Alasan mahasiswa tidak boleh mengikuti ujian ini, atau null bila boleh.
+     * - Remidi: hanya peserta remidi yang lunas.
+     * - Susulan: hanya pemohon susulan yang disetujui, lunas, dan tidak ikut ujian utama.
+     * - UTS/UAS: peserta KRS yang tidak terdaftar susulan untuk ujian ini.
+     * Susulan dan UTS/UAS juga memakai syarat kehadiran (bila diberlakukan), kecuali ada dispensasi.
+     */
+    public function alasanTidakBolehIkut(int $mahasiswaId): ?string
+    {
         if ($this->remidi()) {
-            return RemidiPeserta::query()->where('kelas_id', $this->kelas_id)->where('mahasiswa_id', $mahasiswaId)->lunas()->exists();
+            return RemidiPeserta::query()->where('kelas_id', $this->kelas_id)->where('mahasiswa_id', $mahasiswaId)->lunas()->exists()
+                ? null
+                : 'Anda bukan peserta remidi yang tagihannya lunas.';
+        }
+
+        if ($this->susulan() && ! UjianSusulan::pesertaSusulan($this)->contains($mahasiswaId)) {
+            return 'Anda bukan peserta ujian susulan yang tagihannya lunas.';
         }
 
         $kelas = $this->kelasKuliah;
 
         if (! $kelas->krs()->where('mahasiswa_id', $mahasiswaId)->exists()) {
-            return false;
+            return 'Anda bukan peserta kelas ini.';
         }
 
-        return (SyaratUjian::untukKelas($kelas, [$mahasiswaId])['peserta'][$mahasiswaId][$this->jenis]['memenuhi'] ?? null) !== false;
+        // Pemohon susulan yang sudah disetujui mengikuti jadwal susulan, bukan ujian utama.
+        if (! $this->susulan() && $this->pengajuanSusulan()->where('mahasiswa_id', $mahasiswaId)->where('status', PengajuanSusulan::DISETUJUI)->exists()) {
+            return 'Anda terdaftar ujian susulan untuk ujian ini. Ikuti jadwal ujian susulannya.';
+        }
+
+        $memenuhi = SyaratUjian::untukKelas($kelas, [$mahasiswaId])['peserta'][$mahasiswaId][$this->jenisUtama()]['memenuhi'] ?? null;
+
+        return $memenuhi === false ? 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.' : null;
     }
 
     /**
@@ -208,7 +278,8 @@ class Ujian extends Model
      */
     public function pertemuan(): ?Pertemuan
     {
-        if ($this->remidi()) {
+        // Remidi dan susulan tidak punya pertemuan dan tidak mengubah presensi.
+        if ($this->remidi() || $this->susulan()) {
             return null;
         }
 

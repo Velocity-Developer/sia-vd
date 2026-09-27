@@ -9,6 +9,7 @@ import { ref } from 'vue';
 type Ujian = {
     id: number;
     jenis: JenisUjian;
+    peserta_susulan: number | null;
     mode: ModeUjian;
     tanggal: string;
     jam_mulai: string;
@@ -28,6 +29,12 @@ type Ujian = {
 const props = defineProps<{ ujians: Ujian[]; tahunAkademikId: number | null; tahunAkademikOptions: { id: number; name: string }[] }>();
 const tahun = ref<number | string>(props.tahunAkademikId ?? '');
 const gantiTahun = () => router.get(route('dosen.ujian.index'), { tahun_akademik_id: tahun.value }, { preserveScroll: true });
+const jumlahPeserta = (u: Ujian) => {
+    if (u.jenis === 'remidi') return `${u.kelas_kuliah?.remidi_lunas_count ?? 0} peserta remidi`;
+    if (u.jenis === 'uts_susulan' || u.jenis === 'uas_susulan') return `${u.peserta_susulan ?? 0} peserta susulan`;
+
+    return `${u.kelas_kuliah?.krs_count ?? 0} mahasiswa`;
+};
 </script>
 
 <template>
@@ -54,8 +61,7 @@ const gantiTahun = () => router.get(route('dosen.ujian.index'), { tahun_akademik
                             <p class="font-medium text-black">{{ u.kelas_kuliah?.mata_kuliah?.nama_matkul }}</p>
                             <p class="text-xs text-[#a39e98]">
                                 {{ u.kelas_kuliah?.kode_kelas }} ·
-                                {{ u.jenis === 'remidi' ? u.kelas_kuliah?.remidi_lunas_count : u.kelas_kuliah?.krs_count }}
-                                {{ u.jenis === 'remidi' ? 'peserta remidi' : 'mahasiswa' }}
+                                {{ jumlahPeserta(u) }}
                             </p>
                         </div>
                         <div class="flex items-center gap-2">

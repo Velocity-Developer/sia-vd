@@ -263,3 +263,110 @@ it('cancels the bill of a student who sat the main exam, and flags a paid one', 
     $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'paksa' => true])
         ->assertSessionHas('error', 'Belum ada jenis biaya aktif. Isi dulu di menu Jenis Biaya.');
 });
+
+/**
+ * Susulan disetujui untuk kedua mahasiswa; tagihan terbit, hanya mahasiswa pertama yang lunas.
+ *
+ * @return array{0: KelasKuliah, 1: list<User>, 2: Ujian, 3: User}
+ */
+function susulanLunas(string $mode = 'tatap_muka'): array
+{
+    [$kelas, $mhs, $ujian, $admin] = susulanDisetujui($mode);
+    jenisBiayaSusulan();
+    test()->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+    test()->actingAs($admin)->post(route('admin.tagihan-susulan.lunas', TagihanSusulan::where('mahasiswa_id', $mhs[0]->mahasiswaProfile->id)->first()));
+
+    return [$kelas, $mhs, $ujian, $admin];
+}
+
+function isianJadwalSusulan(KelasKuliah $kelas, array $ubah = []): array
+{
+    return ['kelas_id' => $kelas->id, 'jenis' => 'uts_susulan', 'mode' => 'online_berkas', 'tanggal' => '2025-10-13', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'status' => 'terbit', ...$ubah];
+}
+
+it('lets admin schedule a susulan only for classes with paid applicants, inside its window', function () {
+    [$kelas, $mhs, $ujian, $admin] = susulanDisetujui();
+
+    $this->actingAs($admin)->post(route('admin.ujian.store'), isianJadwalSusulan($kelas))
+        ->assertSessionHasErrors(['kelas_id' => 'Belum ada pemohon susulan kelas ini yang pengajuannya disetujui dan tagihannya lunas.']);
+
+    jenisBiayaSusulan();
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+    $this->actingAs($admin)->post(route('admin.tagihan-susulan.lunas', TagihanSusulan::first()));
+    $kelas->tahunAkademik->update(['batas_input_nilai' => '2025-10-20']);
+
+    $this->actingAs($admin)->get(route('admin.ujian.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
+        ->assertInertia(fn ($page) => $page->where('susulanSiap.uts', 1)->where('susulanSiap.uas', 0));
+    $this->actingAs($admin)->post(route('admin.ujian.store'), isianJadwalSusulan($kelas, ['tanggal' => '2025-10-05']))->assertSessionHasErrors('tanggal');
+    $this->actingAs($admin)->post(route('admin.ujian.store'), isianJadwalSusulan($kelas, ['tanggal' => '2025-10-21']))->assertSessionHasErrors('tanggal');
+    $this->actingAs($admin)->post(route('admin.ujian.store'), isianJadwalSusulan($kelas))->assertSessionHasNoErrors();
+
+    $susulan = Ujian::where('jenis', 'uts_susulan')->first();
+    expect($susulan->pertemuan())->toBeNull()->and($susulan->labelJenis())->toBe('UTS Susulan');
+    $this->actingAs($admin)->post(route('admin.ujian.store'), isianJadwalSusulan($kelas, ['tanggal' => '2025-10-14']))->assertSessionHasErrors('jenis');
+});
+
+it('shows the susulan only to paid applicants and keeps attendance unchanged', function () {
+    [$kelas, $mhs, $ujian, $admin] = susulanLunas();
+    $susulan = Ujian::create(isianJadwalSusulan($kelas));
+    $this->travelTo('2025-10-13 10:00:00');
+
+    $this->actingAs($mhs[0])->get(route('mahasiswa.ujian'))
+        ->assertInertia(fn ($page) => $page->where('ujians', fn ($u) => collect($u)->contains('jenis', 'uts_susulan')
+            && collect($u)->firstWhere('jenis', 'uts')['terdaftar_susulan'] === true));
+    $this->actingAs($mhs[0])->get(route('mahasiswa.ujian.show', $susulan))->assertInertia(fn ($page) => $page->where('bolehIkut', true));
+    $this->actingAs($mhs[0])->get(route('mahasiswa.ujian.kartu', ['jenis' => 'uts_susulan']))->assertOk();
+    $this->actingAs($mhs[0])->post(route('mahasiswa.ujian.kumpulkan', $susulan), ['jawaban' => [UploadedFile::fake()->create('j.pdf', 10, 'application/pdf')]])
+        ->assertSessionHas('success');
+
+    // Belum lunas: tidak melihat jadwal susulan sama sekali.
+    $this->actingAs($mhs[1])->get(route('mahasiswa.ujian'))
+        ->assertInertia(fn ($page) => $page->where('ujians', fn ($u) => ! collect($u)->contains('jenis', 'uts_susulan')));
+    $this->actingAs($mhs[1])->get(route('mahasiswa.ujian.show', $susulan))->assertNotFound();
+
+    expect(PresensiMahasiswa::whereHas('pertemuan', fn ($q) => $q->where('kelas_id', $kelas->id)->where('jenis', 'uts'))->count())->toBe(0);
+
+    // Dosen hanya melihat peserta susulan, bisa menilai, dan mencetak daftar hadir.
+    $dosen = $kelas->dosen->user;
+    $this->travelTo('2025-10-13 12:00:00');
+    $this->actingAs($dosen)->get(route('dosen.ujian.show', $susulan))
+        ->assertInertia(fn ($page) => $page->has('peserta', 1)->where('peserta.0.mahasiswa_id', $mhs[0]->mahasiswaProfile->id));
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$susulan, $mhs[0]->mahasiswaProfile]), ['nilai' => 80])->assertSessionHas('success');
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$susulan, $mhs[1]->mahasiswaProfile]), ['nilai' => 80])->assertNotFound();
+    $this->actingAs($dosen)->get(route('dosen.ujian.daftar-hadir', $susulan))->assertOk();
+});
+
+it('blocks the online main exam for approved applicants', function () {
+    [$kelas, $mhs, $ujian] = kelasSusulan('online_berkas');
+    $this->travelTo('2025-10-05 09:00:00');
+    $this->actingAs($mhs[0])->post(route('mahasiswa.ujian.susulan', $ujian), isianSusulan());
+    $this->actingAs(User::factory()->admin()->create())->post(route('admin.ujian-susulan.setujui', PengajuanSusulan::first()));
+
+    $this->travelTo('2025-10-06 14:00:00');
+    $berkas = fn () => ['jawaban' => [UploadedFile::fake()->create('j.pdf', 10, 'application/pdf')]];
+    $this->actingAs($mhs[0])->post(route('mahasiswa.ujian.kumpulkan', $ujian), $berkas())
+        ->assertSessionHasErrors(['jawaban' => 'Anda terdaftar ujian susulan untuk ujian ini. Ikuti jadwal ujian susulannya.']);
+    $this->actingAs($mhs[1])->post(route('mahasiswa.ujian.kumpulkan', $ujian), $berkas())->assertSessionHas('success');
+});
+
+it('drops the susulan right of a paid applicant who is recorded at the main exam', function () {
+    [$kelas, $mhs] = susulanLunas();
+    $susulan = Ujian::create(isianJadwalSusulan($kelas));
+    $pertemuanUts = Pertemuan::where('kelas_id', $kelas->id)->where('jenis', 'uts')->first();
+    PresensiMahasiswa::create(['pertemuan_id' => $pertemuanUts->id, 'mahasiswa_id' => $mhs[0]->mahasiswaProfile->id, 'status' => PresensiMahasiswa::HADIR, 'metode' => 'manual']);
+    $this->travelTo('2025-10-13 10:00:00');
+
+    $this->actingAs($mhs[0])->get(route('mahasiswa.ujian.show', $susulan))->assertNotFound();
+    $this->actingAs($kelas->dosen->user)->get(route('dosen.ujian.show', $susulan))->assertInertia(fn ($page) => $page->has('peserta', 0));
+});
+
+it('creates draft susulan schedules for all ready classes at once', function () {
+    [$kelas, , , $admin] = susulanLunas();
+    $isian = ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'jenis' => 'uts_susulan', 'mode' => 'online_berkas', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00'];
+
+    $this->actingAs($admin)->post(route('admin.ujian.susulan-massal'), [...$isian, 'tanggal' => '2025-10-01'])
+        ->assertSessionHas('success', '0 jadwal susulan dibuat sebagai draf. 1 kelas dilewati karena tanggalnya sebelum ujian utama atau sesudah batas input nilai kelas.');
+    $this->actingAs($admin)->post(route('admin.ujian.susulan-massal'), [...$isian, 'tanggal' => '2025-10-13'])
+        ->assertSessionHas('success', '1 jadwal susulan dibuat sebagai draf.');
+    expect(Ujian::where('jenis', 'uts_susulan')->where('status', 'draf')->count())->toBe(1);
+});

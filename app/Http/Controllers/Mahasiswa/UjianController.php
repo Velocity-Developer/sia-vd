@@ -10,7 +10,6 @@ use App\Models\PengajuanSusulan;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\Pertemuan;
-use App\Models\RemidiPeserta;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
@@ -79,6 +78,7 @@ class UjianController extends Controller
                 'soal' => $bolehIkut && $ujian->sudahMulai() ? array_map(fn (string $p): string => basename($p), $ujian->soal_berkas ?? []) : [],
             ],
             'bolehIkut' => $bolehIkut,
+            'alasanTidakIkut' => $bolehIkut ? null : $ujian->alasanTidakBolehIkut($mahasiswa->id),
             'sudahMulai' => $ujian->sudahMulai(),
             'sudahSelesai' => $ujian->sudahSelesai(),
             // Hitung mundur memakai jam server.
@@ -136,8 +136,8 @@ class UjianController extends Controller
             throw ValidationException::withMessages(['jawaban' => 'Waktu ujian sudah habis. Jawaban tidak bisa dikumpulkan lagi.']);
         }
 
-        if (! $ujian->bolehIkut($mahasiswa->id)) {
-            throw ValidationException::withMessages(['jawaban' => $ujian->remidi() ? 'Anda bukan peserta remidi yang tagihannya lunas.' : 'Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini.']);
+        if (($alasan = $ujian->alasanTidakBolehIkut($mahasiswa->id)) !== null) {
+            throw ValidationException::withMessages(['jawaban' => $alasan]);
         }
 
         $berkas = collect($request->file('jawaban'))->map(fn ($f): string => $f->storeAs(
@@ -174,7 +174,7 @@ class UjianController extends Controller
         abort_if($tahun === null, 404);
 
         $ujians = $this->daftarUjian($mahasiswa, $tahun->id)->where('jenis', $jenis)->values();
-        abort_if($ujians->isEmpty(), 404, 'Belum ada jadwal '.($jenis === Ujian::REMIDI ? 'remidi' : strtoupper($jenis)).' yang terbit.');
+        abort_if($ujians->isEmpty(), 404, 'Belum ada jadwal ujian jenis ini yang terbit.');
         $institusi = PengaturanInstitusi::current();
 
         return Pdf::loadView('pdf.kartu-ujian', [
@@ -201,9 +201,12 @@ class UjianController extends Controller
             ->get(['id', 'kode_kelas', 'matkul_id']);
 
         // Jadwal remidi hanya tampil bagi peserta remidi yang tagihannya lunas.
-        $kelasRemidi = RemidiPeserta::query()->where('mahasiswa_id', $mahasiswa->id)->whereIn('kelas_id', $kelas->pluck('id'))->lunas()->pluck('kelas_id')->flip();
-        $kelas->each(fn (KelasKuliah $k) => $k->setRelation('ujians', $k->ujians->reject(fn (Ujian $u): bool => $u->remidi() && ! $kelasRemidi->has($k->id))->values()));
+        // Jadwal remidi dan susulan hanya tampil bagi pesertanya sendiri (yang tagihannya lunas).
+        $kelas->each(fn (KelasKuliah $k) => $k->setRelation('ujians', $k->ujians
+            ->each(fn (Ujian $u) => $u->setRelation('kelasKuliah', $k))
+            ->reject(fn (Ujian $u): bool => $u->khusus() && ! $u->termasukPesertaKhusus($mahasiswa->id))->values()));
 
+        $ujianDisusul = PengajuanSusulan::query()->where('mahasiswa_id', $mahasiswa->id)->where('status', PengajuanSusulan::DISETUJUI)->pluck('ujian_id')->all();
         $pertemuan = Pertemuan::query()->whereIn('kelas_id', $kelas->pluck('id'))->get()->groupBy('kelas_id');
         $syarat = SyaratUjian::untukMahasiswa(
             $mahasiswa->id,
@@ -227,7 +230,9 @@ class UjianController extends Controller
             'kode_matkul' => $k->mataKuliah?->kode_matkul,
             'nama_matkul' => $k->mataKuliah?->nama_matkul,
             'sks' => $k->mataKuliah?->sks,
-            'syarat' => $syarat[$k->id]['peserta'][$mahasiswa->id][$u->jenis] ?? null,
+            'syarat' => $syarat[$k->id]['peserta'][$mahasiswa->id][$u->jenisUtama()] ?? null,
+            // UTS/UAS yang pengajuan susulannya disetujui: mahasiswa mengikuti jadwal susulan, bukan ujian ini.
+            'terdaftar_susulan' => in_array($u->id, $ujianDisusul, true),
         ]))->sortBy(fn (array $u): string => $u['tanggal'].$u['jam_mulai'])->values();
     }
 
@@ -267,7 +272,8 @@ class UjianController extends Controller
     {
         abort_unless($ujian->status === Ujian::TERBIT && $ujian->kelasKuliah->krs()->where('mahasiswa_id', $mahasiswa->id)->exists(), 404);
         // Ujian remidi tidak terlihat sama sekali oleh yang bukan peserta lunas.
-        abort_if($ujian->remidi() && ! $ujian->bolehIkut($mahasiswa->id), 404);
+        // Remidi dan susulan tidak terlihat sama sekali oleh yang bukan pesertanya.
+        abort_if($ujian->khusus() && ! $ujian->termasukPesertaKhusus($mahasiswa->id), 404);
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile

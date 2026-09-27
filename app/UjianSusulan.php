@@ -8,6 +8,7 @@ use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
 use App\Models\QuizAttempt;
+use App\Models\TagihanSusulan;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use Illuminate\Support\Carbon;
@@ -65,5 +66,54 @@ class UjianSusulan
             self::ikutUjianUtama($ujian, $mahasiswa->id) => 'Anda sudah mengikuti ujian ini.',
             default => null,
         };
+    }
+
+    /**
+     * Peserta ujian susulan: pengajuan disetujui untuk ujian utamanya, tagihan lunas, dan tidak ikut ujian utama.
+     *
+     * @return Collection<int, int> id mahasiswa
+     */
+    public static function pesertaSusulan(Ujian $susulan): Collection
+    {
+        $utama = $susulan->ujianUtama();
+
+        if ($utama === null) {
+            return collect();
+        }
+
+        return self::pemohonLunas($utama)->diff(self::pesertaUjianUtama($utama))->values();
+    }
+
+    /**
+     * Pemohon susulan yang disetujui dan tagihannya lunas untuk satu ujian utama.
+     *
+     * @return Collection<int, int> id mahasiswa
+     */
+    public static function pemohonLunas(Ujian $utama): Collection
+    {
+        return PengajuanSusulan::query()
+            ->where('ujian_id', $utama->id)
+            ->where('status', PengajuanSusulan::DISETUJUI)
+            ->whereHas('tagihan', fn ($q) => $q->where('status', TagihanSusulan::LUNAS))
+            ->pluck('mahasiswa_id');
+    }
+
+    /**
+     * Ujian utama terbit (UTS/UAS) di tahun akademik ini yang punya pemohon lunas tetapi belum punya jadwal susulan.
+     *
+     * @return Collection<int, Ujian>
+     */
+    public static function ujianUtamaSiapSusulan(?int $tahunAkademikId, ?string $jenis = null): Collection
+    {
+        return Ujian::query()
+            ->whereIn('jenis', $jenis ? [$jenis] : Ujian::JENIS)
+            ->terbit()
+            ->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahunAkademikId))
+            ->whereHas('pengajuanSusulan', fn ($q) => $q->where('status', PengajuanSusulan::DISETUJUI)->whereHas('tagihan', fn ($t) => $t->where('status', TagihanSusulan::LUNAS)))
+            ->with(['kelasKuliah:id,kode_kelas,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,nama_matkul'])
+            ->get()
+            ->filter(fn (Ujian $u): bool => ! Ujian::query()->where('kelas_id', $u->kelas_id)->where('jenis', Ujian::jenisSusulanUntuk($u->jenis))->exists()
+                && self::pemohonLunas($u)->diff(self::pesertaUjianUtama($u))->isNotEmpty())
+            ->values();
     }
 }

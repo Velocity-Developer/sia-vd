@@ -184,6 +184,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::post('ujian', [AdminUjianController::class, 'store'])->name('admin.ujian.store');
         Route::post('ujian/buat-massal', [AdminUjianController::class, 'buatMassal'])->name('admin.ujian.buat-massal');
         Route::post('ujian/remidi-massal', [AdminUjianController::class, 'buatRemidiMassal'])->name('admin.ujian.remidi-massal');
+        Route::post('ujian/susulan-massal', [AdminUjianController::class, 'buatSusulanMassal'])->name('admin.ujian.susulan-massal');
         Route::put('ujian/terbitkan', [AdminUjianController::class, 'terbitkan'])->name('admin.ujian.terbitkan');
         Route::get('ujian/{ujian}/edit', [AdminUjianController::class, 'edit'])->name('admin.ujian.edit');
         Route::put('ujian/{ujian}', [AdminUjianController::class, 'update'])->name('admin.ujian.update');

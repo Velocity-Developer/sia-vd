@@ -14,6 +14,7 @@ use App\Models\RemidiPeserta;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\SyaratUjian;
+use App\UjianSusulan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
@@ -64,7 +65,7 @@ class UjianKelasController extends Controller
                     'mahasiswa_id' => $krs->mahasiswa_id,
                     'nim' => $krs->mahasiswa?->nim,
                     'nama' => $krs->mahasiswa?->user?->name,
-                    'syarat' => $syarat['peserta'][$krs->mahasiswa_id][$ujian->jenis] ?? null,
+                    'syarat' => $syarat['peserta'][$krs->mahasiswa_id][$ujian->jenisUtama()] ?? null,
                     'jawaban' => $j === null ? null : [
                         'id' => $j->id,
                         'jumlah_berkas' => count($j->berkas ?? []),
@@ -113,13 +114,13 @@ class UjianKelasController extends Controller
     }
 
     /**
-     * Daftar hadir ujian remidi tatap muka (PDF): hanya peserta remidi yang lunas. Daftar hadir UTS/UAS ada di menu Presensi.
+     * Daftar hadir ujian remidi/susulan (PDF), hanya pesertanya. Daftar hadir UTS/UAS ada di menu Presensi.
      */
     public function daftarHadir(Ujian $ujian): HttpResponse
     {
         $kelas = $ujian->kelasKuliah;
         $this->pastikanAksesKelas($kelas);
-        abort_unless($ujian->remidi(), 404);
+        abort_unless($ujian->khusus(), 404);
         $kelas->load(['mataKuliah:id,kode_matkul,nama_matkul,sks,prodi_id', 'mataKuliah.prodi:id,nama_prodi', 'dosen:id,user_id,nidn', 'dosen.user:id,name', 'tahunAkademik:id,tahun,semester']);
         $ujian->load('ruang:id,kode_ruang');
         $institusi = PengaturanInstitusi::current();
@@ -129,7 +130,7 @@ class UjianKelasController extends Controller
             'logoSrc' => $institusi->logoDataUri(),
             'kontak' => $institusi->kontakKop(),
             'kelas' => $kelas,
-            'jenis' => Ujian::REMIDI,
+            'jenis' => $ujian->jenis,
             'jadwal' => $ujian,
             'aktif' => false,
             'min' => null,
@@ -139,19 +140,22 @@ class UjianKelasController extends Controller
                 ->sortBy(fn ($p) => $p->mahasiswa?->nim)
                 ->map(fn ($p): array => ['nim' => $p->mahasiswa?->nim, 'nama' => $p->mahasiswa?->user?->name, 'syarat' => null])
                 ->values(),
-        ])->download('peserta-remidi-'.Str::slug($kelas->kode_kelas.'-'.$kelas->tahunAkademik?->tahun.'-'.$kelas->tahunAkademik?->semester).'.pdf');
+        ])->download('peserta-'.str_replace('_', '-', $ujian->jenis).'-'.Str::slug($kelas->kode_kelas.'-'.$kelas->tahunAkademik?->tahun.'-'.$kelas->tahunAkademik?->semester).'.pdf');
     }
 
     /**
-     * Peserta ujian: mahasiswa KRS kelas, atau untuk remidi hanya peserta remidi yang lunas.
+     * Peserta ujian: mahasiswa KRS kelas; remidi hanya peserta remidi yang lunas; susulan hanya pemohon lunas
+     * yang tidak ikut ujian utama.
      *
      * @return HasMany<Krs|RemidiPeserta, KelasKuliah>
      */
     private function kueriPeserta(Ujian $ujian): HasMany
     {
-        return $ujian->remidi()
-            ? $ujian->kelasKuliah->remidiPesertas()->lunas()
-            : $ujian->kelasKuliah->krs();
+        return match (true) {
+            $ujian->remidi() => $ujian->kelasKuliah->remidiPesertas()->lunas(),
+            $ujian->susulan() => $ujian->kelasKuliah->krs()->whereIn('mahasiswa_id', UjianSusulan::pesertaSusulan($ujian)),
+            default => $ujian->kelasKuliah->krs(),
+        };
     }
 
     /**

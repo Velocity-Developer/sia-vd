@@ -25,6 +25,7 @@ const props = defineProps<{
         soal: string[];
     };
     bolehIkut: boolean;
+    alasanTidakIkut: string | null;
     sudahMulai: boolean;
     sudahSelesai: boolean;
     detikSampaiMulai: number | null;
@@ -164,7 +165,8 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                 </p>
 
                 <div v-if="!props.bolehIkut" class="rounded-xl border border-[#f4c3bd] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]">
-                    Anda belum memenuhi syarat kehadiran untuk mengikuti ujian ini. Hubungi dosen atau kaprodi bila ada dispensasi.
+                    {{ props.alasanTidakIkut }}
+                    <template v-if="props.alasanTidakIkut?.includes('syarat kehadiran')">Hubungi dosen atau kaprodi bila ada dispensasi.</template>
                 </div>
 
                 <section v-if="props.ujian.mode === 'tatap_muka'" :class="kartu">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dosen;
 use App\Http\Controllers\Controller;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
+use App\UjianSusulan;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,7 +32,9 @@ class UjianController extends Controller
             ])
             ->orderBy('tanggal')
             ->orderBy('jam_mulai')
-            ->get();
+            ->get()
+            // Jumlah peserta susulan: pemohon lunas yang tidak ikut ujian utama.
+            ->each(fn (Ujian $u) => $u->setAttribute('peserta_susulan', $u->susulan() ? UjianSusulan::pesertaSusulan($u)->count() : null));
 
         return Inertia::render('Dosen/Ujian', [
             'ujians' => $ujians,

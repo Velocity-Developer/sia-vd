@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>Daftar Hadir {{ $jenis === 'remidi' ? 'Remidi' : strtoupper($jenis) }} {{ $kelas->kode_kelas }}</title>
+    <title>Daftar Hadir {{ ['remidi' => 'Remidi', 'uts_susulan' => 'UTS Susulan', 'uas_susulan' => 'UAS Susulan'][$jenis] ?? strtoupper($jenis) }} {{ $kelas->kode_kelas }}</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #1a1a1a; margin: 0; }
@@ -45,7 +45,7 @@
         </table>
     </div>
 
-    <p class="title">Daftar Hadir {{ ['uts' => 'Ujian Tengah Semester', 'uas' => 'Ujian Akhir Semester', 'remidi' => 'Ujian Remidi'][$jenis] }}</p>
+    <p class="title">Daftar Hadir {{ ['uts' => 'Ujian Tengah Semester', 'uas' => 'Ujian Akhir Semester', 'remidi' => 'Ujian Remidi', 'uts_susulan' => 'Ujian Tengah Semester Susulan', 'uas_susulan' => 'Ujian Akhir Semester Susulan'][$jenis] }}</p>
 
     <table class="identitas">
         <tr>
@@ -68,7 +68,7 @@
                 <th style="width: 26px;">No</th>
                 <th style="width: 90px;">NIM</th>
                 <th>Nama</th>
-                @if ($jenis !== 'remidi')
+                @if (in_array($jenis, ['uts', 'uas'], true))
                     <th style="width: 70px;">Kehadiran</th>
                 @endif
                 @if ($aktif)
@@ -84,7 +84,7 @@
                     <td class="center">{{ $i + 1 }}</td>
                     <td>{{ $mhs['nim'] }}</td>
                     <td>{{ $mhs['nama'] }}</td>
-                    @if ($jenis !== 'remidi')
+                    @if (in_array($jenis, ['uts', 'uas'], true))
                         <td class="center">{{ isset($syarat['persen']) ? $syarat['persen'].'%' : '-' }}</td>
                     @endif
                     @if ($aktif)
@@ -106,6 +106,8 @@
     <p class="keterangan">
         @if ($jenis === 'remidi')
             Peserta remidi yang tagihan remidinya sudah lunas.
+        @elseif (! in_array($jenis, ['uts', 'uas'], true))
+            Peserta ujian susulan yang pengajuannya disetujui dan tagihannya lunas.
         @else
         Kehadiran dihitung dari pertemuan kuliah yang sudah selesai{{ $jenis === 'uts' ? ' sebelum UTS' : '' }}; izin dan sakit dihitung tidak hadir.
         @if ($aktif) Batas minimal {{ $min }}%. @endif

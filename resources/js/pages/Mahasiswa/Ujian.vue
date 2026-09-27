@@ -24,13 +24,16 @@ type Ujian = {
     kode_matkul: string | null;
     nama_matkul: string | null;
     syarat: Syarat;
+    terdaftar_susulan: boolean;
 };
 
 const props = defineProps<{ ujians: Ujian[]; tahunAkademikId: number | null; tahunAkademikOptions: { id: number; name: string }[] }>();
 const tahun = ref<number | string>(props.tahunAkademikId ?? '');
 const gantiTahun = () => router.get(route('mahasiswa.ujian'), { tahun_akademik_id: tahun.value }, { preserveScroll: true });
 const perJenis = computed(() =>
-    (['uts', 'uas', 'remidi'] as const).map((j) => ({ jenis: j, ujians: props.ujians.filter((u) => u.jenis === j) })).filter((g) => g.ujians.length),
+    (['uts', 'uas', 'uts_susulan', 'uas_susulan', 'remidi'] as const)
+        .map((j) => ({ jenis: j, ujians: props.ujians.filter((u) => u.jenis === j) }))
+        .filter((g) => g.ujians.length),
 );
 const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, tahun_akademik_id: props.tahunAkademikId });
 </script>
@@ -44,7 +47,7 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
                     <div class="space-y-1">
                         <h1 class="text-[26px] font-bold leading-[1.23] text-black">Jadwal Ujian</h1>
                         <p class="text-sm text-[#615d59]">
-                            UTS, UAS, dan remidi mata kuliah di KRS Anda. Cetak kartu ujian dan bawa saat ujian tatap muka.
+                            UTS, UAS, ujian susulan, dan remidi mata kuliah di KRS Anda. Cetak kartu ujian dan bawa saat ujian tatap muka.
                         </p>
                     </div>
                     <SelectFilter v-model="tahun" label="Tahun akademik" @change="gantiTahun">
@@ -67,7 +70,10 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
                                 <p class="font-medium text-black">{{ u.nama_matkul }}</p>
                                 <p class="text-xs text-[#a39e98]">{{ u.kode_matkul }} · {{ u.kode_kelas }}</p>
                             </div>
-                            <span v-if="u.syarat?.dispensasi" class="rounded bg-[#eaf3fd] px-2 py-0.5 text-xs text-[#0b62b5]">Dispensasi</span>
+                            <span v-if="u.terdaftar_susulan" class="rounded bg-[#fff6e0] px-2 py-0.5 text-xs text-[#8a5a00]"
+                                >Ikut jadwal susulan</span
+                            >
+                            <span v-else-if="u.syarat?.dispensasi" class="rounded bg-[#eaf3fd] px-2 py-0.5 text-xs text-[#0b62b5]">Dispensasi</span>
                             <span
                                 v-else-if="u.syarat?.memenuhi === false"
                                 class="rounded bg-[#fdecea] px-2 py-0.5 text-xs font-medium text-[#b42318]"

@@ -34,6 +34,7 @@ const props = defineProps<{
     filter: { tahun_akademik_id: number | null; prodi_id: number | null; jenis: JenisUjian | null; status: 'draf' | 'terbit' | null; search: string };
     belumAda: Record<'uts' | 'uas', number>;
     remidiSiap: number;
+    susulanSiap: Record<'uts' | 'uas', number>;
     jumlahDraf: number;
     tahunAkademikOptions: Opsi[];
     prodiOptions: Opsi[];
@@ -45,13 +46,21 @@ const prodi = ref<number | string>(props.filter.prodi_id ?? 'all');
 const jenis = ref<string>(props.filter.jenis ?? 'all');
 const status = ref<string>(props.filter.status ?? 'all');
 const search = ref(props.filter.search);
-const massalRemidiOpen = ref(false);
-const formRemidi = useForm({ tanggal: '', jam_mulai: '', jam_akhir: '', mode: 'online_berkas' });
-// Tahun akademik diambil saat dikirim, mengikuti filter yang sedang dipilih.
-const buatRemidiMassal = () =>
-    formRemidi
-        .transform((data) => ({ ...data, tahun_akademik_id: props.filter.tahun_akademik_id }))
-        .post(route('admin.ujian.remidi-massal'), { preserveScroll: true, onSuccess: () => (massalRemidiOpen.value = false) });
+// Satu modal untuk jadwal massal remidi dan susulan (UTS/UAS).
+type JenisMassal = 'remidi' | 'uts_susulan' | 'uas_susulan';
+const massalJenis = ref<JenisMassal | null>(null);
+const formMassal = useForm({ tanggal: '', jam_mulai: '', jam_akhir: '', mode: 'online_berkas' });
+const jumlahSiap = (jenis: JenisMassal) => (jenis === 'remidi' ? props.remidiSiap : props.susulanSiap[jenis === 'uts_susulan' ? 'uts' : 'uas']);
+const buatMassalKhusus = () => {
+    const jenis = massalJenis.value;
+    if (!jenis) return;
+    formMassal
+        .transform((data) => ({ ...data, tahun_akademik_id: props.filter.tahun_akademik_id, ...(jenis === 'remidi' ? {} : { jenis }) }))
+        .post(route(jenis === 'remidi' ? 'admin.ujian.remidi-massal' : 'admin.ujian.susulan-massal'), {
+            preserveScroll: true,
+            onSuccess: () => (massalJenis.value = null),
+        });
+};
 
 const kirim = () =>
     router.get(
@@ -132,11 +141,28 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                     class="flex flex-wrap items-center gap-3 rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
                 >
                     <span>{{ props.remidiSiap }} kelas punya peserta remidi yang sudah lunas tetapi belum dijadwalkan remidinya.</span>
-                    <Button size="sm" variant="outline" class="bg-white" @click="massalRemidiOpen = true">Buat semua jadwal remidi</Button>
+                    <Button size="sm" variant="outline" class="bg-white" @click="massalJenis = 'remidi'">Buat semua jadwal remidi</Button>
                     <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: 'remidi' })">
                         <Button size="sm" variant="outline" class="bg-white">Jadwalkan satu kelas</Button>
                     </Link>
                 </div>
+                <template v-for="j in ['uts', 'uas'] as const" :key="`susulan-${j}`">
+                    <div
+                        v-if="props.susulanSiap[j]"
+                        class="flex flex-wrap items-center gap-3 rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
+                    >
+                        <span
+                            >{{ props.susulanSiap[j] }} kelas punya pemohon susulan {{ JENIS_UJIAN[j] }} yang sudah lunas tetapi belum dijadwalkan
+                            susulannya.</span
+                        >
+                        <Button size="sm" variant="outline" class="bg-white" @click="massalJenis = `${j}_susulan`"
+                            >Buat semua jadwal {{ JENIS_UJIAN[j] }} susulan</Button
+                        >
+                        <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: `${j}_susulan` })">
+                            <Button size="sm" variant="outline" class="bg-white">Jadwalkan satu kelas</Button>
+                        </Link>
+                    </div>
+                </template>
 
                 <div
                     v-if="props.belumAda.uts || props.belumAda.uas"
@@ -172,6 +198,8 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                         <option value="all">Semua jenis</option>
                         <option value="uts">UTS</option>
                         <option value="uas">UAS</option>
+                        <option value="uts_susulan">UTS Susulan</option>
+                        <option value="uas_susulan">UAS Susulan</option>
                         <option value="remidi">Remidi</option>
                     </SelectFilter>
                     <SelectFilter v-model="status" label="Status" @change="kirim">
@@ -271,39 +299,38 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
             </div>
         </div>
 
-        <div
-            v-if="massalRemidiOpen"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-            @click.self="massalRemidiOpen = false"
-        >
-            <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="buatRemidiMassal">
-                <h3 class="text-lg font-semibold">Buat semua jadwal remidi</h3>
+        <div v-if="massalJenis" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="massalJenis = null">
+            <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="buatMassalKhusus">
+                <h3 class="text-lg font-semibold">Buat semua jadwal {{ JENIS_UJIAN[massalJenis].toLowerCase() }}</h3>
                 <p class="mt-1 text-sm text-[#615d59]">
-                    {{ props.remidiSiap }} kelas yang siap mendapat jadwal remidi berstatus draf dengan waktu dan mode yang sama. Setelahnya sunting
-                    yang perlu berbeda, lalu terbitkan.
+                    {{ jumlahSiap(massalJenis) }} kelas yang siap mendapat jadwal {{ JENIS_UJIAN[massalJenis].toLowerCase() }} berstatus draf dengan
+                    waktu dan mode yang sama. Setelahnya sunting yang perlu berbeda, lalu terbitkan.
+                    <template v-if="massalJenis !== 'remidi'">
+                        Kelas yang ujian utamanya sesudah tanggal ini, atau batas input nilainya sebelum tanggal ini, dilewati.</template
+                    >
                 </p>
                 <div class="mt-4 grid gap-3 sm:grid-cols-3">
                     <label class="grid content-start gap-1 text-sm"
-                        ><span class="font-medium">Tanggal</span><Input v-model="formRemidi.tanggal" type="date" class="h-10" required
+                        ><span class="font-medium">Tanggal</span><Input v-model="formMassal.tanggal" type="date" class="h-10" required
                     /></label>
                     <label class="grid content-start gap-1 text-sm"
-                        ><span class="font-medium">Jam mulai</span><Input v-model="formRemidi.jam_mulai" type="time" class="h-10" required
+                        ><span class="font-medium">Jam mulai</span><Input v-model="formMassal.jam_mulai" type="time" class="h-10" required
                     /></label>
                     <label class="grid content-start gap-1 text-sm"
-                        ><span class="font-medium">Jam selesai</span><Input v-model="formRemidi.jam_akhir" type="time" class="h-10" required
+                        ><span class="font-medium">Jam selesai</span><Input v-model="formMassal.jam_akhir" type="time" class="h-10" required
                     /></label>
                     <label class="grid content-start gap-1 text-sm sm:col-span-3">
                         <span class="font-medium">Mode</span>
-                        <select v-model="formRemidi.mode" class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]">
+                        <select v-model="formMassal.mode" class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]">
                             <option v-for="m in MODE_UJIAN" :key="m.value" :value="m.value">{{ m.label }}</option>
                         </select>
-                        <span v-if="formRemidi.mode === 'tatap_muka'" class="text-xs text-[#a39e98]">Ruang diisi per kelas sebelum diterbitkan.</span>
+                        <span v-if="formMassal.mode === 'tatap_muka'" class="text-xs text-[#a39e98]">Ruang diisi per kelas sebelum diterbitkan.</span>
                     </label>
                 </div>
-                <p v-for="(pesan, k) in formRemidi.errors" :key="k" class="mt-2 text-xs text-[#dd5b00]">{{ pesan }}</p>
+                <p v-for="(pesan, k) in formMassal.errors" :key="k" class="mt-2 text-xs text-[#dd5b00]">{{ pesan }}</p>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button type="button" variant="outline" class="rounded-full" @click="massalRemidiOpen = false">Batal</Button>
-                    <Button type="submit" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="formRemidi.processing"
+                    <Button type="button" variant="outline" class="rounded-full" @click="massalJenis = null">Batal</Button>
+                    <Button type="submit" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="formMassal.processing"
                         >Buat Draf</Button
                     >
                 </div>

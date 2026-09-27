@@ -31,6 +31,7 @@ const props = defineProps<{
     tahunAkademikId: number | null;
     kelasOptions: Opsi[];
     kelasRemidiOptions: Opsi[];
+    kelasSusulanOptions: Record<'uts_susulan' | 'uas_susulan', Opsi[]>;
     batasRemidi: { bayar: string | null; nilai: string | null };
     menungguVerifikasi: Record<number, number>;
     ruangOptions: Opsi[];
@@ -65,7 +66,15 @@ const remidi = computed(() => (props.ujian?.jenis ?? form.jenis) === 'remidi');
 // Remidi hanya untuk kelas yang daftar remidinya dikunci dan punya peserta lunas.
 const kelasTerpilih = computed(() => Number(props.ujian?.kelas_id ?? form.kelas_id) || 0);
 const jumlahMenunggu = computed(() => (remidi.value ? (props.menungguVerifikasi[kelasTerpilih.value] ?? 0) : 0));
-const opsiKelas = computed(() => (remidi.value ? props.kelasRemidiOptions : props.kelasOptions));
+const jenisAktif = computed(() => props.ujian?.jenis ?? form.jenis);
+const susulan = computed(() => jenisAktif.value === 'uts_susulan' || jenisAktif.value === 'uas_susulan');
+// Susulan hanya untuk kelas yang ujian utamanya punya pemohon lunas dan belum dijadwalkan.
+const opsiKelas = computed(() => {
+    if (remidi.value) return props.kelasRemidiOptions;
+    if (jenisAktif.value === 'uts_susulan' || jenisAktif.value === 'uas_susulan') return props.kelasSusulanOptions[jenisAktif.value];
+
+    return props.kelasOptions;
+});
 watch(
     () => form.jenis,
     () => {
@@ -103,7 +112,7 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
 
                 <form class="flex flex-col gap-4" @submit.prevent="simpan">
                     <section v-if="!props.ujian" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                        <div class="grid content-start items-start gap-4 sm:grid-cols-[1fr,260px]">
+                        <div class="grid content-start items-start gap-4 sm:grid-cols-[1fr,300px]">
                             <div class="grid content-start gap-2">
                                 <Label for="kelas_id">Kelas</Label>
                                 <SearchSelect
@@ -117,6 +126,9 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                 <p v-if="remidi && !props.kelasRemidiOptions.length" class="text-xs text-[#a39e98]">
                                     Belum ada kelas yang daftar remidinya dikunci dan punya peserta lunas.
                                 </p>
+                                <p v-if="susulan && !opsiKelas.length" class="text-xs text-[#a39e98]">
+                                    Belum ada kelas dengan pemohon susulan yang disetujui dan tagihannya lunas.
+                                </p>
                                 <p v-if="jumlahMenunggu" class="text-xs text-[#dd5b00]">
                                     {{ jumlahMenunggu }} bukti bayar kelas ini masih menunggu verifikasi. Verifikasi dulu di Tagihan Remidi agar
                                     pesertanya tidak tertinggal ujian.
@@ -125,7 +137,7 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                             </div>
                             <div class="grid content-start gap-2">
                                 <Label>Jenis ujian</Label>
-                                <div class="flex h-10 items-center gap-4 text-sm">
+                                <div class="flex min-h-10 flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                                     <label v-for="(label, j) in JENIS_UJIAN" :key="j" class="flex items-center gap-2">
                                         <input v-model="form.jenis" type="radio" :value="j" class="size-4 accent-[#0075de]" /> {{ label }}
                                     </label>
@@ -160,6 +172,9 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                             <div class="grid content-start gap-2">
                                 <Label for="tanggal">Tanggal</Label>
                                 <Input id="tanggal" v-model="form.tanggal" type="date" :class="inp" required />
+                                <p v-if="susulan" class="text-xs text-[#a39e98]">
+                                    Tidak sebelum ujian utamanya, paling lambat batas input nilai kelas.
+                                </p>
                                 <p v-if="remidi && props.batasRemidi.bayar" class="text-xs text-[#a39e98]">
                                     Sesudah {{ formatTanggal(props.batasRemidi.bayar, false) }} s.d.
                                     {{ formatTanggal(props.batasRemidi.nilai, false) }}
