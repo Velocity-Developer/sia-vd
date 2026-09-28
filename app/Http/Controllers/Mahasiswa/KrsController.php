@@ -8,9 +8,10 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
+use App\Models\MataKuliah;
 use App\Models\PengaturanAkademik;
-use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
+use App\TawaranKrs;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -24,14 +25,11 @@ class KrsController extends Controller
     {
         $mahasiswa = $this->mahasiswa($request);
         $tahunAkademik = TahunAkademik::aktif();
-        $semester = $mahasiswa->semesterPada($tahunAkademik);
         $periodeKrsAktif = $this->periodeKrsAktif($tahunAkademik);
-        // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk riwayat, IPS, dan ringkasan SKS.
+        // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk tawaran, IPS, dan ringkasan SKS.
         $semuaKrs = $this->semuaKrs($mahasiswa);
-        $riwayat = $this->riwayatMatkul($mahasiswa, $semuaKrs);
-        $matkulMengulang = $riwayat->filter(fn (Collection $krs, int $matkulId): bool => $this->alasanTidakBolehAmbil($riwayat, $matkulId, $tahunAkademik) === null)
-            ->keys()
-            ->values();
+        $tawaran = new TawaranKrs($mahasiswa, $tahunAkademik, $semuaKrs);
+        $kelasDiambil = $semuaKrs->pluck('kelas_id');
 
         $kelasKuliahs = KelasKuliah::query()
             ->when(! $periodeKrsAktif, fn ($query) => $query->whereKey(0))
@@ -43,12 +41,13 @@ class KrsController extends Controller
                 'jadwals' => fn ($query) => $query->with('ruang')->orderBy('jam_mulai'),
             ])
             ->withCount('krs')
-            ->whereHas('mataKuliah', fn ($query) => $query
-                ->where('prodi_id', $mahasiswa->prodi_id)
-                ->where(fn ($query) => $query->where('semester', $semester)->orWhereIn('id', $matkulMengulang)))
+            ->whereHas('mataKuliah', fn ($query) => $query->where('prodi_id', $mahasiswa->prodi_id))
             ->whereHas('tahunAkademik', fn ($query) => $query->where('status', true))
             ->orderBy('kode_kelas')
-            ->get();
+            ->get()
+            // Kelas yang sudah diambil tetap tampil agar bisa dibatalkan.
+            ->filter(fn (KelasKuliah $kelas): bool => $kelasDiambil->contains($kelas->id) || $tawaran->jenis($kelas->mataKuliah) !== null)
+            ->values();
 
         $ipsSebelumnya = $mahasiswa->ipsSemesterSebelum($tahunAkademik, $semuaKrs);
         $krsTahunIni = $tahunAkademik === null
@@ -57,10 +56,12 @@ class KrsController extends Controller
 
         return Inertia::render('Mahasiswa/Krs', [
             'kelasKuliahs' => $kelasKuliahs,
-            'mahasiswa' => $mahasiswa->only(['angkatan', 'prodi_id', 'status']) + ['semester' => $semester],
-            'kelasDiambil' => $semuaKrs->pluck('kelas_id')->values(),
+            'mahasiswa' => $mahasiswa->only(['angkatan', 'prodi_id', 'status']) + ['semester' => $tawaran->semester()],
+            'kelasDiambil' => $kelasDiambil->values(),
             'krsTahunIni' => $krsTahunIni->map(fn (Krs $krs): array => ['id' => $krs->id, 'kelas_id' => $krs->kelas_id, 'nilai' => $krs->nilai])->values(),
-            'matkulMengulang' => $matkulMengulang,
+            'labelMatkul' => $kelasKuliahs->pluck('mataKuliah')->unique('id')
+                ->mapWithKeys(fn (MataKuliah $mataKuliah): array => [$mataKuliah->id => $tawaran->label($mataKuliah)])
+                ->filter(),
             'sksDiambil' => $krsTahunIni->sum(fn (Krs $krs): int => $krs->kelasKuliah?->mataKuliah?->sks ?? 0),
             'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null),
             'ipsSebelumnya' => $ipsSebelumnya === null ? null : [
@@ -101,17 +102,11 @@ class KrsController extends Controller
         $error = DB::transaction(function () use ($mahasiswa, $kelasKuliah): ?string {
             MahasiswaProfile::query()->whereKey($mahasiswa->id)->lockForUpdate()->first();
             $kelas = KelasKuliah::query()->whereKey($kelasKuliah->id)->lockForUpdate()->first();
-            // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk riwayat, IPS, dan ringkasan SKS.
-            $semuaKrs = $this->semuaKrs($mahasiswa);
-            $riwayat = $this->riwayatMatkul($mahasiswa, $semuaKrs);
-            $alasan = $this->alasanTidakBolehAmbil($riwayat, $kelas->matkul_id, $kelasKuliah->tahunAkademik);
+            $tawaran = new TawaranKrs($mahasiswa, $kelasKuliah->tahunAkademik, $this->semuaKrs($mahasiswa));
+            $alasan = $tawaran->alasanTidakBolehAmbil($kelasKuliah->mataKuliah);
 
             if ($alasan !== null) {
                 return $alasan;
-            }
-
-            if ($kelasKuliah->mataKuliah->semester !== $mahasiswa->semesterPada($kelasKuliah->tahunAkademik) && ! $riwayat->has($kelas->matkul_id)) {
-                return 'Mata kuliah ini bukan untuk semester Anda.';
             }
 
             $bentrok = Jadwal::bentrokUntukMahasiswa($kelas, $mahasiswa->id);
@@ -228,11 +223,6 @@ class KrsController extends Controller
     }
 
     /**
-     * Riwayat KRS mahasiswa dikelompokkan per mata kuliah.
-     *
-     * @return Collection<int, Collection<int, Krs>>
-     */
-    /**
      * Seluruh KRS mahasiswa beserta data kelas yang dibutuhkan halaman KRS.
      *
      * @return Collection<int, Krs>
@@ -246,40 +236,5 @@ class KrsController extends Controller
                 'kelasKuliah.tahunAkademik:id,tahun,semester,tanggal_mulai',
             ])
             ->get();
-    }
-
-    /**
-     * @param  Collection<int, Krs>|null  $krsTerpakai
-     * @return Collection<int, Collection<int, Krs>>
-     */
-    private function riwayatMatkul(MahasiswaProfile $mahasiswa, ?Collection $krsTerpakai = null): Collection
-    {
-        return ($krsTerpakai ?? $this->semuaKrs($mahasiswa))
-            ->filter(fn (Krs $krs): bool => $krs->kelasKuliah !== null)
-            ->groupBy(fn (Krs $krs): int => $krs->kelasKuliah->matkul_id);
-    }
-
-    /**
-     * Alasan mata kuliah tidak boleh diambil tahun ini, atau null bila boleh (termasuk mengulang).
-     *
-     * @param  Collection<int, Collection<int, Krs>>  $riwayat
-     */
-    private function alasanTidakBolehAmbil(Collection $riwayat, int $matkulId, ?TahunAkademik $tahunAkademik): ?string
-    {
-        foreach ($riwayat->get($matkulId, collect()) as $krs) {
-            if ($krs->kelasKuliah->tahun_akademik_id === $tahunAkademik?->id) {
-                return 'Anda sudah mengambil kelas di mata kuliah ini. Silakan isi form pindah kelas apabila ingin pindah kelas.';
-            }
-
-            if (blank($krs->nilai)) {
-                return 'Mata kuliah ini masih menunggu nilai dari pengambilan sebelumnya.';
-            }
-
-            if (! SkalaNilai::bolehDiulang($krs->nilai)) {
-                return "Anda sudah lulus mata kuliah ini dengan nilai {$krs->nilai}.";
-            }
-        }
-
-        return null;
     }
 }

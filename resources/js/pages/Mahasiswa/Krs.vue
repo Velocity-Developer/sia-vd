@@ -38,7 +38,7 @@ const props = defineProps<{
     mahasiswa: { semester: number | null; angkatan: string; prodi_id: number };
     kelasDiambil: number[];
     krsTahunIni: { id: number; kelas_id: number; nilai: string | null }[];
-    matkulMengulang: number[];
+    labelMatkul: Record<number, string>;
     sksDiambil: number;
     maksSks: number;
     ipsSebelumnya: { ips: number; tahun_akademik: string } | null;
@@ -187,7 +187,7 @@ const jadwal = (kelas: KelasKuliah) =>
                 <div class="space-y-1">
                     <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Rencana Studi (KRS)</h1>
                     <p class="text-sm leading-5 text-[#615d59]">
-                        Kelas kuliah yang tersedia sesuai semester, program studi, dan tahun akademik aktif.
+                        Kelas kuliah semester Anda di tahun akademik aktif, ditambah mata kuliah yang tertunda atau perlu diulang.
                     </p>
                 </div>
 
@@ -267,9 +267,14 @@ const jadwal = (kelas: KelasKuliah) =>
                                             {{ group.matkul.kode_matkul }} — {{ group.matkul.nama_matkul }}
                                             <span class="font-normal text-[#615d59]">({{ group.matkul.sks }} SKS - {{ group.matkul.jenis }})</span>
                                             <span
-                                                v-if="matkulMengulang.includes(group.matkul.id)"
-                                                class="ml-1 rounded-full bg-[#fff4e5] px-2 py-0.5 text-xs font-medium text-[#dd5b00]"
-                                                >Mengulang</span
+                                                v-if="labelMatkul[group.matkul.id]"
+                                                class="ml-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                                                :class="
+                                                    labelMatkul[group.matkul.id] === 'Mengulang'
+                                                        ? 'bg-[#fff4e5] text-[#dd5b00]'
+                                                        : 'bg-[#e8f2fc] text-[#0075de]'
+                                                "
+                                                >{{ labelMatkul[group.matkul.id] }}</span
                                             >
                                         </td>
                                     </tr>

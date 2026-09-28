@@ -78,7 +78,7 @@ it('lets a student retake a failed course from a previous year and offers it in 
     $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
         ->assertInertia(fn ($page) => $page
             ->where('kelasKuliahs', fn ($kelasList) => collect($kelasList)->pluck('id')->contains($kelas->id))
-            ->where('matkulMengulang', fn ($ids) => collect($ids)->contains($kelas->matkul_id)));
+            ->where("labelMatkul.{$kelas->matkul_id}", 'Mengulang'));
 
     $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelas))->assertSessionHas('krs_success');
 });
@@ -145,4 +145,42 @@ it('uses the previous semester IPS and falls back while its grades are incomplet
 
     $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
         ->assertInertia(fn ($page) => $page->where('ipsSebelumnya.ips', 4)->where('maksSks', 24));
+});
+
+it('offers postponed courses of the same parity until they are taken', function () {
+    [$mahasiswa, $kelas] = krsSetup();
+    $mahasiswa->mahasiswaProfile->update(['angkatan' => angkatanUntuk($kelas, 5)]);
+    $semesterIni = kelasLainDiProdi($kelas, 2, semester: 5);
+    $tertunda = kelasLainDiProdi($kelas, 2, semester: 3);
+    $paritasLain = kelasLainDiProdi($kelas, 2, semester: 4);
+    $semesterDepan = kelasLainDiProdi($kelas, 2, semester: 7);
+
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
+        ->assertInertia(fn ($page) => $page
+            ->where('mahasiswa.semester', 5)
+            ->where('kelasKuliahs', fn ($kelasList) => collect($kelasList)->pluck('id')->sort()->values()->all() === collect([$kelas->id, $semesterIni->id, $tertunda->id])->sort()->values()->all())
+            ->where("labelMatkul.{$tertunda->matkul_id}", 'Tertunda smt 3')
+            ->where("labelMatkul.{$kelas->matkul_id}", 'Tertunda smt 1')
+            ->missing("labelMatkul.{$semesterIni->matkul_id}"));
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $paritasLain))
+        ->assertSessionHas('krs_error', 'Mata kuliah ini tidak ditawarkan untuk semester Anda.');
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $semesterDepan))
+        ->assertSessionHas('krs_error', 'Mata kuliah ini tidak ditawarkan untuk semester Anda.');
+
+    // Setelah diambil, kelas tertunda tetap tampil agar bisa dibatalkan.
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $tertunda))->assertSessionHas('krs_success');
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
+        ->assertInertia(fn ($page) => $page->where('kelasKuliahs', fn ($kelasList) => collect($kelasList)->pluck('id')->contains($tertunda->id)));
+});
+
+it('no longer offers a postponed course once it has been passed', function () {
+    [$mahasiswa, $kelas] = krsSetup();
+    $mahasiswa->mahasiswaProfile->update(['angkatan' => angkatanUntuk($kelas, 3)]);
+    $lalu = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
+    $kelasLalu = KelasKuliah::create(['kode_kelas' => 'LALU-A', 'tahun_akademik_id' => $lalu->id, 'kapasitas' => 30, 'dosen_id' => $kelas->dosen_id, 'matkul_id' => $kelas->matkul_id]);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasLalu->id, 'status' => 'Aktif', 'nilai' => 'A']);
+
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
+        ->assertInertia(fn ($page) => $page->where('kelasKuliahs', fn ($kelasList) => ! collect($kelasList)->pluck('id')->contains($kelas->id)));
 });
