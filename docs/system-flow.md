@@ -146,7 +146,7 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 
 **Field:**
 
-- `tahun`, `semester`;
+- `tahun` (format `2026/2027`), `semester` (`Ganjil`/`Genap`);
 - `tanggal_mulai`, `tanggal_akhir`;
 - `tanggal_krs_awal`, `tanggal_krs_akhir`;
 - `batas_input_nilai`, `batas_bayar_remidi`, `batas_input_nilai_remidi`;
@@ -155,6 +155,7 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 **Validasi:**
 
 - `tahun` unik per `semester`.
+- `tahun` wajib berformat `YYYY/YYYY` dengan tahun kedua = tahun pertama + 1, dan `semester` hanya `Ganjil` atau `Genap`. Keduanya dipakai menghitung semester mahasiswa ([3.3](#33-pengguna-manage-user)).
 - Tanggal akhir ≥ tanggal mulai. Tanggal KRS akhir ≥ tanggal KRS awal.
 - `batas_input_nilai` ≥ `tanggal_mulai`.
 - `batas_bayar_remidi` harus **setelah** `batas_input_nilai` (bila keduanya diisi).
@@ -166,6 +167,8 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 - `tanggal_mulai` **terkunci** begitu ada kelas di tahun itu yang sudah punya pertemuan; perubahannya ditolak dengan pesan jumlah kelas terdampak (form menampilkan keterangan terkunci). Pertemuan tidak pernah digeser otomatis.
 - Tahun akademik yang sudah punya kelas tidak bisa dihapus.
 
+**Urutan:** daftar dan pilihan tahun akademik di semua halaman diurutkan menurut `tanggal_mulai` (terbaru dulu), bukan teks tahun/semester.
+
 **Periode KRS dianggap aktif** bila hari ini berada di antara `tanggal_krs_awal` dan `tanggal_krs_akhir` (inklusif). Bila salah satunya kosong, periode dianggap tertutup.
 
 ### 3.2 Fakultas, program studi, mata kuliah, ruang
@@ -174,8 +177,15 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 |---|---|---|
 | Fakultas | `kode_fakultas` (unik), `nama_fakultas` (unik), `dekan_id`, tanggal berdiri, kontak | masih punya program studi |
 | Program studi | `fakultas_id`, `kode_prodi` (unik), `nama_prodi`, `jenjang`, akreditasi, `kaprodi`, `tahun_berdiri` | masih punya mata kuliah, mahasiswa, atau dosen |
-| Mata kuliah | `kode_matkul` (unik), `nama_matkul`, `sks` 1–6, `semester` 1–14, `jenis` (Wajib/Pilihan), `prodi_id` | dipakai kelas kuliah |
+| Mata kuliah | `kode_matkul` (unik), `nama_matkul`, `sks` 1–6, `semester` 1–14, `jenis` (Wajib/Pilihan), `prodi_id`, prasyarat | dipakai kelas kuliah |
 | Ruang | `kode_ruang` (unik), `nama_ruang`, `kapasitas` 1–1000, `detail` | dipakai jadwal |
+
+**Prasyarat mata kuliah** (tabel `mata_kuliah_prasyarat`, diisi di form mata kuliah):
+
+- prasyarat harus mata kuliah dari **prodi yang sama** dengan **semester lebih kecil**, dan bukan mata kuliah itu sendiri. Karena itu prasyarat tidak mungkin melingkar;
+- semester mata kuliah tidak bisa diubah menjadi sama atau lebih besar dari mata kuliah yang mensyaratkannya, dan prodinya tidak bisa diubah selama ia menjadi prasyarat;
+- detail mata kuliah menampilkan "Harus Lulus Dulu" dan "Menjadi Prasyarat Untuk";
+- menghapus mata kuliah ikut menghapus hubungan prasyaratnya.
 
 ### 3.3 Pengguna (Manage User)
 
@@ -192,8 +202,9 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 
 - Karyawan: `nomor_induk`.
 - Dosen: `nidn` (unik), jabatan fungsional, pendidikan, status kepegawaian, `prodi_id`.
-- Mahasiswa: `nim` (unik), `angkatan`, `semester`, `status`, `dosen_wali_id`, `prodi_id`, sekolah asal, `nisn` (10 digit, unik), `email_alternatif`, data orang tua.
+- Mahasiswa: `nim` (unik), `angkatan` (wajib, 4 digit), `status`, `dosen_wali_id`, `prodi_id`, sekolah asal, `nisn` (10 digit, unik), `email_alternatif`, data orang tua.
   - Pilihan `status`: `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`, `Transfer Masuk`.
+  - **Semester tidak disimpan**, tetapi dihitung dari angkatan (`MahasiswaProfile::semesterPada`): `(tahun pertama tahun akademik − angkatan) × 2 + (Ganjil ? 1 : 2)`. Angkatan 2024 berada di semester 1 pada 2024/2025 Ganjil dan semester 5 pada 2026/2027 Ganjil. Semester tetap bertambah selama mahasiswa cuti. Hasilnya kosong bila mahasiswa belum mulai kuliah. Detail pengguna menampilkan semester pada tahun akademik aktif.
 
 **Hapus pengguna ditolak bila:**
 
@@ -360,7 +371,13 @@ Mahasiswa mengisi KRS di menu **Rencana Studi (KRS)**. Semua rute KRS dijaga `ca
 - **Batas SKS** (`PengaturanAkademik::maksSksUntuk`) diambil dari IPS semester sebelumnya (`MahasiswaProfile::ipsSemesterSebelum`):
   - "semester sebelumnya" adalah tahun akademik **terakhir yang pernah diambil mahasiswa**;
   - IPS bernilai kosong bila belum pernah kuliah, atau bila ada nilai semester itu yang belum lengkap. Batasnya lalu memakai `maks_sks_tanpa_ips`.
-- **Kelas yang ditawarkan:** mata kuliah dari prodi mahasiswa, pada semester yang sama dengan semester mahasiswa, ditambah mata kuliah yang boleh diulang.
+- **Kelas yang ditawarkan** (`App\TawaranKrs`): kelas di tahun akademik aktif dari prodi mahasiswa, dengan mata kuliah yang termasuk salah satu dari:
+  1. **semester ini:** semester mata kuliah sama dengan semester mahasiswa ([3.3](#33-pengguna-manage-user));
+  2. **tertunda:** semester lebih kecil dengan paritas sama (Ganjil/Genap) dan **belum pernah diambil**, misalnya karena cuti. Mata kuliah semester 3 yang terlewat muncul di semester 5, lalu 7, dan seterusnya sampai diambil. Berlaku juga untuk mata kuliah Pilihan;
+  3. **mengulang:** pernah diambil, nilainya sudah keluar, dan semua nilainya `boleh_diulang`.
+
+  Mata kuliah yang sudah lulus (nilai tidak `boleh_diulang`) atau pengambilan lamanya belum bernilai tidak ditawarkan. Kelas yang sudah diambil tahun ini selalu tampil agar bisa dibatalkan. Halaman KRS memberi label **"Tertunda smt N"** atau **"Mengulang"**.
+- **Prasyarat:** mata kuliah yang prasyaratnya belum lulus **tetap tampil tetapi terkunci** dengan alasan "Prasyarat: … belum lulus". Prasyarat dianggap lulus bila nilainya sudah keluar dan `lulus`, termasuk nilai yang masih `boleh_diulang` (bawaan: D). Prasyarat yang sedang diambil semester ini belum bernilai, jadi mata kuliah lanjutannya baru bisa diambil di periode berikutnya yang menawarkannya.
 
 ### 7.2 Mengambil kelas (`KrsController::store`)
 
@@ -371,11 +388,11 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 3. KRS belum disimpan (belum terkunci).
 4. Status mahasiswa diizinkan.
 5. Dalam transaksi, baris mahasiswa dan kelas dikunci (`lockForUpdate`).
-6. Riwayat mata kuliah yang sama (`alasanTidakBolehAmbil`):
+6. Riwayat mata kuliah yang sama (`TawaranKrs::alasanTidakBolehAmbil`):
    - sudah diambil di tahun ini, termasuk di kelas paralel → ditolak;
    - pengambilan lama belum bernilai → ditolak;
    - nilai lama tidak `boleh_diulang` → ditolak ("sudah lulus").
-7. Semester mata kuliah harus sama dengan semester mahasiswa, kecuali mata kuliah ulang.
+7. Mata kuliah harus termasuk tawaran (semester ini, tertunda, atau mengulang; lihat 7.1), bila tidak ditolak ("tidak ditawarkan untuk semester Anda"). Lalu semua prasyarat harus sudah lulus, bila tidak ditolak ("Prasyarat: … belum lulus").
 8. Tidak bentrok jadwal dengan kelas lain yang sudah diambil tahun ini (`Jadwal::bentrokUntukMahasiswa`).
 9. Kelas belum penuh (jumlah KRS < `kapasitas`).
 10. Total SKS tahun ini ditambah SKS kelas ini tidak melebihi batas SKS.
@@ -1008,6 +1025,8 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Dari | Ke | Hubungan |
 |---|---|---|
 | Huruf akhir semester lalu | IPS → batas SKS KRS | `maksSksUntuk(ipsSemesterSebelum)` |
+| Angkatan + tahun akademik | Semester mahasiswa → tawaran KRS | Semester dihitung, tidak disimpan; menentukan mata kuliah semester ini dan yang tertunda |
+| Huruf akhir mata kuliah prasyarat | KRS mata kuliah lanjutan | Mata kuliah lanjutan terkunci sampai prasyaratnya lulus |
 | Batas SKS (kuota) | Tagihan semester | Komponen `per_sks` dikali kuota, bukan SKS diambil |
 | Tagihan semester | KRS | Bila `kunci_krs_aktif` menyala, tagihan terbit yang belum lunas mengunci KRS |
 | KRS | Kelas, presensi, ujian, remidi | Peserta setiap fitur kelas adalah mahasiswa ber-KRS |
@@ -1086,7 +1105,7 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 16. **Admin membatalkan KRS tanpa cek periode atau kunci KRS.** Baris `krs_semester` tetap ada.
 17. **Tarif ganda bisa lolos.** Unique `(jenis_biaya_id, prodi_id, angkatan)` tidak mencegah dua tarif umum (kolom NULL). Duplikat lain memicu error database, bukan pesan validasi.
 18. **Filter status KRS tidak konsisten.** Sebagian perhitungan SKS memfilter status KRS `Aktif`, sebagian tidak. Belum berdampak karena semua KRS saat ini berstatus `Aktif`.
-19. **Urutan tahun akademik** di KHS dan Info Biaya berbasis teks (`semester`), sehingga urutan Ganjil/Genap perlu dicek.
+19. ~~**Urutan tahun akademik** di KHS dan Info Biaya berbasis teks (`semester`).~~ **Selesai 28 Sep 2026:** semua daftar tahun akademik diurutkan menurut `tanggal_mulai` (lihat 3.1).
 20. **Belum ada transkrip PDF.** Hanya KHS yang punya PDF.
 
 ### Kelas, konten, dan presensi

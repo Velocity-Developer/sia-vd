@@ -217,15 +217,22 @@ flowchart TD
     G -- "Sudah diambil tahun ini" --> X4["Ditolak"]
     G -- "Pengambilan lama belum bernilai" --> X5["Ditolak: menunggu nilai"]
     G -- "Nilai lama tidak boleh diulang" --> X6["Ditolak: sudah lulus"]
-    G -- "Belum pernah / boleh diulang" --> H{"Semester mata kuliah sama,<br/>atau mengulang?"}
-    H -- Tidak --> X7["Ditolak: bukan untuk semester Anda"]
-    H -- Ya --> I{"Bentrok jadwal dengan<br/>kelas lain tahun ini?"}
+    G -- "Belum pernah / boleh diulang" --> H{"Termasuk tawaran?<br/>semester ini, tertunda<br/>(smt lebih kecil, paritas sama,<br/>belum pernah diambil), atau mengulang"}
+    H -- Tidak --> X7["Ditolak: tidak ditawarkan<br/>untuk semester Anda"]
+    H -- Ya --> P{"Semua prasyarat sudah lulus?<br/>(nilai keluar dan lulus)"}
+    P -- Tidak --> X11["Ditolak: Prasyarat ... belum lulus<br/>(di daftar tampil terkunci)"]
+    P -- Ya --> I{"Bentrok jadwal dengan<br/>kelas lain tahun ini?"}
     I -- Ya --> X8["Ditolak: sebutkan kelas yang bentrok"]
     I -- Tidak --> J{"Jumlah KRS kelas<br/>kurang dari kapasitas?"}
     J -- Tidak --> X9["Ditolak: kelas penuh"]
     J -- Ya --> K{"SKS tahun ini + SKS kelas<br/>tidak melebihi batas SKS?"}
     K -- Tidak --> X10["Ditolak: melebihi batas SKS"]
     K -- Ya --> L(["KRS dibuat, status Aktif"])
+
+    subgraph Semester["Semester mahasiswa (tidak disimpan)"]
+        M1["(tahun pertama TA - angkatan) x 2<br/>+ 1 bila Ganjil, + 2 bila Genap"]
+    end
+    M1 -.-> H
 
     subgraph Batas["Batas SKS"]
         S1["IPS semester terakhir yang diambil"] --> S2{"IPS ada dan nilai lengkap?"}
@@ -735,6 +742,7 @@ flowchart TD
 erDiagram
     TAHUN_AKADEMIK ||--o{ KELAS_KULIAH : memiliki
     MATA_KULIAH ||--o{ KELAS_KULIAH : diajarkan_di
+    MATA_KULIAH }o--o{ MATA_KULIAH : prasyarat
     DOSEN ||--o{ KELAS_KULIAH : mengampu
     KELAS_KULIAH ||--o{ JADWAL : punya
     KELAS_KULIAH ||--o{ PERTEMUAN : punya
