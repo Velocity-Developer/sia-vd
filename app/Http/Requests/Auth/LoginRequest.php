@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -36,13 +37,21 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate the request's credentials.
      *
+     * Kolom masuk menerima username, NIM, atau NIDN (lihat User::usernameUntukMasuk).
+     *
      * @throws ValidationException
      */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
+        $masuk = trim($this->string('username'));
+        $kredensial = [
+            'username' => User::usernameUntukMasuk($masuk) ?? $masuk,
+            'password' => $this->string('password')->toString(),
+        ];
+
+        if (! Auth::attempt($kredensial, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

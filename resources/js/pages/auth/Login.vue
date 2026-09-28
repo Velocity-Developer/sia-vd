@@ -33,7 +33,7 @@ const isian =
 </script>
 
 <template>
-    <AuthBase title="Masuk ke Akun Anda" description="Gunakan username dan kata sandi yang diberikan kampus.">
+    <AuthBase title="Masuk ke Akun Anda" description="Masuk dengan NIM (mahasiswa), NIDN (dosen), atau username, beserta kata sandi yang diberikan kampus.">
         <Head title="Masuk" />
 
         <div v-if="status" class="mb-5 rounded-xl border border-[#c9ecd2] bg-[#f2fbf4] px-4 py-3 text-sm text-[#1aae39]" role="status">
@@ -42,7 +42,7 @@ const isian =
 
         <form class="flex flex-col gap-5" @submit.prevent="submit">
             <div class="grid gap-2">
-                <Label for="username" class="text-sm font-medium text-[#31302e]">Username</Label>
+                <Label for="username" class="text-sm font-medium text-[#31302e]">NIM / NIDN / Username</Label>
                 <div class="relative">
                     <User class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                     <Input

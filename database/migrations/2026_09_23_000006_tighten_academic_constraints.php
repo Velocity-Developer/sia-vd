@@ -14,6 +14,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        $this->isiRoleKosong();
         $this->ensureClean();
 
         Schema::table('kelas_kuliah', function (Blueprint $table): void {
@@ -60,13 +61,32 @@ return new class extends Migration
     }
 
     /**
+     * User lama tanpa role (sisa migrasi sebelum tabel roles) diberi role bawaan sesuai profil
+     * yang dimilikinya. User tanpa profil sama sekali tetap dilaporkan oleh ensureClean().
+     */
+    private function isiRoleKosong(): void
+    {
+        foreach (['admin' => 'admin_profiles', 'dosen' => 'dosen_profiles', 'mahasiswa' => 'mahasiswa_profiles'] as $jenis => $tabelProfil) {
+            $roleId = DB::table('roles')->where('is_system', true)->where('user_type', $jenis)->orderBy('id')->value('id');
+            if ($roleId === null) {
+                continue;
+            }
+
+            DB::table('users')
+                ->whereNull('role_id')
+                ->whereIn('id', DB::table($tabelProfil)->select('user_id'))
+                ->update(['role_id' => $roleId]);
+        }
+    }
+
+    /**
      * Hentikan migrasi dengan pesan yang jelas bila data lama belum memenuhi aturan baru.
      */
     private function ensureClean(): void
     {
         $masalah = array_filter([
             'kelas kuliah tanpa tahun akademik' => DB::table('kelas_kuliah')->whereNull('tahun_akademik_id')->count(),
-            'user tanpa role' => DB::table('users')->whereNull('role_id')->count(),
+            'user tanpa role dan tanpa profil' => DB::table('users')->whereNull('role_id')->count(),
             'mahasiswa tanpa NIM' => DB::table('mahasiswa_profiles')->whereNull('nim')->count(),
             'tahun akademik ganda (tahun + semester sama)' => DB::table('tahun_akademik')->select('tahun', 'semester')->groupBy('tahun', 'semester')->havingRaw('COUNT(*) > 1')->get()->count(),
         ]);

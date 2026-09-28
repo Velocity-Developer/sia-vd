@@ -115,7 +115,7 @@ class User extends Authenticatable
      */
     public function canManage(User $target): bool
     {
-        return $target->role === null || $this->canAssignRole($target->role);
+        return $this->canAssignRole($target->role);
     }
 
     /**
@@ -131,6 +131,21 @@ class User extends Authenticatable
         }
 
         return 'mahasiswa';
+    }
+
+    /**
+     * Username akun yang dimaksud oleh isian kolom masuk: username itu sendiri, NIM mahasiswa,
+     * atau NIDN dosen. Username didahulukan bila kebetulan sama dengan NIM/NIDN akun lain.
+     */
+    public static function usernameUntukMasuk(string $masuk): ?string
+    {
+        if ($masuk === '') {
+            return null;
+        }
+
+        return static::query()->where('username', $masuk)->value('username')
+            ?? static::query()->whereHas('mahasiswaProfile', fn (Builder $query) => $query->where('nim', $masuk))->value('username')
+            ?? static::query()->whereHas('dosenProfile', fn (Builder $query) => $query->where('nidn', $masuk))->value('username');
     }
 
     /**

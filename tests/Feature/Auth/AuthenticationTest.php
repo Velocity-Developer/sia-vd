@@ -27,7 +27,7 @@ test('users can not authenticate with invalid password', function () {
     $this->post('/login', [
         'username' => $user->username,
         'password' => 'wrong-password',
-    ])->assertSessionHasErrors(['username' => 'Username atau kata sandi tidak cocok.']);
+    ])->assertSessionHasErrors(['username' => 'NIM/NIDN/username atau kata sandi tidak cocok.']);
 
     $this->assertGuest();
 });
@@ -64,4 +64,47 @@ test('permintaan inertia saat keluar memicu muat ulang penuh', function () {
     $this->assertGuest();
     $response->assertStatus(409);
     $response->assertHeader('X-Inertia-Location', url('/'));
+});
+
+test('mahasiswa dapat masuk memakai NIM', function () {
+    $user = User::factory()->mahasiswa()->create();
+
+    $this->post('/login', [
+        'username' => $user->mahasiswaProfile->nim,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('dosen dapat masuk memakai NIDN', function () {
+    $user = User::factory()->dosen()->create();
+
+    $this->post('/login', [
+        'username' => ' '.$user->dosenProfile->nidn.' ',
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+});
+
+test('username didahulukan bila sama dengan NIM akun lain', function () {
+    $mahasiswa = User::factory()->mahasiswa()->create();
+    $pemilikUsername = User::factory()->create(['username' => $mahasiswa->mahasiswaProfile->nim]);
+
+    $this->post('/login', [
+        'username' => $mahasiswa->mahasiswaProfile->nim,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($pemilikUsername);
+});
+
+test('NIM tak dikenal ditolak dengan pesan biasa', function () {
+    $this->post('/login', [
+        'username' => '999999999',
+        'password' => 'password',
+    ])->assertSessionHasErrors(['username' => 'NIM/NIDN/username atau kata sandi tidak cocok.']);
+
+    $this->assertGuest();
 });
