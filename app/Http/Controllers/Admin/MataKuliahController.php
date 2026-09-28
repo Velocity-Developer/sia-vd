@@ -7,7 +7,9 @@ use App\Models\MataKuliah;
 use App\Models\ProgramStudi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -30,19 +32,27 @@ class MataKuliahController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/MataKuliahForm', ['mataKuliah' => null, 'programStudis' => $this->programStudis()]);
+        return Inertia::render('Admin/MataKuliahForm', ['mataKuliah' => null, 'programStudis' => $this->programStudis(), 'pilihanPrasyarat' => $this->pilihanPrasyarat()]);
     }
 
     public function show(MataKuliah $mataKuliah): Response
     {
-        $mataKuliah->load(['prodi.fakultas']);
+        $mataKuliah->load([
+            'prodi.fakultas',
+            'prasyarat' => fn ($query) => $query->orderBy('semester')->orderBy('kode_matkul'),
+            'menjadiPrasyarat' => fn ($query) => $query->orderBy('semester')->orderBy('kode_matkul'),
+        ]);
 
         return Inertia::render('Admin/MataKuliahShow', ['mataKuliah' => $mataKuliah]);
     }
 
     public function edit(MataKuliah $mataKuliah): Response
     {
-        return Inertia::render('Admin/MataKuliahForm', ['mataKuliah' => $mataKuliah, 'programStudis' => $this->programStudis()]);
+        return Inertia::render('Admin/MataKuliahForm', [
+            'mataKuliah' => $mataKuliah->toArray() + ['prasyarat_ids' => $mataKuliah->prasyarat()->pluck('mata_kuliahs.id')->all()],
+            'programStudis' => $this->programStudis(),
+            'pilihanPrasyarat' => $this->pilihanPrasyarat(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -87,6 +97,14 @@ class MataKuliahController extends Controller
         ])->all();
     }
 
+    /**
+     * @return array<int, array{id: int, kode_matkul: string, nama_matkul: string, semester: int, prodi_id: int}>
+     */
+    private function pilihanPrasyarat(): array
+    {
+        return MataKuliah::query()->orderBy('semester')->orderBy('kode_matkul')->get(['id', 'kode_matkul', 'nama_matkul', 'semester', 'prodi_id'])->all();
+    }
+
     private function save(Request $request, MataKuliah $model): void
     {
         $data = $request->validate([
@@ -97,8 +115,55 @@ class MataKuliahController extends Controller
             'jenis' => ['required', 'in:Wajib,Pilihan'],
             'tugas_akhir' => ['boolean'],
             'prodi_id' => ['required', 'exists:program_studis,id'],
+            'prasyarat_ids' => ['array'],
+            'prasyarat_ids.*' => ['integer', 'distinct', Rule::exists('mata_kuliahs', 'id')->where('prodi_id', $request->integer('prodi_id')), Rule::notIn(array_filter([$model->id]))],
         ], $this->messages(), $this->attributes());
-        $model->fill([...$data, 'tugas_akhir' => $request->boolean('tugas_akhir')])->save();
+        $prasyaratIds = $data['prasyarat_ids'] ?? [];
+        unset($data['prasyarat_ids']);
+        $this->pastikanUrutanPrasyarat($model, $data, $prasyaratIds);
+
+        DB::transaction(function () use ($model, $data, $prasyaratIds, $request): void {
+            $model->fill([...$data, 'tugas_akhir' => $request->boolean('tugas_akhir')])->save();
+            $model->prasyarat()->sync($prasyaratIds);
+        });
+    }
+
+    /**
+     * Prasyarat harus dari semester lebih kecil, dan mata kuliah yang mensyaratkan mata kuliah ini harus
+     * dari semester lebih besar dan prodi yang sama. Dengan begitu prasyarat tidak mungkin melingkar.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  list<int>  $prasyaratIds
+     */
+    private function pastikanUrutanPrasyarat(MataKuliah $model, array $data, array $prasyaratIds): void
+    {
+        $semester = (int) $data['semester'];
+        $terlaluTinggi = MataKuliah::query()->whereKey($prasyaratIds)->where('semester', '>=', $semester)->orderBy('kode_matkul')->get();
+
+        if ($terlaluTinggi->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'prasyarat_ids' => 'Prasyarat harus dari semester sebelum semester '.$semester.': '.$terlaluTinggi->map(fn (MataKuliah $mk): string => "{$mk->nama_matkul} (smt {$mk->semester})")->implode(', ').'.',
+            ]);
+        }
+
+        if (! $model->exists) {
+            return;
+        }
+
+        $pensyarat = $model->menjadiPrasyarat()->orderBy('kode_matkul')->get();
+        $bentrokSemester = $pensyarat->filter(fn (MataKuliah $mk): bool => $mk->semester <= $semester);
+
+        if ($bentrokSemester->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'semester' => 'Semester harus lebih kecil dari mata kuliah yang mensyaratkannya: '.$bentrokSemester->map(fn (MataKuliah $mk): string => "{$mk->nama_matkul} (smt {$mk->semester})")->implode(', ').'.',
+            ]);
+        }
+
+        if ($pensyarat->contains(fn (MataKuliah $mk): bool => $mk->prodi_id !== (int) $data['prodi_id'])) {
+            throw ValidationException::withMessages([
+                'prodi_id' => 'Program studi tidak bisa diubah karena mata kuliah ini menjadi prasyarat mata kuliah lain.',
+            ]);
+        }
     }
 
     /**
@@ -108,6 +173,8 @@ class MataKuliahController extends Controller
     {
         return [
             'in' => ':attribute tidak valid.',
+            'prasyarat_ids.*.exists' => 'Prasyarat harus mata kuliah dari program studi yang sama.',
+            'prasyarat_ids.*.not_in' => 'Mata kuliah tidak bisa menjadi prasyarat dirinya sendiri.',
             'exists' => ':attribute tidak ditemukan.',
         ];
     }
@@ -125,6 +192,7 @@ class MataKuliahController extends Controller
             'jenis' => 'Jenis',
             'tugas_akhir' => 'Mata kuliah TA/Skripsi',
             'prodi_id' => 'Program Studi',
+            'prasyarat_ids' => 'Prasyarat',
         ];
     }
 }

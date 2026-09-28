@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
 const props = defineProps<{
     mataKuliah: Record<string, any> | null;
     programStudis: { id: number; nama_prodi: string; jenjang: string; nama_fakultas: string }[];
+    pilihanPrasyarat: { id: number; kode_matkul: string; nama_matkul: string; semester: number; prodi_id: number }[];
 }>();
 
 const groupedProdi = computed(() => {
@@ -34,6 +35,26 @@ const form = useForm({
     jenis: props.mataKuliah?.jenis ?? '',
     tugas_akhir: Boolean(props.mataKuliah?.tugas_akhir),
     prodi_id: props.mataKuliah?.prodi_id ?? '',
+    prasyarat_ids: (props.mataKuliah?.prasyarat_ids ?? []) as number[],
+});
+
+// Prasyarat hanya dari prodi yang sama dan semester lebih kecil (sama dengan aturan di server).
+const cariPrasyarat = ref('');
+const kandidatPrasyarat = computed(() =>
+    props.pilihanPrasyarat.filter(
+        (item) =>
+            item.prodi_id === Number(form.prodi_id) && item.id !== props.mataKuliah?.id && (!form.semester || item.semester < Number(form.semester)),
+    ),
+);
+const prasyaratTampil = computed(() => {
+    const kata = cariPrasyarat.value.trim().toLowerCase();
+    return kata
+        ? kandidatPrasyarat.value.filter((item) => `${item.kode_matkul} ${item.nama_matkul}`.toLowerCase().includes(kata))
+        : kandidatPrasyarat.value;
+});
+watch(kandidatPrasyarat, (kandidat) => {
+    const boleh = new Set(kandidat.map((item) => item.id));
+    form.prasyarat_ids = form.prasyarat_ids.filter((id) => boleh.has(id));
 });
 
 const submit = () =>
@@ -136,6 +157,41 @@ const sel =
                             </span>
                         </label>
                         <InputError :message="form.errors.tugas_akhir" />
+                    </section>
+
+                    <section
+                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                    >
+                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Prasyarat</h2>
+                        <p class="mt-1 text-sm text-[#615d59]">
+                            Mata kuliah yang harus lulus sebelum mahasiswa bisa mengambil mata kuliah ini. Pilihan berasal dari program studi yang
+                            sama dengan semester lebih kecil.
+                        </p>
+                        <p v-if="!form.prodi_id || !form.semester" class="mt-4 text-sm text-[#a39e98]">
+                            Pilih program studi dan isi semester terlebih dahulu.
+                        </p>
+                        <p v-else-if="!kandidatPrasyarat.length" class="mt-4 text-sm text-[#a39e98]">
+                            Belum ada mata kuliah dari semester sebelumnya di program studi ini.
+                        </p>
+                        <template v-else>
+                            <Input v-model="cariPrasyarat" type="search" placeholder="Cari kode atau nama mata kuliah" :class="`${inp} mt-4`" />
+                            <div class="mt-3 grid max-h-72 gap-1 overflow-y-auto rounded-lg border border-[#e6e6e6] p-2 sm:grid-cols-2">
+                                <label
+                                    v-for="item in prasyaratTampil"
+                                    :key="item.id"
+                                    class="flex items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-[#f6f5f4]"
+                                >
+                                    <input v-model="form.prasyarat_ids" type="checkbox" :value="item.id" class="mt-0.5 size-4 accent-[#0075de]" />
+                                    <span
+                                        >{{ item.kode_matkul }} — {{ item.nama_matkul }}
+                                        <span class="text-[#a39e98]">(smt {{ item.semester }})</span></span
+                                    >
+                                </label>
+                                <p v-if="!prasyaratTampil.length" class="px-2 py-1.5 text-sm text-[#a39e98]">Mata kuliah tidak ditemukan.</p>
+                            </div>
+                            <p class="mt-2 text-xs text-[#615d59]">{{ form.prasyarat_ids.length }} prasyarat dipilih.</p>
+                        </template>
+                        <InputError :message="form.errors.prasyarat_ids" />
                     </section>
 
                     <div class="flex justify-end pt-2">

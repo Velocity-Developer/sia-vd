@@ -39,6 +39,7 @@ const props = defineProps<{
     kelasDiambil: number[];
     krsTahunIni: { id: number; kelas_id: number; nilai: string | null }[];
     labelMatkul: Record<number, string>;
+    terkunciMatkul: Record<number, string>;
     sksDiambil: number;
     maksSks: number;
     ipsSebelumnya: { ips: number; tahun_akademik: string } | null;
@@ -74,6 +75,7 @@ const showResult = () => {
     resultModalOpen.value = true;
 };
 const isTaken = (kelasId: number) => props.kelasDiambil.includes(kelasId);
+const terkunci = (kelas: KelasKuliah) => props.terkunciMatkul[matkul(kelas)?.id ?? 0] ?? null;
 const krsBisaDibatalkan = (kelasId: number) => props.krsTahunIni.find((krs) => krs.kelas_id === kelasId && !krs.nilai);
 const selectedKelasId = ref<number | null>(null);
 const modalOpen = ref(false);
@@ -276,6 +278,9 @@ const jadwal = (kelas: KelasKuliah) =>
                                                 "
                                                 >{{ labelMatkul[group.matkul.id] }}</span
                                             >
+                                            <p v-if="terkunciMatkul[group.matkul.id]" class="mt-1 text-xs font-normal text-[#dd5b00]">
+                                                {{ terkunciMatkul[group.matkul.id] }}. Mata kuliah ini belum bisa diambil.
+                                            </p>
                                         </td>
                                     </tr>
                                     <tr v-for="kelas in group.kelas" :key="kelas.id" class="hover:bg-[#f6f5f4]/60">
@@ -308,10 +313,18 @@ const jadwal = (kelas: KelasKuliah) =>
                                                         ? 'bg-white text-[#0075de] hover:bg-white'
                                                         : 'bg-[#0075de] text-white hover:bg-[#005bab]'
                                                 "
-                                                :disabled="isTaken(kelas.id) || !bolehKrs || krsTersimpan"
+                                                :disabled="isTaken(kelas.id) || !bolehKrs || krsTersimpan || Boolean(terkunci(kelas))"
                                                 @click="ambilKelas(kelas.id)"
                                             >
-                                                {{ isTaken(kelas.id) ? 'Sudah Diambil' : krsTersimpan ? 'KRS Terkunci' : 'Ambil' }}
+                                                {{
+                                                    isTaken(kelas.id)
+                                                        ? 'Sudah Diambil'
+                                                        : krsTersimpan
+                                                          ? 'KRS Terkunci'
+                                                          : terkunci(kelas)
+                                                            ? 'Terkunci'
+                                                            : 'Ambil'
+                                                }}
                                             </Button>
                                         </td>
                                     </tr>

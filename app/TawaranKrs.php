@@ -15,6 +15,8 @@ use Illuminate\Support\Collection;
  * 2. tertunda: semester lebih kecil dengan paritas sama (Ganjil/Genap) dan belum pernah diambil,
  *    misalnya karena cuti. Mata kuliah itu muncul lagi tiap dua semester sampai diambil;
  * 3. mengulang: pernah diambil dengan nilai yang boleh diulang.
+ *
+ * Mata kuliah yang prasyaratnya belum lulus tetap ditawarkan tetapi terkunci.
  */
 class TawaranKrs
 {
@@ -100,7 +102,24 @@ class TawaranKrs
             return $alasan;
         }
 
-        return $this->jenis($mataKuliah) === null ? 'Mata kuliah ini tidak ditawarkan untuk semester Anda.' : null;
+        if ($this->jenis($mataKuliah) === null) {
+            return 'Mata kuliah ini tidak ditawarkan untuk semester Anda.';
+        }
+
+        return $this->alasanPrasyarat($mataKuliah);
+    }
+
+    /**
+     * Alasan mata kuliah terkunci karena prasyaratnya belum lulus, atau null bila tidak terkunci.
+     * Prasyarat dianggap lulus bila nilainya sudah keluar dan lulus, termasuk nilai yang masih boleh diulang.
+     */
+    public function alasanPrasyarat(MataKuliah $mataKuliah): ?string
+    {
+        $belumLulus = $mataKuliah->prasyarat
+            ->reject(fn (MataKuliah $prasyarat): bool => $this->riwayat->get($prasyarat->id, collect())
+                ->contains(fn (Krs $krs): bool => filled($krs->nilai) && SkalaNilai::lulus($krs->nilai)));
+
+        return $belumLulus->isEmpty() ? null : 'Prasyarat: '.$belumLulus->pluck('nama_matkul')->implode(', ').' belum lulus';
     }
 
     /**

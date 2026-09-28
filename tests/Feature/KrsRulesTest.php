@@ -184,3 +184,51 @@ it('no longer offers a postponed course once it has been passed', function () {
     $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
         ->assertInertia(fn ($page) => $page->where('kelasKuliahs', fn ($kelasList) => ! collect($kelasList)->pluck('id')->contains($kelas->id)));
 });
+
+/**
+ * Mahasiswa semester 5 dengan mata kuliah semester 5 yang mensyaratkan mata kuliah semester 3.
+ *
+ * @return array{0: User, 1: KelasKuliah, 2: KelasKuliah, 3: TahunAkademik}
+ */
+function krsDenganPrasyarat(): array
+{
+    [$mahasiswa, $kelas] = krsSetup();
+    $mahasiswa->mahasiswaProfile->update(['angkatan' => angkatanUntuk($kelas, 5)]);
+    $prasyarat = kelasLainDiProdi($kelas, 2, semester: 3);
+    $prasyarat->mataKuliah->update(['nama_matkul' => 'Struktur Data']);
+    $lanjutan = kelasLainDiProdi($kelas, 2, semester: 5);
+    $lanjutan->mataKuliah->prasyarat()->attach($prasyarat->matkul_id);
+    $lalu = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
+
+    return [$mahasiswa, $prasyarat, $lanjutan, $lalu];
+}
+
+it('shows a course with an unmet prerequisite as locked and refuses it', function () {
+    [$mahasiswa, $prasyarat, $lanjutan] = krsDenganPrasyarat();
+
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
+        ->assertInertia(fn ($page) => $page
+            ->where('kelasKuliahs', fn ($kelasList) => collect($kelasList)->pluck('id')->contains($lanjutan->id))
+            ->where("terkunciMatkul.{$lanjutan->matkul_id}", 'Prasyarat: Struktur Data belum lulus'));
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $lanjutan))
+        ->assertSessionHas('krs_error', 'Prasyarat: Struktur Data belum lulus');
+
+    // Prasyarat yang baru diambil semester ini belum bernilai, jadi lanjutannya tetap terkunci.
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $prasyarat))->assertSessionHas('krs_success');
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $lanjutan))
+        ->assertSessionHas('krs_error', 'Prasyarat: Struktur Data belum lulus');
+});
+
+it('accepts a passed prerequisite even when the grade may still be retaken', function (string $nilai, bool $boleh) {
+    [$mahasiswa, $prasyarat, $lanjutan, $lalu] = krsDenganPrasyarat();
+    $kelasLalu = KelasKuliah::create(['kode_kelas' => 'LALU-P', 'tahun_akademik_id' => $lalu->id, 'kapasitas' => 30, 'dosen_id' => $prasyarat->dosen_id, 'matkul_id' => $prasyarat->matkul_id]);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasLalu->id, 'status' => 'Aktif', 'nilai' => $nilai]);
+
+    $respons = $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $lanjutan));
+
+    $boleh ? $respons->assertSessionHas('krs_success') : $respons->assertSessionHas('krs_error', 'Prasyarat: Struktur Data belum lulus');
+})->with([
+    'D lulus tapi boleh diulang' => ['D', true],
+    'E tidak lulus' => ['E', false],
+]);

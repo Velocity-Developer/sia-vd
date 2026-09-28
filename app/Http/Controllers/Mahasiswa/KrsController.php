@@ -35,6 +35,7 @@ class KrsController extends Controller
             ->when(! $periodeKrsAktif, fn ($query) => $query->whereKey(0))
             ->with([
                 'mataKuliah.prodi',
+                'mataKuliah.prasyarat:mata_kuliahs.id,nama_matkul',
                 'tahunAkademik',
                 'dosen:id,user_id',
                 'dosen.user:id,name',
@@ -62,6 +63,9 @@ class KrsController extends Controller
             'labelMatkul' => $kelasKuliahs->pluck('mataKuliah')->unique('id')
                 ->mapWithKeys(fn (MataKuliah $mataKuliah): array => [$mataKuliah->id => $tawaran->label($mataKuliah)])
                 ->filter(),
+            'terkunciMatkul' => $kelasKuliahs->pluck('mataKuliah')->unique('id')
+                ->mapWithKeys(fn (MataKuliah $mataKuliah): array => [$mataKuliah->id => $tawaran->alasanPrasyarat($mataKuliah)])
+                ->filter(),
             'sksDiambil' => $krsTahunIni->sum(fn (Krs $krs): int => $krs->kelasKuliah?->mataKuliah?->sks ?? 0),
             'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null),
             'ipsSebelumnya' => $ipsSebelumnya === null ? null : [
@@ -82,7 +86,7 @@ class KrsController extends Controller
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
         $mahasiswa = $this->mahasiswa($request);
-        $kelasKuliah->loadMissing('mataKuliah', 'tahunAkademik');
+        $kelasKuliah->loadMissing('mataKuliah.prasyarat:mata_kuliahs.id,nama_matkul', 'tahunAkademik');
 
         abort_unless($kelasKuliah->mataKuliah?->prodi_id === $mahasiswa->prodi_id && $kelasKuliah->tahunAkademik?->status === true, 404);
 

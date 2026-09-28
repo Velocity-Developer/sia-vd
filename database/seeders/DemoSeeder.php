@@ -307,13 +307,17 @@ class DemoSeeder extends Seeder
         ];
 
         $mataKuliah = collect();
+        // Contoh prasyarat, memakai urutan nama di atas: mata kuliah => prasyaratnya.
+        $contohPrasyarat = [4 => 0, 5 => 1, 9 => 5, 16 => 12];
 
         foreach ($prodi as $item) {
+            $perIndex = [];
+
             foreach ($namaPerProdi[$item->kode_prodi] as $index => $nama) {
                 $semester = intdiv($index, self::MATKUL_PER_SEMESTER) + 1;
                 $urut = $index % self::MATKUL_PER_SEMESTER;
 
-                $mataKuliah->push(MataKuliah::updateOrCreate(
+                $mataKuliah->push($perIndex[$index] = MataKuliah::updateOrCreate(
                     ['kode_matkul' => substr($item->kode_prodi, 0, 2).$semester.str_pad((string) ($urut + 1), 2, '0', STR_PAD_LEFT)],
                     [
                         'nama_matkul' => $nama,
@@ -324,6 +328,10 @@ class DemoSeeder extends Seeder
                         'prodi_id' => $item->id,
                     ],
                 ));
+            }
+
+            foreach ($perIndex as $index => $matkul) {
+                $matkul->prasyarat()->sync(isset($contohPrasyarat[$index]) ? [$perIndex[$contohPrasyarat[$index]]->id] : []);
             }
         }
 
@@ -555,11 +563,17 @@ class DemoSeeder extends Seeder
                 $kelasSemester = KelasKuliah::query()
                     ->where('tahun_akademik_id', $tahun->id)
                     ->whereHas('mataKuliah', fn ($query) => $query->where('prodi_id', $profil->prodi_id)->where('semester', $semester))
-                    ->with('mataKuliah:id,sks')
+                    ->with('mataKuliah:id,sks', 'mataKuliah.prasyarat:mata_kuliahs.id')
                     ->orderBy('kode_kelas')
                     ->get()
                     ->groupBy('matkul_id')
                     ->map(fn (Collection $paralel) => $paralel->values()[$indexMahasiswa % $paralel->count()])
+                    // Mata kuliah yang prasyaratnya belum lulus tidak diambil, sama seperti aturan KRS.
+                    ->filter(fn (KelasKuliah $kelas): bool => $kelas->mataKuliah->prasyarat->every(fn (MataKuliah $prasyarat): bool => Krs::query()
+                        ->where('mahasiswa_id', $profil->id)
+                        ->whereHas('kelasKuliah', fn ($query) => $query->where('matkul_id', $prasyarat->id))
+                        ->pluck('nilai')
+                        ->contains(fn (?string $nilai): bool => filled($nilai) && SkalaNilai::lulus($nilai))))
                     ->values();
 
                 foreach ($kelasSemester as $indexKelas => $kelas) {

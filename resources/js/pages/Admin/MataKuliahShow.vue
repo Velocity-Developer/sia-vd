@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
+type MatkulRingkas = { id: number; kode_matkul: string; nama_matkul: string; semester: number };
+
 type MataKuliahShowProps = {
     id: number;
     kode_matkul: string;
@@ -11,6 +13,8 @@ type MataKuliahShowProps = {
     semester: number;
     jenis: string;
     tugas_akhir: boolean;
+    prasyarat: MatkulRingkas[];
+    menjadi_prasyarat: MatkulRingkas[];
     prodi?: {
         id: number;
         kode_prodi: string;
@@ -108,6 +112,32 @@ const prodi = () => (props.mataKuliah as any).prodi ?? null;
                         <div class="space-y-1">
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kode Fakultas</dt>
                             <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(prodi()?.fakultas?.kode_fakultas) }}</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section
+                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
+                >
+                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Prasyarat</h2>
+                    <dl class="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div class="space-y-1">
+                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Harus Lulus Dulu</dt>
+                            <dd v-if="props.mataKuliah.prasyarat.length" class="space-y-1 text-[15px] leading-5 text-black">
+                                <p v-for="item in props.mataKuliah.prasyarat" :key="item.id">
+                                    {{ item.kode_matkul }} — {{ item.nama_matkul }} <span class="text-[#a39e98]">(smt {{ item.semester }})</span>
+                                </p>
+                            </dd>
+                            <dd v-else class="text-[15px] text-black">Tidak ada</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Menjadi Prasyarat Untuk</dt>
+                            <dd v-if="props.mataKuliah.menjadi_prasyarat.length" class="space-y-1 text-[15px] leading-5 text-black">
+                                <p v-for="item in props.mataKuliah.menjadi_prasyarat" :key="item.id">
+                                    {{ item.kode_matkul }} — {{ item.nama_matkul }} <span class="text-[#a39e98]">(smt {{ item.semester }})</span>
+                                </p>
+                            </dd>
+                            <dd v-else class="text-[15px] text-black">Tidak ada</dd>
                         </div>
                     </dl>
                 </section>

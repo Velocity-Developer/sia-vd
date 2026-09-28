@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MataKuliah extends Model
@@ -32,5 +33,21 @@ class MataKuliah extends Model
     public function kelasKuliah(): HasMany
     {
         return $this->hasMany(KelasKuliah::class, 'matkul_id');
+    }
+
+    /**
+     * Mata kuliah yang harus lulus sebelum mata kuliah ini bisa diambil.
+     */
+    public function prasyarat(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'mata_kuliah_prasyarat', 'mata_kuliah_id', 'prasyarat_id');
+    }
+
+    /**
+     * Mata kuliah yang mensyaratkan mata kuliah ini.
+     */
+    public function menjadiPrasyarat(): BelongsToMany
+    {
+        return $this->belongsToMany(self::class, 'mata_kuliah_prasyarat', 'prasyarat_id', 'mata_kuliah_id');
     }
 }
