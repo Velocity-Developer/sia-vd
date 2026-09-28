@@ -35,7 +35,8 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 
 - Ada tiga jenis pengguna (`App\UserType`): `admin` (label "Admin / Karyawan"), `dosen`, dan `mahasiswa`.
 - Jenis pengguna hanya menentukan tabel profil yang dipakai (`admin_profiles`, `dosen_profiles`, `mahasiswa_profiles`). Hak akses ditentukan oleh **role**.
-- Setiap pengguna punya **satu role** (`users.role_id`). Setiap role punya `user_type` dan sekumpulan **permission**.
+- Setiap pengguna punya **satu role** (`users.role_id`, NOT NULL). Setiap role punya `user_type` dan sekumpulan **permission**.
+  - Migrasi pengetatan (`2026_09_23_000006`) mengisi `role_id` kosong pada data lama dengan role sistem sesuai profil (`admin_profiles`, `dosen_profiles`, `mahasiswa_profiles`). Hanya pengguna tanpa profil sama sekali yang menghentikan migrasi.
 - `PermissionCatalog::sync()` membuat satu role sistem per jenis (slug `admin`, `dosen`, `mahasiswa`, `is_system = true`).
   - Role sistem baru mendapat semua permission bawaan.
   - Role sistem yang sudah ada hanya ditambah permission yang baru masuk katalog, sehingga perubahan dari admin tidak tertimpa.
@@ -62,7 +63,7 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 | Dosen | `dosen.dashboard`, `dosen.kelas-kuliah`, `dosen.jadwal`, `dosen.materi`, `dosen.tugas`, `dosen.quiz`, `dosen.presensi`, `dosen.ujian`, `dosen.mahasiswa-kelas`, `dosen.bimbingan` (Bimbingan TA) |
 | Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.tugas-akhir`, `mahasiswa.info-biaya`, `mahasiswa.perpustakaan` |
 
-- Permission berawalan `admin.` tidak terikat jenis pengguna, jadi bisa diberikan ke role jenis apa pun.
+- Permission berawalan `admin.` (kolom `user_type` NULL) hanya bisa diberikan ke role **Admin / Karyawan** dan **Dosen** (dosen boleh merangkap staf, mis. kaprodi). Role Mahasiswa tidak pernah mendapatkannya (`Permission::isAvailableFor`); sambungan lama dilepas migrasi `2026_09_28_100000`, dan yang tetap tersambung diabaikan `Role::permissionKeys()`.
 - Permission `dosen.*` dan `mahasiswa.*` hanya berlaku untuk role dengan jenis yang sama.
 
 ### 1.4 Aturan eskalasi hak
@@ -77,7 +78,7 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 
 `User::grupRute()` memilih grup rute Ziggy:
 
-- `staf` untuk pengguna yang punya permission `admin.*` atau `dosen.*`;
+- `staf` untuk pengguna yang punya permission `admin.*` atau `dosen.*` (hanya role Admin/Karyawan dan Dosen);
 - `mahasiswa` untuk pengguna lain yang sudah masuk;
 - `umum` untuk tamu.
 
@@ -90,8 +91,9 @@ Karena daftar rute berbeda per grup, login dan logout memakai *full reload* (`In
 ### 2.1 Login
 
 1. `/` langsung dialihkan ke halaman login.
-2. Pengguna mengisi `username`, `password`, dan opsi `remember`. Autentikasi hanya mencocokkan kolom `users.username`.
-   - Placeholder form menyebut "NIM, NIDN, atau username", tetapi tidak ada pencarian lewat NIM atau NIDN.
+2. Pengguna mengisi kolom **NIM / NIDN / Username**, `password`, dan opsi `remember`.
+   - `User::usernameUntukMasuk()` mencari akun berurutan: `users.username`, lalu `mahasiswa_profiles.nim`, lalu `dosen_profiles.nidn` (spasi di tepi dibuang). Username didahulukan bila kebetulan sama dengan NIM/NIDN akun lain.
+   - Pesan gagal: "NIM/NIDN/username atau kata sandi tidak cocok."
 3. Batas percobaan:
    - 5 percobaan per kombinasi `username|IP` (`LoginRequest`), lalu terkunci sementara;
    - `throttle:20,1` per IP pada rute `POST login`.
@@ -99,7 +101,8 @@ Karena daftar rute berbeda per grup, login dan logout memakai *full reload* (`In
    - `<jenis>.dashboard` bila pengguna punya permission-nya;
    - dashboard lain yang ia miliki (`admin`, lalu `dosen`, lalu `mahasiswa`);
    - `/dashboard` sebagai cadangan.
-5. `AuthenticateSession` aktif. Mengganti kata sandi di pengaturan profil mengakhiri sesi di perangkat lain.
+5. Akun yang emailnya belum terverifikasi tetap bisa masuk, tetapi rute ber-middleware `verified` mengalihkannya ke halaman **Verifikasi Email** (lihat 2.4).
+6. `AuthenticateSession` aktif. Mengganti kata sandi di pengaturan profil mengakhiri sesi di perangkat lain.
 
 ### 2.2 Logout
 
@@ -114,20 +117,22 @@ Karena daftar rute berbeda per grup, login dan logout memakai *full reload* (`In
 3. Di halaman atur ulang, pengguna mengisi `token`, `email`, `password`, dan konfirmasinya. Aturan kata sandi memakai `Password::defaults()`.
 4. Setelah berhasil, `remember_token` diganti dan pengguna dialihkan ke login.
 
-### 2.4 Yang tidak ada atau tidak aktif
+### 2.4 Verifikasi email dan konfirmasi kata sandi
 
 - **Tidak ada registrasi mandiri.** Semua akun dibuat admin.
-- **Verifikasi email tidak aktif.**
-  - Model `User` tidak mengimplementasikan `MustVerifyEmail` (import-nya dikomentari), sehingga middleware `verified` tidak pernah memblokir.
-  - Rute `verification.*` ada, tetapi praktis tidak dipakai.
-- Rute konfirmasi kata sandi (`password.confirm`) ada, tetapi tidak dipakai rute mana pun.
+- **Verifikasi email aktif.** `User` mengimplementasikan `MustVerifyEmail`; rute `admin/…`, `dosen/…`, `mahasiswa/…`, `berkas/…`, dan Pengaturan Sistem memakai middleware `verified`. Pengaturan Profil tetap terbuka agar email yang salah bisa dibetulkan.
+  - Akun yang sudah ada saat fitur ini dinyalakan ditandai terverifikasi (migrasi `2026_09_28_110000`); akun demo dari seeder juga langsung terverifikasi.
+  - Akun baru buatan admin dikirimi surel `VerifikasiEmail` (bahasa Indonesia, tautan bertanda tangan 60 menit). Mengganti email (oleh admin atau pengguna sendiri) mengosongkan `email_verified_at` dan mengirim tautan ke alamat baru.
+  - Kegagalan SMTP tidak menggagalkan penyimpanan (`User::kirimVerifikasiEmail()` mencatat galat ke log); pesan galat menyarankan kirim ulang.
+  - Di halaman detail pengguna, admin bisa **Kirim Ulang Tautan Verifikasi** (`throttle:6,1`) atau **Tandai Terverifikasi** manual, bila boleh mengelola akun itu (`canManage`).
+- **Konfirmasi kata sandi** (`password.confirm`, berlaku 3 jam) dipasang di menu **Kelola User** (dosen, mahasiswa, karyawan) dan **Kelola Role**, setelah pengecekan izin. Aksi selain GET kembali ke halaman asal sesudah konfirmasi.
 
 ### 2.5 Profil pengguna
 
 - Menu **Pengaturan Profil** (`/settings`) berisi dua bagian: Profil dan Kata Sandi.
 - **Profil:** pengguna bisa mengubah `name` dan `email` (email unik dan huruf kecil).
   - Nama **mahasiswa** tidak bisa diubah sendiri karena tercetak di KHS. Field itu diabaikan saat validasi.
-  - Mengganti email mengosongkan `email_verified_at`.
+  - Mengganti email mengosongkan `email_verified_at` dan mengirim tautan verifikasi baru.
 - **Username** hanya bisa diubah admin.
 - Tidak ada fitur hapus akun sendiri.
 
@@ -202,7 +207,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 
 - Field role: `name` (unik), `description`, `user_type`, dan daftar permission.
 - `user_type` tidak bisa diubah untuk role sistem maupun role yang sedang dipakai.
-- Permission yang tidak cocok dengan jenis role ditolak.
+- Permission yang tidak cocok dengan jenis role ditolak (termasuk menu `admin.*` untuk role Mahasiswa).
 - Role sistem dan role yang masih dipakai pengguna tidak bisa dihapus.
 
 ---
@@ -1048,10 +1053,10 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 
 ### Autentikasi dan akses
 
-1. **Login lewat NIM/NIDN.** Placeholder form menyebut NIM/NIDN, tetapi login hanya lewat `username`. Apakah username mahasiswa dan dosen memang selalu diisi NIM/NIDN?
-2. **Verifikasi email dan konfirmasi kata sandi tidak aktif.** `MustVerifyEmail` dikomentari, rute `verification.*` dan `password.confirm` tidak dipakai, dan teks verifikasi di halaman profil masih berbahasa Inggris. Apakah memang tidak akan dipakai?
-3. **Pengguna tanpa role** (`role_id` kosong) masih mungkin ada, sisa migrasi lama. Apakah masih ada di data nyata?
-4. **Role mahasiswa yang diberi permission admin** masuk grup Ziggy `staf`. Apakah skenario ini memang didukung?
+1. ~~**Login lewat NIM/NIDN.**~~ **Selesai 28 Sep 2026:** login menerima NIM, NIDN, atau username (lihat 2.1).
+2. ~~**Verifikasi email dan konfirmasi kata sandi tidak aktif.**~~ **Selesai 28 Sep 2026:** keduanya dipakai (lihat 2.4).
+3. ~~**Pengguna tanpa role.**~~ **Selesai 28 Sep 2026:** `role_id` kosong diisi dari profil saat migrasi (lihat 1.1).
+4. ~~**Role mahasiswa yang diberi permission admin.**~~ **Selesai 28 Sep 2026:** menu admin hanya untuk role Admin/Karyawan dan Dosen (lihat 1.3).
 
 ### Pengaturan dan data master
 

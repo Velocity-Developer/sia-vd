@@ -133,10 +133,10 @@ flowchart TD
 ```mermaid
 flowchart TD
     A(["Buka /"]) --> B["Redirect ke halaman login"]
-    B --> C["Isi username, password, remember"]
+    B --> C["Isi NIM / NIDN / username, password, remember"]
     C --> D{"Lebih dari 5 percobaan per username+IP<br/>atau 20 per menit per IP?"}
     D -- Ya --> D1["Ditolak: coba lagi nanti"]
-    D -- Tidak --> E{"Auth attempt pada kolom username<br/>(bukan NIM/NIDN, PD-1)"}
+    D -- Tidak --> E0["Cari akun: username, lalu NIM,<br/>lalu NIDN"] --> E{"Auth attempt<br/>dengan username akun itu"}
     E -- Gagal --> E1["Pesan gagal pada field username"] --> C
     E -- Berhasil --> F["Regenerasi sesi"]
     F --> G{"Punya permission<br/>jenis.dashboard?"}
@@ -147,7 +147,9 @@ flowchart TD
     H --> K["Full reload: Ziggy memuat grup rute<br/>staf, mahasiswa, atau umum"]
     H2 --> K
     J --> K
-    K --> L["Setiap rute dijaga auth + can:permission<br/>Gate::before membaca permission role"]
+    K --> V{"Email sudah terverifikasi?"}
+    V -- Tidak --> V1["Halaman Verifikasi Email<br/>(kirim ulang tautan)"]
+    V -- Ya --> L["Setiap rute dijaga auth + verified + can:permission<br/>Gate::before membaca permission role<br/>Kelola User/Role: konfirmasi kata sandi"]
     L --> M{"Rute halaman bersama?"}
     M -- Ya --> N["Peran dari nama rute admin.* atau dosen.*<br/>dosen hanya kelas yang diampu, selain itu 403"]
     M -- Tidak --> O["Halaman modul"]
