@@ -133,9 +133,10 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('ujian-jawaban/{jawaban}/{index}', [BerkasController::class, 'jawabanUjian'])->whereNumber('index')->name('berkas.ujian-jawaban');
 });
 
+// Kelola User & Kelola Role meminta konfirmasi kata sandi (berlaku 3 jam, config auth.password_timeout).
 Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function () {
     foreach (['dosen', 'mahasiswa', 'karyawan'] as $type) {
-        Route::middleware('can:admin.users.'.$type)->group(function () use ($type): void {
+        Route::middleware(['can:admin.users.'.$type, 'password.confirm'])->group(function () use ($type): void {
             Route::get($type, fn (Request $request) => app(UserController::class)->index($request, $type))
                 ->name('admin.users.'.$type);
             Route::get($type.'/create', fn () => app(UserController::class)->create($type))
@@ -150,12 +151,17 @@ Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function (
                 ->name('admin.users.'.$type.'.update');
             Route::delete($type.'/{user}', fn (User $user) => app(UserController::class)->destroy($type, $user))
                 ->name('admin.users.'.$type.'.destroy');
+            Route::post($type.'/{user}/verifikasi-email', fn (Request $request, User $user) => app(UserController::class)->kirimVerifikasi($request, $type, $user))
+                ->middleware('throttle:6,1')
+                ->name('admin.users.'.$type.'.verifikasi-email');
+            Route::put($type.'/{user}/tandai-terverifikasi', fn (Request $request, User $user) => app(UserController::class)->tandaiTerverifikasi($request, $type, $user))
+                ->name('admin.users.'.$type.'.tandai-terverifikasi');
         });
     }
 });
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas): void {
-    Route::middleware('can:admin.roles')->group(function (): void {
+    Route::middleware(['can:admin.roles', 'password.confirm'])->group(function (): void {
         Route::resource('roles', RoleController::class)->except('show')->names('admin.roles');
     });
 

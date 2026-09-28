@@ -33,7 +33,10 @@ const isian =
 </script>
 
 <template>
-    <AuthBase title="Masuk ke Akun Anda" description="Masuk dengan NIM (mahasiswa), NIDN (dosen), atau username, beserta kata sandi yang diberikan kampus.">
+    <AuthBase
+        title="Masuk ke Akun Anda"
+        description="Masuk dengan NIM (mahasiswa), NIDN (dosen), atau username, beserta kata sandi yang diberikan kampus."
+    >
         <Head title="Masuk" />
 
         <div v-if="status" class="mb-5 rounded-xl border border-[#c9ecd2] bg-[#f2fbf4] px-4 py-3 text-sm text-[#1aae39]" role="status">

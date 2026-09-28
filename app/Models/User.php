@@ -2,19 +2,21 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\Notifications\AturUlangKataSandi;
+use App\Notifications\VerifikasiEmail;
 use App\UserType;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Throwable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, SerializesDatesInAppTimezone;
@@ -206,5 +208,30 @@ class User extends Authenticatable
     public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
     {
         $this->notify(new AturUlangKataSandi($token));
+    }
+
+    /**
+     * Surel tautan verifikasi email versi sendiri (berbahasa Indonesia).
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifikasiEmail);
+    }
+
+    /**
+     * Kirim tautan verifikasi tanpa menggagalkan aksi pemanggil bila SMTP bermasalah.
+     * Mengembalikan false bila pengiriman gagal (galat tetap dicatat di log).
+     */
+    public function kirimVerifikasiEmail(): bool
+    {
+        try {
+            $this->sendEmailVerificationNotification();
+
+            return true;
+        } catch (Throwable $e) {
+            report($e);
+
+            return false;
+        }
     }
 }

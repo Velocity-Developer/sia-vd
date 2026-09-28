@@ -32,12 +32,17 @@ class ProfileController extends Controller
     {
         $request->user()->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
+        $emailBerubah = $request->user()->isDirty('email');
+        if ($emailBerubah) {
             $request->user()->email_verified_at = null;
         }
 
         $request->user()->save();
 
-        return to_route('profile.edit');
+        if ($emailBerubah && ! $request->user()->kirimVerifikasiEmail()) {
+            return to_route('profile.edit')->with('error', 'Profil tersimpan, tetapi surel verifikasi gagal dikirim. Coba kirim ulang beberapa saat lagi.');
+        }
+
+        return to_route('profile.edit')->with('status', $emailBerubah ? 'verification-link-sent' : null);
     }
 }

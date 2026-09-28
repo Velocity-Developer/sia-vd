@@ -2,13 +2,14 @@
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
 defineProps<{
     status?: string;
 }>();
 
+const page = usePage<{ flash?: { error?: string | null } }>();
 const form = useForm({});
 
 const submit = () => {
@@ -25,6 +26,14 @@ const submit = () => {
             class="mb-4 rounded-lg border border-[#c9ecd2] bg-[#f2fbf4] px-3 py-2 text-center text-sm text-[#1aae39]"
         >
             Tautan verifikasi baru sudah dikirim ke email Anda.
+        </div>
+
+        <div
+            v-if="page.props.flash?.error"
+            class="mb-4 rounded-lg border border-[#f5d0b5] bg-[#fdf4ee] px-3 py-2 text-center text-sm text-[#dd5b00]"
+            role="alert"
+        >
+            {{ page.props.flash.error }}
         </div>
 
         <form @submit.prevent="submit" class="space-y-6 text-center">

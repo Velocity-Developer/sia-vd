@@ -105,7 +105,8 @@ class UserController extends Controller
 
         return Inertia::render('Admin/UserShow', [
             'title' => 'Detail '.ucfirst($type).' - '.$user->name, 'type' => $type,
-            'user' => $user->only(['id', 'name', 'username', 'email']) + ['role_name' => $user->role?->name] + ($profile ?? []) + $extra,
+            'user' => $user->only(['id', 'name', 'username', 'email', 'email_verified_at']) + ['role_name' => $user->role?->name] + ($profile ?? []) + $extra,
+            'bolehKelola' => request()->user()->canManage($user),
         ]);
     }
 
@@ -175,15 +176,21 @@ class UserController extends Controller
         $this->ensureCanAssignRole($request, (int) $data['role_id']);
         $label = $this->roleLabel($type);
         try {
-            DB::transaction(function () use ($data, $role): void {
+            $user = DB::transaction(function () use ($data, $role): User {
                 $user = User::create($this->userData($data));
                 $user->profile()->create($this->profileData($data, $role));
+
+                return $user;
             });
         } catch (Throwable) {
             return to_route('admin.users.'.$type)->with('error', $label.' gagal ditambahkan.');
         }
 
-        return to_route('admin.users.'.$type)->with('success', $label.' berhasil ditambahkan.');
+        if (! $user->kirimVerifikasiEmail()) {
+            return to_route('admin.users.'.$type)->with('error', $label.' berhasil ditambahkan, tetapi surel verifikasi gagal dikirim. Periksa Pengaturan Email lalu kirim ulang dari halaman detail.');
+        }
+
+        return to_route('admin.users.'.$type)->with('success', $label.' berhasil ditambahkan. Tautan verifikasi dikirim ke '.$user->email.'.');
     }
 
     public function update(Request $request, string $type, User $user): RedirectResponse
@@ -213,14 +220,52 @@ class UserController extends Controller
         $label = $this->roleLabel($type);
         try {
             DB::transaction(function () use ($user, $data, $role): void {
-                $user->update($this->userData($data));
+                $user->fill($this->userData($data));
+                if ($user->isDirty('email')) {
+                    $user->email_verified_at = null;
+                }
+                $user->save();
                 $user->profile()->updateOrCreate([], $this->profileData($data, $role));
             });
         } catch (Throwable) {
             return to_route('admin.users.'.$type)->with('error', $label.' gagal diperbarui.');
         }
 
+        if ($user->wasChanged('email')) {
+            return $user->kirimVerifikasiEmail()
+                ? to_route('admin.users.'.$type)->with('success', $label.' berhasil diperbarui. Email berubah, tautan verifikasi dikirim ke '.$user->email.'.')
+                : to_route('admin.users.'.$type)->with('error', $label.' berhasil diperbarui, tetapi surel verifikasi ke email baru gagal dikirim. Kirim ulang dari halaman detail.');
+        }
+
         return to_route('admin.users.'.$type)->with('success', $label.' berhasil diperbarui.');
+    }
+
+    /**
+     * Kirim ulang tautan verifikasi ke email akun yang belum terverifikasi.
+     */
+    public function kirimVerifikasi(Request $request, string $type, User $user): RedirectResponse
+    {
+        abort_unless($user->type() === $this->role($type), 404);
+        abort_unless($request->user()->canManage($user), 403, 'Anda tidak dapat mengubah akun dengan hak akses lebih tinggi.');
+        if ($user->hasVerifiedEmail()) {
+            return back()->with('error', 'Email akun ini sudah terverifikasi.');
+        }
+
+        return $user->kirimVerifikasiEmail()
+            ? back()->with('success', 'Tautan verifikasi dikirim ke '.$user->email.'.')
+            : back()->with('error', 'Surel verifikasi gagal dikirim. Periksa Pengaturan Email.');
+    }
+
+    /**
+     * Tandai email terverifikasi secara manual (mis. pengguna tidak bisa menerima surel).
+     */
+    public function tandaiTerverifikasi(Request $request, string $type, User $user): RedirectResponse
+    {
+        abort_unless($user->type() === $this->role($type), 404);
+        abort_unless($request->user()->canManage($user), 403, 'Anda tidak dapat mengubah akun dengan hak akses lebih tinggi.');
+        $user->markEmailAsVerified();
+
+        return back()->with('success', 'Email '.$user->email.' ditandai terverifikasi.');
     }
 
     public function destroy(string $type, User $user): RedirectResponse

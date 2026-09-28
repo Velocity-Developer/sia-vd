@@ -1271,6 +1271,7 @@ class DemoSeeder extends Seeder
 
         if (! $user->exists) {
             $user->password = Hash::make($password);
+            $user->email_verified_at = now();
         }
 
         $user->save();

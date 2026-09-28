@@ -53,7 +53,7 @@ it('creates dosen and edits users with self-excluded unique fields', function ()
         'status_kepegawaian' => 'Tetap', 'prodi_id' => $prodi->id,
     ];
 
-    $this->actingAs($admin)->post(route('admin.users.dosen.store'), $payload)->assertRedirect()->assertSessionHas('success', 'Dosen berhasil ditambahkan.');
+    $this->actingAs($admin)->post(route('admin.users.dosen.store'), $payload)->assertRedirect()->assertSessionHas('success', 'Dosen berhasil ditambahkan. Tautan verifikasi dikirim ke baru@example.com.');
 
     $this->actingAs($admin)->put(route('admin.users.dosen.update', $dosen), array_replace($payload, [
         'name' => 'Dosen Diubah', 'username' => $dosen->username, 'email' => $dosen->email, 'nidn' => $dosen->dosenProfile->nidn,
@@ -86,7 +86,7 @@ it('validates required profile fields and new dropdown values', function () {
         'agama' => 'Kristen Protestan', 'no_telepon' => '08123456789', 'alamat' => 'Jl. Baru',
         'kewarganegaraan' => 'Indonesia', 'password' => 'password123', 'password_confirmation' => 'password123',
     ];
-    $this->actingAs($admin)->post(route('admin.users.mahasiswa.store'), $mahasiswaPayload)->assertRedirect()->assertSessionHas('success', 'Mahasiswa berhasil ditambahkan.');
+    $this->actingAs($admin)->post(route('admin.users.mahasiswa.store'), $mahasiswaPayload)->assertRedirect()->assertSessionHas('success', fn (string $pesan): bool => str_starts_with($pesan, 'Mahasiswa berhasil ditambahkan.'));
 
     $existing = User::factory()->mahasiswa()->create();
     $existing->profile->update(['nim' => '12345678']);
@@ -98,7 +98,7 @@ it('validates required profile fields and new dropdown values', function () {
     $this->actingAs($admin)->post(route('admin.users.mahasiswa.store'), array_replace($mahasiswaPayload, [
         'nim' => '87654321', 'username' => 'mhs-baru', 'email' => 'mhs@example.com',
         'name' => 'Mahasiswa Baru', 'nisn' => '0987654321', 'email_alternatif' => 'alt2@example.com',
-    ]))->assertRedirect()->assertSessionHas('success', 'Mahasiswa berhasil ditambahkan.');
+    ]))->assertRedirect()->assertSessionHas('success', fn (string $pesan): bool => str_starts_with($pesan, 'Mahasiswa berhasil ditambahkan.'));
 
     $user = User::where('username', 'mhs-baru')->firstOrFail();
     expect($user->profile->nim)->toBe('87654321')->and($user->profile->tanggal_lahir->toDateString())->toBe('2001-03-04')->and($user->profile->alamat)->toBe('Jl. Baru')->and($user->profile->nama_ayah_kandung)->toBe('Ayah')->and($user->profile->nama_ibu_kandung)->toBe('Ibu')->and($user->profile->tanggal_lahir_ayah->toDateString())->toBe('1970-05-10');
@@ -174,6 +174,9 @@ it('lets admin create, update, and delete a karyawan with a custom staff role', 
     expect($rina->type())->toBe(UserType::Admin)
         ->and($rina->adminProfile->nomor_induk)->toBe('KRY-001')
         ->and($rina->hasPermission('admin.tagihan'))->toBeTrue();
+
+    // Akun baru belum terverifikasi; tandai dulu agar menu terbuka.
+    $rina->markEmailAsVerified();
 
     // Karyawan hanya membuka menu sesuai role-nya. Sesi admin dikosongkan dulu karena hash kata sandi
     // akun baru berbeda dari akun factory (AuthenticateSession akan mengeluarkannya).

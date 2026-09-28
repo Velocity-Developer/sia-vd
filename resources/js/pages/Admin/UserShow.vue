@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 const props = defineProps<{
     title: string;
     type: string;
     user: Record<string, any>;
+    bolehKelola: boolean;
 }>();
+
+const page = usePage<{ flash?: { success?: string | null; error?: string | null } }>();
+const memproses = ref(false);
+const aksiVerifikasi = (aksi: 'verifikasi-email' | 'tandai-terverifikasi') => {
+    if (aksi === 'tandai-terverifikasi' && !confirm('Tandai email ini terverifikasi tanpa mengeklik tautan?')) return;
+    const url = route(`admin.users.${props.type}.${aksi}`, props.user.id);
+    const opsi = { preserveScroll: true, onStart: () => (memproses.value = true), onFinish: () => (memproses.value = false) };
+    if (aksi === 'verifikasi-email') router.post(url, {}, opsi);
+    else router.put(url, {}, opsi);
+};
 
 const v = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '-';
@@ -128,7 +140,34 @@ const ibu = [
                             <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
                             <dd class="break-all text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
                         </div>
+                        <div class="space-y-1">
+                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Verifikasi Email</dt>
+                            <dd class="text-[15px] font-medium leading-5">
+                                <span v-if="props.user.email_verified_at" class="text-[#1aae39]"
+                                    >Terverifikasi {{ v(props.user.email_verified_at) }}</span
+                                >
+                                <span v-else class="text-[#dd5b00]">Belum terverifikasi</span>
+                            </dd>
+                        </div>
                     </dl>
+                    <div v-if="!props.user.email_verified_at && props.bolehKelola" class="mt-4 flex flex-wrap gap-2">
+                        <Button
+                            variant="outline"
+                            class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white"
+                            :disabled="memproses"
+                            @click="aksiVerifikasi('verifikasi-email')"
+                            >Kirim Ulang Tautan Verifikasi</Button
+                        >
+                        <Button
+                            variant="outline"
+                            class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white"
+                            :disabled="memproses"
+                            @click="aksiVerifikasi('tandai-terverifikasi')"
+                            >Tandai Terverifikasi</Button
+                        >
+                    </div>
+                    <p v-if="page.props.flash?.success" class="mt-3 text-sm text-[#1aae39]" role="status">{{ page.props.flash.success }}</p>
+                    <p v-if="page.props.flash?.error" class="mt-3 text-sm text-[#dd5b00]" role="alert">{{ page.props.flash.error }}</p>
                 </section>
 
                 <!-- Data Pribadi -->

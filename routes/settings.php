@@ -19,7 +19,7 @@ Route::middleware('auth')->group(function () {
     Route::put('settings/password', [PasswordController::class, 'update'])->name('password.update');
 
     // Pengaturan Sistem: satu halaman bertab, tiap tab beralamat sendiri dan diperiksa izinnya sendiri.
-    Route::prefix('pengaturan-sistem')->group(function (): void {
+    Route::prefix('pengaturan-sistem')->middleware('verified')->group(function (): void {
         Route::get('/', [PengaturanSistemController::class, 'index'])->name('pengaturan-sistem.index');
 
         Route::middleware('can:admin.institusi')->group(function (): void {
