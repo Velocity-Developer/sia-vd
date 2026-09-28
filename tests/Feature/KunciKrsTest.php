@@ -17,7 +17,7 @@ function kunciKrsSetup(int $sks = 4): array
     $mahasiswa = User::factory()->mahasiswa()->create();
     $mahasiswa->mahasiswaProfile->update([
         'prodi_id' => $kelas->mataKuliah->prodi_id,
-        'semester' => $kelas->mataKuliah->semester,
+        'angkatan' => angkatanUntuk($kelas),
         'status' => 'Aktif',
     ]);
 

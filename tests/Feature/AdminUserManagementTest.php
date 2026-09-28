@@ -77,7 +77,7 @@ it('validates required profile fields and new dropdown values', function () {
     $mahasiswaPayload = [
         'role_id' => Role::system(UserType::Mahasiswa)->id,
         'name' => 'Mahasiswa Lengkap', 'username' => 'mhs-lengkap', 'email' => 'lengkap@example.com',
-        'nim' => '11111111', 'angkatan' => 2024, 'semester' => 2, 'status' => 'Aktif',
+        'nim' => '11111111', 'angkatan' => 2024, 'status' => 'Aktif',
         'dosen_wali_id' => $dosenWali->dosenProfile->id, 'prodi_id' => $prodi->id, 'sekolah_asal' => 'SMA Negeri 1',
         'nisn' => '1234567890', 'email_alternatif' => 'alt@example.com',
         'nama_ayah_kandung' => 'Ayah', 'tanggal_lahir_ayah' => '1970-05-10', 'pendidikan_terakhir_ayah' => 'S1', 'pekerjaan_ayah' => 'Pegawai Negeri Sipil (PNS)', 'penghasilan_ayah' => 'Rp5.000.000 – Rp7.499.999', 'no_telepon_ayah' => '08111111111', 'email_ayah' => 'ayah@example.com', 'alamat_ayah' => 'Jl. Ayah',

@@ -13,6 +13,8 @@ class TahunAkademik extends Model
 
     protected $table = 'tahun_akademik';
 
+    public const SEMESTER = ['Ganjil', 'Genap'];
+
     protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'batas_input_nilai', 'batas_bayar_remidi', 'batas_input_nilai_remidi', 'status'];
 
     protected function casts(): array
@@ -25,6 +27,19 @@ class TahunAkademik extends Model
             'batas_input_nilai_remidi' => 'date:Y-m-d',
             'status' => 'boolean',
         ];
+    }
+
+    public static function aktif(): ?self
+    {
+        return self::query()->where('status', true)->first();
+    }
+
+    /**
+     * Tahun pertama dari teks tahun akademik ("2026/2027" menjadi 2026).
+     */
+    public function tahunAwal(): ?int
+    {
+        return preg_match('/^(\d{4})\//', (string) $this->tahun, $cocok) === 1 ? (int) $cocok[1] : null;
     }
 
     public function kelasKuliahs(): HasMany

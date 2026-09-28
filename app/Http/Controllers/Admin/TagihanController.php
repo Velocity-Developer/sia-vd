@@ -41,7 +41,7 @@ class TagihanController extends Controller
             ->orderBy('nim')
             ->paginate(15)
             ->withQueryString()
-            ->through(fn (MahasiswaProfile $mahasiswa): array => $this->baris($mahasiswa));
+            ->through(fn (MahasiswaProfile $mahasiswa): array => $this->baris($mahasiswa, $tahunAkademik));
 
         return Inertia::render('Admin/Tagihan', [
             'daftar' => $daftar,
@@ -53,7 +53,7 @@ class TagihanController extends Controller
                 'status' => $status ?: 'all',
                 'search' => $search,
             ],
-            'tahunAkademikOptions' => TahunAkademik::query()->orderByDesc('tahun')->orderBy('semester')->get()
+            'tahunAkademikOptions' => TahunAkademik::query()->orderByDesc('tanggal_mulai')->get()
                 ->map(fn (TahunAkademik $ta): array => ['id' => $ta->id, 'name' => $ta->tahun.' '.$ta->semester])->all(),
             'prodiOptions' => ProgramStudi::query()->orderBy('nama_prodi')->get()
                 ->map(fn (ProgramStudi $prodi): array => ['id' => $prodi->id, 'name' => $prodi->jenjang.' '.$prodi->nama_prodi])->all(),
@@ -285,7 +285,7 @@ class TagihanController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function baris(MahasiswaProfile $mahasiswa): array
+    private function baris(MahasiswaProfile $mahasiswa, ?TahunAkademik $tahunAkademik): array
     {
         $tagihan = $mahasiswa->tagihan->first();
 
@@ -295,7 +295,7 @@ class TagihanController extends Controller
             'nim' => $mahasiswa->nim,
             'prodi' => $mahasiswa->prodi?->nama_prodi,
             'angkatan' => $mahasiswa->angkatan,
-            'semester' => $mahasiswa->semester,
+            'semester' => $mahasiswa->semesterPada($tahunAkademik),
             'status' => $tagihan?->status ?? TagihanSemester::BELUM_BAYAR,
             'total' => $tagihan?->total ?? 0,
             'ada_tagihan' => (bool) $tagihan,

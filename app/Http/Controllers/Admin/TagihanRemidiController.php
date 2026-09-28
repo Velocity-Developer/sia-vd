@@ -84,7 +84,7 @@ class TagihanRemidiController extends Controller
             'batasBayar' => $tahunAkademik?->batas_bayar_remidi?->toDateString(),
             'batasLewat' => $tahunAkademik?->batas_bayar_remidi?->copy()->endOfDay()->isPast() ?? false,
             'adaJenisBiaya' => JenisBiaya::query()->where('aktif', true)->where('kategori', JenisBiaya::REMIDI)->exists(),
-            'tahunAkademikOptions' => TahunAkademik::query()->orderByDesc('tahun')->orderBy('semester')->get()
+            'tahunAkademikOptions' => TahunAkademik::query()->orderByDesc('tanggal_mulai')->get()
                 ->map(fn (TahunAkademik $ta): array => ['id' => $ta->id, 'name' => $ta->tahun.' '.$ta->semester])->all(),
         ]);
     }

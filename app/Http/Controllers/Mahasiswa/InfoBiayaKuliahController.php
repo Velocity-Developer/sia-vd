@@ -27,7 +27,7 @@ class InfoBiayaKuliahController extends Controller
             ->with(['items', 'tahunAkademik'])
             ->where('mahasiswa_id', $mahasiswa?->id)
             ->get()
-            ->sortByDesc(fn (TagihanSemester $item) => [$item->tahunAkademik?->tahun, $item->tahunAkademik?->semester])
+            ->sortByDesc(fn (TagihanSemester $item) => $item->tahunAkademik?->tanggal_mulai)
             ->values();
 
         $tahunAktif = TahunAkademik::query()->where('status', true)->first();

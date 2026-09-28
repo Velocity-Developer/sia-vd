@@ -82,7 +82,7 @@ class TagihanSusulanController extends Controller
             'filter' => ['tahun_akademik_id' => $taId, 'status' => $status ?: 'all', 'search' => $search],
             'batasBayarHari' => PengaturanAkademik::current()->batas_bayar_susulan_hari,
             'adaJenisBiaya' => JenisBiaya::query()->where('aktif', true)->where('kategori', JenisBiaya::SUSULAN)->exists(),
-            'tahunAkademikOptions' => TahunAkademik::query()->orderByDesc('tahun')->orderBy('semester')->get()
+            'tahunAkademikOptions' => TahunAkademik::query()->orderByDesc('tanggal_mulai')->get()
                 ->map(fn (TahunAkademik $ta): array => ['id' => $ta->id, 'name' => $ta->tahun.' '.$ta->semester])->all(),
         ]);
     }

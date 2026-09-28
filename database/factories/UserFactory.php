@@ -42,7 +42,7 @@ class UserFactory extends Factory
             if ($type === UserType::Mahasiswa) {
                 $base += [
                     'nim' => fake()->unique()->numerify('########'),
-                    'angkatan' => 2024, 'semester' => 2, 'status' => 'Aktif',
+                    'angkatan' => 2024, 'status' => 'Aktif',
                     'dosen_wali_id' => DosenProfile::query()->inRandomOrder()->value('id'),
                     'prodi_id' => ProgramStudi::query()->inRandomOrder()->value('id'),
                     'sekolah_asal' => fake()->company(),

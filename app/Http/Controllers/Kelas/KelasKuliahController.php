@@ -64,7 +64,7 @@ class KelasKuliahController extends Controller
             'jumlahPertemuanBawaan' => PengaturanAkademik::current()->jumlah_pertemuan,
             'dosens' => $this->dosens(),
             'matkulGroups' => $this->matkulGroups(),
-            'tahunAkademiks' => TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get(),
+            'tahunAkademiks' => TahunAkademik::orderByDesc('tanggal_mulai')->get(),
         ]);
     }
 
@@ -254,7 +254,7 @@ class KelasKuliahController extends Controller
             'kelasKuliah' => $kelasKuliah,
             'dosens' => $this->dosens(),
             'matkulGroups' => $this->matkulGroups(),
-            'tahunAkademiks' => TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get(),
+            'tahunAkademiks' => TahunAkademik::orderByDesc('tanggal_mulai')->get(),
         ]);
     }
 
@@ -317,7 +317,7 @@ class KelasKuliahController extends Controller
      */
     private function tahunAkademiks(): array
     {
-        return TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get()
+        return TahunAkademik::orderByDesc('tanggal_mulai')->get()
             ->map(fn (TahunAkademik $tahunAkademik): array => [
                 'id' => $tahunAkademik->id,
                 'name' => $tahunAkademik->tahun.' '.$tahunAkademik->semester,

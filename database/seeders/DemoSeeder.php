@@ -409,7 +409,6 @@ class DemoSeeder extends Seeder
         foreach ($prodi as $indexProdi => $item) {
             foreach ([2, 1, 0] as $mundur) {
                 $angkatan = $tahunMasukAktif - $mundur;
-                $semester = $mundur * 2 + 1;
 
                 for ($urut = 1; $urut <= self::MAHASISWA_PER_ANGKATAN; $urut++) {
                     $nomor++;
@@ -421,7 +420,6 @@ class DemoSeeder extends Seeder
                     $mahasiswa->push($user->mahasiswaProfile()->updateOrCreate([], [
                         'nim' => $angkatan.str_pad((string) ($indexProdi + 1), 2, '0', STR_PAD_LEFT).str_pad((string) $urut, 3, '0', STR_PAD_LEFT),
                         'angkatan' => $angkatan,
-                        'semester' => $semester,
                         'status' => 'Aktif',
                         'prodi_id' => $item->id,
                         'dosen_wali_id' => $dosen[$indexProdi * 4 + ($urut % 4)]->id,
@@ -544,10 +542,9 @@ class DemoSeeder extends Seeder
 
         foreach ($tahunAkademik as $urutanTahun => $tahun) {
             foreach ($mahasiswa as $indexMahasiswa => $profil) {
-                // Tiap tahun akademik di data demo adalah satu semester berurutan (Ganjil, Genap, Ganjil).
-                $semester = $profil->semester - (count($tahunAkademik) - 1 - $urutanTahun);
+                $semester = $profil->semesterPada($tahun);
 
-                if ($semester < 1) {
+                if ($semester === null) {
                     continue;
                 }
 
@@ -1184,7 +1181,7 @@ class DemoSeeder extends Seeder
             'matkul_id' => $skripsi->id,
         ]);
 
-        $peserta = MahasiswaProfile::query()->where('prodi_id', $skripsi->prodi_id)->orderByDesc('semester')->orderBy('nim')->take(2)->get();
+        $peserta = MahasiswaProfile::query()->where('prodi_id', $skripsi->prodi_id)->orderBy('angkatan')->orderBy('nim')->take(2)->get();
 
         $admin = User::query()->where('username', 'admin')->firstOrFail();
         foreach ($peserta as $urut => $m) {

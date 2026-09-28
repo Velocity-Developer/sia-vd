@@ -35,7 +35,7 @@ type KelasKuliah = {
 
 const props = defineProps<{
     kelasKuliahs: KelasKuliah[];
-    mahasiswa: { semester: number; angkatan: string; prodi_id: number };
+    mahasiswa: { semester: number | null; angkatan: string; prodi_id: number };
     kelasDiambil: number[];
     krsTahunIni: { id: number; kelas_id: number; nilai: string | null }[];
     matkulMengulang: number[];
@@ -205,7 +205,7 @@ const jadwal = (kelas: KelasKuliah) =>
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div>
                             <p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Semester</p>
-                            <p class="mt-1 font-medium text-black">{{ mahasiswa.semester }}</p>
+                            <p class="mt-1 font-medium text-black">{{ mahasiswa.semester ?? '-' }}</p>
                         </div>
                         <div>
                             <p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Angkatan</p>

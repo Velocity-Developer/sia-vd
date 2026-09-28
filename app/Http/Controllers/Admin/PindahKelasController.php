@@ -65,7 +65,7 @@ class PindahKelasController extends Controller
             'pengajuans' => $pengajuans,
             'search' => $search,
             'tahunAkademikId' => $tahunAkademikId,
-            'tahunAkademiks' => TahunAkademik::orderByDesc('tahun')->orderBy('semester')->get(['id', 'tahun', 'semester']),
+            'tahunAkademiks' => TahunAkademik::orderByDesc('tanggal_mulai')->get(['id', 'tahun', 'semester']),
         ]);
     }
 

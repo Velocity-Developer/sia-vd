@@ -61,3 +61,15 @@ function createMateriKelasKuliah(?TahunAkademik $tahunAkademik = null): KelasKul
 
     return KelasKuliah::create(['kode_kelas' => "IF{$suffix}-A", 'tahun_akademik_id' => $tahunAkademik->id, 'kapasitas' => 30, 'dosen_id' => $dosen->dosenProfile->id, 'matkul_id' => $matkul->id]);
 }
+
+/**
+ * Angkatan yang membuat mahasiswa berada di semester tertentu pada kelas itu
+ * (semester dihitung dari angkatan, lihat MahasiswaProfile::semesterPada).
+ */
+function angkatanUntuk(KelasKuliah $kelas, ?int $semester = null): int
+{
+    $tahun = $kelas->tahunAkademik;
+    $semester ??= $kelas->mataKuliah->semester;
+
+    return $tahun->tahunAwal() - intdiv($semester - ($tahun->semester === 'Genap' ? 2 : 1), 2);
+}

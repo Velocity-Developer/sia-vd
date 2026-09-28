@@ -16,7 +16,7 @@ function mahasiswaDenganNilaiLalu(?string $nilai): array
     $kelas = createMateriKelasKuliah();
     $kelas->tahunAkademik->update(['tanggal_krs_awal' => now()->subDay(), 'tanggal_krs_akhir' => now()->addDay()]);
     $mahasiswa = User::factory()->mahasiswa()->create();
-    $mahasiswa->mahasiswaProfile->update(['prodi_id' => $kelas->mataKuliah->prodi_id, 'semester' => $kelas->mataKuliah->semester, 'status' => 'Aktif']);
+    $mahasiswa->mahasiswaProfile->update(['prodi_id' => $kelas->mataKuliah->prodi_id, 'angkatan' => angkatanUntuk($kelas), 'status' => 'Aktif']);
 
     if ($nilai !== null) {
         $lalu = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Genap', 'tanggal_mulai' => '2025-02-01', 'tanggal_akhir' => '2025-07-31', 'tanggal_krs_awal' => '2025-02-01', 'tanggal_krs_akhir' => '2025-02-14', 'status' => false]);

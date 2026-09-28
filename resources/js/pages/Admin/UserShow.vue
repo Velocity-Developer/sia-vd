@@ -61,7 +61,7 @@ const pribadi = [
 const akademik = [
     { label: 'NIM', key: 'nim' },
     { label: 'Angkatan', key: 'angkatan' },
-    { label: 'Semester', key: 'semester' },
+    { label: 'Semester (tahun aktif)', key: 'semester' },
     { label: 'Status', key: 'status' },
     { label: 'Program Studi', key: 'prodi_name' },
     { label: 'Jenjang', key: 'prodi_jenjang' },

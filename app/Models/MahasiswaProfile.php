@@ -12,7 +12,7 @@ class MahasiswaProfile extends Model
 {
     use SerializesDatesInAppTimezone;
 
-    protected $fillable = ['user_id', 'nim', 'angkatan', 'semester', 'status', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'no_telepon', 'alamat', 'kewarganegaraan', 'dosen_wali_id', 'prodi_id', 'sekolah_asal', 'nisn', 'email_alternatif', 'nama_ayah_kandung', 'nama_ibu_kandung', 'tanggal_lahir_ayah', 'tanggal_lahir_ibu', 'pendidikan_terakhir_ayah', 'pendidikan_terakhir_ibu', 'pekerjaan_ayah', 'pekerjaan_ibu', 'penghasilan_ayah', 'penghasilan_ibu', 'no_telepon_ayah', 'no_telepon_ibu', 'email_ayah', 'email_ibu', 'alamat_ayah', 'alamat_ibu'];
+    protected $fillable = ['user_id', 'nim', 'angkatan', 'status', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'no_telepon', 'alamat', 'kewarganegaraan', 'dosen_wali_id', 'prodi_id', 'sekolah_asal', 'nisn', 'email_alternatif', 'nama_ayah_kandung', 'nama_ibu_kandung', 'tanggal_lahir_ayah', 'tanggal_lahir_ibu', 'pendidikan_terakhir_ayah', 'pendidikan_terakhir_ibu', 'pekerjaan_ayah', 'pekerjaan_ibu', 'penghasilan_ayah', 'penghasilan_ibu', 'no_telepon_ayah', 'no_telepon_ibu', 'email_ayah', 'email_ibu', 'alamat_ayah', 'alamat_ibu'];
 
     protected function casts(): array
     {
@@ -42,6 +42,24 @@ class MahasiswaProfile extends Model
     public function quizAttempts(): HasMany
     {
         return $this->hasMany(QuizAttempt::class, 'mahasiswa_id');
+    }
+
+    /**
+     * Semester mahasiswa pada tahun akademik tertentu, dihitung dari angkatan: angkatan 2024 berada di
+     * semester 1 pada 2024/2025 Ganjil, semester 2 pada Genap, dan seterusnya. Semester tetap bertambah
+     * selama mahasiswa cuti. Null bila tahun akademik tidak ada atau mahasiswa belum mulai kuliah.
+     */
+    public function semesterPada(?TahunAkademik $tahunAkademik): ?int
+    {
+        $tahunAwal = $tahunAkademik?->tahunAwal();
+
+        if ($tahunAwal === null || $this->angkatan === null) {
+            return null;
+        }
+
+        $semester = ($tahunAwal - (int) $this->angkatan) * 2 + ($tahunAkademik->semester === 'Genap' ? 2 : 1);
+
+        return $semester >= 1 ? $semester : null;
     }
 
     public function krsSemester(): HasMany

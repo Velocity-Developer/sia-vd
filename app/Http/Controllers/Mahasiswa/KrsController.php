@@ -23,7 +23,8 @@ class KrsController extends Controller
     public function index(Request $request): Response
     {
         $mahasiswa = $this->mahasiswa($request);
-        $tahunAkademik = TahunAkademik::where('status', true)->first();
+        $tahunAkademik = TahunAkademik::aktif();
+        $semester = $mahasiswa->semesterPada($tahunAkademik);
         $periodeKrsAktif = $this->periodeKrsAktif($tahunAkademik);
         // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk riwayat, IPS, dan ringkasan SKS.
         $semuaKrs = $this->semuaKrs($mahasiswa);
@@ -44,7 +45,7 @@ class KrsController extends Controller
             ->withCount('krs')
             ->whereHas('mataKuliah', fn ($query) => $query
                 ->where('prodi_id', $mahasiswa->prodi_id)
-                ->where(fn ($query) => $query->where('semester', $mahasiswa->semester)->orWhereIn('id', $matkulMengulang)))
+                ->where(fn ($query) => $query->where('semester', $semester)->orWhereIn('id', $matkulMengulang)))
             ->whereHas('tahunAkademik', fn ($query) => $query->where('status', true))
             ->orderBy('kode_kelas')
             ->get();
@@ -56,7 +57,7 @@ class KrsController extends Controller
 
         return Inertia::render('Mahasiswa/Krs', [
             'kelasKuliahs' => $kelasKuliahs,
-            'mahasiswa' => $mahasiswa->only(['semester', 'angkatan', 'prodi_id', 'status']),
+            'mahasiswa' => $mahasiswa->only(['angkatan', 'prodi_id', 'status']) + ['semester' => $semester],
             'kelasDiambil' => $semuaKrs->pluck('kelas_id')->values(),
             'krsTahunIni' => $krsTahunIni->map(fn (Krs $krs): array => ['id' => $krs->id, 'kelas_id' => $krs->kelas_id, 'nilai' => $krs->nilai])->values(),
             'matkulMengulang' => $matkulMengulang,
@@ -109,7 +110,7 @@ class KrsController extends Controller
                 return $alasan;
             }
 
-            if ($kelasKuliah->mataKuliah->semester !== (int) $mahasiswa->semester && ! $riwayat->has($kelas->matkul_id)) {
+            if ($kelasKuliah->mataKuliah->semester !== $mahasiswa->semesterPada($kelasKuliah->tahunAkademik) && ! $riwayat->has($kelas->matkul_id)) {
                 return 'Mata kuliah ini bukan untuk semester Anda.';
             }
 

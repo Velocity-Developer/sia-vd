@@ -68,7 +68,7 @@ it('rejects a KRS class whose schedule clashes with a class already taken', func
     Jadwal::create(['kelas_id' => $target->id, ...jadwalPayload($ruangB, ['jam_mulai' => '09:00', 'jam_akhir' => '11:00'])]);
 
     $mahasiswa = User::factory()->mahasiswa()->create();
-    $mahasiswa->mahasiswaProfile->update(['prodi_id' => $prodiId, 'semester' => 1]);
+    $mahasiswa->mahasiswaProfile->update(['prodi_id' => $prodiId, 'angkatan' => angkatanUntuk($target)]);
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $diambil->id, 'status' => 'Aktif']);
 
     $this->actingAs($mahasiswa)

@@ -30,7 +30,6 @@ const roleFields =
             ? [
                   'nim',
                   'angkatan',
-                  'semester',
                   'status',
                   'dosen_wali_id',
                   'prodi_id',
@@ -70,7 +69,6 @@ const labels: Record<string, string> = {
     status_kepegawaian: 'Status Kepegawaian',
     nim: 'NIM',
     angkatan: 'Angkatan',
-    semester: 'Semester',
     status: 'Status',
     dosen_wali_id: 'Dosen Wali',
     prodi_id: 'Program Studi',
@@ -356,7 +354,7 @@ const sel =
                         class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
                     >
                         <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Akademik</h2>
-                        <div class="mt-4 grid items-start gap-4 sm:grid-cols-3">
+                        <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="nim" class="text-sm font-medium text-black">{{ labels.nim }}</Label
                                 ><Input id="nim" v-model="form.nim" :class="inp" required /><InputError :message="form.errors.nim" />
@@ -366,12 +364,7 @@ const sel =
                                 ><Input id="angkatan" v-model="form.angkatan" type="number" :class="inp" required /><InputError
                                     :message="form.errors.angkatan"
                                 />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label for="semester" class="text-sm font-medium text-black">{{ labels.semester }}</Label
-                                ><Input id="semester" v-model="form.semester" type="number" :class="inp" required /><InputError
-                                    :message="form.errors.semester"
-                                />
+                                <p class="text-xs text-[#a39e98]">Tahun masuk, misalnya 2026. Semester mahasiswa dihitung otomatis dari angkatan.</p>
                             </div>
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
@@ -734,7 +727,7 @@ const sel =
                                 :id="field"
                                 v-model="form[field]"
                                 :class="inp"
-                                :type="['angkatan', 'semester'].includes(field) ? 'number' : 'text'"
+                                :type="field === 'angkatan' ? 'number' : 'text'"
                                 required
                             /><InputError :message="form.errors[field]" />
                         </div>

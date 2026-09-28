@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Pertemuan;
 use App\Models\TahunAkademik;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,7 +19,7 @@ class TahunAkademikController extends Controller
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
-        $tahunAkademiks = TahunAkademik::query()->when($search !== '', fn ($query) => $query->where('tahun', 'like', "%{$search}%")->orWhere('semester', 'like', "%{$search}%"))->orderByDesc('tahun')->orderBy('semester')->paginate(10)->withQueryString();
+        $tahunAkademiks = TahunAkademik::query()->when($search !== '', fn ($query) => $query->where('tahun', 'like', "%{$search}%")->orWhere('semester', 'like', "%{$search}%"))->orderByDesc('tanggal_mulai')->paginate(10)->withQueryString();
 
         return Inertia::render('Admin/TahunAkademik', ['tahunAkademiks' => $tahunAkademiks, 'search' => $search]);
     }
@@ -79,8 +80,14 @@ class TahunAkademikController extends Controller
     {
         $validated = $request->validate(
             [
-                'tahun' => ['required', 'string', 'max:20', Rule::unique('tahun_akademik', 'tahun')->where('semester', $request->input('semester'))->ignore($model)],
-                'semester' => ['required', 'string', 'max:20'],
+                // Semester mahasiswa dihitung dari tahun pertama dan Ganjil/Genap, jadi formatnya harus pasti.
+                'tahun' => ['required', 'string', 'regex:/^\d{4}\/\d{4}$/', function (string $attribute, mixed $value, Closure $fail): void {
+                    $bagian = array_map('intval', explode('/', (string) $value));
+                    if (count($bagian) === 2 && $bagian[1] !== $bagian[0] + 1) {
+                        $fail('Tahun kedua harus satu tahun setelah tahun pertama, misalnya 2026/2027.');
+                    }
+                }, Rule::unique('tahun_akademik', 'tahun')->where('semester', $request->input('semester'))->ignore($model)],
+                'semester' => ['required', Rule::in(TahunAkademik::SEMESTER)],
                 'tanggal_mulai' => ['required', 'date'],
                 'tanggal_akhir' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
                 'tanggal_krs_awal' => ['required', 'date'],
@@ -96,6 +103,8 @@ class TahunAkademikController extends Controller
                 'batas_input_nilai_remidi.after' => 'Batas input nilai remidi harus setelah batas bayar remidi.',
                 'batas_bayar_remidi.after' => 'Batas bayar remidi harus setelah batas input nilai.',
                 'tahun.unique' => 'Tahun akademik dengan tahun dan semester ini sudah ada.',
+                'tahun.regex' => 'Format tahun akademik harus seperti 2026/2027.',
+                'semester.in' => 'Semester harus Ganjil atau Genap.',
             ],
             [
                 'tahun' => 'tahun akademik',

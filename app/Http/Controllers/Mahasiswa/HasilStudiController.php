@@ -98,8 +98,7 @@ class HasilStudiController extends Controller
     private function dataKhs(MahasiswaProfile $mahasiswa, ?int $tahunAkademikId): array
     {
         $tahunAkademik = TahunAkademik::query()
-            ->orderByDesc('tahun')
-            ->orderByDesc('semester')
+            ->orderByDesc('tanggal_mulai')
             ->get(['id', 'tahun', 'semester', 'status']);
         $tahunAkademikAktif = $tahunAkademik->firstWhere('status', true) ?? $tahunAkademik->first();
         $tahunAkademikTerpilih = $tahunAkademikId ? $tahunAkademik->firstWhere('id', $tahunAkademikId) : $tahunAkademikAktif;

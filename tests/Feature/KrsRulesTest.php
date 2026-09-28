@@ -16,7 +16,7 @@ function krsSetup(int $sks = 3): array
     $kelas->tahunAkademik->update(['tanggal_krs_awal' => now()->subDay(), 'tanggal_krs_akhir' => now()->addDay()]);
     $kelas->mataKuliah->update(['sks' => $sks]);
     $mahasiswa = User::factory()->mahasiswa()->create();
-    $mahasiswa->mahasiswaProfile->update(['prodi_id' => $kelas->mataKuliah->prodi_id, 'semester' => $kelas->mataKuliah->semester, 'status' => 'Aktif']);
+    $mahasiswa->mahasiswaProfile->update(['prodi_id' => $kelas->mataKuliah->prodi_id, 'angkatan' => angkatanUntuk($kelas), 'status' => 'Aktif']);
 
     return [$mahasiswa->fresh(), $kelas->fresh()];
 }
@@ -73,7 +73,7 @@ it('lets a student retake a failed course from a previous year and offers it in 
     $lalu = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Ganjil', 'tanggal_mulai' => '2024-08-01', 'tanggal_akhir' => '2025-01-31', 'tanggal_krs_awal' => '2024-08-01', 'tanggal_krs_akhir' => '2024-08-14', 'status' => false]);
     $kelasLalu = KelasKuliah::create(['kode_kelas' => 'LALU-A', 'tahun_akademik_id' => $lalu->id, 'kapasitas' => 30, 'dosen_id' => $kelas->dosen_id, 'matkul_id' => $kelas->matkul_id]);
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasLalu->id, 'status' => 'Aktif', 'nilai' => 'E']);
-    $mahasiswa->mahasiswaProfile->update(['semester' => 3]);
+    $mahasiswa->mahasiswaProfile->update(['angkatan' => angkatanUntuk($kelas, 3)]);
 
     $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
         ->assertInertia(fn ($page) => $page

@@ -18,7 +18,6 @@ function keuanganSetup(int $sks = 4): array
     $mahasiswa = User::factory()->mahasiswa()->create();
     $mahasiswa->mahasiswaProfile->update([
         'prodi_id' => $kelas->mataKuliah->prodi_id,
-        'semester' => $kelas->mataKuliah->semester,
         'angkatan' => 2024,
         'status' => 'Aktif',
     ]);
