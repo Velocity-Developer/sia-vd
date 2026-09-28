@@ -3,26 +3,69 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use App\Models\Concerns\TagihanBerbukti;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
+/**
+ * Tagihan semester satu mahasiswa. Alurnya: admin menerbitkan, mahasiswa mengunggah bukti bayar,
+ * lalu admin menandai lunas atau menolak buktinya. Tidak punya batas bayar, jadi tidak pernah gugur.
+ */
 class TagihanSemester extends Model
 {
     use SerializesDatesInAppTimezone;
-
-    public const BELUM_BAYAR = 'belum_bayar';
-
-    public const LUNAS = 'lunas';
+    use TagihanBerbukti;
 
     protected $table = 'tagihan_semester';
 
-    protected $fillable = ['mahasiswa_id', 'tahun_akademik_id', 'status', 'total', 'tanggal_lunas', 'diubah_oleh'];
+    protected $fillable = [
+        'mahasiswa_id', 'tahun_akademik_id', 'status', 'total', 'rincian_manual', 'tanggal_lunas', 'diubah_oleh',
+        'bukti', 'bukti_diunggah_at', 'alasan_tolak', 'diverifikasi_oleh', 'diverifikasi_at',
+    ];
 
     protected function casts(): array
     {
-        return ['total' => 'integer', 'tanggal_lunas' => 'date'];
+        return [
+            'total' => 'integer',
+            'rincian_manual' => 'boolean',
+            'tanggal_lunas' => 'date',
+            'bukti_diunggah_at' => 'datetime',
+            'diverifikasi_at' => 'datetime',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        // Tanggal lunas mengikuti status, dari jalur mana pun tagihan itu dilunasi atau dibatalkan.
+        static::saving(function (TagihanSemester $tagihan): void {
+            if ($tagihan->status !== self::LUNAS) {
+                $tagihan->tanggal_lunas = null;
+            } elseif ($tagihan->tanggal_lunas === null) {
+                $tagihan->tanggal_lunas = today();
+            }
+        });
+    }
+
+    public function batasBayar(): ?Carbon
+    {
+        return null;
+    }
+
+    /**
+     * Tagihan hanya dihitung ulang saat diterbitkan ulang bila belum dibayar, belum ada bukti,
+     * dan rinciannya tidak diketik admin.
+     */
+    public function bolehDihitungUlang(): bool
+    {
+        return $this->status === self::BELUM_BAYAR && $this->bukti === null && ! $this->rincian_manual;
+    }
+
+    public function verifikator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'diverifikasi_oleh');
     }
 
     public function mahasiswa(): BelongsTo
@@ -76,18 +119,15 @@ class TagihanSemester extends Model
     }
 
     /**
-     * Susun ulang rincian tagihan dari tarif yang berlaku. Nominalnya disalin ke rincian
-     * (dibekukan), jadi perubahan tarif tidak mengubah tagihan yang sudah terbit kecuali
-     * disusun ulang dari halaman admin.
+     * Rincian tagihan dari tarif yang berlaku. Totalnya nol bila tidak ada tarif yang cocok.
      *
      * @param  Collection<int, JenisBiaya>  $jenisBiaya
+     * @return list<array<string, mixed>>
      */
-    public function susunRincian(MahasiswaProfile $mahasiswa, Collection $jenisBiaya): void
+    public static function hitungRincian(MahasiswaProfile $mahasiswa, Collection $jenisBiaya, ?TahunAkademik $tahunAkademik): array
     {
-        $kuota = self::kuotaSks($mahasiswa, $this->tahunAkademik ?? TahunAkademik::find($this->tahun_akademik_id));
-        $total = 0;
-
-        $this->items()->delete();
+        $kuota = self::kuotaSks($mahasiswa, $tahunAkademik);
+        $rincian = [];
 
         foreach ($jenisBiaya as $jenis) {
             $tarif = $jenis->tarifUntuk($mahasiswa->prodi_id, $mahasiswa->angkatan);
@@ -102,19 +142,29 @@ class TagihanSemester extends Model
                 continue;
             }
 
-            $subtotal = $tarif->nominal * $jumlah;
-            $total += $subtotal;
-
-            $this->items()->create([
+            $rincian[] = [
                 'jenis_biaya_id' => $jenis->id,
                 'nama' => $jenis->nama,
                 'cara_hitung' => $jenis->cara_hitung,
                 'nominal_satuan' => $tarif->nominal,
                 'jumlah' => $jumlah,
-                'subtotal' => $subtotal,
-            ]);
+                'subtotal' => $tarif->nominal * $jumlah,
+            ];
         }
 
-        $this->forceFill(['total' => $total])->save();
+        return $rincian;
+    }
+
+    /**
+     * Ganti rincian tagihan. Nominalnya disalin (dibekukan), jadi perubahan tarif tidak mengubah
+     * tagihan yang sudah terbit kecuali diterbitkan ulang.
+     *
+     * @param  list<array<string, mixed>>  $rincian
+     */
+    public function gantiRincian(array $rincian, bool $manual): void
+    {
+        $this->items()->delete();
+        $this->items()->createMany($rincian);
+        $this->forceFill(['total' => array_sum(array_column($rincian, 'subtotal')), 'rincian_manual' => $manual])->save();
     }
 }

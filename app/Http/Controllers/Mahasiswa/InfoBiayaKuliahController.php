@@ -151,6 +151,10 @@ class InfoBiayaKuliahController extends Controller
             'status' => $tagihan->status,
             'total' => $tagihan->total,
             'tanggal_lunas' => $tagihan->tanggal_lunas?->toDateString(),
+            'boleh_unggah' => $tagihan->bolehUnggah(),
+            'ada_bukti' => $tagihan->bukti !== null,
+            'bukti_diunggah_at' => $tagihan->bukti_diunggah_at?->toIso8601String(),
+            'alasan_tolak' => $tagihan->alasan_tolak,
             'items' => $tagihan->items->map(fn ($item): array => [
                 'nama' => $item->nama,
                 'cara_hitung' => $item->cara_hitung,

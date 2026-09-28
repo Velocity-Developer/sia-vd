@@ -959,20 +959,19 @@ class DemoSeeder extends Seeder
 
         foreach ($tahunAkademik as $tahun) {
             foreach ($mahasiswa as $urutan => $profil) {
+                $rincian = TagihanSemester::hitungRincian($profil, $jenisBiaya, $tahun);
+
+                // Tidak ada komponen biaya yang berlaku untuk mahasiswa ini: tagihan tidak dibuat.
+                if (array_sum(array_column($rincian, 'subtotal')) === 0) {
+                    continue;
+                }
+
                 $tagihan = TagihanSemester::query()->create([
                     'mahasiswa_id' => $profil->id,
                     'tahun_akademik_id' => $tahun->id,
                     'status' => TagihanSemester::BELUM_BAYAR,
                 ]);
-
-                $tagihan->susunRincian($profil, $jenisBiaya);
-
-                if ($tagihan->total === 0) {
-                    // Tidak ada komponen biaya yang berlaku untuk mahasiswa ini.
-                    $tagihan->delete();
-
-                    continue;
-                }
+                $tagihan->gantiRincian($rincian, false);
 
                 // Semester lampau dianggap sudah selesai dibayar; semester berjalan dua dari tiga mahasiswa.
                 $lunas = $tahun->id !== $tahunAktif->id || $urutan % 3 !== 0;

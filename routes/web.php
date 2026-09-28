@@ -43,6 +43,7 @@ use App\Http\Controllers\Mahasiswa\PindahKelasController as MahasiswaPindahKelas
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
 use App\Http\Controllers\Mahasiswa\QuizAttemptController;
 use App\Http\Controllers\Mahasiswa\TagihanRemidiController as MahasiswaTagihanRemidiController;
+use App\Http\Controllers\Mahasiswa\TagihanSemesterController as MahasiswaTagihanSemesterController;
 use App\Http\Controllers\Mahasiswa\TagihanSusulanController as MahasiswaTagihanSusulanController;
 use App\Http\Controllers\Mahasiswa\TugasAkhirController as MahasiswaTugasAkhirController;
 use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
@@ -122,6 +123,7 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
     Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
     Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->name('berkas.bukti-susulan');
+    Route::get('bukti-semester/{tagihanSemester}', [BerkasController::class, 'buktiSemester'])->name('berkas.bukti-semester');
     Route::get('pengajuan-akademik/{pengajuanAkademik}/{kunci}', [BerkasController::class, 'pengajuanAkademik'])->where('kunci', '[a-z_]+')->name('berkas.pengajuan-akademik');
     Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->name('berkas.lampiran-susulan');
     Route::get('surat-pendadaran/{pendadaran}', [PendadaranBerkasController::class, 'surat'])->name('berkas.surat-pendadaran');
@@ -180,7 +182,10 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('tagihan', [TagihanController::class, 'index'])->name('admin.tagihan.index');
         Route::get('tagihan/{mahasiswa}/rincian', [TagihanController::class, 'rincian'])->name('admin.tagihan.rincian');
         Route::post('tagihan/terbitkan', [TagihanController::class, 'terbitkan'])->name('admin.tagihan.terbitkan');
-        Route::put('tagihan/status', [TagihanController::class, 'ubahStatus'])->name('admin.tagihan.status');
+        Route::post('tagihan/{tagihanSemester}/lunas', [TagihanController::class, 'lunas'])->name('admin.tagihan.lunas');
+        Route::post('tagihan/{tagihanSemester}/tolak', [TagihanController::class, 'tolak'])->name('admin.tagihan.tolak');
+        Route::post('tagihan/{tagihanSemester}/batal-lunas', [TagihanController::class, 'batalLunas'])->name('admin.tagihan.batal-lunas');
+        Route::post('tagihan/{tagihanSemester}/bukti', [TagihanController::class, 'unggahBukti'])->name('admin.tagihan.bukti');
         Route::put('tagihan/{mahasiswa}/rincian', [TagihanController::class, 'simpanRincian'])->name('admin.tagihan.rincian.simpan');
         Route::delete('tagihan/{mahasiswa}/kunci-krs', [TagihanController::class, 'bukaKunciKrs'])->name('admin.tagihan.buka-kunci-krs');
         Route::get('tagihan-remidi', [TagihanRemidiController::class, 'index'])->name('admin.tagihan-remidi.index');
@@ -419,6 +424,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
 
     Route::middleware('can:mahasiswa.info-biaya')->group(function (): void {
         Route::get('info-biaya-kuliah', [InfoBiayaKuliahController::class, 'index'])->name('mahasiswa.info-biaya-kuliah');
+        Route::post('tagihan-semester/{tagihanSemester}/bukti', [MahasiswaTagihanSemesterController::class, 'unggahBukti'])->name('mahasiswa.tagihan-semester.bukti');
         Route::post('tagihan-remidi/{tagihanRemidi}/bukti', [MahasiswaTagihanRemidiController::class, 'unggahBukti'])->name('mahasiswa.tagihan-remidi.bukti');
         Route::post('tagihan-susulan/{tagihanSusulan}/bukti', [MahasiswaTagihanSusulanController::class, 'unggahBukti'])->name('mahasiswa.tagihan-susulan.bukti');
     });

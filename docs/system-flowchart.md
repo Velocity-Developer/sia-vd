@@ -179,13 +179,20 @@ flowchart TD
     C -- "Ya, belum paksa" --> C1["Minta konfirmasi<br/>kuota sebagian mahasiswa memakai<br/>maks SKS tanpa IPS"]
     C1 -- "Lanjut: paksa" --> D
     C -- Tidak --> D["Untuk tiap mahasiswa berstatus Aktif"]
-    D --> E{"Tagihan sudah lunas?"}
-    E -- Ya --> E1["Dilewati"]
-    E -- Tidak --> F["Status belum_bayar<br/>susun rincian dari tarif paling khusus"]
-    F --> G["tetap = nominal x 1<br/>per_sks = nominal x kuota SKS"]
-    G --> H["Rincian dibekukan di tagihan_item"]
+    D --> E{"Sudah punya tagihan yang<br/>tidak boleh dihitung ulang?<br/>(lunas, ada bukti, rincian manual)"}
+    E -- Ya --> E1["Tidak disentuh"]
+    E -- "Tidak / belum ada" --> F["Hitung rincian dari tarif paling khusus<br/>tetap = nominal x 1<br/>per_sks = nominal x kuota SKS"]
+    F --> F1{"Total Rp0?"}
+    F1 -- Ya --> F2["Tidak ditagih (tanpa tarif)<br/>tagihan lama dihapus"]
+    F1 -- Tidak --> H["Status belum_bayar<br/>rincian dibekukan di tagihan_item"]
 
-    H --> I["Admin: Tandai Lunas / Belum Bayar<br/>atau ketik rincian manual"]
+    H --> P1["Mahasiswa: unggah bukti di Biaya Kuliah"]
+    P1 --> P2["menunggu_verifikasi"]
+    P2 -- "Admin: Tolak + alasan" --> P3["ditolak"] --> P1
+    P2 -- "Admin: Tandai Lunas" --> I["lunas"]
+    H -- "Admin: Tandai Lunas tanpa bukti<br/>atau unggah bukti sendiri" --> I
+    I -- "Admin: Batal Lunas" --> P4["kembali ke menunggu_verifikasi<br/>(ada bukti) atau belum_bayar"]
+    R["Admin: ketik rincian manual<br/>(total lebih dari 0, bukan lunas)"] --> H
 
     subgraph Kunci["Middleware tagihan.lunas pada rute KRS"]
         K1{"kunci_krs_aktif menyala?"} -- Tidak --> K9(["Boleh KRS"])
@@ -195,7 +202,7 @@ flowchart TD
         K3 -- Ya --> K9
         K3 -- Tidak --> K4["GET: halaman KRS Terkunci<br/>selain GET: kembali dengan krs_error"]
     end
-    I --> K1
+    H --> K1
 ```
 
 ## 6. Mengambil kelas di KRS

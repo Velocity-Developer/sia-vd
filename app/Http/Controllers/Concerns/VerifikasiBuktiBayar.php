@@ -95,6 +95,6 @@ trait VerifikasiBuktiBayar
             'diverifikasi_at' => now(),
         ]);
 
-        return back()->with('success', 'Bukti bayar ditolak. Mahasiswa bisa mengunggah ulang sebelum batas bayar.');
+        return back()->with('success', 'Bukti bayar ditolak. Mahasiswa bisa mengunggah ulang'.($tagihan->batasBayar() !== null ? ' sebelum batas bayar.' : '.'));
     }
 }

@@ -188,6 +188,8 @@ it('menyimpan rincian tagihan yang diketik admin dan menghitung ulang totalnya',
 
     expect($tagihan->total)->toBe(3_000_000)
         ->and($tagihan->items)->toHaveCount(2)
+        ->and($tagihan->rincian_manual)->toBeTrue()
+        ->and($tagihan->status)->toBe(TagihanSemester::BELUM_BAYAR)
         ->and($tagihan->diubah_oleh)->toBe($admin->id);
 });
 

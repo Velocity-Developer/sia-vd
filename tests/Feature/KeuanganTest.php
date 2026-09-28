@@ -7,6 +7,8 @@ use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Mahasiswa aktif yang sudah mengambil satu kelas, beserta kelas dan tahun akademiknya.
@@ -144,31 +146,199 @@ it('menolak menerbitkan tagihan saat belum ada jenis biaya aktif', function () {
     expect(TagihanSemester::count())->toBe(0);
 });
 
-it('mengubah status pembayaran dan mencatat siapa yang mengubah', function () {
+/**
+ * Tagihan semester terbit untuk satu mahasiswa.
+ */
+function tagihanTerbit(User $mahasiswa, int $tahunAkademikId, array $atribut = []): TagihanSemester
+{
+    $tagihan = TagihanSemester::create([
+        'mahasiswa_id' => $mahasiswa->mahasiswaProfile->id,
+        'tahun_akademik_id' => $tahunAkademikId,
+        'status' => TagihanSemester::BELUM_BAYAR,
+        ...$atribut,
+    ]);
+    $tagihan->gantiRincian([['nama' => 'SPP Tetap', 'cara_hitung' => JenisBiaya::TETAP, 'nominal_satuan' => 1_000_000, 'jumlah' => 1, 'subtotal' => 1_000_000]], $atribut['rincian_manual'] ?? false);
+
+    return $tagihan->fresh();
+}
+
+function berkasBukti(string $nama = 'bukti.pdf'): array
+{
+    return ['bukti' => UploadedFile::fake()->create($nama, 100, 'application/pdf')];
+}
+
+it('menjalankan alur unggah bukti, tolak, unggah ulang, lalu lunas', function () {
+    Storage::fake('local');
+    [$mahasiswa, $kelas] = keuanganSetup();
+    $admin = User::factory()->admin()->create();
+    $tagihan = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id);
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tagihan-semester.bukti', $tagihan), berkasBukti())->assertSessionHas('success');
+    $tagihan->refresh();
+    $buktiPertama = $tagihan->bukti;
+    expect($tagihan->status)->toBe(TagihanSemester::MENUNGGU);
+    Storage::disk('local')->assertExists($buktiPertama);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.tolak', $tagihan), ['alasan' => ''])->assertSessionHasErrors('alasan');
+    $this->actingAs($admin)->post(route('admin.tagihan.tolak', $tagihan), ['alasan' => 'Nominal kurang'])->assertSessionHas('success');
+    expect($tagihan->fresh()->status)->toBe(TagihanSemester::DITOLAK)
+        ->and($tagihan->fresh()->alasan_tolak)->toBe('Nominal kurang');
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tagihan-semester.bukti', $tagihan), berkasBukti('ulang.pdf'))->assertSessionHas('success');
+    $tagihan->refresh();
+    expect($tagihan->status)->toBe(TagihanSemester::MENUNGGU)->and($tagihan->alasan_tolak)->toBeNull();
+    Storage::disk('local')->assertMissing($buktiPertama);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.lunas', $tagihan))->assertSessionHas('success');
+    $tagihan->refresh();
+    expect($tagihan->status)->toBe(TagihanSemester::LUNAS)
+        ->and($tagihan->tanggal_lunas)->not->toBeNull()
+        ->and($tagihan->diverifikasi_oleh)->toBe($admin->id)
+        ->and($tagihan->diubah_oleh)->toBe($admin->id);
+
+    // Tagihan lunas tidak menerima bukti lagi dan tidak bisa ditolak.
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tagihan-semester.bukti', $tagihan), berkasBukti())->assertSessionHas('error');
+    $this->actingAs($admin)->post(route('admin.tagihan.tolak', $tagihan), ['alasan' => 'x'])->assertSessionHas('error');
+});
+
+it('menolak mahasiswa mengunggah bukti untuk tagihan orang lain', function () {
+    Storage::fake('local');
+    [$mahasiswa, $kelas] = keuanganSetup();
+    $lain = User::factory()->mahasiswa()->create();
+    $tagihan = tagihanTerbit($lain, $kelas->tahun_akademik_id);
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tagihan-semester.bukti', $tagihan), berkasBukti())->assertNotFound();
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tagihan-semester.bukti', $tagihan->id), ['bukti' => UploadedFile::fake()->create('x.html', 5, 'text/html')])->assertNotFound();
+    expect($tagihan->fresh()->status)->toBe(TagihanSemester::BELUM_BAYAR);
+});
+
+it('membatasi siapa yang boleh melihat bukti bayar semester', function () {
+    Storage::fake('local');
+    [$mahasiswa, $kelas] = keuanganSetup();
+    $lain = User::factory()->mahasiswa()->create();
+    $admin = User::factory()->admin()->create();
+    $tagihan = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id);
+
+    $this->actingAs($mahasiswa)->get(route('berkas.bukti-semester', $tagihan))->assertNotFound();
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tagihan-semester.bukti', $tagihan), berkasBukti());
+
+    $this->actingAs($mahasiswa)->get(route('berkas.bukti-semester', $tagihan))->assertOk();
+    $this->actingAs($admin)->get(route('berkas.bukti-semester', $tagihan))->assertOk();
+    $this->actingAs($lain)->get(route('berkas.bukti-semester', $tagihan))->assertForbidden();
+});
+
+it('membiarkan admin menandai lunas tanpa bukti dan membatalkannya', function () {
+    Storage::fake('local');
+    [$mahasiswa, $kelas] = keuanganSetup();
+    $admin = User::factory()->admin()->create();
+    $tagihan = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.lunas', $tagihan))->assertSessionHas('success');
+    expect($tagihan->fresh()->status)->toBe(TagihanSemester::LUNAS);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.batal-lunas', $tagihan))->assertSessionHas('success');
+    $tagihan->refresh();
+    expect($tagihan->status)->toBe(TagihanSemester::BELUM_BAYAR)
+        ->and($tagihan->tanggal_lunas)->toBeNull()
+        ->and($tagihan->diverifikasi_oleh)->toBeNull();
+
+    // Dengan bukti, batal lunas mengembalikan tagihan ke antrean verifikasi.
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.tagihan-semester.bukti', $tagihan), berkasBukti());
+    $this->actingAs($admin)->post(route('admin.tagihan.lunas', $tagihan));
+    $this->actingAs($admin)->post(route('admin.tagihan.batal-lunas', $tagihan));
+    expect($tagihan->fresh()->status)->toBe(TagihanSemester::MENUNGGU);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.batal-lunas', $tagihan))->assertSessionHas('error');
+});
+
+it('menandai lunas saat admin mengunggah bukti sendiri', function () {
+    Storage::fake('local');
+    [$mahasiswa, $kelas] = keuanganSetup();
+    $admin = User::factory()->admin()->create();
+    $tagihan = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.bukti', $tagihan), berkasBukti('kuitansi.pdf'))->assertSessionHas('success');
+    $tagihan->refresh();
+
+    expect($tagihan->status)->toBe(TagihanSemester::LUNAS)
+        ->and($tagihan->bukti)->not->toBeNull()
+        ->and($tagihan->diverifikasi_oleh)->toBe($admin->id);
+    Storage::disk('local')->assertExists($tagihan->bukti);
+});
+
+it('menolak mahasiswa memverifikasi tagihannya sendiri', function () {
+    [$mahasiswa, $kelas] = keuanganSetup();
+    $tagihan = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id);
+
+    $this->actingAs($mahasiswa)->post(route('admin.tagihan.lunas', $tagihan))->assertForbidden();
+    expect($tagihan->fresh()->status)->toBe(TagihanSemester::BELUM_BAYAR);
+});
+
+it('hanya menghitung ulang tagihan belum bayar yang rinciannya tidak diketik manual', function () {
+    Storage::fake('local');
+    [$mahasiswa, $kelas] = keuanganSetup();
+    jenisBiayaContoh($kelas->mataKuliah->prodi_id);
+    $admin = User::factory()->admin()->create();
+    $manual = User::factory()->mahasiswa()->create();
+    $berbukti = User::factory()->mahasiswa()->create();
+
+    foreach ([$manual, $berbukti] as $m) {
+        $m->mahasiswaProfile->update(['prodi_id' => $kelas->mataKuliah->prodi_id, 'angkatan' => 2024, 'status' => 'Aktif']);
+    }
+
+    $biasa = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id);
+    $tagihanManual = tagihanTerbit($manual, $kelas->tahun_akademik_id, ['rincian_manual' => true]);
+    $tagihanBerbukti = tagihanTerbit($berbukti, $kelas->tahun_akademik_id);
+    $this->actingAs($berbukti)->post(route('mahasiswa.tagihan-semester.bukti', $tagihanBerbukti), berkasBukti());
+
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id])
+        ->assertSessionHas('success', fn (string $pesan) => str_contains($pesan, '1 dihitung ulang') && str_contains($pesan, '2 tidak disentuh'));
+
+    expect($biasa->fresh()->total)->toBe(4_000_000)
+        ->and($tagihanManual->fresh()->total)->toBe(1_000_000)
+        ->and($tagihanManual->fresh()->rincian_manual)->toBeTrue()
+        ->and($tagihanBerbukti->fresh()->total)->toBe(1_000_000)
+        ->and($tagihanBerbukti->fresh()->status)->toBe(TagihanSemester::MENUNGGU);
+});
+
+it('tidak menerbitkan tagihan untuk mahasiswa tanpa tarif yang cocok', function () {
+    [$mahasiswa, $kelas] = keuanganSetup();
+    // Tarif hanya untuk angkatan lain.
+    $jenis = JenisBiaya::create(['kode' => 'SPP-LAMA', 'nama' => 'SPP Angkatan Lama', 'cara_hitung' => JenisBiaya::TETAP, 'aktif' => true, 'urutan' => 1]);
+    $jenis->tarif()->create(['prodi_id' => null, 'angkatan' => 1999, 'nominal' => 2_000_000]);
+    $admin = User::factory()->admin()->create();
+    $lama = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id);
+
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id])
+        ->assertSessionHas('success', fn (string $pesan) => str_contains($pesan, '1 mahasiswa tanpa tarif'));
+
+    // Tagihan lama yang belum dibayar ikut dihapus karena kini bernilai nol.
+    expect(TagihanSemester::query()->find($lama->id))->toBeNull()
+        ->and(TagihanSemester::count())->toBe(0);
+});
+
+it('menolak rincian manual bernilai nol dan rincian tagihan lunas', function () {
     [$mahasiswa, $kelas] = keuanganSetup();
     $admin = User::factory()->admin()->create();
     $profil = $mahasiswa->mahasiswaProfile;
 
-    $this->actingAs($admin)->put(route('admin.tagihan.status'), [
-        'mahasiswa_id' => $profil->id,
+    $this->actingAs($admin)->put(route('admin.tagihan.rincian.simpan', $profil->id), [
         'tahun_akademik_id' => $kelas->tahun_akademik_id,
-        'status' => TagihanSemester::LUNAS,
-    ])->assertSessionHasNoErrors();
-
-    $tagihan = TagihanSemester::query()->firstOrFail();
-
-    expect($tagihan->status)->toBe(TagihanSemester::LUNAS)
-        ->and($tagihan->tanggal_lunas)->not->toBeNull()
-        ->and($tagihan->diubah_oleh)->toBe($admin->id);
-
-    $this->actingAs($admin)->put(route('admin.tagihan.status'), [
-        'mahasiswa_id' => $profil->id,
+        'items' => [['nama' => 'Beasiswa', 'subtotal' => 0]],
+    ])->assertSessionHas('error');
+    $this->actingAs($admin)->put(route('admin.tagihan.rincian.simpan', $profil->id), [
         'tahun_akademik_id' => $kelas->tahun_akademik_id,
-        'status' => TagihanSemester::BELUM_BAYAR,
-    ]);
+        'items' => [],
+    ])->assertSessionHasErrors('items');
+    expect(TagihanSemester::count())->toBe(0);
 
-    expect(TagihanSemester::count())->toBe(1)
-        ->and(TagihanSemester::query()->first()->tanggal_lunas)->toBeNull();
+    $tagihan = tagihanTerbit($mahasiswa, $kelas->tahun_akademik_id, ['status' => TagihanSemester::LUNAS]);
+
+    $this->actingAs($admin)->put(route('admin.tagihan.rincian.simpan', $profil->id), [
+        'tahun_akademik_id' => $kelas->tahun_akademik_id,
+        'items' => [['nama' => 'SPP', 'subtotal' => 5_000]],
+    ])->assertSessionHas('error');
+    expect($tagihan->fresh()->total)->toBe(1_000_000);
 });
 
 it('menyaring daftar tagihan dan menghitung ringkasannya', function () {
@@ -186,7 +356,7 @@ it('menyaring daftar tagihan dan menghitung ringkasannya', function () {
 
     $this->actingAs($admin)
         ->get(route('admin.tagihan.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
-        ->assertInertia(fn ($page) => $page->where('ringkasan.total', 2)->where('ringkasan.lunas', 1)->where('ringkasan.belum_bayar', 1));
+        ->assertInertia(fn ($page) => $page->where('ringkasan.total', 2)->where('ringkasan.lunas', 1)->where('ringkasan.belum_bayar', 0)->where('ringkasan.belum_terbit', 1));
 
     $this->actingAs($admin)
         ->get(route('admin.tagihan.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'status' => 'lunas']))
@@ -194,7 +364,11 @@ it('menyaring daftar tagihan dan menghitung ringkasannya', function () {
 
     $this->actingAs($admin)
         ->get(route('admin.tagihan.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'angkatan' => 2023]))
-        ->assertInertia(fn ($page) => $page->has('daftar.data', 1)->where('daftar.data.0.status', TagihanSemester::BELUM_BAYAR));
+        ->assertInertia(fn ($page) => $page->has('daftar.data', 1)->where('daftar.data.0.status', 'belum_terbit'));
+
+    $this->actingAs($admin)
+        ->get(route('admin.tagihan.index', ['tahun_akademik_id' => $kelas->tahun_akademik_id, 'status' => 'belum_terbit']))
+        ->assertInertia(fn ($page) => $page->has('daftar.data', 1)->where('daftar.data.0.nim', $lain->mahasiswaProfile->nim));
 });
 
 it('tidak menampilkan mahasiswa yang tidak aktif', function () {

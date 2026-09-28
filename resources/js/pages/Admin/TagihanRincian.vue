@@ -3,13 +3,27 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import UnggahBuktiBayar from '@/components/UnggahBuktiBayar.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { STATUS_TAGIHAN_REMIDI } from '@/lib/tagihanRemidi';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { LoaderCircle, Plus, Trash2 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 type Item = { nama: string; cara_hitung: string; nominal_satuan: number; jumlah: number; subtotal: number };
-type Tagihan = { id: number; status: string; total: number; tanggal_lunas: string | null; items: Item[] };
+type Tagihan = {
+    id: number;
+    status: 'belum_bayar' | 'menunggu_verifikasi' | 'lunas' | 'ditolak';
+    total: number;
+    rincian_manual: boolean;
+    tanggal_lunas: string | null;
+    ada_bukti: boolean;
+    bukti_diunggah_at: string | null;
+    alasan_tolak: string | null;
+    diverifikasi_oleh: string | null;
+    diverifikasi_at: string | null;
+    items: Item[];
+};
 
 const props = defineProps<{
     mahasiswa: { id: number; nama: string | null; nim: string | null; prodi: string | null; angkatan: number | null };
@@ -20,6 +34,10 @@ const props = defineProps<{
     kuota: number;
     krsTersimpan: boolean;
 }>();
+
+const page = usePage<{ flash?: { success?: string; error?: string } }>();
+const lunas = computed(() => props.tagihan?.status === 'lunas');
+const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(nilai)) : '-');
 
 /** Rincian diketik sebagai teks karena isian number mengembalikan string. */
 const form = useForm({
@@ -67,16 +85,27 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                     </p>
                 </div>
 
+                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
+                    {{ page.props.flash.success }}
+                </div>
+                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
+                    {{ page.props.flash.error }}
+                </div>
+
                 <div class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
                             <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Status</p>
                             <span
+                                v-if="props.tagihan"
                                 class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium"
-                                :class="props.tagihan?.status === 'lunas' ? 'bg-[#eaf7ed] text-[#1aae39]' : 'bg-[#fdf1e9] text-[#dd5b00]'"
+                                :class="STATUS_TAGIHAN_REMIDI[props.tagihan.status].kelas"
                             >
-                                {{ props.tagihan?.status === 'lunas' ? 'Lunas' : 'Belum Bayar' }}
+                                {{ STATUS_TAGIHAN_REMIDI[props.tagihan.status].label }}
                             </span>
+                            <span v-else class="mt-1 inline-block rounded-full bg-[#f6f5f4] px-2 py-0.5 text-xs font-medium text-[#615d59]"
+                                >Belum Terbit</span
+                            >
                         </div>
                         <div class="text-right">
                             <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Total Tagihan</p>
@@ -88,13 +117,49 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                         Kuota SKS (dasar biaya per SKS): <span class="font-medium text-black">{{ props.kuota }} SKS</span> · SKS yang sudah diambil:
                         {{ props.sks }} SKS · KRS {{ props.krsTersimpan ? 'sudah disimpan mahasiswa (terkunci)' : 'belum disimpan mahasiswa' }}.
                     </p>
+
+                    <div v-if="props.tagihan" class="mt-4 space-y-2 border-t border-[#e6e6e6] pt-4 text-sm text-[#615d59]">
+                        <p v-if="props.tagihan.tanggal_lunas">
+                            Lunas {{ tanggal(props.tagihan.tanggal_lunas)
+                            }}<template v-if="props.tagihan.diverifikasi_oleh"> · diverifikasi {{ props.tagihan.diverifikasi_oleh }}</template
+                            >.
+                        </p>
+                        <p v-if="props.tagihan.status === 'ditolak'" class="text-[#b42318]">Bukti ditolak: {{ props.tagihan.alasan_tolak }}</p>
+                        <p v-if="props.tagihan.ada_bukti">
+                            Bukti diunggah {{ tanggal(props.tagihan.bukti_diunggah_at) }}.
+                            <a
+                                :href="route('berkas.bukti-semester', props.tagihan.id)"
+                                target="_blank"
+                                rel="noopener"
+                                class="font-medium text-[#0075de] hover:underline"
+                                >Lihat bukti</a
+                            >
+                        </p>
+                        <p v-else>Belum ada bukti bayar.</p>
+                        <template v-if="!lunas">
+                            <p>Mahasiswa menyerahkan bukti langsung (mis. kuitansi loket)? Unggah di sini; tagihan langsung ditandai lunas.</p>
+                            <UnggahBuktiBayar
+                                rute="admin.tagihan.bukti"
+                                :id="props.tagihan.id"
+                                :ada-bukti="false"
+                                label-kirim="Unggah & Tandai Lunas"
+                            />
+                        </template>
+                    </div>
                 </div>
 
                 <form class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm" @submit.prevent="simpan">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
                             <h2 class="text-lg font-semibold text-black">Rincian Tagihan</h2>
-                            <p class="text-sm text-[#615d59]">Boleh diketik manual, mis. keringanan atau biaya tambahan. Total ikut menyesuaikan.</p>
+                            <p class="text-sm text-[#615d59]">
+                                Boleh diketik manual, mis. keringanan atau biaya tambahan. Total ikut menyesuaikan. Rincian manual tidak ditimpa saat
+                                tagihan diterbitkan ulang.
+                            </p>
+                            <p v-if="props.tagihan?.rincian_manual" class="text-xs font-medium text-[#a39e98]">Rincian saat ini diketik manual.</p>
+                            <p v-if="lunas" class="text-xs font-medium text-[#dd5b00]">
+                                Tagihan sudah lunas, rincian tidak bisa diubah. Batalkan status lunasnya dulu dari daftar tagihan.
+                            </p>
                         </div>
                         <Button type="button" variant="outline" class="h-9 rounded-lg border-[#d8d5d2]" @click="tambahBaris">
                             <Plus class="size-4" /> Tambah Baris
@@ -129,7 +194,8 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                             v-if="!form.items.length"
                             class="rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59]"
                         >
-                            Belum ada rincian. Tambahkan baris, atau terbitkan tagihan massal dari halaman daftar.
+                            Belum ada rincian. Tambahkan baris (tagihan ikut diterbitkan saat disimpan), atau terbitkan tagihan massal dari halaman
+                            daftar.
                         </p>
                     </div>
 
@@ -139,7 +205,7 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                         </p>
                         <Button
                             type="submit"
-                            :disabled="form.processing || !props.tahunAkademikId"
+                            :disabled="form.processing || !props.tahunAkademikId || lunas || !form.items.length"
                             class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
                         >
                             <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />

@@ -48,6 +48,8 @@ class PastikanTagihanLunas
 
         return Inertia::render('Mahasiswa/KrsTerkunci', [
             'tahunAkademik' => $tahunAkademik->tahun.' '.$tahunAkademik->semester,
+            'status' => $tagihan->status,
+            'alasanTolak' => $tagihan->alasan_tolak,
             'total' => $tagihan->total,
             'items' => $tagihan->items->map(fn ($item): array => [
                 'nama' => $item->nama,

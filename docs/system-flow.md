@@ -326,8 +326,10 @@ Admin membuka menu **Keuangan → Tagihan Mahasiswa**, lalu **Terbitkan Tagihan 
 1. Harus ada jenis biaya aktif berkategori `semester`. Bila tidak ada, penerbitan ditolak.
 2. Bila masih ada KRS tanpa nilai di tahun akademik sebelumnya, sistem meminta konfirmasi (`tagihan_konfirmasi`). Alasannya, kuota SKS sebagian mahasiswa akan memakai angka "tanpa IPS". Admin bisa lanjut (`paksa`) atau batal.
 3. Untuk setiap mahasiswa berstatus **`Aktif`**:
-   - tagihan yang sudah `lunas` dilewati;
-   - tagihan lain di-set `belum_bayar` lalu rinciannya disusun ulang (`TagihanSemester::susunRincian`).
+   - tagihan yang sudah ada **hanya dihitung ulang** bila `belum_bayar`, belum ada bukti, dan rinciannya tidak diketik manual (`TagihanSemester::bolehDihitungUlang`). Tagihan `lunas`, `menunggu_verifikasi`, `ditolak` (sudah ada bukti), atau berincian manual tidak disentuh;
+   - rincian dihitung dengan `TagihanSemester::hitungRincian` lalu disimpan dengan `gantiRincian`;
+   - bila totalnya **Rp0** (tidak ada tarif yang cocok), tagihan **tidak dibuat**. Tagihan lama yang boleh dihitung ulang ikut dihapus;
+   - pesan hasil menyebut jumlah tagihan baru, yang dihitung ulang, yang tidak disentuh, dan mahasiswa tanpa tarif.
 4. **Rumus rincian:**
    - komponen `tetap` = nominal tarif × 1;
    - komponen `per_sks` = nominal tarif × **kuota SKS**, yaitu batas SKS dari IPS semester sebelumnya, **bukan** SKS yang sudah diambil;
@@ -337,13 +339,16 @@ Admin membuka menu **Keuangan → Tagihan Mahasiswa**, lalu **Terbitkan Tagihan 
 
 ### 6.3 Status dan pengelolaan tagihan
 
-- **Status tagihan:** `belum_bayar` dan `lunas`. Setiap mahasiswa punya satu tagihan per tahun akademik.
-- **Tandai lunas / belum bayar:** admin menekan tombol di daftar tagihan.
-  - Lunas mengisi `tanggal_lunas`; belum bayar mengosongkannya.
-  - Bisa dilakukan walau tagihan belum terbit. Sistem lalu membuat baris tagihan kosong.
-- **Rincian manual:** admin bisa mengetik ulang komponen tagihan. Total dihitung ulang, status tidak berubah.
+- **Status tagihan:** `belum_bayar`, `menunggu_verifikasi`, `ditolak`, `lunas` (trait `TagihanBerbukti`, sama dengan tagihan remidi dan susulan, tetapi **tanpa batas bayar** sehingga tidak pernah gugur). Setiap mahasiswa punya satu tagihan per tahun akademik. Daftar admin menampilkan mahasiswa tanpa tagihan sebagai **Belum Terbit**.
+- **Alur bayar:**
+  1. Mahasiswa mengunggah bukti (PDF/JPG/PNG, maks 5 MB) di **Biaya Kuliah**, untuk semester berjalan maupun riwayat yang belum lunas (`mahasiswa.tagihan-semester.bukti`). Status menjadi `menunggu_verifikasi`; bukti lama dihapus bila diganti.
+  2. Admin membuka bukti (`berkas.bukti-semester`, hanya pemilik tagihan dan admin keuangan) lalu **Tandai Lunas** atau **Tolak** dengan alasan wajib. Bukti yang ditolak (`ditolak`) boleh diunggah ulang.
+  3. Admin boleh **Tandai Lunas tanpa bukti** (mis. bayar di loket), atau **mengunggah bukti sendiri** dari halaman Rincian; unggahan admin langsung menandai lunas.
+  4. **Batal Lunas** mengembalikan tagihan ke `menunggu_verifikasi` bila ada bukti, selain itu ke `belum_bayar`.
+- Semua aksi bayar hanya untuk tagihan yang **sudah terbit**. `tanggal_lunas` diisi dan dikosongkan otomatis mengikuti status; verifikator dicatat di `diverifikasi_oleh`/`diverifikasi_at`.
+- **Rincian manual:** admin bisa mengetik ulang komponen tagihan (minimal satu baris, total tidak boleh Rp0). Tagihan yang belum terbit ikut dibuat berstatus `belum_bayar`. Tagihan ditandai `rincian_manual` sehingga tidak ditimpa saat diterbitkan ulang. Tagihan `lunas` tidak bisa diubah rinciannya sebelum lunasnya dibatalkan.
 - **Mahasiswa**, di menu **Biaya Kuliah**, melihat:
-  - tagihan semester berjalan dan riwayatnya;
+  - tagihan semester berjalan dan riwayatnya, beserta status, alasan tolak, dan isian unggah bukti;
   - panel "Dari Mana Angka Ini?" (tarif per SKS, kuota, SKS yang sudah diambil, sisa SKS yang sudah ditagih tetapi belum diambil);
   - tagihan remidi.
 
@@ -354,9 +359,9 @@ Admin membuka menu **Keuangan → Tagihan Mahasiswa**, lalu **Terbitkan Tagihan 
   - sakelar `kunci_krs_aktif` menyala;
   - ada tahun akademik aktif;
   - tagihan tahun itu **sudah terbit**;
-  - tagihan itu belum `lunas`.
+  - tagihan itu belum `lunas` (termasuk yang `menunggu_verifikasi`).
 - Akibatnya:
-  - permintaan GET menampilkan halaman **KRS Terkunci** (rincian tagihan dan batas KRS);
+  - permintaan GET menampilkan halaman **KRS Terkunci** (rincian tagihan, batas KRS, dan keterangan bila bukti sedang diperiksa atau ditolak);
   - permintaan lain ditolak dengan pesan "Tagihan semester ini belum lunas…".
 - Bila tagihan belum terbit, mahasiswa **tidak** dikunci.
 
@@ -1059,7 +1064,7 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 |---|---|
 | Status mahasiswa | `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal` |
 | KRS | `status`: `Aktif`. Nilai berupa huruf dari skala nilai. |
-| Tagihan semester | `belum_bayar`, `lunas` |
+| Tagihan semester | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tanpa batas bayar (tidak pernah gugur) |
 | Tagihan remidi | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` |
 | Pengajuan susulan | `menunggu`, `disetujui`, `ditolak`, `dibatalkan`; tampilan `dibatalkan` (menunggu tetapi ikut ujian utama) dan `gugur` (disetujui tetapi ikut ujian utama) |
 | Tagihan susulan | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` (lewat batas) dan `dibatalkan` (ikut ujian utama sebelum lunas) |
@@ -1097,12 +1102,12 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 ### Keuangan dan KRS
 
 8. ~~**Mahasiswa `Transfer Masuk` tidak pernah ditagih.**~~ **Selesai 28 Sep 2026:** status `Transfer Masuk` dihapus dan diubah menjadi `Aktif` (lihat 3.3).
-9. **Tandai lunas sebelum tagihan terbit** membuat tagihan bernilai 0 tanpa rincian, dan penerbitan berikutnya melewatinya. Komentar kode mengatakan rincian "menyusul".
-10. **"Tandai Belum Bayar" tanpa tagihan terbit** membuat tagihan Rp0 yang tetap mengunci KRS bila sakelar menyala. Hal yang sama terjadi bila tidak ada tarif yang cocok.
-11. **Terbitkan ulang menimpa rincian yang diketik manual** pada tagihan yang belum lunas.
+9. ~~**Tandai lunas sebelum tagihan terbit** membuat tagihan bernilai 0 tanpa rincian, dan penerbitan berikutnya melewatinya.~~ **Selesai 28 Sep 2026:** tandai lunas/belum bayar hanya untuk tagihan terbit; tagihan semester kini dibayar lewat unggah bukti lalu diverifikasi admin (lihat 6.3).
+10. ~~**"Tandai Belum Bayar" tanpa tagihan terbit** membuat tagihan Rp0 yang tetap mengunci KRS.~~ **Selesai 28 Sep 2026:** tagihan Rp0 tidak dibuat (dilaporkan "tanpa tarif"); tagihan kosong lama dihapus saat migrasi (lihat 6.2).
+11. ~~**Terbitkan ulang menimpa rincian yang diketik manual.**~~ **Selesai 28 Sep 2026:** hanya tagihan `belum_bayar` tanpa bukti dan tanpa rincian manual yang dihitung ulang (lihat 6.2).
 12. **Dua definisi "semester sebelumnya".** Peringatan nilai belum lengkap memakai tahun akademik global sebelumnya; IPS memakai tahun terakhir yang diambil mahasiswa. Hasil keduanya bisa berbeda.
 13. **Label `per_sks` tidak cocok dengan rumus.** Label dan komentar menyebut "SKS yang diambil", padahal rumusnya memakai kuota SKS.
-14. **Konfirmasi awal tombol "Terbitkan Tagihan Semester Ini" kemungkinan terlewat.** Event klik diteruskan sebagai argumen `paksa` (`@click="terbitkan"`).
+14. ~~**Konfirmasi awal tombol "Terbitkan Tagihan Semester Ini" kemungkinan terlewat.**~~ **Selesai 28 Sep 2026:** tombol memanggil `terbitkan()` tanpa argumen, jadi konfirmasi awal selalu tampil.
 15. **Teks spanduk tidak sesuai perilaku.** Spanduk menyebut "tagihan akan bernilai nol" bila belum ada jenis biaya, padahal server menolak penerbitan.
 16. **Admin membatalkan KRS tanpa cek periode atau kunci KRS.** Baris `krs_semester` tetap ada.
 17. **Tarif ganda bisa lolos.** Unique `(jenis_biaya_id, prodi_id, angkatan)` tidak mencegah dua tarif umum (kolom NULL). Duplikat lain memicu error database, bukan pesan validasi.

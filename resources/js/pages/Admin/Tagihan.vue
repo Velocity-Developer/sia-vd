@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import AlertModal from '@/components/AlertModal.vue';
 import Pagination from '@/components/Pagination.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { STATUS_TAGIHAN_REMIDI } from '@/lib/tagihanRemidi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Search } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
@@ -15,10 +17,15 @@ type Baris = {
     prodi: string | null;
     angkatan: number | null;
     semester: number | null;
-    status: string;
+    tagihan_id: number | null;
+    status: 'belum_terbit' | 'belum_bayar' | 'menunggu_verifikasi' | 'ditolak' | 'lunas';
     total: number;
-    ada_tagihan: boolean;
+    rincian_manual: boolean;
     tanggal_lunas: string | null;
+    ada_bukti: boolean;
+    bukti_diunggah_at: string | null;
+    alasan_tolak: string | null;
+    diverifikasi_oleh: string | null;
     diubah_oleh: string | null;
     diubah_pada: string | null;
     krs_tersimpan: boolean;
@@ -27,7 +34,7 @@ type Opsi = { id: number; name: string };
 
 const props = defineProps<{
     daftar: { data: Baris[]; links: { url: string | null; label: string; active: boolean }[]; from: number | null; total: number };
-    ringkasan: { total: number; lunas: number; belum_bayar: number; terbit: number };
+    ringkasan: { total: number; terbit: number; belum_terbit: number; lunas: number; menunggu: number; belum_bayar: number };
     filter: { tahun_akademik_id: number | null; prodi_id: number | null; angkatan: number | null; status: string; search: string };
     tahunAkademikOptions: Opsi[];
     prodiOptions: Opsi[];
@@ -75,15 +82,48 @@ watch(
     },
 );
 
-const ubahStatus = (baris: Baris) => {
-    router.put(
-        route('admin.tagihan.status'),
+const STATUS = { ...STATUS_TAGIHAN_REMIDI, belum_terbit: { label: 'Belum Terbit', kelas: 'bg-[#f6f5f4] text-[#615d59]' } };
+
+// Aksi pembayaran satu tagihan: lunas, batal lunas, atau tolak bukti (dengan alasan).
+const konfirmasi = ref<{ baris: Baris; aksi: 'lunas' | 'batal-lunas' } | null>(null);
+const deskripsiKonfirmasi = (k: { baris: Baris; aksi: 'lunas' | 'batal-lunas' } | null) => {
+    if (!k) return '';
+    if (k.aksi === 'batal-lunas') {
+        return `Batalkan status lunas tagihan ${k.baris.nama}? ${k.baris.ada_bukti ? 'Tagihan kembali menunggu verifikasi bukti.' : 'Tagihan kembali belum bayar.'}`;
+    }
+    return `Tandai tagihan ${k.baris.nama} sebesar ${rupiah(k.baris.total)} sebagai lunas?${k.baris.ada_bukti ? '' : ' Belum ada bukti yang diunggah; pastikan pembayaran sudah diterima.'}`;
+};
+const jalankanKonfirmasi = () => {
+    const k = konfirmasi.value;
+    if (!k?.baris.tagihan_id) return;
+    router.post(
+        route(k.aksi === 'lunas' ? 'admin.tagihan.lunas' : 'admin.tagihan.batal-lunas', k.baris.tagihan_id),
+        {},
         {
-            mahasiswa_id: baris.id,
-            tahun_akademik_id: tahunAkademikId.value === semua ? null : tahunAkademikId.value,
-            status: baris.status === 'lunas' ? 'belum_bayar' : 'lunas',
+            preserveScroll: true,
+            onFinish: () => (konfirmasi.value = null),
         },
-        { preserveScroll: true, preserveState: true },
+    );
+};
+
+const tolakItem = ref<Baris | null>(null);
+const alasan = ref('');
+const alasanError = ref('');
+const bukaTolak = (baris: Baris) => {
+    tolakItem.value = baris;
+    alasan.value = '';
+    alasanError.value = '';
+};
+const tolak = () => {
+    if (!tolakItem.value?.tagihan_id) return;
+    router.post(
+        route('admin.tagihan.tolak', tolakItem.value.tagihan_id),
+        { alasan: alasan.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => (tolakItem.value = null),
+            onError: (errors) => (alasanError.value = errors.alasan ?? ''),
+        },
     );
 };
 
@@ -98,7 +138,13 @@ const bukaKunciKrs = (baris: Baris) => {
 };
 
 const terbitkan = (paksa = false) => {
-    if (!paksa && !confirm('Terbitkan tagihan untuk semua mahasiswa aktif pada semester ini? Tagihan yang sudah lunas tidak diubah.')) return;
+    if (
+        !paksa &&
+        !confirm(
+            'Terbitkan tagihan untuk semua mahasiswa aktif pada semester ini? Tagihan yang sudah dibayar, sudah ada bukti bayar, atau rinciannya diketik manual tidak diubah.',
+        )
+    )
+        return;
 
     router.post(
         route('admin.tagihan.terbitkan'),
@@ -134,7 +180,11 @@ const waktu = (nilai: string | null) =>
                         <h1 class="text-[26px] font-bold leading-[1.23] text-black">Tagihan Mahasiswa</h1>
                         <p class="text-sm text-[#615d59]">Status pembayaran tiap mahasiswa per semester.</p>
                     </div>
-                    <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="tahunAkademikId === semua" @click="terbitkan">
+                    <Button
+                        class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
+                        :disabled="tahunAkademikId === semua"
+                        @click="terbitkan()"
+                    >
                         Terbitkan Tagihan Semester Ini
                     </Button>
                 </div>
@@ -146,11 +196,16 @@ const waktu = (nilai: string | null) =>
                     {{ page.props.flash.error }}
                 </div>
                 <div v-if="!props.adaJenisBiaya" class="rounded-xl border border-[#f6d7c4] bg-[#fdf6f1] px-4 py-3 text-sm text-[#dd5b00]">
-                    Belum ada jenis biaya aktif, jadi tagihan yang diterbitkan akan bernilai nol.
+                    Belum ada jenis biaya aktif, jadi tagihan belum bisa diterbitkan.
                     <Link :href="route('admin.jenis-biaya.index')" class="font-medium text-[#0075de] hover:underline">Atur jenis biaya</Link>
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-4">
+                <div v-if="props.ringkasan.menunggu" class="rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]">
+                    {{ props.ringkasan.menunggu }} bukti bayar menunggu verifikasi.
+                    <button type="button" class="font-medium underline" @click="((status = 'menunggu_verifikasi'), kirim())">Tampilkan</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
                     <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
                         <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa Aktif</p>
                         <p class="text-[22px] font-bold text-black">{{ props.ringkasan.total }}</p>
@@ -160,12 +215,16 @@ const waktu = (nilai: string | null) =>
                         <p class="text-[22px] font-bold text-[#1aae39]">{{ props.ringkasan.lunas }}</p>
                     </div>
                     <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
+                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Menunggu Verifikasi</p>
+                        <p class="text-[22px] font-bold text-[#0075de]">{{ props.ringkasan.menunggu }}</p>
+                    </div>
+                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
                         <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Belum Bayar</p>
                         <p class="text-[22px] font-bold text-[#dd5b00]">{{ props.ringkasan.belum_bayar }}</p>
                     </div>
                     <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Tagihan Terbit</p>
-                        <p class="text-[22px] font-bold text-black">{{ props.ringkasan.terbit }}</p>
+                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Belum Terbit</p>
+                        <p class="text-[22px] font-bold text-black">{{ props.ringkasan.belum_terbit }}</p>
                     </div>
                 </div>
 
@@ -199,8 +258,11 @@ const waktu = (nilai: string | null) =>
                         </SelectFilter>
                         <SelectFilter v-model="status" label="Filter status pembayaran" @change="kirim">
                             <option :value="semua">Semua Status</option>
-                            <option value="lunas">Lunas</option>
+                            <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
                             <option value="belum_bayar">Belum Bayar</option>
+                            <option value="ditolak">Ditolak</option>
+                            <option value="lunas">Lunas</option>
+                            <option value="belum_terbit">Belum Terbit</option>
                         </SelectFilter>
                     </div>
                 </div>
@@ -229,19 +291,32 @@ const waktu = (nilai: string | null) =>
                                     </td>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ baris.prodi ?? '-' }}</td>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">
-                                        <span v-if="baris.ada_tagihan" class="block">{{ rupiah(baris.total) }}</span>
+                                        <span v-if="baris.tagihan_id" class="block">{{ rupiah(baris.total) }}</span>
                                         <span v-else class="block text-[#a39e98]">Belum diterbitkan</span>
+                                        <span v-if="baris.rincian_manual" class="block text-xs text-[#a39e98]">Rincian manual</span>
                                     </td>
                                     <td class="px-4 py-3 text-[15px]">
                                         <span
                                             class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
-                                            :class="baris.status === 'lunas' ? 'bg-[#eaf7ed] text-[#1aae39]' : 'bg-[#fdf1e9] text-[#dd5b00]'"
+                                            :class="STATUS[baris.status].kelas"
                                         >
-                                            {{ baris.status === 'lunas' ? 'Lunas' : 'Belum Bayar' }}
+                                            {{ STATUS[baris.status].label }}
                                         </span>
-                                        <span v-if="baris.tanggal_lunas" class="mt-1 block text-xs text-[#a39e98]">{{
-                                            tanggal(baris.tanggal_lunas)
-                                        }}</span>
+                                        <span v-if="baris.tanggal_lunas" class="mt-1 block text-xs text-[#a39e98]"
+                                            >{{ tanggal(baris.tanggal_lunas)
+                                            }}<template v-if="baris.diverifikasi_oleh"> · {{ baris.diverifikasi_oleh }}</template></span
+                                        >
+                                        <span v-if="baris.status === 'ditolak'" class="mt-1 block max-w-[200px] text-xs text-[#a39e98]"
+                                            >Ditolak: {{ baris.alasan_tolak }}</span
+                                        >
+                                        <a
+                                            v-if="baris.ada_bukti && baris.tagihan_id"
+                                            :href="route('berkas.bukti-semester', baris.tagihan_id)"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="mt-1 block text-xs font-medium text-[#0075de] hover:underline"
+                                            >Lihat bukti · {{ tanggal(baris.bukti_diunggah_at) }}</a
+                                        >
                                     </td>
                                     <td class="px-4 py-3 text-[15px]">
                                         <template v-if="baris.krs_tersimpan">
@@ -274,18 +349,30 @@ const waktu = (nilai: string | null) =>
                                                 Rincian
                                             </Link>
                                             <Button
+                                                v-if="baris.status === 'menunggu_verifikasi'"
+                                                variant="outline"
+                                                class="h-8 rounded-lg border-[#d8d5d2] px-3 text-sm text-[#dd5b00]"
+                                                @click="bukaTolak(baris)"
+                                                >Tolak</Button
+                                            >
+                                            <Button
+                                                v-if="baris.tagihan_id && baris.status !== 'lunas'"
+                                                class="h-8 whitespace-nowrap rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]"
+                                                @click="konfirmasi = { baris, aksi: 'lunas' }"
+                                                >Tandai Lunas</Button
+                                            >
+                                            <Button
+                                                v-if="baris.status === 'lunas'"
                                                 variant="outline"
                                                 class="h-8 whitespace-nowrap rounded-lg border-[#d8d5d2] px-3 text-sm"
-                                                :disabled="tahunAkademikId === semua"
-                                                @click="ubahStatus(baris)"
+                                                @click="konfirmasi = { baris, aksi: 'batal-lunas' }"
+                                                >Batal Lunas</Button
                                             >
-                                                {{ baris.status === 'lunas' ? 'Tandai Belum Bayar' : 'Tandai Lunas' }}
-                                            </Button>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr v-if="!props.daftar.data.length">
-                                    <td colspan="7" class="px-4 py-14 text-center text-sm text-[#615d59]">
+                                    <td colspan="8" class="px-4 py-14 text-center text-sm text-[#615d59]">
                                         Tidak ada mahasiswa yang cocok dengan filter.
                                     </td>
                                 </tr>
@@ -295,6 +382,34 @@ const waktu = (nilai: string | null) =>
                 </div>
 
                 <Pagination :links="props.daftar.links" :total="props.daftar.total" />
+            </div>
+        </div>
+
+        <AlertModal
+            :open="!!konfirmasi"
+            :title="konfirmasi?.aksi === 'batal-lunas' ? 'Batalkan status lunas?' : 'Tandai lunas?'"
+            :description="deskripsiKonfirmasi(konfirmasi)"
+            :confirm-text="konfirmasi?.aksi === 'batal-lunas' ? 'Batalkan Lunas' : 'Tandai Lunas'"
+            cancel-text="Batal"
+            @update:open="!$event && (konfirmasi = null)"
+            @confirm="jalankanKonfirmasi"
+            @cancel="konfirmasi = null"
+        />
+        <div v-if="tolakItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="tolakItem = null">
+            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                <h3 class="text-lg font-semibold">Tolak bukti bayar</h3>
+                <p class="mt-2 text-sm text-[#615d59]">
+                    {{ tolakItem.nama }} bisa mengunggah ulang bukti bayar. Alasan penolakan ditampilkan ke mahasiswa.
+                </p>
+                <label class="mt-4 grid gap-2 text-sm">
+                    <span class="font-medium">Alasan</span>
+                    <Input v-model="alasan" placeholder="Mis. nominal tidak sesuai" class="h-10" />
+                    <span v-if="alasanError" class="text-xs text-[#dd5b00]">{{ alasanError }}</span>
+                </label>
+                <div class="mt-6 flex justify-end gap-2">
+                    <Button variant="outline" class="rounded-full" @click="tolakItem = null">Batal</Button>
+                    <Button class="rounded-full bg-[#dd5b00] text-white hover:bg-[#b84b00]" @click="tolak">Tolak</Button>
+                </div>
             </div>
         </div>
     </AppLayout>

@@ -1,11 +1,23 @@
 <script setup lang="ts">
 import DaftarTagihanBerbukti, { type TagihanBerbukti } from '@/components/DaftarTagihanBerbukti.vue';
+import UnggahBuktiBayar from '@/components/UnggahBuktiBayar.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { type Rincian, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
+import { STATUS_TAGIHAN_REMIDI, type Rincian, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 
 type Item = { nama: string; cara_hitung: string; nominal_satuan: number; jumlah: number; subtotal: number };
-type Tagihan = { id: number; tahun_akademik: string; status: string; total: number; tanggal_lunas: string | null; items: Item[] };
+type Tagihan = {
+    id: number;
+    tahun_akademik: string;
+    status: 'belum_bayar' | 'menunggu_verifikasi' | 'lunas' | 'ditolak';
+    total: number;
+    tanggal_lunas: string | null;
+    boleh_unggah: boolean;
+    ada_bukti: boolean;
+    bukti_diunggah_at: string | null;
+    alasan_tolak: string | null;
+    items: Item[];
+};
 
 type Dasar = {
     tarif_per_sks: number;
@@ -50,6 +62,7 @@ const biayaInfo = [
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nilai || 0);
 const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(nilai)) : null);
+const statusTagihan = (tagihan: Tagihan | null) => STATUS_TAGIHAN_REMIDI[tagihan?.status ?? 'belum_bayar'];
 </script>
 
 <template>
@@ -62,6 +75,13 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                     <p class="text-sm text-[#615d59]">Tagihan semester berjalan dan riwayat pembayaran Anda.</p>
                 </div>
 
+                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
+                    {{ page.props.flash.success }}
+                </div>
+                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
+                    {{ page.props.flash.error }}
+                </div>
+
                 <div class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
@@ -72,16 +92,23 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                             <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Total Tagihan</p>
                             <p class="text-[22px] font-bold text-black">{{ rupiah(props.semesterBerjalan?.total ?? 0) }}</p>
                             <span
+                                v-if="props.semesterBerjalan"
                                 class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium"
-                                :class="props.semesterBerjalan?.status === 'lunas' ? 'bg-[#eaf7ed] text-[#1aae39]' : 'bg-[#fdf1e9] text-[#dd5b00]'"
+                                :class="statusTagihan(props.semesterBerjalan).kelas"
                             >
-                                {{ props.semesterBerjalan?.status === 'lunas' ? 'Lunas' : 'Belum Bayar' }}
+                                {{ statusTagihan(props.semesterBerjalan).label }}
                             </span>
                         </div>
                     </div>
 
                     <p v-if="props.semesterBerjalan?.tanggal_lunas" class="mt-3 text-sm text-[#615d59]">
                         Dinyatakan lunas pada {{ tanggal(props.semesterBerjalan.tanggal_lunas) }}.
+                    </p>
+                    <p v-if="props.semesterBerjalan?.status === 'menunggu_verifikasi'" class="mt-3 text-sm text-[#005bab]">
+                        Bukti bayar sedang diperiksa bagian keuangan. Anda masih bisa menggantinya bila salah unggah.
+                    </p>
+                    <p v-if="props.semesterBerjalan?.status === 'ditolak'" class="mt-3 text-sm text-[#b42318]">
+                        Bukti ditolak: {{ props.semesterBerjalan.alasan_tolak }}. Silakan unggah ulang.
                     </p>
 
                     <div v-if="props.semesterBerjalan?.items?.length" class="mt-4 overflow-hidden rounded-lg border border-[#e6e6e6]">
@@ -119,6 +146,30 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                     <p v-else class="mt-4 rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59]">
                         Tagihan semester ini belum diterbitkan. Hubungi bagian keuangan bila Anda merasa seharusnya sudah ada.
                     </p>
+
+                    <div
+                        v-if="props.semesterBerjalan && (props.semesterBerjalan.ada_bukti || props.semesterBerjalan.boleh_unggah)"
+                        class="mt-4 space-y-2"
+                    >
+                        <p v-if="props.semesterBerjalan.ada_bukti" class="text-sm text-[#615d59]">
+                            Bukti diunggah {{ tanggal(props.semesterBerjalan.bukti_diunggah_at) }}.
+                            <a
+                                :href="route('berkas.bukti-semester', props.semesterBerjalan.id)"
+                                target="_blank"
+                                rel="noopener"
+                                class="font-medium text-[#0075de] hover:underline"
+                                >Lihat bukti</a
+                            >
+                        </p>
+                        <template v-if="props.semesterBerjalan.boleh_unggah">
+                            <p class="text-sm text-[#615d59]">Sudah membayar? Unggah bukti transfer atau kuitansi (PDF/JPG/PNG, maks 5 MB).</p>
+                            <UnggahBuktiBayar
+                                rute="mahasiswa.tagihan-semester.bukti"
+                                :id="props.semesterBerjalan.id"
+                                :ada-bukti="props.semesterBerjalan.ada_bukti"
+                            />
+                        </template>
+                    </div>
                 </div>
 
                 <div v-if="props.dasar" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
@@ -166,13 +217,6 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                         </template>
                         <template v-else> Anda sudah mengambil {{ props.dasar.sks_diambil }} SKS, sesuai jatah yang ditagihkan. </template>
                     </p>
-                </div>
-
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.error }}
                 </div>
 
                 <DaftarTagihanBerbukti
@@ -237,11 +281,21 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ rupiah(tagihan.total) }}</td>
                                     <td class="px-4 py-3 text-[15px]">
                                         <span
-                                            class="rounded-full px-2 py-0.5 text-xs font-medium"
-                                            :class="tagihan.status === 'lunas' ? 'bg-[#eaf7ed] text-[#1aae39]' : 'bg-[#fdf1e9] text-[#dd5b00]'"
+                                            class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
+                                            :class="statusTagihan(tagihan).kelas"
                                         >
-                                            {{ tagihan.status === 'lunas' ? 'Lunas' : 'Belum Bayar' }}
+                                            {{ statusTagihan(tagihan).label }}
                                         </span>
+                                        <span v-if="tagihan.status === 'ditolak'" class="mt-1 block text-xs text-[#b42318]"
+                                            >Ditolak: {{ tagihan.alasan_tolak }}</span
+                                        >
+                                        <UnggahBuktiBayar
+                                            v-if="tagihan.boleh_unggah"
+                                            class="mt-2"
+                                            rute="mahasiswa.tagihan-semester.bukti"
+                                            :id="tagihan.id"
+                                            :ada-bukti="tagihan.ada_bukti"
+                                        />
                                     </td>
                                     <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ tanggal(tagihan.tanggal_lunas) ?? '-' }}</td>
                                 </tr>

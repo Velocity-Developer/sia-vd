@@ -12,6 +12,7 @@ use App\Models\PengajuanIzin;
 use App\Models\PengajuanSusulan;
 use App\Models\PengumpulanTugas;
 use App\Models\TagihanRemidi;
+use App\Models\TagihanSemester;
 use App\Models\TagihanSusulan;
 use App\Models\Tugas;
 use App\Models\TugasAkhir;
@@ -116,6 +117,20 @@ class BerkasController extends Controller
         abort_unless($boleh, 403);
 
         return $this->kirim($tagihanRemidi->bukti);
+    }
+
+    /**
+     * Bukti bayar tagihan semester: mahasiswa pemilik tagihan dan admin keuangan.
+     */
+    public function buktiSemester(Request $request, TagihanSemester $tagihanSemester): StreamedResponse
+    {
+        $user = $request->user();
+        $boleh = ($user->mahasiswaProfile !== null && $tagihanSemester->mahasiswa_id === $user->mahasiswaProfile->id)
+            || $user->hasPermission('admin.tagihan');
+
+        abort_unless($boleh && $tagihanSemester->bukti !== null, $boleh ? 404 : 403);
+
+        return $this->kirim($tagihanSemester->bukti);
     }
 
     /**

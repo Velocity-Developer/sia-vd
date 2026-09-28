@@ -6,6 +6,8 @@ import { Lock } from 'lucide-vue-next';
 
 const props = defineProps<{
     tahunAkademik: string;
+    status: string;
+    alasanTolak: string | null;
     total: number;
     items: { nama: string; subtotal: number }[];
     batasKrs: string | null;
@@ -26,8 +28,17 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                     </div>
                     <h1 class="mt-4 text-[22px] font-bold leading-7 text-black">Pengisian KRS Terkunci</h1>
                     <p class="mt-2 text-sm leading-5 text-[#615d59]">
-                        Tagihan semester {{ props.tahunAkademik }} belum lunas. Setelah pembayaran Anda diverifikasi bagian keuangan, halaman KRS
-                        terbuka dengan sendirinya.
+                        <template v-if="props.status === 'menunggu_verifikasi'">
+                            Bukti bayar semester {{ props.tahunAkademik }} sudah Anda kirim dan sedang diperiksa bagian keuangan. Halaman KRS terbuka
+                            dengan sendirinya setelah pembayaran dinyatakan lunas.
+                        </template>
+                        <template v-else>
+                            Tagihan semester {{ props.tahunAkademik }} belum lunas. Unggah bukti bayar di Info Biaya Kuliah; setelah diverifikasi
+                            bagian keuangan, halaman KRS terbuka dengan sendirinya.
+                        </template>
+                    </p>
+                    <p v-if="props.status === 'ditolak'" class="mt-2 text-sm text-[#b42318]">
+                        Bukti bayar sebelumnya ditolak: {{ props.alasanTolak }}. Silakan unggah ulang.
                     </p>
 
                     <div class="mt-5 rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3 text-left">
