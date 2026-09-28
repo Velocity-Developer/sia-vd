@@ -178,7 +178,7 @@ flowchart TD
     B -- Ya --> C{"Ada nilai semester sebelumnya<br/>yang masih kosong?"}
     C -- "Ya, belum paksa" --> C1["Minta konfirmasi<br/>kuota sebagian mahasiswa memakai<br/>maks SKS tanpa IPS"]
     C1 -- "Lanjut: paksa" --> D
-    C -- Tidak --> D["Untuk tiap mahasiswa berstatus Aktif<br/>(Transfer Masuk tidak ikut, PD-8)"]
+    C -- Tidak --> D["Untuk tiap mahasiswa berstatus Aktif"]
     D --> E{"Tagihan sudah lunas?"}
     E -- Ya --> E1["Dilewati"]
     E -- Tidak --> F["Status belum_bayar<br/>susun rincian dari tarif paling khusus"]
@@ -210,7 +210,7 @@ flowchart TD
     C -- Tidak --> X1["Ditolak: periode belum dibuka / berakhir"]
     C -- Ya --> D{"KRS sudah disimpan?"}
     D -- Ya --> X2["Ditolak: KRS terkunci, gunakan pindah kelas"]
-    D -- Tidak --> E{"Status mahasiswa Aktif<br/>atau Transfer Masuk?"}
+    D -- Tidak --> E{"Status mahasiswa Aktif?"}
     E -- Tidak --> X3["Ditolak: status tidak memungkinkan KRS"]
     E -- Ya --> F["Transaksi + lockForUpdate<br/>mahasiswa dan kelas"]
     F --> G{"Riwayat mata kuliah yang sama"}

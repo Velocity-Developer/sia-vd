@@ -88,6 +88,11 @@ it('validates required profile fields and new dropdown values', function () {
     ];
     $this->actingAs($admin)->post(route('admin.users.mahasiswa.store'), $mahasiswaPayload)->assertRedirect()->assertSessionHas('success', fn (string $pesan): bool => str_starts_with($pesan, 'Mahasiswa berhasil ditambahkan.'));
 
+    // Status Transfer Masuk sudah dihapus.
+    $this->actingAs($admin)->post(route('admin.users.mahasiswa.store'), array_replace($mahasiswaPayload, [
+        'nim' => '22222222', 'username' => 'mhs-transfer', 'email' => 'transfer@example.com', 'nisn' => '1111111111', 'email_alternatif' => 'transfer.alt@example.com', 'status' => 'Transfer Masuk',
+    ]))->assertSessionHasErrors('status');
+
     $existing = User::factory()->mahasiswa()->create();
     $existing->profile->update(['nim' => '12345678']);
 

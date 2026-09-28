@@ -177,8 +177,8 @@ it('requires the remidi payment deadline to come after the grade deadline', func
     $isian = ['tahun' => '2031/2032', 'semester' => 'Ganjil', 'tanggal_mulai' => '2031-08-01', 'tanggal_akhir' => '2032-01-31',
         'tanggal_krs_awal' => '2031-08-01', 'tanggal_krs_akhir' => '2031-08-14', 'status' => false];
 
-    $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [...$isian, 'batas_input_nilai' => '2032-01-20', 'batas_bayar_remidi' => '2032-01-20'])
-        ->assertSessionHasErrors(['batas_bayar_remidi' => 'Batas bayar remidi harus setelah batas input nilai.']);
+    $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [...$isian, 'batas_input_nilai' => '2032-02-07', 'batas_bayar_remidi' => '2032-02-07'])
+        ->assertSessionHasErrors(['batas_bayar_remidi' => 'Batas bayar remidi harus setelah tanggal akhir semester dan batas input nilai.']);
     // Batas input nilai remidi boleh diisi tanpa batas bayar (tidak gagal karena pembanding kosong).
     $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [...$isian, 'batas_input_nilai_remidi' => '2032-01-30'])->assertSessionHasNoErrors();
 });

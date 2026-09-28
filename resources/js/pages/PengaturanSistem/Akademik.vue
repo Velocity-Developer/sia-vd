@@ -239,7 +239,8 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                 <h2 class="text-lg font-semibold text-black">Skala Nilai</h2>
                 <p class="mt-1 text-sm text-[#615d59]">
                     Dipakai untuk pilihan nilai di kelas, IP/IPK, KHS, dan transkrip. Mengubah bobot akan mengubah IP/IPK semua mahasiswa yang
-                    memiliki nilai tersebut. Angka minimal (0–100) dipakai mengubah nilai angka pendadaran menjadi huruf.
+                    memiliki nilai tersebut. Angka minimal (0–100) dipakai mengubah nilai angka pendadaran menjadi huruf. Wajib ada minimal satu huruf
+                    lulus dan satu huruf tidak lulus, dan huruf tidak lulus harus boleh diulang.
                 </p>
 
                 <div class="relative mt-5 overflow-x-auto rounded-xl border border-[#e6e6e6]">

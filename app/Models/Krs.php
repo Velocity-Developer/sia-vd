@@ -14,7 +14,7 @@ class Krs extends Model
     /**
      * Status mahasiswa yang boleh mengisi KRS.
      */
-    public const STATUS_MAHASISWA_BOLEH_KRS = ['Aktif', 'Transfer Masuk'];
+    public const STATUS_MAHASISWA_BOLEH_KRS = ['Aktif'];
 
     protected $table = 'krs';
 

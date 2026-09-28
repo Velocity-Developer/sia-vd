@@ -97,7 +97,7 @@ const labels: Record<string, string> = {
     password_confirmation: 'Konfirmasi Kata Sandi',
 };
 const agama = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu'];
-const statuses = ['Aktif', 'Nonaktif', 'Lulus', 'Dropout', 'Cuti', 'Mengundurkan Diri', 'Meninggal', 'Transfer Masuk'];
+const statuses = ['Aktif', 'Nonaktif', 'Lulus', 'Dropout', 'Cuti', 'Mengundurkan Diri', 'Meninggal'];
 const pekerjaanOptions = [
     'Tidak Bekerja',
     'Karyawan Swasta',

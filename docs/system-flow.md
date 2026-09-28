@@ -157,8 +157,9 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 - `tahun` unik per `semester`.
 - `tahun` wajib berformat `YYYY/YYYY` dengan tahun kedua = tahun pertama + 1, dan `semester` hanya `Ganjil` atau `Genap`. Keduanya dipakai menghitung semester mahasiswa ([3.3](#33-pengguna-manage-user)).
 - Tanggal akhir ≥ tanggal mulai. Tanggal KRS akhir ≥ tanggal KRS awal.
-- `batas_input_nilai` ≥ `tanggal_mulai`.
-- `batas_bayar_remidi` harus **setelah** `batas_input_nilai` (bila keduanya diisi).
+- Tanggal KRS akhir ≤ tanggal akhir semester. Tanggal KRS awal boleh sebelum tanggal mulai kuliah.
+- `batas_input_nilai` ≥ `tanggal_akhir`, karena UAS paling lambat di tanggal akhir.
+- `batas_bayar_remidi` harus **setelah** `tanggal_akhir`, dan setelah `batas_input_nilai` bila diisi.
 - `batas_input_nilai_remidi` harus **setelah** `batas_bayar_remidi` (bila keduanya diisi).
 - Hanya boleh ada **satu tahun akademik aktif**. Mengaktifkan tahun kedua ditolak ("Sudah ada tahun akademik yang aktif."). Tahun lain tidak dinonaktifkan otomatis.
 
@@ -203,7 +204,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 - Karyawan: `nomor_induk`.
 - Dosen: `nidn` (unik), jabatan fungsional, pendidikan, status kepegawaian, `prodi_id`.
 - Mahasiswa: `nim` (unik), `angkatan` (wajib, 4 digit), `status`, `dosen_wali_id`, `prodi_id`, sekolah asal, `nisn` (10 digit, unik), `email_alternatif`, data orang tua.
-  - Pilihan `status`: `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`, `Transfer Masuk`.
+  - Pilihan `status`: `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`. Status `Transfer Masuk` dihapus 28 Sep 2026; mahasiswa yang berstatus itu diubah menjadi `Aktif` saat migrasi.
   - **Semester tidak disimpan**, tetapi dihitung dari angkatan (`MahasiswaProfile::semesterPada`): `(tahun pertama tahun akademik − angkatan) × 2 + (Ganjil ? 1 : 2)`. Angkatan 2024 berada di semester 1 pada 2024/2025 Ganjil dan semester 5 pada 2026/2027 Ganjil. Semester tetap bertambah selama mahasiswa cuti. Hasilnya kosong bila mahasiswa belum mulai kuliah. Detail pengguna menampilkan semester pada tahun akademik aktif.
 
 **Hapus pengguna ditolak bila:**
@@ -246,6 +247,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
    - setiap baris berisi `huruf`, `bobot` 0–4, `angka_minimal` 0–100 (boleh kosong), `lulus`, dan `boleh_diulang`;
    - bawaan: A=4, B=3, C=2, D=1 (lulus, boleh diulang), E=0 (tidak lulus, boleh diulang); angka minimal A 80, B 70, C 60, D 50, E 0;
    - angka minimal dipakai mengonversi nilai pendadaran menjadi huruf ([14.4](#144-penilaian-dan-hasil-pendadaran)); huruf berbobot lebih tinggi wajib berangka minimal lebih tinggi;
+   - wajib ada minimal satu huruf `lulus` dan satu huruf tidak lulus, dan setiap huruf tidak lulus wajib `boleh_diulang`;
    - huruf yang sudah dipakai di KRS tidak bisa dihapus.
 4. **Pindah kelas**: sakelar membuka atau menutup formulir pengajuan mahasiswa, bawaan tertutup.
 5. **Remidi**: `huruf_maks_remidi`, yaitu huruf tertinggi setelah remidi. Kosong berarti bebas.
@@ -366,7 +368,7 @@ Mahasiswa mengisi KRS di menu **Rencana Studi (KRS)**. Semua rute KRS dijaga `ca
 
 ### 7.1 Syarat dasar
 
-- Status mahasiswa harus `Aktif` atau `Transfer Masuk` (`Krs::STATUS_MAHASISWA_BOLEH_KRS`).
+- Status mahasiswa harus `Aktif` (`Krs::STATUS_MAHASISWA_BOLEH_KRS`).
 - Harus ada tahun akademik aktif dan periode KRS sedang berjalan. Di luar periode, daftar kelas tampil kosong.
 - **Batas SKS** (`PengaturanAkademik::maksSksUntuk`) diambil dari IPS semester sebelumnya (`MahasiswaProfile::ipsSemesterSebelum`):
   - "semester sebelumnya" adalah tahun akademik **terakhir yang pernah diambil mahasiswa**;
@@ -1055,7 +1057,7 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
 | Entitas | Nilai |
 |---|---|
-| Status mahasiswa | `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`, `Transfer Masuk` |
+| Status mahasiswa | `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal` |
 | KRS | `status`: `Aktif`. Nilai berupa huruf dari skala nilai. |
 | Tagihan semester | `belum_bayar`, `lunas` |
 | Tagihan remidi | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` |
@@ -1088,13 +1090,13 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 
 ### Pengaturan dan data master
 
-5. **Urutan tanggal tahun akademik belum lengkap.** Tanggal KRS tidak divalidasi terhadap tanggal mulai dan akhir semester, dan `batas_input_nilai` tidak dibandingkan dengan `tanggal_akhir`.
-6. **Skala nilai boleh tanpa huruf "tidak lulus" sama sekali.** Tidak ada validasi yang mewajibkannya.
+5. ~~**Urutan tanggal tahun akademik belum lengkap.**~~ **Selesai 28 Sep 2026:** KRS harus ditutup paling lambat tanggal akhir, batas input nilai dan batas bayar remidi tidak boleh sebelum tanggal akhir (lihat 3.1).
+6. ~~**Skala nilai boleh tanpa huruf "tidak lulus" sama sekali.**~~ **Selesai 28 Sep 2026:** wajib ada huruf lulus dan tidak lulus, dan huruf tidak lulus wajib boleh diulang (lihat bagian 4).
 7. ~~**Pesan penyusunan ulang pertemuan tidak lengkap.**~~ **Selesai 28 Sep 2026:** susun ulang dihapus; tanggal mulai terkunci bila sudah ada pertemuan, dan perubahan jadwal hanya per pertemuan dengan alasan (lihat 9.1).
 
 ### Keuangan dan KRS
 
-8. **Mahasiswa `Transfer Masuk` tidak pernah ditagih**, karena tagihan hanya untuk status `Aktif`. Mereka juga tidak pernah terkunci oleh `tagihan.lunas`.
+8. ~~**Mahasiswa `Transfer Masuk` tidak pernah ditagih.**~~ **Selesai 28 Sep 2026:** status `Transfer Masuk` dihapus dan diubah menjadi `Aktif` (lihat 3.3).
 9. **Tandai lunas sebelum tagihan terbit** membuat tagihan bernilai 0 tanpa rincian, dan penerbitan berikutnya melewatinya. Komentar kode mengatakan rincian "menyusul".
 10. **"Tandai Belum Bayar" tanpa tagihan terbit** membuat tagihan Rp0 yang tetap mengunci KRS bila sakelar menyala. Hal yang sama terjadi bila tidak ada tarif yang cocok.
 11. **Terbitkan ulang menimpa rincian yang diketik manual** pada tagihan yang belum lunas.

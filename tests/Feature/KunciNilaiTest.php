@@ -107,8 +107,8 @@ it('stores the grade deadline on the tahun akademik', function () {
 
     $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [
         'tahun' => '2030/2031', 'semester' => 'Ganjil', 'tanggal_mulai' => '2030-08-01', 'tanggal_akhir' => '2031-01-31',
-        'tanggal_krs_awal' => '2030-08-01', 'tanggal_krs_akhir' => '2030-08-14', 'batas_input_nilai' => '2031-01-20', 'status' => false,
+        'tanggal_krs_awal' => '2030-08-01', 'tanggal_krs_akhir' => '2030-08-14', 'batas_input_nilai' => '2031-02-07', 'status' => false,
     ])->assertSessionHasNoErrors();
 
-    $this->assertDatabaseHas('tahun_akademik', ['tahun' => '2030/2031', 'batas_input_nilai' => '2031-01-20']);
+    $this->assertDatabaseHas('tahun_akademik', ['tahun' => '2030/2031', 'batas_input_nilai' => '2031-02-07']);
 });

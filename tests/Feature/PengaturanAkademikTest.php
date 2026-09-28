@@ -89,10 +89,11 @@ it('does not remove a grade letter that students already have', function () {
     $mahasiswa = User::factory()->mahasiswa()->create();
     Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id, 'nilai' => 'E']);
     $tanpaE = SkalaNilai::query()->where('huruf', '!=', 'E')->get(['huruf', 'bobot', 'lulus', 'boleh_diulang'])->toArray();
+    $tanpaE[] = ['huruf' => 'F', 'bobot' => 0, 'lulus' => false, 'boleh_diulang' => true];
 
     $this->actingAs(User::factory()->admin()->create())
         ->put(route('admin.pengaturan-akademik.skala-nilai'), ['skala_nilai' => $tanpaE])
-        ->assertSessionHasErrors('skala_nilai');
+        ->assertSessionHasErrors(['skala_nilai' => 'Nilai E masih dipakai di KRS mahasiswa sehingga tidak bisa dihapus.']);
 
     expect(SkalaNilai::where('huruf', 'E')->exists())->toBeTrue();
 });
@@ -102,3 +103,15 @@ it('keeps academic settings admin-only', function () {
         ->get(route('pengaturan-sistem.akademik'))
         ->assertForbidden();
 });
+
+it('requires a passing and a failing grade, and failing grades must be retakeable', function (array $skala, string $pesan) {
+    $this->actingAs(User::factory()->admin()->create())
+        ->put(route('admin.pengaturan-akademik.skala-nilai'), ['skala_nilai' => $skala])
+        ->assertSessionHasErrors(['skala_nilai' => $pesan]);
+
+    expect(SkalaNilai::where('huruf', 'E')->value('lulus'))->toBeFalse();
+})->with([
+    'semua lulus' => [[['huruf' => 'A', 'bobot' => 4, 'lulus' => true, 'boleh_diulang' => false], ['huruf' => 'E', 'bobot' => 0, 'lulus' => true, 'boleh_diulang' => true]], 'Skala nilai harus punya minimal satu huruf lulus dan satu huruf tidak lulus.'],
+    'tidak ada yang lulus' => [[['huruf' => 'A', 'bobot' => 4, 'lulus' => false, 'boleh_diulang' => true], ['huruf' => 'E', 'bobot' => 0, 'lulus' => false, 'boleh_diulang' => true]], 'Skala nilai harus punya minimal satu huruf lulus dan satu huruf tidak lulus.'],
+    'gagal tanpa bisa diulang' => [[['huruf' => 'A', 'bobot' => 4, 'lulus' => true, 'boleh_diulang' => false], ['huruf' => 'E', 'bobot' => 0, 'lulus' => false, 'boleh_diulang' => false]], 'Huruf tidak lulus harus boleh diulang: E.'],
+]);

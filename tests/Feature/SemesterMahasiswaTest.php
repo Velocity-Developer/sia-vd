@@ -49,3 +49,19 @@ it('requires the academic year as YYYY/YYYY+1 with Ganjil or Genap', function (a
     'tahun kedua tidak berurutan' => [['tahun' => '2025/2027'], 'tahun'],
     'semester pendek' => [['semester' => 'Pendek'], 'semester'],
 ]);
+
+it('keeps the KRS period and grade deadline in order with the semester dates', function (array $ubah, string $error) {
+    $payload = ['tahun' => '2025/2026', 'semester' => 'Ganjil', 'tanggal_mulai' => '2025-09-01', 'tanggal_akhir' => '2026-01-31', 'tanggal_krs_awal' => '2025-08-25', 'tanggal_krs_akhir' => '2025-09-14', 'batas_input_nilai' => '2026-02-07', 'status' => false];
+    $admin = User::factory()->admin()->create();
+
+    // KRS boleh dibuka sebelum tanggal mulai kuliah.
+    $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), $payload)->assertSessionHasNoErrors();
+    TahunAkademik::query()->delete();
+
+    $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), array_replace($payload, $ubah))->assertSessionHasErrors($error);
+    expect(TahunAkademik::count())->toBe(0);
+})->with([
+    'KRS ditutup setelah semester berakhir' => [['tanggal_krs_akhir' => '2026-02-01'], 'tanggal_krs_akhir'],
+    'batas input nilai sebelum semester berakhir' => [['batas_input_nilai' => '2026-01-20'], 'batas_input_nilai'],
+    'batas bayar remidi sebelum semester berakhir' => [['batas_input_nilai' => null, 'batas_bayar_remidi' => '2026-01-20'], 'batas_bayar_remidi'],
+]);

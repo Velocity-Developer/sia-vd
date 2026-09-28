@@ -155,6 +155,21 @@ class PengaturanAkademikController extends Controller
             'skala_nilai.*.angka_minimal' => 'Angka minimal',
         ]);
 
+        // Harus ada huruf lulus dan huruf tidak lulus. Huruf tidak lulus wajib boleh diulang, kalau tidak
+        // mahasiswa yang gagal tidak akan pernah bisa mengambil mata kuliah itu lagi.
+        $skala = collect($data['skala_nilai']);
+        if (! $skala->contains(fn (array $row): bool => (bool) $row['lulus']) || ! $skala->contains(fn (array $row): bool => ! $row['lulus'])) {
+            throw ValidationException::withMessages([
+                'skala_nilai' => 'Skala nilai harus punya minimal satu huruf lulus dan satu huruf tidak lulus.',
+            ]);
+        }
+        $tidakBisaDiulang = $skala->filter(fn (array $row): bool => ! $row['lulus'] && ! $row['boleh_diulang'])->pluck('huruf');
+        if ($tidakBisaDiulang->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'skala_nilai' => 'Huruf tidak lulus harus boleh diulang: '.$tidakBisaDiulang->implode(', ').'.',
+            ]);
+        }
+
         // Huruf berbobot lebih tinggi harus berangka minimal lebih tinggi, agar konversi angka → huruf tidak rancu.
         $berangka = collect($data['skala_nilai'])->filter(fn (array $row): bool => ($row['angka_minimal'] ?? null) !== null)->sortByDesc('bobot')->values();
         foreach ($berangka as $i => $row) {

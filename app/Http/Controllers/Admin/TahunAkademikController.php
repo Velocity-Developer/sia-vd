@@ -91,17 +91,20 @@ class TahunAkademikController extends Controller
                 'tanggal_mulai' => ['required', 'date'],
                 'tanggal_akhir' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
                 'tanggal_krs_awal' => ['required', 'date'],
-                'tanggal_krs_akhir' => ['required', 'date', 'after_or_equal:tanggal_krs_awal'],
-                'batas_input_nilai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
+                // KRS boleh dibuka sebelum kuliah dimulai, tetapi harus ditutup sebelum semester berakhir.
+                'tanggal_krs_akhir' => ['required', 'date', 'after_or_equal:tanggal_krs_awal', 'before_or_equal:tanggal_akhir'],
+                // UAS paling lambat di tanggal akhir, jadi batas input nilai tidak boleh sebelum itu.
+                'batas_input_nilai' => ['nullable', 'date', 'after_or_equal:tanggal_akhir'],
                 // Tagihan remidi terbit setelah nilai final, jadi batas bayarnya harus sesudah batas input nilai.
-                'batas_bayar_remidi' => ['nullable', 'date', 'after_or_equal:tanggal_mulai', ...($request->filled('batas_input_nilai') ? ['after:batas_input_nilai'] : [])],
+                'batas_bayar_remidi' => ['nullable', 'date', 'after:tanggal_akhir', ...($request->filled('batas_input_nilai') ? ['after:batas_input_nilai'] : [])],
                 'batas_input_nilai_remidi' => ['nullable', 'date', ...($request->filled('batas_bayar_remidi') ? ['after:batas_bayar_remidi'] : [])],
                 'status' => ['boolean'],
             ],
             [
                 'after_or_equal' => ':attribute harus sama atau setelah :date.',
+                'tanggal_krs_akhir.before_or_equal' => 'Tanggal KRS akhir tidak boleh setelah tanggal akhir semester.',
                 'batas_input_nilai_remidi.after' => 'Batas input nilai remidi harus setelah batas bayar remidi.',
-                'batas_bayar_remidi.after' => 'Batas bayar remidi harus setelah batas input nilai.',
+                'batas_bayar_remidi.after' => 'Batas bayar remidi harus setelah tanggal akhir semester dan batas input nilai.',
                 'tahun.unique' => 'Tahun akademik dengan tahun dan semester ini sudah ada.',
                 'tahun.regex' => 'Format tahun akademik harus seperti 2026/2027.',
                 'semester.in' => 'Semester harus Ganjil atau Genap.',
