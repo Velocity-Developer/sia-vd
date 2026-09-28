@@ -274,8 +274,11 @@ flowchart TD
     D --> E["Generate pertemuan (admin/pengampu)<br/>dari tanggal mulai TA mengikuti jadwal"]
     E --> F["Pertemuan 1..n<br/>n/2 = UTS, n = UAS (bila n minimal 4)"]
     F --> G{"Perubahan kemudian"}
-    G -- "Ubah jadwal + terapkan" --> H["Susun ulang pertemuan<br/>yang masih dijadwalkan dan tidak manual"]
-    G -- "Ubah tanggal mulai TA" --> H
+    G -- "Ubah jadwal mingguan" --> H0["Pertemuan yang sudah dibuat<br/>tidak berubah"]
+    G -- "Ubah tanggal mulai TA" --> H1["Ditolak bila kelas<br/>sudah punya pertemuan"]
+    G -- "Ubah satu pertemuan" --> H{"Masih dijadwalkan, alasan diisi,<br/>tidak bentrok, bukan UTS/UAS<br/>yang diatur Jadwal Ujian?"}
+    H -- Tidak --> H2["Ditolak"]
+    H -- Ya --> H3["Hanya pertemuan itu dipindah<br/>dan dicatat di riwayat jadwal<br/>(mahasiswa diberi tahu di Beranda)"]
     G -- "Ubah jumlah pertemuan" --> I{"Pertemuan yang terbuang<br/>sudah berjalan / ada presensi?"}
     I -- Ya --> I1["Ditolak"]
     I -- Tidak --> I2["UAS ke pertemuan terakhir,<br/>UTS ke tengah, tambah pertemuan baru"]
@@ -289,9 +292,7 @@ flowchart TD
 ```mermaid
 stateDiagram-v2
     [*] --> dijadwalkan: generate pertemuan
-    dijadwalkan --> dijadwalkan: jadwal ulang (cek bentrok, jadwal_manual)
-    dijadwalkan --> dibatalkan: batal (catatan wajib)
-    dibatalkan --> dijadwalkan: aktifkan
+    dijadwalkan --> dijadwalkan: jadwal ulang (alasan wajib, cek bentrok, dicatat di riwayat)
     dijadwalkan --> berlangsung: dosen buka di jam mulai s.d. jam akhir / admin setelah jam mulai / ujian online dimulai
     berlangsung --> selesai: tutup dengan jurnal (topik wajib)
     berlangsung --> selesai: tutup otomatis 60 menit setelah jam akhir, saat halaman dibuka
@@ -345,7 +346,7 @@ stateDiagram-v2
     disetujui --> [*]: presensi di-set izin/sakit, metode pengajuan (tidak menurunkan status hadir)
     note left of menunggu
         Syarat mengajukan: sebelum akhir hari (tanggal + batas hari),
-        pertemuan tidak dibatalkan, belum tercatat hadir.
+        belum tercatat hadir. Izin ikut pertemuan yang dijadwal ulang.
         Tidak ada batas awal (PD-28).
     end note
 ```

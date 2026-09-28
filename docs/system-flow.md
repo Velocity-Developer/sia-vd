@@ -163,7 +163,7 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 
 **Efek samping:**
 
-- Mengubah `tanggal_mulai` menyusun ulang pertemuan (`Pertemuan::susunUlang`). Yang disusun ulang hanya pertemuan berstatus `dijadwalkan`, tidak dijadwal manual, dan tidak jatuh di masa lalu.
+- `tanggal_mulai` **terkunci** begitu ada kelas di tahun itu yang sudah punya pertemuan; perubahannya ditolak dengan pesan jumlah kelas terdampak (form menampilkan keterangan terkunci). Pertemuan tidak pernah digeser otomatis.
 - Tahun akademik yang sudah punya kelas tidak bisa dihapus.
 
 **Periode KRS dianggap aktif** bila hari ini berada di antara `tanggal_krs_awal` dan `tanggal_krs_akhir` (inklusif). Bila salah satunya kosong, periode dianggap tertutup.
@@ -281,7 +281,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
   - dengan ruang yang sama;
   - dengan dosen pengampu yang sama di kelas lain.
 - Bentrok jadwal **mahasiswa** tidak dicek di sini. Pengecekannya dilakukan saat KRS dan saat admin menyetujui pindah kelas.
-- Opsi `terapkan_ke_pertemuan` menyusun ulang pertemuan yang belum berjalan. Menghapus jadwal tidak mengubah pertemuan yang sudah ada.
+- Jadwal mingguan hanya dipakai saat **membuat** pertemuan. Menambah, mengubah, atau menghapus jadwal tidak mengubah pertemuan yang sudah ada; form jadwal menampilkan keterangan itu bila kelas sudah punya pertemuan.
 
 ### 5.3 Halaman kelas
 
@@ -461,15 +461,24 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 - Slot diambil dari jadwal mingguan kelas, mulai `tanggal_mulai` tahun akademik. Kelas tanpa jadwal ditolak.
 - Pertemuan ke-⌊n/2⌋ menjadi **UTS** dan pertemuan ke-n menjadi **UAS** (bila n ≥ 4).
 - Pertemuan yang sudah ada tidak diubah. Ada peringatan bila tanggal melewati akhir tahun akademik.
+- Tidak ada pembatalan maupun susun ulang: jumlah pertemuan selalu sama dengan `jumlah_pertemuan` kelas.
+
+**Jadwal ulang per pertemuan** (`PertemuanController::update`, admin atau pengampu):
+
+- Tanggal, jam, ruang, dan dosen (khusus admin) hanya bisa diubah selama pertemuan masih `dijadwalkan`. Hanya pertemuan itu yang berubah.
+- **Alasan wajib** bila salah satunya berubah. Perubahan dicek bentrok ruang, dosen, dan jadwal mingguan kelas lain.
+- Setiap perubahan dicatat di `riwayat_jadwal_pertemuan` (dari → ke, alasan, pengubah, waktu; `Pertemuan::jadwalUlang`). Riwayat tampil di detail pertemuan; daftar pertemuan menandai "Dijadwal ulang: <alasan>".
+- Pertemuan UTS/UAS yang sudah punya jadwal ujian hanya bisa dipindah dari menu Jadwal Ujian (`Ujian::sinkronkanPertemuan`, tidak dicatat di riwayat).
+- Jenis dan catatan boleh diubah tanpa alasan dan tidak masuk riwayat.
+- Pengajuan izin tetap menempel ke pertemuan yang dipindah. Mahasiswa melihat "Dipindah dari … : alasan" di halaman Presensi, dan Beranda menampilkan **Perubahan jadwal kuliah** untuk pertemuan mendatang yang dijadwal ulang dalam 14 hari terakhir (`App\PengingatJadwalPertemuan`), ditandai penting bila ia sudah mengajukan izin.
 
 **Status pertemuan:**
 
 | Status | Arti |
 |---|---|
-| `dijadwalkan` | Awal. Bisa dijadwal ulang (dicek bentrok ruang, dosen, pertemuan lain) atau dibatalkan dengan catatan. |
+| `dijadwalkan` | Awal. Bisa dijadwal ulang dengan alasan (lihat di atas). |
 | `berlangsung` | Dibuka dosen atau admin. Semua peserta KRS otomatis dibuatkan baris presensi `alpa`. |
 | `selesai` | Ditutup dengan jurnal (`topik` wajib), atau ditutup otomatis. |
-| `dibatalkan` | Bisa diaktifkan kembali ke `dijadwalkan`. |
 
 - **Terlewat** bukan status tersimpan. Artinya pertemuan masih `dijadwalkan` padahal jam akhirnya sudah lewat.
 - **Siapa boleh membuka pertemuan:**
@@ -509,7 +518,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 
 1. Mahasiswa mengajukan `izin` atau `sakit` per pertemuan, dengan alasan dan lampiran opsional (pdf/jpg/png, maks 3 × 5 MB).
    - Batas waktunya akhir hari tanggal pertemuan + `batas_pengajuan_izin_hari`.
-   - Pertemuannya tidak boleh dibatalkan, dan mahasiswa belum tercatat hadir.
+   - Mahasiswa belum tercatat hadir.
 2. Status pengajuan: `menunggu` → `disetujui` atau `ditolak`. Menolak wajib disertai catatan.
 3. Pengajuan yang ditolak boleh diajukan ulang, dan statusnya kembali `menunggu`.
 4. Yang memproses adalah **dosen pengampu atau admin**. Dosen pengganti dan kaprodi tidak bisa.
@@ -530,7 +539,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 ### 9.5 Laporan dan peringatan
 
 - **Ekspor presensi kelas** tersedia dalam PDF dan CSV.
-- **Laporan kehadiran dosen** (khusus admin) berisi pertemuan terlaksana, dibatalkan, terlewat, oleh pengganti, dosen masuk terlambat, tanpa jurnal, dan rata-rata hadir.
+- **Laporan kehadiran dosen** (khusus admin) berisi pertemuan terlaksana, dijadwal ulang, terlewat, oleh pengganti, dosen masuk terlambat, tanpa jurnal, dan rata-rata hadir.
 - **Beranda mahasiswa:** mata kuliah dengan kehadiran di bawah batas, atau sisa jatah tidak hadir ≤ 1.
 - **Beranda dosen:** pertemuan hari ini, jumlah izin yang menunggu, dan jumlah mahasiswa di bawah batas kehadiran.
 
@@ -1002,7 +1011,7 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Batas SKS (kuota) | Tagihan semester | Komponen `per_sks` dikali kuota, bukan SKS diambil |
 | Tagihan semester | KRS | Bila `kunci_krs_aktif` menyala, tagihan terbit yang belum lunas mengunci KRS |
 | KRS | Kelas, presensi, ujian, remidi | Peserta setiap fitur kelas adalah mahasiswa ber-KRS |
-| Jadwal mingguan | Pertemuan | Pertemuan dibuat dan disusun ulang dari jadwal; UTS/UAS ada di pertemuan n/2 dan n |
+| Jadwal mingguan | Pertemuan | Pertemuan dibuat sekali dari jadwal (perubahan jadwal sesudahnya tidak ikut); UTS/UAS ada di pertemuan n/2 dan n |
 | Jadwal ujian UTS/UAS | Pertemuan UTS/UAS | Tanggal, jam, dan ruang pertemuan mengikuti ujian |
 | Presensi | Syarat ujian | Persentase hadir menentukan boleh ikut ujian online (bila sakelar menyala) |
 | Ujian online | Presensi | Mengerjakan ujian mencatat hadir di pertemuan UTS/UAS |
@@ -1033,7 +1042,7 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Tagihan remidi | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` |
 | Pengajuan susulan | `menunggu`, `disetujui`, `ditolak`, `dibatalkan`; tampilan `dibatalkan` (menunggu tetapi ikut ujian utama) dan `gugur` (disetujui tetapi ikut ujian utama) |
 | Tagihan susulan | `belum_bayar`, `menunggu_verifikasi`, `lunas`, `ditolak`; tampilan `gugur` (lewat batas) dan `dibatalkan` (ikut ujian utama sebelum lunas) |
-| Pertemuan | jenis: `kuliah`, `uts`, `uas`. Status: `dijadwalkan`, `berlangsung`, `selesai`, `dibatalkan`; tampilan "terlewat" |
+| Pertemuan | jenis: `kuliah`, `uts`, `uas`. Status: `dijadwalkan`, `berlangsung`, `selesai`; tampilan "terlewat"; riwayat jadwal ulang |
 | Presensi mahasiswa | `hadir`, `terlambat`, `izin`, `sakit`, `alpa`. Metode: `manual`, `qr`, `pin`, `pengajuan`, `ujian` |
 | Pengajuan izin | `menunggu`, `disetujui`, `ditolak` |
 | Ujian | jenis: `uts`, `uas`, `remidi`, `uts_susulan`, `uas_susulan`. Mode: `tatap_muka`, `online_berkas`, `online_soal`. Status: `draf`, `terbit` |
@@ -1062,7 +1071,7 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 
 5. **Urutan tanggal tahun akademik belum lengkap.** Tanggal KRS tidak divalidasi terhadap tanggal mulai dan akhir semester, dan `batas_input_nilai` tidak dibandingkan dengan `tanggal_akhir`.
 6. **Skala nilai boleh tanpa huruf "tidak lulus" sama sekali.** Tidak ada validasi yang mewajibkannya.
-7. **Pesan penyusunan ulang pertemuan tidak lengkap.** Saat `tanggal_mulai` diubah, pertemuan yang dilewati karena jatuh di masa lalu tidak disebut di pesan sukses.
+7. ~~**Pesan penyusunan ulang pertemuan tidak lengkap.**~~ **Selesai 28 Sep 2026:** susun ulang dihapus; tanggal mulai terkunci bila sudah ada pertemuan, dan perubahan jadwal hanya per pertemuan dengan alasan (lihat 9.1).
 
 ### Keuangan dan KRS
 
