@@ -176,3 +176,22 @@ it('migrates the legacy role column into the roles table', function () {
         ->and($mahasiswa->fresh()->role_id)->toBe(Role::system(UserType::Mahasiswa)->id)
         ->and($admin->fresh()->homeRoute())->toBe('admin.dashboard');
 });
+
+it('menolak menu admin untuk role mahasiswa tetapi mengizinkannya untuk role dosen', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->post(route('admin.roles.store'), [
+        'name' => 'Asisten Mahasiswa',
+        'user_type' => 'mahasiswa',
+        'permissions' => permissionIds(['mahasiswa.dashboard', 'admin.tagihan']),
+    ])->assertSessionHasErrors(['permissions' => 'Hak akses Tagihan Mahasiswa tidak sesuai dengan jenis pengguna Mahasiswa.']);
+
+    $this->actingAs($admin)->post(route('admin.roles.store'), [
+        'name' => 'Kaprodi',
+        'user_type' => 'dosen',
+        'permissions' => permissionIds(['dosen.dashboard', 'admin.mata-kuliah']),
+    ])->assertSessionHasNoErrors();
+
+    expect(Role::where('name', 'Asisten Mahasiswa')->exists())->toBeFalse()
+        ->and(Role::where('name', 'Kaprodi')->firstOrFail()->permissionKeys())->toBe(['admin.mata-kuliah', 'dosen.dashboard']);
+});

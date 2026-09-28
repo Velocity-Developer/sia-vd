@@ -18,9 +18,13 @@ class Permission extends Model
         return $this->belongsToMany(Role::class);
     }
 
+    /**
+     * Permission tanpa jenis pengguna (menu admin) hanya untuk role Admin/Karyawan dan Dosen
+     * (dosen boleh merangkap staf, mis. kaprodi); role Mahasiswa tidak pernah mendapatkannya.
+     */
     public function isAvailableFor(UserType $type): bool
     {
-        return $this->user_type === null || $this->user_type === $type;
+        return $this->user_type === null ? $type !== UserType::Mahasiswa : $this->user_type === $type;
     }
 
     protected function casts(): array

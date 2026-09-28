@@ -98,3 +98,13 @@ it('shares the role and permissions of the authenticated user with the frontend'
             ->missing('auth.user.role')
         );
 });
+
+it('mengabaikan menu admin yang terlanjur tersambung ke role mahasiswa', function () {
+    $role = Role::factory()->type(UserType::Mahasiswa)->create();
+    $role->permissions()->attach(Permission::whereIn('key', ['mahasiswa.dashboard', 'admin.tagihan'])->pluck('id'));
+    $user = User::factory()->withRole($role)->create();
+
+    expect($user->hasPermission('admin.tagihan'))->toBeFalse()
+        ->and($user->grupRute())->toBe('mahasiswa');
+    $this->actingAs($user)->get(route('admin.tagihan.index'))->assertForbidden();
+});

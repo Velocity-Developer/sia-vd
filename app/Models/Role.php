@@ -54,7 +54,7 @@ class Role extends Model
     public function permissionKeys(): array
     {
         return $this->permissions
-            ->filter(fn (Permission $permission): bool => $permission->user_type === null || $permission->user_type === $this->user_type)
+            ->filter(fn (Permission $permission): bool => $permission->isAvailableFor($this->user_type))
             ->pluck('key')
             ->values()
             ->all();

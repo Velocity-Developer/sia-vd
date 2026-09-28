@@ -42,7 +42,9 @@ const form = useForm<{ name: string; description: string; user_type: UserType; p
 
 const typeLabel = (type: UserType | null) => props.userTypes.find((item) => item.value === type)?.label ?? '';
 
-const isAvailable = (permission: PermissionItem) => permission.user_type === null || permission.user_type === form.user_type;
+// Sama dengan Permission::isAvailableFor: menu admin (tanpa jenis) terlarang untuk role Mahasiswa.
+const isAvailable = (permission: PermissionItem) =>
+    permission.user_type === null ? form.user_type !== 'mahasiswa' : permission.user_type === form.user_type;
 const isLocked = (permission: PermissionItem) => props.lockedPermissions.includes(permission.id);
 const isChecked = (permission: PermissionItem) => form.permissions.includes(permission.id);
 
@@ -228,7 +230,11 @@ const sel =
                                                 permission.description
                                             }}</span>
                                             <span v-if="!isAvailable(permission)" class="mt-1 block text-xs leading-4 text-[#a39e98]">
-                                                Khusus role {{ typeLabel(permission.user_type) }}
+                                                {{
+                                                    permission.user_type
+                                                        ? `Khusus role ${typeLabel(permission.user_type)}`
+                                                        : `Khusus role ${typeLabel('admin')} dan ${typeLabel('dosen')}`
+                                                }}
                                             </span>
                                             <span v-else-if="isLocked(permission)" class="mt-1 block text-xs leading-4 text-[#a39e98]">
                                                 Wajib aktif agar Admin tidak kehilangan akses
