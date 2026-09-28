@@ -112,7 +112,7 @@ class JadwalPendadaran
      */
     private function pertemuan(): Builder
     {
-        return Pertemuan::query()->whereDate('tanggal', $this->tanggal)->where('status', '!=', Pertemuan::DIBATALKAN)
+        return Pertemuan::query()->whereDate('tanggal', $this->tanggal)
             ->where('jam_mulai', '<', $this->jamAkhir)->where('jam_akhir', '>', $this->jamMulai);
     }
 

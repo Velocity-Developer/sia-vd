@@ -16,7 +16,7 @@ import {
 } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { CalendarPlus, Download, Pencil, RefreshCw } from 'lucide-vue-next';
+import { CalendarPlus, Download, Pencil } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Pertemuan = {
@@ -32,6 +32,8 @@ type Pertemuan = {
     dosen_id: number | null;
     topik: string | null;
     catatan: string | null;
+    riwayat_jadwal_count: number;
+    alasan_jadwal_terakhir: string | null;
     jumlah_tercatat: number;
     jumlah_hadir: number;
     ruang?: { kode_ruang: string; nama_ruang: string } | null;
@@ -112,17 +114,6 @@ const jumlahTidakMemenuhi = computed(() => props.peserta.filter((m) => m.ujian?.
 const kurang = computed(() => props.kelasKuliah.jumlah_pertemuan - props.pertemuan.length);
 
 const generating = ref(false);
-const susunUlang = () =>
-    router.post(
-        rute('presensi.susun-ulang', props.kelasKuliah.id),
-        {},
-        {
-            preserveScroll: true,
-            onStart: () => (generating.value = true),
-            onFinish: () => (generating.value = false),
-        },
-    );
-
 const generate = () =>
     router.post(
         rute('presensi.generate', props.kelasKuliah.id),
@@ -146,6 +137,7 @@ const suntingForm = useForm({
     ruang_id: '' as number | string,
     jenis: 'kuliah' as JenisPertemuan,
     catatan: '',
+    alasan: '',
 });
 const bukaSunting = (item: Pertemuan) => {
     sunting.value = item;
@@ -157,6 +149,7 @@ const bukaSunting = (item: Pertemuan) => {
         ruang_id: item.ruang_id ?? '',
         jenis: item.jenis,
         catatan: item.catatan ?? '',
+        alasan: '',
     });
 };
 const simpanSunting = () => {
@@ -166,20 +159,15 @@ const simpanSunting = () => {
         .put(rute('presensi.pertemuan.update', sunting.value.id), { preserveScroll: true, onSuccess: () => (sunting.value = null) });
 };
 const jadwalTerkunci = computed(() => sunting.value !== null && sunting.value.status !== 'dijadwalkan');
-
-// Batalkan pertemuan (mis. libur) dengan alasan.
-const pembatalan = ref<Pertemuan | null>(null);
-const batalForm = useForm({ catatan: '' });
-const bukaBatal = (item: Pertemuan) => {
-    pembatalan.value = item;
-    batalForm.reset();
-    batalForm.clearErrors();
-};
-const simpanBatal = () => {
-    if (!pembatalan.value) return;
-    batalForm.put(rute('presensi.pertemuan.batal', pembatalan.value.id), { preserveScroll: true, onSuccess: () => (pembatalan.value = null) });
-};
-const aktifkan = (item: Pertemuan) => router.put(rute('presensi.pertemuan.aktifkan', item.id), {}, { preserveScroll: true });
+// Alasan wajib bila tanggal, jam, atau ruang berubah; perubahannya dicatat di riwayat pertemuan.
+const jadwalBerubah = computed(
+    () =>
+        sunting.value !== null &&
+        (suntingForm.tanggal !== sunting.value.tanggal.slice(0, 10) ||
+            suntingForm.jam_mulai !== jam(sunting.value.jam_mulai) ||
+            suntingForm.jam_akhir !== jam(sunting.value.jam_akhir) ||
+            (suntingForm.ruang_id || null) !== sunting.value.ruang_id),
+);
 
 const pertemuanDihitung = computed(() => props.pertemuan.filter((item) => item.jenis === 'kuliah' && item.status === 'selesai').length);
 const dibawahBatas = (rekap: Rekap | null) => rekap?.persen !== null && rekap?.persen !== undefined && rekap.persen < props.minKehadiran;
@@ -238,16 +226,6 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                             @click="generate"
                         >
                             <CalendarPlus class="mr-1 size-4" /> Buat {{ kurang }} pertemuan
-                        </Button>
-                        <Button
-                            v-if="props.pertemuan.length && bisaUbah"
-                            variant="outline"
-                            class="rounded-lg border-[#e6e6e6] bg-white text-black"
-                            title="Samakan tanggal, jam, dan ruang pertemuan yang belum berjalan dengan jadwal mingguan terbaru"
-                            :disabled="generating"
-                            @click="susunUlang"
-                        >
-                            <RefreshCw class="mr-1 size-4" /> Susun ulang dari jadwal
                         </Button>
                     </div>
                 </div>
@@ -358,6 +336,13 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                             {{ statusTampil(item).label }}
                                         </span>
                                         <span
+                                            v-if="item.riwayat_jadwal_count"
+                                            class="mt-1 block max-w-[180px] truncate text-xs text-[#8a5a00]"
+                                            :title="item.alasan_jadwal_terakhir ?? ''"
+                                        >
+                                            Dijadwal ulang: {{ item.alasan_jadwal_terakhir }}
+                                        </span>
+                                        <span
                                             v-if="item.catatan"
                                             class="mt-1 block max-w-[180px] truncate text-xs text-[#a39e98]"
                                             :title="item.catatan"
@@ -389,22 +374,6 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                                     @click="bukaSunting(item)"
                                                 >
                                                     <Pencil class="size-4" />
-                                                </button>
-                                                <button
-                                                    v-if="item.status === 'dijadwalkan'"
-                                                    type="button"
-                                                    class="text-[#dd5b00] hover:underline"
-                                                    @click="bukaBatal(item)"
-                                                >
-                                                    Batalkan
-                                                </button>
-                                                <button
-                                                    v-if="item.status === 'dibatalkan'"
-                                                    type="button"
-                                                    class="text-[#0075de] hover:underline"
-                                                    @click="aktifkan(item)"
-                                                >
-                                                    Jadwalkan lagi
                                                 </button>
                                             </template>
                                         </div>
@@ -567,7 +536,6 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                                 :title="infoStatusPresensi(mhs.presensi[item.id])?.label"
                                                 >{{ infoStatusPresensi(mhs.presensi[item.id])?.singkat }}</span
                                             >
-                                            <span v-else-if="item.status === 'dibatalkan'" class="text-xs text-[#d0ccc7]">×</span>
                                             <span v-else class="text-xs text-[#d0ccc7]">·</span>
                                         </td>
                                         <td class="whitespace-nowrap px-4 py-2 text-right">
@@ -683,39 +651,29 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                     id="catatan"
                                     v-model="suntingForm.catatan"
                                     maxlength="255"
-                                    placeholder="mis. Pengganti tanggal merah"
+                                    placeholder="Catatan umum pertemuan (opsional)"
                                     :class="inp"
                                 />
                                 <InputError :message="suntingForm.errors.catatan" />
+                            </div>
+                            <div v-if="jadwalBerubah" class="grid content-start gap-1.5 sm:col-span-3">
+                                <Label for="alasan">Alasan perubahan jadwal</Label>
+                                <Input
+                                    id="alasan"
+                                    v-model="suntingForm.alasan"
+                                    maxlength="255"
+                                    placeholder="mis. Libur nasional, diganti Rabu"
+                                    :class="inp"
+                                    required
+                                />
+                                <p class="text-xs text-[#a39e98]">Hanya pertemuan ini yang berubah. Perubahan dan alasannya tercatat di riwayat.</p>
+                                <InputError :message="suntingForm.errors.alasan" />
                             </div>
                         </div>
                         <div class="flex justify-end gap-2">
                             <Button type="button" variant="outline" @click="sunting = null">Batal</Button>
                             <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="suntingForm.processing"
                                 >Simpan</Button
-                            >
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Batalkan pertemuan -->
-                <div v-if="pembatalan" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="pembatalan = null">
-                    <form class="flex w-full max-w-md flex-col gap-4 rounded-xl bg-white p-6" @submit.prevent="simpanBatal">
-                        <div>
-                            <h2 class="text-lg font-semibold">Batalkan pertemuan ke-{{ pembatalan.pertemuan_ke }}?</h2>
-                            <p class="mt-1 text-sm text-[#615d59]">
-                                Pertemuan batal tidak dihitung dalam persentase kehadiran. Bila kuliah dipindah ke hari lain, ubah tanggalnya saja.
-                            </p>
-                        </div>
-                        <div class="grid gap-1.5">
-                            <Label for="alasan">Alasan</Label>
-                            <Input id="alasan" v-model="batalForm.catatan" maxlength="255" placeholder="mis. Libur nasional" :class="inp" required />
-                            <InputError :message="batalForm.errors.catatan" />
-                        </div>
-                        <div class="flex justify-end gap-2">
-                            <Button type="button" variant="outline" @click="pembatalan = null">Kembali</Button>
-                            <Button type="submit" class="bg-[#dd5b00] text-white hover:bg-[#b84c00]" :disabled="batalForm.processing"
-                                >Batalkan pertemuan</Button
                             >
                         </div>
                     </form>

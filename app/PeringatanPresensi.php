@@ -27,7 +27,7 @@ class PeringatanPresensi
             ->whereHas('tahunAkademik', fn ($q) => $q->where('status', true))
             ->whereHas('krs', fn ($q) => $q->where('mahasiswa_id', $mahasiswa->id))
             ->with('mataKuliah:id,nama_matkul')
-            ->withCount(['pertemuans as rencana' => fn ($q) => $q->where('jenis', Pertemuan::KULIAH)->where('status', '!=', Pertemuan::DIBATALKAN)])
+            ->withCount(['pertemuans as rencana' => fn ($q) => $q->where('jenis', Pertemuan::KULIAH)])
             ->get(['id', 'kode_kelas', 'matkul_id']);
         $rekap = PresensiMahasiswa::rekapMahasiswa($mahasiswa->id, $kelas->pluck('id')->all());
 
@@ -82,7 +82,6 @@ class PeringatanPresensi
         return [
             'hariIni' => Pertemuan::query()
                 ->whereDate('tanggal', today())
-                ->where('status', '!=', Pertemuan::DIBATALKAN)
                 ->where(fn ($q) => $q->whereHas('kelasKuliah', fn ($k) => $k->where('dosen_id', $dosen->id))->orWhere('dosen_id', $dosen->id))
                 ->with(['kelasKuliah:id,kode_kelas,matkul_id', 'kelasKuliah.mataKuliah:id,nama_matkul', 'ruang:id,kode_ruang'])
                 ->orderBy('jam_mulai')

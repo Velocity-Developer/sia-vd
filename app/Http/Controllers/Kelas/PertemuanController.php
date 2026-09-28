@@ -10,6 +10,8 @@ use App\Models\KelasKuliah;
 use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
+use App\Models\RiwayatJadwalPertemuan;
+use App\Models\Ujian;
 use App\SyaratUjian;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -47,6 +49,9 @@ class PertemuanController extends Controller
             'kelasKuliah' => fn () => $kelas->load(['mataKuliah:id,kode_matkul,nama_matkul', 'dosen:id,user_id', 'dosen.user:id,name', 'tahunAkademik:id,tahun,semester,status']),
             'pertemuan' => fn () => $pertemuan->load(['ruang:id,kode_ruang,nama_ruang', 'dosen:id,user_id,nidn', 'dosen.user:id,name']),
             'presensi' => fn () => $this->daftarHadir($pertemuan, $kelas),
+            'riwayatJadwal' => fn () => $pertemuan->riwayatJadwal()
+                ->with(['ruangLama:id,kode_ruang', 'ruangBaru:id,kode_ruang', 'dosenLama.user:id,name', 'dosenBaru.user:id,name', 'pengubah:id,name'])
+                ->get()->map(fn (RiwayatJadwalPertemuan $r): array => $r->ringkas()),
             'jumlahPeserta' => fn () => $kelas->krs()->count(),
             'bisaKelola' => fn () => $this->bolehKelolaPertemuan($pertemuan),
             'bisaAturJadwal' => fn () => $this->pengampu($kelas),
@@ -102,8 +107,9 @@ class PertemuanController extends Controller
     }
 
     /**
-     * Jadwal ulang (tanggal, jam, ruang) hanya selama pertemuan belum dimulai; jenis dan catatan boleh
-     * diubah kapan saja selama belum terkunci. Dosen pengganti hanya diatur admin.
+     * Ubah satu pertemuan. Jadwal (tanggal, jam, ruang, dosen) hanya bisa diubah selama pertemuan belum dimulai,
+     * wajib beralasan, dan dicatat di riwayat; pertemuan lain tidak ikut berubah. Jenis dan catatan boleh diubah
+     * kapan saja selama belum terkunci. Dosen pengganti hanya diatur admin.
      */
     public function update(Request $request, Pertemuan $pertemuan): RedirectResponse
     {
@@ -119,83 +125,67 @@ class PertemuanController extends Controller
             'jenis' => ['required', Rule::in(Pertemuan::JENIS)],
             'catatan' => ['nullable', 'string', 'max:255'],
             'dosen_id' => ['nullable', 'exists:dosen_profiles,id'],
+            'alasan' => ['nullable', 'string', 'max:255'],
         ], [
             'after' => ':attribute harus lebih besar dari Jam Mulai.',
             'date_format' => ':attribute tidak valid.',
         ], [
             'tanggal' => 'Tanggal', 'jam_mulai' => 'Jam Mulai', 'jam_akhir' => 'Jam Akhir', 'ruang_id' => 'Ruang',
-            'jenis' => 'Jenis', 'catatan' => 'Catatan', 'dosen_id' => 'Dosen',
+            'jenis' => 'Jenis', 'catatan' => 'Catatan', 'dosen_id' => 'Dosen', 'alasan' => 'Alasan perubahan jadwal',
         ]);
 
-        if ($this->peran() !== 'admin') {
-            unset($data['dosen_id']);
-        }
-
-        $waktuBerubah = $data['tanggal'] !== $pertemuan->tanggal->toDateString()
-            || $data['jam_mulai'] !== substr($pertemuan->jam_mulai, 0, 5)
-            || $data['jam_akhir'] !== substr($pertemuan->jam_akhir, 0, 5)
-            || (int) ($data['ruang_id'] ?? 0) !== (int) $pertemuan->ruang_id;
-        $jadwalBerubah = $waktuBerubah
-            || (array_key_exists('dosen_id', $data) && (int) ($data['dosen_id'] ?? 0) !== (int) $pertemuan->dosen_id);
+        $baru = [
+            'tanggal' => $data['tanggal'],
+            'jam_mulai' => $data['jam_mulai'],
+            'jam_akhir' => $data['jam_akhir'],
+            'ruang_id' => isset($data['ruang_id']) ? (int) $data['ruang_id'] : null,
+            'dosen_id' => $this->peran() === 'admin' && array_key_exists('dosen_id', $data)
+                ? (isset($data['dosen_id']) ? (int) $data['dosen_id'] : null)
+                : $pertemuan->dosen_id,
+        ];
+        $waktuBerubah = $baru['tanggal'] !== $pertemuan->tanggal->toDateString()
+            || $baru['jam_mulai'] !== substr($pertemuan->jam_mulai, 0, 5)
+            || $baru['jam_akhir'] !== substr($pertemuan->jam_akhir, 0, 5)
+            || $baru['ruang_id'] !== $pertemuan->ruang_id;
+        $jadwalBerubah = $waktuBerubah || $baru['dosen_id'] !== $pertemuan->dosen_id;
 
         if ($jadwalBerubah) {
             if ($pertemuan->status !== Pertemuan::DIJADWALKAN) {
                 throw ValidationException::withMessages(['tanggal' => 'Tanggal, jam, ruang, dan dosen hanya bisa diubah sebelum pertemuan dimulai.']);
             }
 
+            if ($waktuBerubah && in_array($pertemuan->jenis, [Pertemuan::UTS, Pertemuan::UAS], true)
+                && Ujian::query()->where('kelas_id', $kelas->id)->where('jenis', $pertemuan->jenis)->exists()) {
+                throw ValidationException::withMessages(['tanggal' => 'Jadwal pertemuan '.strtoupper($pertemuan->jenis).' mengikuti jadwal ujian. Ubah lewat menu Jadwal Ujian.']);
+            }
+
+            if (blank($data['alasan'] ?? null)) {
+                throw ValidationException::withMessages(['alasan' => 'Alasan perubahan jadwal wajib diisi.']);
+            }
+
             $bentrok = Pertemuan::bentrok(
                 $kelas,
-                $data['tanggal'],
-                $data['jam_mulai'].':00',
-                $data['jam_akhir'].':00',
-                $data['ruang_id'] ?? null,
-                $data['dosen_id'] ?? $pertemuan->dosen_id,
+                $baru['tanggal'],
+                $baru['jam_mulai'].':00',
+                $baru['jam_akhir'].':00',
+                $baru['ruang_id'],
+                $baru['dosen_id'],
                 $pertemuan->id,
             );
 
             if ($bentrok !== null) {
                 throw ValidationException::withMessages(['tanggal' => $bentrok]);
             }
+        }
 
-            // Jadwal ulang manual: pertemuan ini tidak ikut disusun ulang saat jadwal mingguan berubah.
-            if ($waktuBerubah) {
-                $data['jadwal_manual'] = true;
+        DB::transaction(function () use ($pertemuan, $data, $baru, $jadwalBerubah, $request): void {
+            if ($jadwalBerubah) {
+                $pertemuan->jadwalUlang($baru, trim($data['alasan']), $request->user());
             }
-        }
+            $pertemuan->update(['jenis' => $data['jenis'], 'catatan' => $data['catatan'] ?? null]);
+        });
 
-        $pertemuan->update($data);
-
-        return back()->with('success', 'Pertemuan ke-'.$pertemuan->pertemuan_ke.' diperbarui.');
-    }
-
-    public function batal(Request $request, Pertemuan $pertemuan): RedirectResponse
-    {
-        $this->pastikanPengampu($pertemuan->kelasKuliah);
-        $this->pastikanTidakTerkunci($pertemuan);
-
-        $data = $request->validate(['catatan' => ['required', 'string', 'max:255']], attributes: ['catatan' => 'Alasan pembatalan']);
-
-        if ($pertemuan->status !== Pertemuan::DIJADWALKAN) {
-            return back()->with('error', 'Hanya pertemuan yang belum dimulai yang bisa dibatalkan.');
-        }
-
-        $pertemuan->update(['status' => Pertemuan::DIBATALKAN, 'catatan' => $data['catatan']]);
-
-        return back()->with('success', 'Pertemuan ke-'.$pertemuan->pertemuan_ke.' dibatalkan dan tidak dihitung dalam kehadiran.');
-    }
-
-    public function aktifkan(Pertemuan $pertemuan): RedirectResponse
-    {
-        $this->pastikanPengampu($pertemuan->kelasKuliah);
-        $this->pastikanTidakTerkunci($pertemuan);
-
-        if ($pertemuan->status !== Pertemuan::DIBATALKAN) {
-            return back()->with('error', 'Pertemuan ini tidak sedang dibatalkan.');
-        }
-
-        $pertemuan->update(['status' => Pertemuan::DIJADWALKAN]);
-
-        return back()->with('success', 'Pertemuan ke-'.$pertemuan->pertemuan_ke.' dijadwalkan kembali.');
+        return back()->with('success', 'Pertemuan ke-'.$pertemuan->pertemuan_ke.($jadwalBerubah ? ' dijadwal ulang; perubahan tercatat di riwayat.' : ' diperbarui.'));
     }
 
     /**
@@ -230,7 +220,7 @@ class PertemuanController extends Controller
             $mulai = $pertemuan->mulaiAt()->locale('id')->translatedFormat('l, d F Y \\p\\u\\k\\u\\l H.i');
 
             return back()->with('error', match (true) {
-                $pertemuan->status !== Pertemuan::DIJADWALKAN => 'Pertemuan ini sudah dimulai, selesai, atau dibatalkan.',
+                $pertemuan->status !== Pertemuan::DIJADWALKAN => 'Pertemuan ini sudah dimulai atau selesai.',
                 now()->lt($pertemuan->mulaiAt()) => "Pertemuan belum bisa dibuka. Pertemuan bisa dimulai {$mulai}.",
                 default => 'Jam pertemuan sudah lewat. Pertemuan yang terlewat hanya bisa dicatat admin sebagai susulan.',
             });

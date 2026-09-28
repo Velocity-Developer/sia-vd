@@ -60,7 +60,11 @@ class PresensiController extends Controller
 
         $pertemuan = Pertemuan::query()
             ->whereIn('kelas_id', $kelas->pluck('id'))
-            ->with(['ruang:id,kode_ruang,nama_ruang', 'presensiMahasiswas' => fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id)->select(['id', 'pertemuan_id', 'mahasiswa_id', 'status', 'waktu_presensi', 'metode', 'keterangan'])])
+            ->with([
+                'ruang:id,kode_ruang,nama_ruang',
+                'presensiMahasiswas' => fn ($query) => $query->where('mahasiswa_id', $mahasiswa->id)->select(['id', 'pertemuan_id', 'mahasiswa_id', 'status', 'waktu_presensi', 'metode', 'keterangan']),
+                'riwayatJadwal:id,pertemuan_id,tanggal_lama,jam_mulai_lama,alasan',
+            ])
             ->orderBy('pertemuan_ke')
             ->get(['id', 'kelas_id', 'pertemuan_ke', 'tanggal', 'jam_mulai', 'jam_akhir', 'ruang_id', 'jenis', 'status', 'topik'])
             ->groupBy('kelas_id');
@@ -85,8 +89,8 @@ class PresensiController extends Controller
             'kelas' => $kelas->map(function (KelasKuliah $item) use ($rekap, $pertemuan, $minKehadiran, $pengajuan, $mahasiswa, $ujian, $pengaturan): array {
                 $daftar = $pertemuan->get($item->id, collect());
                 $rekapKelas = $rekap[$item->id] ?? null;
-                // Batas absen dari rencana pertemuan kuliah yang tidak dibatalkan.
-                $rencana = $daftar->where('jenis', Pertemuan::KULIAH)->where('status', '!=', Pertemuan::DIBATALKAN)->count();
+                // Batas absen dari rencana pertemuan kuliah.
+                $rencana = $daftar->where('jenis', Pertemuan::KULIAH)->count();
                 $maksAbsen = (int) floor($rencana * (100 - $minKehadiran) / 100);
                 $absen = $rekapKelas ? $rekapKelas['dihitung'] - $rekapKelas['hadir'] - $rekapKelas['terlambat'] : 0;
                 $ujianKelas = $ujian[$item->id];
@@ -116,6 +120,12 @@ class PresensiController extends Controller
                         'status' => $p->status,
                         'terlewat' => $p->terlewat(),
                         'topik' => $p->topik,
+                        // Perubahan jadwal terakhir: tanggal asal pertemuan pertama kali dijadwalkan dan alasan terbaru.
+                        'dijadwal_ulang' => $p->riwayatJadwal->isEmpty() ? null : [
+                            'tanggal_asal' => $p->riwayatJadwal->last()->tanggal_lama->toDateString(),
+                            'jam_asal' => substr($p->riwayatJadwal->last()->jam_mulai_lama, 0, 5),
+                            'alasan' => $p->riwayatJadwal->first()->alasan,
+                        ],
                         'presensi' => $p->presensiMahasiswas->first()?->toArray(),
                         'pengajuan' => $pengajuan->get($p->id)?->only(['jenis', 'alasan', 'status', 'catatan_dosen']),
                         'bisa_ajukan_izin' => $this->bisaAjukanIzin($p, $pengajuan->get($p->id), $pengaturan->batas_pengajuan_izin_hari),

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-const props = defineProps<{ tahunAkademik: Record<string, any> | null }>();
+const props = defineProps<{ tahunAkademik: Record<string, any> | null; kelasBerpertemuan?: number }>();
 const title = `${props.tahunAkademik ? 'Edit' : 'Tambah'} Tahun Akademik`;
 const form = useForm({
     tahun: props.tahunAkademik?.tahun ?? '',
@@ -56,6 +56,9 @@ const sel =
                             <DatePicker id="tanggal_mulai" v-model="form.tanggal_mulai" placeholder="Pilih tanggal mulai" /><InputError
                                 :message="form.errors.tanggal_mulai"
                             />
+                            <p v-if="props.kelasBerpertemuan" class="text-xs text-[#a39e98]">
+                                Terkunci: {{ props.kelasBerpertemuan }} kelas sudah punya pertemuan, jadi tanggal mulai tidak bisa diubah.
+                            </p>
                         </div>
                         <div class="grid gap-2">
                             <Label for="tanggal_akhir">Tanggal Akhir</Label>

@@ -14,6 +14,7 @@ use App\Models\PengaturanInstitusi;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
 use App\Models\ProgramStudi;
+use App\Models\RiwayatJadwalPertemuan;
 use App\Models\Ruang;
 use App\Models\TahunAkademik;
 use App\SyaratUjian;
@@ -78,7 +79,6 @@ class PresensiController extends Controller
 
         $hariIni = Pertemuan::query()
             ->whereDate('tanggal', today())
-            ->where('status', '!=', Pertemuan::DIBATALKAN)
             // Dosen juga melihat pertemuan kelas lain yang ditunjukkan kepadanya sebagai pengganti.
             ->where(fn ($query) => $query
                 ->whereHas('kelasKuliah', $saringKelas)
@@ -265,7 +265,7 @@ class PresensiController extends Controller
         $kelas = KelasKuliah::query()
             ->where('tahun_akademik_id', $tahunId)
             ->when($prodiId, fn ($q) => $q->whereHas('mataKuliah', fn ($m) => $m->where('prodi_id', $prodiId)))
-            ->with(['mataKuliah:id,kode_matkul,nama_matkul,prodi_id', 'dosen:id,user_id,nidn', 'dosen.user:id,name', 'pertemuans'])
+            ->with(['mataKuliah:id,kode_matkul,nama_matkul,prodi_id', 'dosen:id,user_id,nidn', 'dosen.user:id,name', 'pertemuans' => fn ($q) => $q->withCount('riwayatJadwal')])
             ->get();
         $rataRata = $this->rataRataKehadiran($kelas->pluck('id')->all());
 
@@ -281,7 +281,7 @@ class PresensiController extends Controller
                 'mata_kuliah' => $item->mataKuliah?->nama_matkul,
                 'rencana' => $item->jumlah_pertemuan,
                 'terlaksana' => $selesai->count(),
-                'dibatalkan' => $pertemuan->where('status', Pertemuan::DIBATALKAN)->count(),
+                'dijadwal_ulang' => $pertemuan->where('riwayat_jadwal_count', '>', 0)->count(),
                 'terlewat' => $pertemuan->filter(fn (Pertemuan $p): bool => $p->terlewat())->count(),
                 'oleh_pengganti' => $selesai->filter(fn (Pertemuan $p): bool => $p->dosen_id !== null && $p->dosen_id !== $item->dosen_id)->count(),
                 'terlambat' => $selesai->filter(fn (Pertemuan $p): bool => $p->dosen_masuk_at !== null && $p->dosen_masuk_at->gt($p->mulaiAt()->addMinutes($toleransi)))->count(),
@@ -296,9 +296,9 @@ class PresensiController extends Controller
             return response()->streamDownload(function () use ($baris): void {
                 $keluar = fopen('php://output', 'w');
                 fwrite($keluar, "\xEF\xBB\xBF");
-                fputcsv($keluar, ['Dosen', 'NIDN', 'Kelas', 'Mata Kuliah', 'Rencana', 'Terlaksana', 'Dibatalkan', 'Terlewat', 'Oleh Pengganti', 'Masuk Terlambat', 'Tanpa Jurnal', 'Rata-rata Hadir Mahasiswa (%)']);
+                fputcsv($keluar, ['Dosen', 'NIDN', 'Kelas', 'Mata Kuliah', 'Rencana', 'Terlaksana', 'Dijadwal Ulang', 'Terlewat', 'Oleh Pengganti', 'Masuk Terlambat', 'Tanpa Jurnal', 'Rata-rata Hadir Mahasiswa (%)']);
                 foreach ($baris as $b) {
-                    fputcsv($keluar, [$b['dosen'], $b['nidn'], $b['kode_kelas'], $b['mata_kuliah'], $b['rencana'], $b['terlaksana'], $b['dibatalkan'], $b['terlewat'], $b['oleh_pengganti'], $b['terlambat'], $b['tanpa_jurnal'], $b['rata_kehadiran'] ?? '']);
+                    fputcsv($keluar, [$b['dosen'], $b['nidn'], $b['kode_kelas'], $b['mata_kuliah'], $b['rencana'], $b['terlaksana'], $b['dijadwal_ulang'], $b['terlewat'], $b['oleh_pengganti'], $b['terlambat'], $b['tanpa_jurnal'], $b['rata_kehadiran'] ?? '']);
                 }
                 fclose($keluar);
             }, 'laporan-kehadiran-dosen-'.Str::slug(($tahun?->tahun ?? '').'-'.($tahun?->semester ?? '')).'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
@@ -312,20 +312,6 @@ class PresensiController extends Controller
             'tahunAkademikOptions' => $tahunAkademiks->map(fn (TahunAkademik $t): array => ['id' => $t->id, 'name' => $t->tahun.' '.$t->semester]),
             'prodiOptions' => ProgramStudi::orderBy('nama_prodi')->get(['id', 'nama_prodi'])->map(fn (ProgramStudi $p): array => ['id' => $p->id, 'name' => $p->nama_prodi]),
         ]);
-    }
-
-    /**
-     * Susun ulang pertemuan yang belum berjalan mengikuti jadwal mingguan dan tanggal tahun akademik terbaru.
-     */
-    public function susunUlang(KelasKuliah $kelasKuliah): RedirectResponse
-    {
-        $this->pastikanPengampu($kelasKuliah);
-        abort_if($this->tahunAkademikTerkunci($kelasKuliah), 403);
-        $hasil = Pertemuan::susunUlang($kelasKuliah);
-
-        return back()->with('success', $hasil['diubah'] > 0
-            ? "{$hasil['diubah']} pertemuan disesuaikan dengan jadwal terbaru.".($hasil['dilewati'] > 0 ? " {$hasil['dilewati']} pertemuan yang tanggalnya sudah lewat tidak diubah." : '')
-            : 'Semua pertemuan yang belum berjalan sudah sesuai jadwal.');
     }
 
     public function generate(KelasKuliah $kelasKuliah): RedirectResponse
@@ -370,7 +356,10 @@ class PresensiController extends Controller
     {
         $pertemuan = $kelasKuliah->pertemuans()
             ->with(['ruang:id,kode_ruang,nama_ruang', 'dosen:id,user_id', 'dosen.user:id,name'])
+            ->addSelect(['alasan_jadwal_terakhir' => RiwayatJadwalPertemuan::query()->select('alasan')
+                ->whereColumn('pertemuan_id', 'pertemuans.id')->latest('id')->limit(1)])
             ->withCount([
+                'riwayatJadwal',
                 'presensiMahasiswas as jumlah_tercatat',
                 'presensiMahasiswas as jumlah_hadir' => fn ($query) => $query->whereIn('status', PresensiMahasiswa::DIHITUNG_HADIR),
             ])

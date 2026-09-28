@@ -53,6 +53,23 @@ type Baris = {
     pengajuan: { id: number; jenis: string; status: 'menunggu' | 'disetujui' | 'ditolak' } | null;
 };
 
+type RiwayatJadwal = {
+    id: number;
+    tanggal_lama: string;
+    jam_mulai_lama: string;
+    jam_akhir_lama: string;
+    ruang_lama: string | null;
+    dosen_lama: string | null;
+    tanggal_baru: string;
+    jam_mulai_baru: string;
+    jam_akhir_baru: string;
+    ruang_baru: string | null;
+    dosen_baru: string | null;
+    alasan: string;
+    oleh: string | null;
+    waktu: string | null;
+};
+
 const props = defineProps<{
     peran: Peran;
     kelasKuliah: {
@@ -75,6 +92,7 @@ const props = defineProps<{
     durasiMandiri: number;
     terkunci: boolean;
     dosenOptions: { id: number; name: string }[];
+    riwayatJadwal: RiwayatJadwal[];
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -170,7 +188,7 @@ const selesaikan = () => {
 };
 
 // Admin: tunjuk dosen pengganti sebelum pertemuan dimulai.
-const penggantiForm = useForm({ dosen_id: props.pertemuan.dosen_id ?? ('' as number | string) });
+const penggantiForm = useForm({ dosen_id: props.pertemuan.dosen_id ?? ('' as number | string), alasan: '' });
 const simpanPengganti = () =>
     penggantiForm
         .transform((data) => ({
@@ -181,8 +199,9 @@ const simpanPengganti = () =>
             jenis: props.pertemuan.jenis,
             catatan: props.pertemuan.catatan,
             dosen_id: data.dosen_id || null,
+            alasan: data.alasan,
         }))
-        .put(rute('presensi.pertemuan.update', props.pertemuan.id), { preserveScroll: true });
+        .put(rute('presensi.pertemuan.update', props.pertemuan.id), { preserveScroll: true, onSuccess: () => penggantiForm.reset('alasan') });
 
 // Presensi mandiri (QR/PIN).
 const mandiriForm = useForm({ menit: props.durasiMandiri });
@@ -269,6 +288,24 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             {{ props.pertemuan.ruang ? `${props.pertemuan.ruang.kode_ruang} — ${props.pertemuan.ruang.nama_ruang}` : 'Tanpa ruang' }}
                         </p>
                         <p v-if="props.pertemuan.catatan" class="text-sm text-[#615d59]">Catatan: {{ props.pertemuan.catatan }}</p>
+                        <details v-if="props.riwayatJadwal.length" class="text-sm text-[#615d59]">
+                            <summary class="cursor-pointer font-medium text-[#8a5a00]">Dijadwal ulang {{ props.riwayatJadwal.length }}×</summary>
+                            <ul class="mt-2 space-y-2">
+                                <li v-for="r in props.riwayatJadwal" :key="r.id" class="rounded-lg border border-[#e6e6e6] bg-white px-3 py-2">
+                                    <p class="text-[#31302e]">
+                                        {{ formatTanggal(r.tanggal_lama) }} {{ r.jam_mulai_lama }}–{{ r.jam_akhir_lama
+                                        }}{{ r.ruang_lama ? ` · ${r.ruang_lama}` : '' }} →
+                                        <span class="font-medium text-black"
+                                            >{{ formatTanggal(r.tanggal_baru) }} {{ r.jam_mulai_baru }}–{{ r.jam_akhir_baru
+                                            }}{{ r.ruang_baru ? ` · ${r.ruang_baru}` : '' }}</span
+                                        >
+                                    </p>
+                                    <p v-if="r.dosen_lama !== r.dosen_baru">Dosen: {{ r.dosen_lama ?? '-' }} → {{ r.dosen_baru ?? '-' }}</p>
+                                    <p>Alasan: {{ r.alasan }}</p>
+                                    <p class="text-xs text-[#a39e98]">{{ r.oleh ?? 'Sistem' }} · {{ r.waktu ? formatTanggal(r.waktu) : '' }}</p>
+                                </li>
+                            </ul>
+                        </details>
                     </div>
                     <Link v-if="!pengganti" :href="rute('presensi.kelas', props.kelasKuliah.id)">
                         <Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black">Semua pertemuan</Button>
@@ -348,10 +385,24 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                 </option>
                             </select>
                         </div>
+                        <div class="grid min-w-[260px] flex-1 gap-1.5">
+                            <Label for="alasan_pengganti" class="text-sm">Alasan penggantian</Label>
+                            <input
+                                id="alasan_pengganti"
+                                v-model="penggantiForm.alasan"
+                                maxlength="255"
+                                placeholder="mis. Dosen pengampu dinas luar kota"
+                                class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]"
+                            />
+                        </div>
                         <Button type="submit" variant="outline" :disabled="penggantiForm.processing || !penggantiForm.isDirty">Simpan dosen</Button>
                         <InputError
                             class="w-full"
-                            :message="penggantiForm.errors.dosen_id ?? (penggantiForm.errors as Record<string, string | undefined>).tanggal"
+                            :message="
+                                penggantiForm.errors.dosen_id ??
+                                penggantiForm.errors.alasan ??
+                                (penggantiForm.errors as Record<string, string | undefined>).tanggal
+                            "
                         />
                     </form>
 
@@ -446,7 +497,6 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             <p v-if="status === 'dijadwalkan'" class="mt-1 text-sm text-[#615d59]">
                                 Daftar hadir {{ props.jumlahPeserta }} mahasiswa muncul setelah pertemuan dimulai.
                             </p>
-                            <p v-else-if="status === 'dibatalkan'" class="mt-1 text-sm text-[#615d59]">Pertemuan dibatalkan, tidak ada presensi.</p>
                             <div v-else class="mt-2 flex flex-wrap gap-2 text-xs">
                                 <span v-for="s in ringkasan" :key="s.value" class="rounded border px-2 py-0.5" :class="s.kelas"
                                     >{{ s.label }}: {{ s.jumlah }}</span

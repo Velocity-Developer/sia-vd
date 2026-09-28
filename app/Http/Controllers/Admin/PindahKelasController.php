@@ -139,7 +139,7 @@ class PindahKelasController extends Controller
 
         return back()->with('success', 'Pengajuan pindah kelas disetujui dan mahasiswa dipindahkan ke kelas tujuan.'
             .($riwayat['dipindah'] > 0 ? " {$riwayat['dipindah']} riwayat presensi ikut dipindahkan." : '')
-            .($riwayat['tertinggal'] > 0 ? " {$riwayat['tertinggal']} presensi tetap di kelas asal karena pertemuan dengan nomor yang sama di kelas tujuan belum ada atau dibatalkan." : ''));
+            .($riwayat['tertinggal'] > 0 ? " {$riwayat['tertinggal']} presensi tetap di kelas asal karena pertemuan dengan nomor yang sama di kelas tujuan belum ada." : ''));
     }
 
     public function reject(Request $request, PengajuanPindahKelas $pengajuan): RedirectResponse

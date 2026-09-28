@@ -29,6 +29,7 @@ type PertemuanSaya = {
     jenis: JenisPertemuan;
     status: StatusPertemuan;
     topik: string | null;
+    dijadwal_ulang: { tanggal_asal: string; jam_asal: string; alasan: string } | null;
     presensi: { status: string; waktu_presensi: string | null; metode: string; keterangan: string | null } | null;
     pengajuan: { jenis: string; alasan: string; status: 'menunggu' | 'disetujui' | 'ditolak'; catatan_dosen: string | null } | null;
     bisa_ajukan_izin: boolean;
@@ -294,6 +295,10 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                                             class="ml-1 rounded bg-[#fff6e0] px-1.5 text-xs font-semibold text-[#8a5a00]"
                                             >{{ JENIS_PERTEMUAN[p.jenis] }}</span
                                         >
+                                    </p>
+                                    <p v-if="p.dijadwal_ulang" class="text-xs text-[#8a5a00]">
+                                        Dipindah dari {{ formatTanggal(p.dijadwal_ulang.tanggal_asal) }} {{ p.dijadwal_ulang.jam_asal }}:
+                                        {{ p.dijadwal_ulang.alasan }}
                                     </p>
                                     <p v-if="p.topik" class="text-xs text-[#a39e98]">{{ p.topik }}</p>
                                     <p v-if="p.presensi?.keterangan" class="text-xs text-[#a39e98]">Keterangan: {{ p.presensi.keterangan }}</p>

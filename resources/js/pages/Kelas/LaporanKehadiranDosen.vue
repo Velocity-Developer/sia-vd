@@ -12,7 +12,7 @@ type Baris = {
     mata_kuliah: string | null;
     rencana: number;
     terlaksana: number;
-    dibatalkan: number;
+    dijadwal_ulang: number;
     terlewat: number;
     oleh_pengganti: number;
     terlambat: number;
@@ -115,7 +115,9 @@ const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
                                 <tr>
                                     <th :class="th">Dosen / Kelas</th>
                                     <th :class="[th, 'text-center']">Terlaksana</th>
-                                    <th :class="[th, 'text-center']">Batal</th>
+                                    <th :class="[th, 'text-center']" title="Pertemuan yang pernah dipindah tanggal, jam, ruang, atau dosennya">
+                                        Dijadwal ulang
+                                    </th>
                                     <th :class="[th, 'text-center']" title="Jadwalnya sudah lewat tetapi tidak pernah dimulai">Terlewat</th>
                                     <th :class="[th, 'text-center']">Oleh pengganti</th>
                                     <th :class="[th, 'text-center']">Masuk terlambat</th>
@@ -144,7 +146,7 @@ const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
                                         <span class="text-xs text-[#a39e98]"> · {{ b.mata_kuliah }}</span>
                                     </td>
                                     <td :class="[td, 'text-center']">{{ b.terlaksana }} / {{ b.rencana }}</td>
-                                    <td :class="[td, 'text-center']">{{ b.dibatalkan }}</td>
+                                    <td :class="[td, 'text-center']">{{ b.dijadwal_ulang }}</td>
                                     <td :class="[td, 'text-center', b.terlewat ? 'font-medium text-[#dd5b00]' : '']">{{ b.terlewat }}</td>
                                     <td :class="[td, 'text-center']">{{ b.oleh_pengganti }}</td>
                                     <td :class="[td, 'text-center']">{{ b.terlambat }}</td>

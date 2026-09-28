@@ -428,8 +428,8 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
             <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="simpanPresensi">
                 <h2 class="text-lg font-semibold text-black">Presensi</h2>
                 <p class="mt-1 text-sm text-[#615d59]">
-                    Kehadiran dihitung dari pertemuan kuliah yang sudah selesai (UTS, UAS, dan pertemuan batal tidak dihitung). Izin dan sakit
-                    dihitung tidak hadir; terlambat dihitung hadir.
+                    Kehadiran dihitung dari pertemuan kuliah yang sudah selesai (UTS dan UAS tidak dihitung). Izin dan sakit dihitung tidak hadir;
+                    terlambat dihitung hadir.
                 </p>
 
                 <div class="mt-5 grid content-start items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">

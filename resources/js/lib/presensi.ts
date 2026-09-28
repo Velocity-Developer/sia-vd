@@ -1,5 +1,5 @@
 export type StatusPresensi = 'hadir' | 'terlambat' | 'izin' | 'sakit' | 'alpa';
-export type StatusPertemuan = 'dijadwalkan' | 'berlangsung' | 'selesai' | 'dibatalkan';
+export type StatusPertemuan = 'dijadwalkan' | 'berlangsung' | 'selesai';
 export type JenisPertemuan = 'kuliah' | 'uts' | 'uas';
 
 export const STATUS_PRESENSI: { value: StatusPresensi; label: string; singkat: string; kelas: string }[] = [
@@ -16,7 +16,6 @@ export const STATUS_PERTEMUAN: Record<StatusPertemuan, { label: string; kelas: s
     dijadwalkan: { label: 'Dijadwalkan', kelas: 'bg-[#f6f5f4] text-[#615d59]' },
     berlangsung: { label: 'Berlangsung', kelas: 'bg-[#eaf3fd] text-[#0b62b5]' },
     selesai: { label: 'Selesai', kelas: 'bg-[#e8f7ec] text-[#1a7f37]' },
-    dibatalkan: { label: 'Dibatalkan', kelas: 'bg-[#fdecea] text-[#b42318]' },
 };
 
 /**

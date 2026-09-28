@@ -29,8 +29,6 @@ class Pertemuan extends Model
 
     public const SELESAI = 'selesai';
 
-    public const DIBATALKAN = 'dibatalkan';
-
     public const NAMA_HARI = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
 
     /** Pertemuan yang lupa ditutup dianggap selesai sekian menit sesudah jam akhir. */
@@ -46,7 +44,7 @@ class Pertemuan extends Model
     public const PERIODE_KODE_TOLERANSI = 2;
 
     protected $fillable = [
-        'kelas_id', 'jadwal_id', 'jadwal_manual', 'pertemuan_ke', 'tanggal', 'jam_mulai', 'jam_akhir', 'ruang_id', 'jenis', 'status',
+        'kelas_id', 'jadwal_id', 'pertemuan_ke', 'tanggal', 'jam_mulai', 'jam_akhir', 'ruang_id', 'jenis', 'status',
         'dosen_id', 'dosen_masuk_at', 'dosen_keluar_at', 'topik', 'catatan', 'kode_rahasia', 'mandiri_sampai',
     ];
 
@@ -62,7 +60,6 @@ class Pertemuan extends Model
             'dosen_masuk_at' => 'datetime',
             'dosen_keluar_at' => 'datetime',
             'mandiri_sampai' => 'datetime',
-            'jadwal_manual' => 'boolean',
         ];
     }
 
@@ -89,6 +86,50 @@ class Pertemuan extends Model
     public function presensiMahasiswas(): HasMany
     {
         return $this->hasMany(PresensiMahasiswa::class);
+    }
+
+    /**
+     * Riwayat perubahan jadwal, terbaru dulu.
+     */
+    public function riwayatJadwal(): HasMany
+    {
+        return $this->hasMany(RiwayatJadwalPertemuan::class)->latest('id');
+    }
+
+    /**
+     * Pindahkan pertemuan ke tanggal/jam/ruang/dosen baru dan catat perubahannya beserta alasan.
+     * Hanya mengubah pertemuan ini; pertemuan lain dan jadwal mingguan tidak tersentuh.
+     *
+     * @param  array{tanggal: string, jam_mulai: string, jam_akhir: string, ruang_id: ?int, dosen_id: ?int}  $baru  jam H:i atau H:i:s
+     */
+    public function jadwalUlang(array $baru, string $alasan, ?User $oleh): void
+    {
+        $jam = fn (string $nilai): string => strlen($nilai) === 5 ? $nilai.':00' : $nilai;
+
+        DB::transaction(function () use ($baru, $alasan, $oleh, $jam): void {
+            $this->riwayatJadwal()->create([
+                'tanggal_lama' => $this->tanggal->toDateString(),
+                'jam_mulai_lama' => $this->jam_mulai,
+                'jam_akhir_lama' => $this->jam_akhir,
+                'ruang_lama_id' => $this->ruang_id,
+                'dosen_lama_id' => $this->dosen_id,
+                'tanggal_baru' => $baru['tanggal'],
+                'jam_mulai_baru' => $jam($baru['jam_mulai']),
+                'jam_akhir_baru' => $jam($baru['jam_akhir']),
+                'ruang_baru_id' => $baru['ruang_id'],
+                'dosen_baru_id' => $baru['dosen_id'],
+                'alasan' => $alasan,
+                'diubah_oleh' => $oleh?->id,
+            ]);
+
+            $this->update([
+                'tanggal' => $baru['tanggal'],
+                'jam_mulai' => $jam($baru['jam_mulai']),
+                'jam_akhir' => $jam($baru['jam_akhir']),
+                'ruang_id' => $baru['ruang_id'],
+                'dosen_id' => $baru['dosen_id'],
+            ]);
+        });
     }
 
     /**
@@ -337,55 +378,6 @@ class Pertemuan extends Model
     }
 
     /**
-     * Susun ulang tanggal, jam, dan ruang pertemuan yang belum dimulai mengikuti jadwal mingguan dan tanggal
-     * tahun akademik terbaru. Pertemuan yang dijadwal ulang manual, sudah berjalan, atau yang tanggal lama
-     * maupun barunya sudah lewat tidak disentuh.
-     *
-     * @return array{diubah: int, dilewati: int}
-     */
-    public static function susunUlang(KelasKuliah $kelas): array
-    {
-        $kelas->unsetRelation('jadwals')->unsetRelation('tahunAkademik');
-        $slot = self::slotJadwal($kelas, $kelas->jumlah_pertemuan);
-        $hasil = ['diubah' => 0, 'dilewati' => 0];
-
-        DB::transaction(function () use ($kelas, $slot, &$hasil): void {
-            foreach ($kelas->pertemuans()->where('status', self::DIJADWALKAN)->where('jadwal_manual', false)->get() as $pertemuan) {
-                $baru = $slot[$pertemuan->pertemuan_ke - 1] ?? null;
-
-                if ($baru === null) {
-                    continue;
-                }
-
-                [$tanggal, $jadwal] = $baru;
-                $sama = $pertemuan->tanggal->isSameDay($tanggal) && $pertemuan->jam_mulai === $jadwal->jam_mulai
-                    && $pertemuan->jam_akhir === $jadwal->jam_akhir && $pertemuan->ruang_id === $jadwal->ruang_id;
-
-                if ($sama) {
-                    continue;
-                }
-
-                if ($pertemuan->tanggal->lt(today()) || $tanggal->lt(today())) {
-                    $hasil['dilewati']++;
-
-                    continue;
-                }
-
-                $pertemuan->update([
-                    'jadwal_id' => $jadwal->id,
-                    'tanggal' => $tanggal,
-                    'jam_mulai' => $jadwal->jam_mulai,
-                    'jam_akhir' => $jadwal->jam_akhir,
-                    'ruang_id' => $jadwal->ruang_id,
-                ]);
-                $hasil['diubah']++;
-            }
-        });
-
-        return $hasil;
-    }
-
-    /**
      * Pesan bentrok bila pada tanggal & jam itu ruang atau dosennya sudah dipakai: oleh pertemuan lain, atau
      * oleh jadwal mingguan kelas lain yang pertemuannya belum dibuat. Null bila tidak bentrok.
      */
@@ -393,7 +385,6 @@ class Pertemuan extends Model
     {
         $pertemuan = static::query()
             ->whereDate('tanggal', $tanggal)
-            ->where('status', '!=', self::DIBATALKAN)
             ->where('jam_mulai', '<', $jamAkhir)
             ->where('jam_akhir', '>', $jamMulai)
             ->when($kecualiId, fn ($query) => $query->whereKeyNot($kecualiId))

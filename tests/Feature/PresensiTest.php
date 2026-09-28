@@ -9,11 +9,13 @@ use App\Models\PengajuanPindahKelas;
 use App\Models\PengaturanAkademik;
 use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
+use App\Models\RiwayatJadwalPertemuan;
 use App\Models\Ruang;
 use App\Models\User;
 use App\SyaratUjian;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -171,10 +173,9 @@ it('records attendance, requires a journal to finish, and computes the recap', f
         $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.selesai', $pertemuan), ['topik' => "Materi pertemuan {$ke}"])->assertSessionHas('success');
     }
 
-    // UTS yang sudah selesai dan pertemuan batal tidak ikut dihitung.
+    // UTS yang sudah selesai tidak ikut dihitung.
     pertemuanKe($kelas, 8)->update(['status' => Pertemuan::SELESAI]);
     pertemuanKe($kelas, 8)->siapkanPeserta();
-    pertemuanKe($kelas, 3)->update(['status' => Pertemuan::DIBATALKAN]);
 
     $rekap = PresensiMahasiswa::rekapKelas($kelas->id);
     expect($rekap[$a]['persen'])->toBe(100.0)
@@ -268,27 +269,53 @@ it('reschedules a meeting and rejects a clash with another class in the same roo
     Pertemuan::create(['kelas_id' => $lain->id, 'pertemuan_ke' => 1, 'tanggal' => '2025-08-06', 'jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'ruang_id' => $ruang->id, 'dosen_id' => $lain->dosen_id]);
     $dosen = $kelas->dosen->user;
     $pertemuan = pertemuanKe($kelas, 1);
-    $isian = ['jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $ruang->id, 'jenis' => 'kuliah', 'catatan' => 'Pengganti libur'];
+    $isian = ['jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $ruang->id, 'jenis' => 'kuliah', 'catatan' => 'Catatan umum', 'alasan' => 'Libur nasional'];
 
     $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.update', $pertemuan), [...$isian, 'tanggal' => '2025-08-06'])->assertSessionHasErrors('tanggal');
 
     $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.update', $pertemuan), [...$isian, 'tanggal' => '2025-08-07'])->assertSessionHasNoErrors();
     expect($pertemuan->fresh()->tanggal->toDateString())->toBe('2025-08-07')
-        ->and($pertemuan->fresh()->catatan)->toBe('Pengganti libur');
+        ->and($pertemuan->fresh()->catatan)->toBe('Catatan umum');
 });
 
-it('cancels and restores a meeting that has not started', function () {
+it('mewajibkan alasan saat jadwal pertemuan diubah dan mencatatnya di riwayat', function () {
     [$kelas] = kelasPresensi(0);
     Pertemuan::generateUntuk($kelas);
-    $pertemuan = pertemuanKe($kelas, 2);
+    $pertemuan = pertemuanKe($kelas, 2); // Senin 11 Agustus 2025 08:00–10:00
     $dosen = $kelas->dosen->user;
+    $isian = ['tanggal' => '2025-08-13', 'jam_mulai' => '10:00', 'jam_akhir' => '12:00', 'ruang_id' => $pertemuan->ruang_id, 'jenis' => 'kuliah'];
 
-    $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.batal', $pertemuan), ['catatan' => ''])->assertSessionHasErrors('catatan');
-    $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.batal', $pertemuan), ['catatan' => 'Libur nasional'])->assertSessionHas('success');
-    expect($pertemuan->fresh()->status)->toBe(Pertemuan::DIBATALKAN);
+    $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.update', $pertemuan), $isian)
+        ->assertSessionHasErrors(['alasan' => 'Alasan perubahan jadwal wajib diisi.']);
+    expect($pertemuan->fresh()->tanggal->toDateString())->toBe('2025-08-11');
 
-    $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.aktifkan', $pertemuan))->assertSessionHas('success');
-    expect($pertemuan->fresh()->status)->toBe(Pertemuan::DIJADWALKAN);
+    $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.update', $pertemuan), [...$isian, 'alasan' => 'Dosen dinas luar kota'])
+        ->assertSessionHasNoErrors();
+
+    $riwayat = RiwayatJadwalPertemuan::sole();
+    expect($pertemuan->fresh()->tanggal->toDateString())->toBe('2025-08-13')
+        ->and($riwayat->tanggal_lama->toDateString())->toBe('2025-08-11')
+        ->and(substr($riwayat->jam_mulai_baru, 0, 5))->toBe('10:00')
+        ->and($riwayat->alasan)->toBe('Dosen dinas luar kota')
+        ->and($riwayat->diubah_oleh)->toBe($dosen->id)
+        // Hanya pertemuan ini yang berubah.
+        ->and(pertemuanKe($kelas, 3)->tanggal->toDateString())->toBe('2025-08-18');
+
+    // Mengubah jenis/catatan saja tidak butuh alasan dan tidak menambah riwayat.
+    $this->actingAs($dosen)->put(route('dosen.presensi.pertemuan.update', $pertemuan), [...$isian, 'catatan' => 'Bawa laptop'])->assertSessionHasNoErrors();
+    expect(RiwayatJadwalPertemuan::count())->toBe(1);
+
+    $this->actingAs($dosen)->get(route('dosen.presensi.pertemuan.show', $pertemuan))
+        ->assertInertia(fn ($page) => $page->has('riwayatJadwal', 1)->where('riwayatJadwal.0.alasan', 'Dosen dinas luar kota'));
+    $this->actingAs($dosen)->get(route('dosen.presensi.kelas', $kelas))
+        ->assertInertia(fn ($page) => $page->where('pertemuan.1.riwayat_jadwal_count', 1)->where('pertemuan.1.alasan_jadwal_terakhir', 'Dosen dinas luar kota'));
+});
+
+it('tidak lagi menyediakan pembatalan maupun susun ulang pertemuan', function () {
+    expect(Route::has('dosen.presensi.pertemuan.batal'))->toBeFalse()
+        ->and(Route::has('dosen.presensi.pertemuan.aktifkan'))->toBeFalse()
+        ->and(Route::has('dosen.presensi.susun-ulang'))->toBeFalse()
+        ->and(Route::has('admin.presensi.susun-ulang'))->toBeFalse();
 });
 
 it('limits the materi meeting number to the class meeting count', function () {
@@ -669,7 +696,12 @@ it('lets a substitute lecturer run only the assigned meeting', function () {
 
     $this->actingAs($admin)->put(route('admin.presensi.pertemuan.update', $pertemuan), [
         'tanggal' => '2025-08-04', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $pertemuan->ruang_id, 'jenis' => 'kuliah', 'dosen_id' => $pengganti->dosenProfile->id,
+    ])->assertSessionHasErrors('alasan');
+    $this->actingAs($admin)->put(route('admin.presensi.pertemuan.update', $pertemuan), [
+        'tanggal' => '2025-08-04', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $pertemuan->ruang_id, 'jenis' => 'kuliah', 'dosen_id' => $pengganti->dosenProfile->id,
+        'alasan' => 'Dosen pengampu sakit',
     ])->assertSessionHasNoErrors();
+    expect(RiwayatJadwalPertemuan::sole()->dosen_baru_id)->toBe($pengganti->dosenProfile->id);
 
     $this->travelTo('2025-08-04 08:00:00');
     $this->actingAs($pengganti)->get(route('dosen.presensi.index'))->assertInertia(fn ($page) => $page->has('hariIni', 1));
@@ -679,7 +711,7 @@ it('lets a substitute lecturer run only the assigned meeting', function () {
     expect($pertemuan->fresh()->status)->toBe(Pertemuan::BERLANGSUNG);
     $this->actingAs($pengganti)->get(route('dosen.presensi.kelas', $kelas))->assertForbidden();
     $this->actingAs($pengganti)->post(route('dosen.presensi.pertemuan.mulai', pertemuanKe($kelas, 2)))->assertForbidden();
-    $this->actingAs($pengganti)->put(route('dosen.presensi.pertemuan.batal', pertemuanKe($kelas, 2)), ['catatan' => 'x'])->assertForbidden();
+    $this->actingAs($pengganti)->put(route('dosen.presensi.pertemuan.update', pertemuanKe($kelas, 2)), ['tanggal' => '2025-08-12', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'jenis' => 'kuliah', 'alasan' => 'x'])->assertForbidden();
 });
 
 it('reports lecturer attendance per class', function () {
@@ -693,14 +725,15 @@ it('reports lecturer attendance per class', function () {
         $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.mulai', pertemuanKe($kelas, $ke)));
         $this->actingAs($dosen)->post(route('dosen.presensi.pertemuan.selesai', pertemuanKe($kelas, $ke)), ['topik' => $topik]);
     }
-    pertemuanKe($kelas, 3)->update(['status' => Pertemuan::DIBATALKAN]);
+    $p3 = pertemuanKe($kelas, 3);
+    $p3->jadwalUlang(['tanggal' => '2025-08-20', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $p3->ruang_id, 'dosen_id' => $p3->dosen_id], 'Libur', null);
     pertemuanKe($kelas, 4)->update(['status' => Pertemuan::SELESAI]); // ditutup tanpa jurnal
 
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin)->get(route('admin.presensi.laporan-dosen', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
         ->assertInertia(fn ($page) => $page->component('Kelas/LaporanKehadiranDosen')
             ->where('baris.0.terlaksana', 3)
-            ->where('baris.0.dibatalkan', 1)
+            ->where('baris.0.dijadwal_ulang', 1)
             ->where('baris.0.terlambat', 1)
             ->where('baris.0.tanpa_jurnal', 1)
             ->where('baris.0.rencana', 16));
@@ -779,7 +812,7 @@ it('detects clashes with the weekly schedule of classes that have no meetings ye
     $lain = createMateriKelasKuliah($kelas->tahunAkademik);
     $ruang = Ruang::where('kode_ruang', 'R-101')->first();
     Jadwal::create(['kelas_id' => $lain->id, 'hari' => 'Rabu', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $ruang->id]);
-    $isian = ['jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'ruang_id' => $ruang->id, 'jenis' => 'kuliah'];
+    $isian = ['jam_mulai' => '09:00', 'jam_akhir' => '11:00', 'ruang_id' => $ruang->id, 'jenis' => 'kuliah', 'alasan' => 'Pindah hari'];
 
     // 2025-08-06 adalah hari Rabu.
     $this->actingAs($kelas->dosen->user)->put(route('dosen.presensi.pertemuan.update', pertemuanKe($kelas, 1)), [...$isian, 'tanggal' => '2025-08-06'])
@@ -787,7 +820,7 @@ it('detects clashes with the weekly schedule of classes that have no meetings ye
 
     $this->actingAs($kelas->dosen->user)->put(route('dosen.presensi.pertemuan.update', pertemuanKe($kelas, 1)), [...$isian, 'tanggal' => '2025-08-07'])
         ->assertSessionHasNoErrors();
-    expect(pertemuanKe($kelas, 1)->jadwal_manual)->toBeTrue();
+    expect(pertemuanKe($kelas, 1)->riwayatJadwal()->count())->toBe(1);
 });
 
 it('deletes an unused class together with its empty meetings, but keeps classes with attendance', function () {
@@ -809,61 +842,47 @@ it('deletes an unused class together with its empty meetings, but keeps classes 
         ->assertSessionHas('error', 'Mahasiswa tidak dapat dihapus karena sudah memiliki riwayat presensi atau pengajuan izin.');
 });
 
-it('applies weekly schedule changes to upcoming meetings but not to held or manually moved ones', function () {
+it('tidak mengubah pertemuan yang sudah dibuat saat jadwal mingguan diubah', function () {
     [$kelas] = kelasPresensi(1);
     Pertemuan::generateUntuk($kelas); // Senin 08:00–10:00 di R-101, pertemuan 1 = 4 Agustus 2025
     $jadwal = $kelas->jadwals()->first();
     $ruangBaru = Ruang::create(['kode_ruang' => 'R-205', 'nama_ruang' => 'Ruang 205', 'kapasitas' => 40]);
     $admin = User::factory()->admin()->create();
-    selesaikanPertemuan($kelas, 1, []);
-    pertemuanKe($kelas, 5)->update(['tanggal' => '2025-09-03', 'jadwal_manual' => true]);
-
-    $this->travelTo('2025-08-20 12:00:00'); // pertemuan 1–3 sudah lewat
-    $this->actingAs($admin)->get(route('admin.kelas-kuliah.jadwal.edit', [$kelas, $jadwal]))
-        ->assertInertia(fn ($page) => $page->where('pertemuanTerkait', 12));
-
-    $this->actingAs($admin)->put(route('admin.kelas-kuliah.jadwal.update', [$kelas, $jadwal]), [
-        'hari' => 'Rabu', 'jam_mulai' => '10:00', 'jam_akhir' => '12:00', 'ruang_id' => $ruangBaru->id, 'terapkan_ke_pertemuan' => true,
-    ])->assertSessionHas('jadwal_success');
-
-    $p4 = pertemuanKe($kelas, 4);
-    expect(pertemuanKe($kelas, 1)->tanggal->toDateString())->toBe('2025-08-04')
-        ->and(substr(pertemuanKe($kelas, 1)->jam_mulai, 0, 5))->toBe('08:00')
-        ->and($p4->tanggal->toDateString())->toBe('2025-08-27')
-        ->and(substr($p4->jam_mulai, 0, 5))->toBe('10:00')
-        ->and($p4->ruang_id)->toBe($ruangBaru->id)
-        ->and(pertemuanKe($kelas, 5)->tanggal->toDateString())->toBe('2025-09-03')
-        ->and(substr(pertemuanKe($kelas, 5)->jam_mulai, 0, 5))->toBe('08:00');
-});
-
-it('can leave meetings untouched when the schedule change should not be applied', function () {
-    [$kelas] = kelasPresensi(0);
-    Pertemuan::generateUntuk($kelas);
-    $jadwal = $kelas->jadwals()->first();
     $this->travelTo('2025-08-01 12:00:00');
 
-    $this->actingAs(User::factory()->admin()->create())->put(route('admin.kelas-kuliah.jadwal.update', [$kelas, $jadwal]), [
-        'hari' => 'Selasa', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $jadwal->ruang_id, 'terapkan_ke_pertemuan' => false,
-    ]);
-    expect(pertemuanKe($kelas, 1)->tanggal->toDateString())->toBe('2025-08-04');
+    $this->actingAs($admin)->get(route('admin.kelas-kuliah.jadwal.edit', [$kelas, $jadwal]))
+        ->assertInertia(fn ($page) => $page->where('jumlahPertemuan', 16));
 
-    // Tombol "Susun ulang dari jadwal" di halaman presensi kelas.
-    $this->actingAs($kelas->dosen->user)->post(route('dosen.presensi.susun-ulang', $kelas))->assertSessionHas('success');
-    expect(pertemuanKe($kelas, 1)->tanggal->toDateString())->toBe('2025-08-05');
+    $this->actingAs($admin)->put(route('admin.kelas-kuliah.jadwal.update', [$kelas, $jadwal]), [
+        'hari' => 'Rabu', 'jam_mulai' => '10:00', 'jam_akhir' => '12:00', 'ruang_id' => $ruangBaru->id,
+    ])->assertSessionHas('jadwal_success', fn (string $pesan): bool => str_contains($pesan, 'Pertemuan yang sudah dibuat tidak berubah'));
+
+    expect(pertemuanKe($kelas, 1)->tanggal->toDateString())->toBe('2025-08-04')
+        ->and(pertemuanKe($kelas, 4)->ruang_id)->not->toBe($ruangBaru->id)
+        ->and(RiwayatJadwalPertemuan::count())->toBe(0);
 });
 
-it('shifts upcoming meetings when the academic year start date changes', function () {
+it('menolak perubahan tanggal mulai tahun akademik bila kelasnya sudah punya pertemuan', function () {
     [$kelas] = kelasPresensi(0);
-    Pertemuan::generateUntuk($kelas);
     $tahun = $kelas->tahunAkademik;
-    $this->travelTo('2025-07-20 12:00:00');
-
-    $this->actingAs(User::factory()->admin()->create())->put(route('admin.tahun-akademik.update', $tahun), [
-        'tahun' => $tahun->tahun, 'semester' => $tahun->semester, 'tanggal_mulai' => '2025-08-08', 'tanggal_akhir' => '2026-01-31',
+    $admin = User::factory()->admin()->create();
+    $isian = [
+        'tahun' => $tahun->tahun, 'semester' => $tahun->semester, 'tanggal_akhir' => '2026-01-31',
         'tanggal_krs_awal' => '2025-08-01', 'tanggal_krs_akhir' => '2025-08-14', 'status' => true,
-    ])->assertSessionHas('success');
+    ];
 
-    expect(pertemuanKe($kelas, 1)->tanggal->toDateString())->toBe('2025-08-11');
+    // Belum ada pertemuan: boleh diubah.
+    $this->actingAs($admin)->put(route('admin.tahun-akademik.update', $tahun), [...$isian, 'tanggal_mulai' => '2025-08-08'])->assertSessionHasNoErrors();
+
+    Pertemuan::generateUntuk($kelas->fresh());
+    $this->actingAs($admin)->get(route('admin.tahun-akademik.edit', $tahun))->assertInertia(fn ($page) => $page->where('kelasBerpertemuan', 1));
+    $this->actingAs($admin)->put(route('admin.tahun-akademik.update', $tahun), [...$isian, 'tanggal_mulai' => '2025-08-01'])
+        ->assertSessionHasErrors(['tanggal_mulai' => 'Tanggal mulai tidak bisa diubah karena 1 kelas sudah punya pertemuan. Ubah jadwal per pertemuan di menu Presensi bila perlu.']);
+    expect($tahun->fresh()->tanggal_mulai->toDateString())->toBe('2025-08-08')
+        ->and(pertemuanKe($kelas, 1)->tanggal->toDateString())->toBe('2025-08-11');
+
+    // Tanggal mulai tetap, kolom lain boleh diubah.
+    $this->actingAs($admin)->put(route('admin.tahun-akademik.update', $tahun), [...$isian, 'tanggal_mulai' => '2025-08-08', 'tanggal_akhir' => '2026-02-28'])->assertSessionHasNoErrors();
 });
 
 it('keeps a Hadir status when a leave request for the same meeting is approved', function () {
@@ -954,7 +973,8 @@ it('shows missed meetings as terlewat and counts them in the lecturer report', f
     Pertemuan::generateUntuk($kelas);
     $this->travelTo('2025-08-19 12:00:00'); // pertemuan 1–3 (4, 11, 18 Agustus) sudah lewat
     selesaikanPertemuan($kelas, 1, []);
-    pertemuanKe($kelas, 2)->update(['status' => Pertemuan::DIBATALKAN]);
+    $p2 = pertemuanKe($kelas, 2);
+    $p2->jadwalUlang(['tanggal' => '2025-08-20', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $p2->ruang_id, 'dosen_id' => $p2->dosen_id], 'Libur', null);
 
     $this->flushSession();
     $this->app['auth']->forgetGuards();
@@ -1104,4 +1124,42 @@ it('returns attendance counts for the QR screen', function () {
 
     $this->actingAs($kelas->dosen->user)->getJson(route('dosen.presensi.pertemuan.kode', $pertemuan))
         ->assertJson(['terbuka' => true, 'hadir' => 2, 'total' => 3]);
+});
+
+it('memberi tahu mahasiswa di beranda dan halaman presensi saat pertemuan dijadwal ulang', function () {
+    [$kelas, $mahasiswa] = kelasPresensi(2);
+    Pertemuan::generateUntuk($kelas);
+    [$berizin, $lain] = $mahasiswa;
+    $this->travelTo('2025-08-05 09:00:00');
+    $p2 = pertemuanKe($kelas, 2); // Senin 11 Agustus 2025
+    $this->actingAs($berizin)->post(route('mahasiswa.presensi.izin'), ['pertemuan_id' => $p2->id, 'jenis' => 'izin', 'alasan' => 'Acara keluarga'])->assertSessionHasNoErrors();
+
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($kelas->dosen->user)->put(route('dosen.presensi.pertemuan.update', $p2), [
+        'tanggal' => '2025-08-13', 'jam_mulai' => '08:00', 'jam_akhir' => '10:00', 'ruang_id' => $p2->ruang_id, 'jenis' => 'kuliah', 'alasan' => 'Libur nasional',
+    ])->assertSessionHasNoErrors();
+
+    // Pengajuan izin tetap menempel ke pertemuan yang dipindah.
+    expect(PengajuanIzin::sole()->pertemuan_id)->toBe($p2->id);
+
+    foreach ([[$berizin, true], [$lain, false]] as [$user, $penting]) {
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->actingAs($user)->get(route('mahasiswa.dashboard'))
+            ->assertInertia(fn ($page) => $page
+                ->has('jadwalPertemuanBerubah.pesan', 1)
+                ->where('jadwalPertemuanBerubah.pesan.0.penting', $penting)
+                ->where('jadwalPertemuanBerubah.pesan.0.teks', fn (string $teks): bool => str_contains($teks, 'pertemuan ke-2 dipindah dari Senin, 11 Agustus ke Rabu, 13 Agustus 2025')
+                    && str_contains($teks, 'Libur nasional')));
+    }
+
+    $this->actingAs($lain)->get(route('mahasiswa.presensi'))
+        ->assertInertia(fn ($page) => $page->where('kelas.0.pertemuan.1.dijadwal_ulang', ['tanggal_asal' => '2025-08-11', 'jam_asal' => '08:00', 'alasan' => 'Libur nasional']));
+
+    // Sesudah tanggal barunya lewat, pengingat hilang.
+    $this->travelTo('2025-08-14 09:00:00');
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($lain)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page->where('jadwalPertemuanBerubah', null));
 });

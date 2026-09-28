@@ -236,7 +236,7 @@ class Ujian extends Model
     {
         $pertemuan = $this->pertemuan();
 
-        if ($pertemuan === null || $pertemuan->status === Pertemuan::DIBATALKAN) {
+        if ($pertemuan === null) {
             return;
         }
 
@@ -305,8 +305,6 @@ class Ujian extends Model
             'jam_mulai' => $this->jam_mulai,
             'jam_akhir' => $this->jam_akhir,
             'ruang_id' => $this->online() ? null : $this->ruang_id,
-            // Jadwal ujian yang mengatur; pertemuan ini tidak ikut disusun ulang dari jadwal mingguan.
-            'jadwal_manual' => true,
         ]);
 
         return true;

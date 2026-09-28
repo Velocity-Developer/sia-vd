@@ -83,7 +83,7 @@ class PresensiMahasiswa extends Model
     /**
      * Pindahkan riwayat presensi, pengajuan izin, dan dispensasi ujian seorang mahasiswa dari kelas asal ke
      * kelas tujuan (dipakai saat pindah kelas disetujui). Presensi pertemuan ke-N di kelas asal pindah ke
-     * pertemuan ke-N di kelas tujuan; yang tidak punya pasangan (belum dibuat/dibatalkan, atau sudah terisi)
+     * pertemuan ke-N di kelas tujuan; yang tidak punya pasangan (belum dibuat, atau sudah terisi)
      * tetap di kelas asal.
      *
      * @return array{dipindah: int, tertinggal: int}
@@ -92,7 +92,6 @@ class PresensiMahasiswa extends Model
     {
         $tujuan = Pertemuan::query()
             ->where('kelas_id', $kelasTujuanId)
-            ->where('status', '!=', Pertemuan::DIBATALKAN)
             ->pluck('id', 'pertemuan_ke');
         $nomorAsal = Pertemuan::query()->where('kelas_id', $kelasAsalId)->pluck('pertemuan_ke', 'id');
         $hasil = ['dipindah' => 0, 'tertinggal' => 0];

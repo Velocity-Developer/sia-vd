@@ -75,8 +75,7 @@ it('saves a schedule and makes the UTS meeting follow it', function () {
     $uts = Pertemuan::where('kelas_id', $kelas->id)->where('jenis', 'uts')->first();
     expect($uts->tanggal->toDateString())->toBe('2025-10-06')
         ->and(substr($uts->jam_mulai, 0, 5))->toBe('13:00')
-        ->and($uts->ruang_id)->toBe($ruang2->id)
-        ->and($uts->jadwal_manual)->toBeTrue();
+        ->and($uts->ruang_id)->toBe($ruang2->id);
 
     // Jadi online: ruang dikosongkan di ujian dan pertemuan.
     $ujian = Ujian::firstOrFail();
@@ -496,4 +495,19 @@ it('records attendance even when the exam meeting was opened without participant
 
     expect(PresensiMahasiswa::where('pertemuan_id', $uts->id)->where('mahasiswa_id', $mhs)->value('status'))->toBe(PresensiMahasiswa::HADIR)
         ->and(PresensiMahasiswa::where('pertemuan_id', $uts->id)->count())->toBe(2);
+});
+
+it('menolak memindah pertemuan UTS yang jadwalnya diatur Jadwal Ujian', function () {
+    [$kelas] = kelasUjian();
+    $admin = User::factory()->admin()->create();
+    $uts = Pertemuan::where('kelas_id', $kelas->id)->where('jenis', 'uts')->firstOrFail();
+    $isian = ['tanggal' => '2025-10-07', 'jam_mulai' => '13:00', 'jam_akhir' => '15:00', 'ruang_id' => $uts->ruang_id, 'jenis' => 'uts', 'alasan' => 'Pindah'];
+
+    // Belum ada jadwal ujian: pertemuan UTS boleh dipindah seperti pertemuan lain.
+    $this->actingAs($admin)->put(route('admin.presensi.pertemuan.update', $uts), $isian)->assertSessionHasNoErrors();
+
+    $this->actingAs($admin)->post(route('admin.ujian.store'), [...isianUjian(), 'kelas_id' => $kelas->id, 'jenis' => 'uts'])->assertSessionHasNoErrors();
+    $this->actingAs($admin)->put(route('admin.presensi.pertemuan.update', $uts), [...$isian, 'tanggal' => '2025-10-08'])
+        ->assertSessionHasErrors(['tanggal' => 'Jadwal pertemuan UTS mengikuti jadwal ujian. Ubah lewat menu Jadwal Ujian.']);
+    expect($uts->fresh()->tanggal->toDateString())->toBe('2025-10-06');
 });

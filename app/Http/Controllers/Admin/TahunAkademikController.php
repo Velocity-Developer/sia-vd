@@ -30,7 +30,10 @@ class TahunAkademikController extends Controller
 
     public function edit(TahunAkademik $tahunAkademik): Response
     {
-        return Inertia::render('Admin/TahunAkademikForm', ['tahunAkademik' => $tahunAkademik]);
+        return Inertia::render('Admin/TahunAkademikForm', [
+            'tahunAkademik' => $tahunAkademik,
+            'kelasBerpertemuan' => $tahunAkademik->kelasKuliahs()->whereHas('pertemuans')->count(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -42,20 +45,19 @@ class TahunAkademikController extends Controller
 
     public function update(Request $request, TahunAkademik $tahunAkademik): RedirectResponse
     {
-        $mulaiLama = $tahunAkademik->tanggal_mulai?->toDateString();
-        $this->save($request, $tahunAkademik);
-        $pesan = 'Tahun Akademik berhasil diperbarui.';
-
-        // Tanggal mulai menentukan tanggal pertemuan; pertemuan yang belum berjalan ikut disusun ulang.
-        if ($mulaiLama !== $tahunAkademik->fresh()->tanggal_mulai?->toDateString()) {
-            $diubah = 0;
-            foreach ($tahunAkademik->kelasKuliahs()->whereHas('pertemuans')->whereHas('jadwals')->get() as $kelas) {
-                $diubah += Pertemuan::susunUlang($kelas)['diubah'];
+        // Tanggal pertemuan dihitung dari tanggal mulai saat pertemuan dibuat; setelah itu tanggal mulai dikunci
+        // agar tanggal pertemuan tidak bergeser diam-diam.
+        $mulaiBaru = $request->date('tanggal_mulai')?->toDateString();
+        if ($mulaiBaru !== null && $mulaiBaru !== $tahunAkademik->tanggal_mulai?->toDateString()) {
+            $kelasBerpertemuan = $tahunAkademik->kelasKuliahs()->whereHas('pertemuans')->count();
+            if ($kelasBerpertemuan > 0) {
+                throw ValidationException::withMessages(['tanggal_mulai' => "Tanggal mulai tidak bisa diubah karena {$kelasBerpertemuan} kelas sudah punya pertemuan. Ubah jadwal per pertemuan di menu Presensi bila perlu."]);
             }
-            $pesan .= $diubah > 0 ? " {$diubah} pertemuan yang belum berjalan disesuaikan dengan tanggal mulai baru." : '';
         }
 
-        return to_route('admin.tahun-akademik.index')->with('success', $pesan);
+        $this->save($request, $tahunAkademik);
+
+        return to_route('admin.tahun-akademik.index')->with('success', 'Tahun Akademik berhasil diperbarui.');
     }
 
     public function destroy(TahunAkademik $tahunAkademik): RedirectResponse

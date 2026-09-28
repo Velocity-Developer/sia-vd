@@ -61,6 +61,6 @@ class PengajuanIzin extends Model
      */
     public static function masihBisaDiajukan(Pertemuan $pertemuan, ?int $batasHari = null): bool
     {
-        return $pertemuan->status !== Pertemuan::DIBATALKAN && now()->lte(self::batasWaktu($pertemuan, $batasHari));
+        return now()->lte(self::batasWaktu($pertemuan, $batasHari));
     }
 }
