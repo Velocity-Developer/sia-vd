@@ -7,11 +7,12 @@ interface Props {
     class?: string;
 }
 
+// Tanpa item, komponen tidak merender elemen apa pun agar padding grup dan gap SidebarFooter tidak menyisakan ruang kosong.
 defineProps<Props>();
 </script>
 
 <template>
-    <SidebarGroup :class="`group-data-[collapsible=icon]:p-0 ${$props.class || ''}`">
+    <SidebarGroup v-if="items.length" :class="`group-data-[collapsible=icon]:p-0 ${$props.class || ''}`">
         <SidebarGroupContent>
             <SidebarMenu>
                 <SidebarMenuItem v-for="item in items" :key="item.title">
