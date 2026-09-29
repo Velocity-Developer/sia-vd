@@ -237,7 +237,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 
 | Tab | Permission | Isi |
 |---|---|---|
-| Institusi | `admin.institusi` | Nama PT (bawaan "SIA VD"), singkatan, logo (jpg/png/webp, maks 2 MB), NPSN, alamat, kontak, tahun berdiri. Dipakai di kop PDF dan tampilan. |
+| Institusi | `admin.institusi` | Nama PT (bawaan "SIA VD"), singkatan, logo (jpg/png/webp, maks 2 MB), NPSN, alamat, kontak, tahun berdiri, **zona waktu** (WIB/WITA/WIT, bawaan WIB). Dipakai di kop PDF dan tampilan. Zona waktu dipasang middleware `TerapkanZonaWaktu` di awal setiap permintaan web (dan `Queue::before` untuk job) sebagai jam "sekarang" seluruh sistem serta label WIB/WITA/WIT di PDF dan jadwal pendadaran. Database menyimpan jam lokal, jadi mengganti zona **tidak menggeser data lama**: jadwal dan tenggat yang diketik tetap jam dinding kampus, sedangkan catatan waktu otomatis yang sudah ada tetap dalam zona lama (keputusan 29 Sep 2026: diatur sekali di awal). |
 | Email | `admin.pengaturan-email` | Mailer `log` atau `smtp`. Kata sandi SMTP disimpan terenkripsi dan tidak pernah dikirim ke browser. Ada tombol kirim surel uji (`throttle:6,1`). Nilai di database menimpa `.env`. |
 | Akademik | `admin.pengaturan-akademik` | Delapan formulir, dijelaskan di bawah tabel ini. |
 | Tampilan | `admin.pengaturan-tampilan` | Nama aplikasi, favicon (png/ico/webp, SVG ditolak), halaman masuk (judul, teks, gambar, tata letak `panel`/`tengah`, sorotan fitur), sidebar bawaan (`lebar`/`ringkas`). |

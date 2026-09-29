@@ -7,6 +7,7 @@ use App\Models\PengaturanInstitusi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,6 +20,11 @@ class InstitusiController extends Controller
     {
         return Inertia::render('PengaturanSistem/Institusi', [
             'institusi' => PengaturanInstitusi::current(),
+            'zonaWaktu' => [
+                ['value' => 'Asia/Jakarta', 'label' => 'WIB — Waktu Indonesia Barat (UTC+7)'],
+                ['value' => 'Asia/Makassar', 'label' => 'WITA — Waktu Indonesia Tengah (UTC+8)'],
+                ['value' => 'Asia/Jayapura', 'label' => 'WIT — Waktu Indonesia Timur (UTC+9)'],
+            ],
         ]);
     }
 
@@ -37,6 +43,7 @@ class InstitusiController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
             'tahun_berdiri' => ['nullable', 'integer', 'min:1000', 'max:'.date('Y')],
+            'zona_waktu' => ['sometimes', 'required', Rule::in(array_keys(PengaturanInstitusi::ZONA_WAKTU))],
         ], [
             'image' => ':attribute harus berupa gambar.',
             'mimes' => ':attribute harus berformat jpg, jpeg, png, atau webp.',
@@ -53,6 +60,7 @@ class InstitusiController extends Controller
             'email' => 'Email Resmi',
             'website' => 'Website',
             'tahun_berdiri' => 'Tahun Berdiri',
+            'zona_waktu' => 'Zona Waktu',
         ]);
 
         $institusi = PengaturanInstitusi::current();

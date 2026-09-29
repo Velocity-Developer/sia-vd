@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PastikanAkunAktif;
 use App\Http\Middleware\PastikanTagihanLunas;
+use App\Http\Middleware\TerapkanZonaWaktu;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Zona waktu institusi dipasang paling awal agar semua middleware sesudahnya memakai jam yang sama.
+        $middleware->web(prepend: [TerapkanZonaWaktu::class]);
+
         $middleware->web(append: [
             // Sesi terikat ke kata sandi: begitu kata sandi diubah (oleh pemilik akun maupun admin),
             // sesi lain yang masih terbuka ikut berakhir.

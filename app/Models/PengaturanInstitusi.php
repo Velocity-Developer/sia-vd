@@ -6,6 +6,7 @@ use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -20,9 +21,21 @@ class PengaturanInstitusi extends Model
 
     private const SHARED_CACHE_KEY = 'institusi.shared';
 
+    /**
+     * Zona waktu yang bisa dipilih beserta singkatannya. Database menyimpan jam lokal (bukan UTC),
+     * jadi mengganti zona tidak menggeser data lama: jadwal dan tenggat yang diketik tetap jam dinding kampus.
+     */
+    public const ZONA_WAKTU = [
+        'Asia/Jakarta' => 'WIB',
+        'Asia/Makassar' => 'WITA',
+        'Asia/Jayapura' => 'WIT',
+    ];
+
+    public const ZONA_BAWAAN = 'Asia/Jakarta';
+
     protected $table = 'pengaturan_institusi';
 
-    protected $fillable = ['nama_pt', 'singkatan', 'logo', 'npsn', 'alamat', 'telepon', 'email', 'website', 'tahun_berdiri', 'updated_by'];
+    protected $fillable = ['nama_pt', 'singkatan', 'logo', 'npsn', 'alamat', 'telepon', 'email', 'website', 'tahun_berdiri', 'zona_waktu', 'updated_by'];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
@@ -60,8 +73,40 @@ class PengaturanInstitusi extends Model
                 'nama_pt' => $institusi?->nama_pt ?? config('app.name'),
                 'singkatan' => $institusi?->singkatan,
                 'logo_url' => $institusi?->logo_url,
+                'zona_waktu' => static::zonaSah($institusi?->zona_waktu),
+                'zona_singkatan' => self::ZONA_WAKTU[static::zonaSah($institusi?->zona_waktu)],
             ];
         });
+    }
+
+    /**
+     * Terapkan zona waktu institusi ke konfigurasi dan PHP, dipanggil di awal setiap permintaan web
+     * (middleware TerapkanZonaWaktu) dan sebelum setiap job antrean.
+     */
+    public static function terapkanZonaWaktu(): void
+    {
+        try {
+            $zona = static::shared()['zona_waktu'] ?? self::ZONA_BAWAAN;
+        } catch (QueryException) {
+            // Tabel belum ada (instalasi baru sebelum migrasi): pakai zona bawaan konfigurasi.
+            return;
+        }
+
+        config(['app.timezone' => $zona]);
+        date_default_timezone_set($zona);
+    }
+
+    /**
+     * Singkatan zona waktu yang sedang dipakai (WIB/WITA/WIT), untuk label jam di PDF dan pesan.
+     */
+    public static function singkatanZona(): string
+    {
+        return self::ZONA_WAKTU[config('app.timezone')] ?? self::ZONA_WAKTU[self::ZONA_BAWAAN];
+    }
+
+    private static function zonaSah(?string $zona): string
+    {
+        return array_key_exists((string) $zona, self::ZONA_WAKTU) ? $zona : self::ZONA_BAWAAN;
     }
 
     protected static function booted(): void

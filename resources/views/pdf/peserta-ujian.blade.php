@@ -15,7 +15,7 @@
         </tr>
         <tr>
             <td class="label">Kelas</td><td class="titik">:</td><td>{{ $kelas->kode_kelas }}</td>
-            <td class="label">Waktu</td><td class="titik">:</td><td>{{ substr($jadwal->jam_mulai, 0, 5) }}–{{ substr($jadwal->jam_akhir, 0, 5) }} WIB</td>
+            <td class="label">Waktu</td><td class="titik">:</td><td>{{ substr($jadwal->jam_mulai, 0, 5) }}–{{ substr($jadwal->jam_akhir, 0, 5) }} {{ \App\Models\PengaturanInstitusi::singkatanZona() }}</td>
         </tr>
         <tr>
             <td class="label">Dosen Pengampu</td><td class="titik">:</td><td>{{ $kelas->dosen?->user?->name ?? '-' }}</td>

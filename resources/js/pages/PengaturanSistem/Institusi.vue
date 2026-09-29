@@ -20,9 +20,10 @@ interface Institusi {
     email: string | null;
     website: string | null;
     tahun_berdiri: number | null;
+    zona_waktu: string;
 }
 
-const props = defineProps<{ institusi: Institusi }>();
+const props = defineProps<{ institusi: Institusi; zonaWaktu: { value: string; label: string }[] }>();
 
 const form = useForm<{
     nama_pt: string;
@@ -34,6 +35,7 @@ const form = useForm<{
     email: string;
     website: string;
     tahun_berdiri: string;
+    zona_waktu: string;
 }>({
     nama_pt: props.institusi.nama_pt ?? '',
     singkatan: props.institusi.singkatan ?? '',
@@ -44,6 +46,7 @@ const form = useForm<{
     email: props.institusi.email ?? '',
     website: props.institusi.website ?? '',
     tahun_berdiri: props.institusi.tahun_berdiri ? String(props.institusi.tahun_berdiri) : '',
+    zona_waktu: props.institusi.zona_waktu ?? 'Asia/Jakarta',
 });
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -177,6 +180,23 @@ const inp =
                     <Label for="tahun_berdiri">Tahun Berdiri</Label>
                     <Input id="tahun_berdiri" v-model="form.tahun_berdiri" type="number" min="1000" max="2100" :class="inp" placeholder="2001" />
                     <InputError :message="form.errors.tahun_berdiri" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="zona_waktu">Zona Waktu</Label>
+                    <select
+                        id="zona_waktu"
+                        v-model="form.zona_waktu"
+                        class="h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                    >
+                        <option v-for="zona in zonaWaktu" :key="zona.value" :value="zona.value">{{ zona.label }}</option>
+                    </select>
+                    <p class="text-xs text-[#615d59]">
+                        Dipakai untuk jam sekarang di seluruh sistem (periode KRS, batas waktu tugas dan ujian, presensi) serta label WIB/WITA/WIT.
+                        Jadwal dan tenggat yang sudah diisi tidak digeser; catatan waktu otomatis yang sudah ada (mis. waktu kumpul tugas) tetap
+                        tercatat dengan zona lama, jadi sebaiknya diatur sekali di awal.
+                    </p>
+                    <InputError :message="form.errors.zona_waktu" />
                 </div>
 
                 <div class="flex items-center gap-4">

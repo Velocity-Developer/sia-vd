@@ -40,6 +40,9 @@ export interface Institusi {
     nama_pt: string;
     singkatan: string | null;
     logo_url: string | null;
+    zona_waktu: string;
+    /** WIB, WITA, atau WIT. */
+    zona_singkatan: string;
 }
 
 /** Pengaturan tampilan sistem, sudah terisi nilai bawaan (lihat PengaturanTampilan::shared). */

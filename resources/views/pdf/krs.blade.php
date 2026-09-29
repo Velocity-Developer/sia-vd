@@ -67,7 +67,7 @@
 
     <p class="catatan">
         Status KRS:
-        <strong>{{ $disimpanPada ? 'Disimpan dan dikunci pada '.$disimpanPada->translatedFormat('d F Y, H.i').' WIB' : 'Belum disimpan (masih dapat berubah)' }}</strong>.
+        <strong>{{ $disimpanPada ? 'Disimpan dan dikunci pada '.$disimpanPada->translatedFormat('d F Y, H.i').' '.\App\Models\PengaturanInstitusi::singkatanZona() : 'Belum disimpan (masih dapat berubah)' }}</strong>.
         KRS ini sah setelah ditandatangani Dosen Pembimbing Akademik dan diketahui Ketua Program Studi.
     </p>
 

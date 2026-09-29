@@ -28,7 +28,7 @@
     <p>yang akan dilaksanakan pada:</p>
     <table class="identitas" style="margin-bottom: 12px;">
         <tr><td class="label">Hari, tanggal</td><td class="titik">:</td><td>{{ $pendadaran->tanggal->translatedFormat('l, d F Y') }}</td></tr>
-        <tr><td class="label">Waktu</td><td class="titik">:</td><td>{{ substr($pendadaran->jam_mulai, 0, 5) }}–{{ substr($pendadaran->jam_akhir, 0, 5) }} WIB</td></tr>
+        <tr><td class="label">Waktu</td><td class="titik">:</td><td>{{ substr($pendadaran->jam_mulai, 0, 5) }}–{{ substr($pendadaran->jam_akhir, 0, 5) }} {{ \App\Models\PengaturanInstitusi::singkatanZona() }}</td></tr>
         <tr><td class="label">Tempat</td><td class="titik">:</td><td>{{ trim(($pendadaran->ruang?->kode_ruang ?? '').' '.($pendadaran->ruang?->nama_ruang ?? '')) }}</td></tr>
     </table>
 

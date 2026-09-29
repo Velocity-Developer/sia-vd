@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\PengaturanEmail;
+use App\Models\PengaturanInstitusi;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -29,5 +31,8 @@ class AppServiceProvider extends ServiceProvider
         // Pengaturan SMTP dari halaman admin menimpa konfigurasi .env. Dipasang saat mailer
         // pertama kali dibuat agar halaman yang tidak mengirim surel tidak ikut membaca tabelnya.
         $this->app->resolving('mail.manager', fn () => PengaturanEmail::terapkan());
+
+        // Job antrean (mis. surel notifikasi) memakai zona waktu institusi seperti permintaan web.
+        Queue::before(fn () => PengaturanInstitusi::terapkanZonaWaktu());
     }
 }

@@ -78,7 +78,7 @@
     <div class="kaki">
         <table>
             <tr>
-                <td>Dicetak melalui Sistem Informasi Akademik {{ $institusi->nama_pt }} pada {{ now()->translatedFormat('d F Y, H.i') }} WIB</td>
+                <td>Dicetak melalui Sistem Informasi Akademik {{ $institusi->nama_pt }} pada {{ now()->translatedFormat('d F Y, H.i') }} {{ \App\Models\PengaturanInstitusi::singkatanZona() }}</td>
                 <td class="kanan">Halaman <span class="nomor-halaman"></span></td>
             </tr>
         </table>

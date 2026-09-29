@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { formatTanggal } from '@/lib/presensi';
 import type { JadwalPendadaran } from '@/lib/tugasAkhir';
+import type { SharedData } from '@/types';
+import { usePage } from '@inertiajs/vue3';
 import { FileText } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 defineProps<{ jadwal: JadwalPendadaran }>();
+
+const page = usePage<SharedData>();
+const zona = computed(() => page.props.institusi?.zona_singkatan ?? 'WIB');
 </script>
 
 <template>
@@ -11,7 +17,7 @@ defineProps<{ jadwal: JadwalPendadaran }>();
         <div>
             <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Waktu</dt>
             <dd class="mt-1 text-black">{{ formatTanggal(jadwal.tanggal) }}</dd>
-            <dd class="text-black">{{ jadwal.jam_mulai }}–{{ jadwal.jam_akhir }} WIB</dd>
+            <dd class="text-black">{{ jadwal.jam_mulai }}–{{ jadwal.jam_akhir }} {{ zona }}</dd>
             <dd v-if="jadwal.nomor_surat" class="mt-2">
                 <a
                     :href="route('berkas.surat-pendadaran', jadwal.id)"
