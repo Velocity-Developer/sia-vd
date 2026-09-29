@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JenisBiayaController;
@@ -101,20 +102,17 @@ $rutePresensi = function (string $peran): void {
     Route::get('presensi/pertemuan/{pertemuan}/kode', [PertemuanController::class, 'kode'])->name($peran.'.presensi.pertemuan.kode');
 };
 
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
+// `/dashboard` bukan halaman sendiri: mengalihkan ke beranda peran (admin/dosen/mahasiswa). Halaman umum hanya untuk
+// akun yang tidak punya izin dashboard mana pun.
+Route::get('dashboard', function (Request $request) {
+    $home = $request->user()->homeRoute();
+
+    return $home === 'dashboard' ? Inertia::render('Dashboard') : redirect()->route($home);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::get('admin', fn (Request $request) => Inertia::render('Dashboard', [
-    'role' => 'admin',
-    'pengingatTugasAkhir' => $request->user()->hasPermission('admin.pengajuan-akademik') ? PengingatTugasAkhir::untukAdmin() : null,
-]))
+Route::get('admin', AdminDashboardController::class)
     ->middleware(['auth', 'verified', 'can:admin.dashboard'])
     ->name('admin.dashboard');
-
-Route::get('admin/data', fn () => Inertia::render('Dashboard', ['role' => 'admin', 'viewAllData' => true]))
-    ->middleware(['auth', 'verified', 'can:admin.dashboard'])
-    ->name('admin.data');
 
 // Berkas kuliah disimpan di disk privat; hak akses dicek di BerkasController.
 Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): void {

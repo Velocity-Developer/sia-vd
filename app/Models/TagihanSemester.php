@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\Models\Concerns\TagihanBerbukti;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -91,6 +92,36 @@ class TagihanSemester extends Model
     public function lunas(): bool
     {
         return $this->status === self::LUNAS;
+    }
+
+    /**
+     * Rekap tagihan mahasiswa aktif pada satu tahun akademik (dipakai daftar Tagihan Mahasiswa dan dashboard admin).
+     * Tagihan ditolak ikut dihitung belum bayar karena mahasiswa masih harus mengunggah ulang.
+     *
+     * @return array{total: int, terbit: int, belum_terbit: int, lunas: int, menunggu: int, belum_bayar: int, nominal_terbit: int, nominal_lunas: int}
+     */
+    public static function ringkasan(?int $tahunAkademikId): array
+    {
+        $total = MahasiswaProfile::query()->where('status', 'Aktif')->whereHas('user')->count();
+        $perStatus = self::query()
+            ->where('tahun_akademik_id', $tahunAkademikId)
+            ->whereHas('mahasiswa', fn (Builder $query) => $query->where('status', 'Aktif')->whereHas('user'))
+            ->selectRaw('status, count(*) as jumlah, coalesce(sum(total), 0) as nominal')
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+        $jumlah = fn (string $status): int => (int) ($perStatus[$status]->jumlah ?? 0);
+
+        return [
+            'total' => $total,
+            'terbit' => (int) $perStatus->sum('jumlah'),
+            'belum_terbit' => max(0, $total - (int) $perStatus->sum('jumlah')),
+            'lunas' => $jumlah(self::LUNAS),
+            'menunggu' => $jumlah(self::MENUNGGU),
+            'belum_bayar' => $jumlah(self::BELUM_BAYAR) + $jumlah(self::DITOLAK),
+            'nominal_terbit' => (int) $perStatus->sum('nominal'),
+            'nominal_lunas' => (int) ($perStatus[self::LUNAS]->nominal ?? 0),
+        ];
     }
 
     /**

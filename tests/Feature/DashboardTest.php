@@ -11,10 +11,10 @@ test('guests are redirected to the login page', function () {
     $response->assertRedirect('/login');
 });
 
-test('authenticated users can visit the dashboard', function () {
+test('authenticated users are sent to their role dashboard', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $response = $this->get('/dashboard');
-    $response->assertStatus(200);
+    $this->get('/dashboard')->assertRedirect(route('mahasiswa.dashboard'));
+    $this->get(route('mahasiswa.dashboard'))->assertOk();
 });

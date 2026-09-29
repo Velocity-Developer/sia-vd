@@ -57,7 +57,7 @@ class TagihanController extends Controller
 
         return Inertia::render('Admin/Tagihan', [
             'daftar' => $daftar,
-            'ringkasan' => $this->ringkasan($tahunAkademik?->id),
+            'ringkasan' => TagihanSemester::ringkasan($tahunAkademik?->id),
             'filter' => [
                 'tahun_akademik_id' => $tahunAkademik?->id,
                 'prodi_id' => $prodiId,
@@ -397,30 +397,6 @@ class TagihanController extends Controller
             'diubah_oleh' => $tagihan?->editor?->name,
             'diubah_pada' => $tagihan?->updated_at?->toDateTimeString(),
             'krs_tersimpan' => $mahasiswa->krsSemester->isNotEmpty(),
-        ];
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    private function ringkasan(?int $tahunAkademikId): array
-    {
-        $total = MahasiswaProfile::query()->where('status', 'Aktif')->whereHas('user')->count();
-        $perStatus = TagihanSemester::query()
-            ->where('tahun_akademik_id', $tahunAkademikId)
-            ->whereHas('mahasiswa', fn (Builder $query) => $query->where('status', 'Aktif')->whereHas('user'))
-            ->selectRaw('status, count(*) as jumlah')
-            ->groupBy('status')
-            ->pluck('jumlah', 'status');
-        $terbit = (int) $perStatus->sum();
-
-        return [
-            'total' => $total,
-            'terbit' => $terbit,
-            'belum_terbit' => $total - $terbit,
-            'lunas' => (int) ($perStatus[TagihanSemester::LUNAS] ?? 0),
-            'menunggu' => (int) ($perStatus[TagihanSemester::MENUNGGU] ?? 0),
-            'belum_bayar' => (int) (($perStatus[TagihanSemester::BELUM_BAYAR] ?? 0) + ($perStatus[TagihanSemester::DITOLAK] ?? 0)),
         ];
     }
 }
