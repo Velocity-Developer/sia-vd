@@ -58,8 +58,44 @@ it('hides sections the staff role has no permission for', function () {
     $staf = User::factory()->withRole(Role::factory()->withPermissions(['admin.dashboard'])->create())->create();
 
     $this->actingAs($staf)->get(route('admin.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('statistik', [])
         ->where('tagihan', null)
+        ->where('buktiTerbaru', null)
         ->where('perkuliahanHariIni', null)
-        ->where('tindakan', [])
+        ->where('tindakan', null)
+        ->where('mahasiswaPerProdi', null)
+        ->where('tahunAkademik.tanggal_krs_awal', null)
         ->where('pengingatTugasAkhir', null));
+});
+
+it('shows a finance staff role only the billing summary, pending proofs, and billing work', function () {
+    $ta = taAktifDashboard();
+    $mhs = User::factory()->mahasiswa()->create(['name' => 'Budi Bayar']);
+    TagihanSemester::create(['mahasiswa_id' => $mhs->mahasiswaProfile->id, 'tahun_akademik_id' => $ta->id, 'status' => TagihanSemester::MENUNGGU,
+        'total' => 1500000, 'bukti_diunggah_at' => now()]);
+    $keuangan = User::factory()->withRole(Role::factory()->withPermissions(['admin.dashboard', 'admin.jenis-biaya', 'admin.tagihan'])->create())->create();
+
+    $this->actingAs($keuangan)->get(route('admin.dashboard'))->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Admin/Dashboard')
+        ->where('statistik', [])
+        ->where('mahasiswaPerProdi', null)
+        ->where('perkuliahanHariIni', null)
+        ->where('tahunAkademik.tanggal_krs_awal', null)
+        ->where('tagihan.menunggu', 1)
+        ->where('tindakan.0.judul', 'Bukti bayar tagihan semester')
+        ->has('buktiTerbaru', 1)
+        ->where('buktiTerbaru.0.jenis', 'Semester')
+        ->where('buktiTerbaru.0.mahasiswa', 'Budi Bayar')
+        ->where('buktiTerbaru.0.total', 1500000)
+        ->where('buktiTerbaru.0.tautan', route('admin.tagihan.index', ['tahun_akademik_id' => $ta->id, 'status' => TagihanSemester::MENUNGGU])));
+});
+
+it('sends only the statistic cards the role may open', function () {
+    taAktifDashboard();
+    $staf = User::factory()->withRole(Role::factory()->withPermissions(['admin.dashboard', 'admin.pengajuan-cuti'])->create())->create();
+
+    $this->actingAs($staf)->get(route('admin.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('statistik', ['mahasiswa_cuti' => 0])
+        ->where('tindakan', [])
+        ->where('mahasiswaPerProdi', null));
 });

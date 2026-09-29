@@ -26,51 +26,116 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Dashboard admin: angka utama tahun akademik aktif dan daftar pekerjaan yang menunggu admin.
- * Setiap bagian hanya dikirim bila role pengguna punya izin halaman tujuannya.
+ * Dashboard admin/karyawan: angka utama tahun akademik aktif dan daftar pekerjaan yang menunggu.
+ * Setiap bagian (termasuk tiap kartu statistik) hanya dikirim bila role pengguna punya izin halaman
+ * sumber datanya, sehingga role karyawan seperti keuangan hanya melihat ringkasan bidangnya.
  */
 class DashboardController extends Controller
 {
+    /** Izin yang menghasilkan butir "Perlu ditindaklanjuti"; tanpa satu pun, bagian itu disembunyikan. */
+    private const IZIN_TINDAKAN = ['admin.tagihan', 'admin.pengajuan-akademik', 'admin.pengajuan-cuti', 'admin.ujian', 'admin.pindah-kelas'];
+
+    private const IZIN_MASA_KRS = ['admin.tahun-akademik', 'admin.kelas-kuliah', 'admin.users.mahasiswa'];
+
+    private const IZIN_SEBARAN_PRODI = ['admin.users.mahasiswa', 'admin.program-studi'];
+
+    /**
+     * Izin yang membuka tiap kartu statistik (cukup salah satu).
+     *
+     * @var array<string, list<string>>
+     */
+    private const IZIN_STATISTIK = [
+        'mahasiswa_aktif' => ['admin.users.mahasiswa'],
+        'dosen_aktif' => ['admin.users.dosen'],
+        'kelas_kuliah' => ['admin.kelas-kuliah'],
+        'program_studi' => ['admin.program-studi'],
+        'mahasiswa_cuti' => ['admin.users.mahasiswa', 'admin.pengajuan-cuti'],
+        'mahasiswa_lulus' => ['admin.users.mahasiswa', 'admin.pengajuan-akademik'],
+    ];
+
     public function __invoke(Request $request): Response
     {
         $user = $request->user();
         $tahunAkademik = TahunAkademik::aktif();
+        $bolehKrs = $this->bolehSalahSatu($user, self::IZIN_MASA_KRS);
 
         return Inertia::render('Admin/Dashboard', [
             'tahunAkademik' => $tahunAkademik === null ? null : [
                 'label' => $tahunAkademik->label(),
                 'tanggal_mulai' => $tahunAkademik->tanggal_mulai?->toDateString(),
                 'tanggal_akhir' => $tahunAkademik->tanggal_akhir?->toDateString(),
-                'tanggal_krs_awal' => $tahunAkademik->tanggal_krs_awal ? Carbon::parse($tahunAkademik->tanggal_krs_awal)->toDateString() : null,
-                'tanggal_krs_akhir' => $tahunAkademik->tanggal_krs_akhir ? Carbon::parse($tahunAkademik->tanggal_krs_akhir)->toDateString() : null,
+                'tanggal_krs_awal' => $bolehKrs && $tahunAkademik->tanggal_krs_awal ? Carbon::parse($tahunAkademik->tanggal_krs_awal)->toDateString() : null,
+                'tanggal_krs_akhir' => $bolehKrs && $tahunAkademik->tanggal_krs_akhir ? Carbon::parse($tahunAkademik->tanggal_krs_akhir)->toDateString() : null,
             ],
-            'statistik' => $this->statistik($tahunAkademik),
-            'tindakan' => $this->tindakan($user, $tahunAkademik),
+            'statistik' => $this->statistik($user, $tahunAkademik),
+            'tindakan' => $this->bolehSalahSatu($user, self::IZIN_TINDAKAN) ? $this->tindakan($user, $tahunAkademik) : null,
             'tagihan' => $user->hasPermission('admin.tagihan') && $tahunAkademik
                 ? [...TagihanSemester::ringkasan($tahunAkademik->id), 'tautan' => route('admin.tagihan.index', ['tahun_akademik_id' => $tahunAkademik->id])]
                 : null,
+            'buktiTerbaru' => $user->hasPermission('admin.tagihan') ? $this->buktiTerbaru() : null,
             'perkuliahanHariIni' => $user->hasPermission('admin.presensi') && $tahunAkademik ? $this->perkuliahanHariIni($tahunAkademik) : null,
-            'mahasiswaPerProdi' => $this->mahasiswaPerProdi(),
+            'mahasiswaPerProdi' => $this->bolehSalahSatu($user, self::IZIN_SEBARAN_PRODI) ? $this->mahasiswaPerProdi() : null,
             'pengingatTugasAkhir' => $user->hasPermission('admin.pengajuan-akademik') ? PengingatTugasAkhir::untukAdmin() : null,
         ]);
     }
 
     /**
-     * @return array{mahasiswa_aktif: int, mahasiswa_cuti: int, mahasiswa_lulus: int, dosen_aktif: int, kelas_kuliah: int, program_studi: int}
+     * @param  list<string>  $izin
      */
-    private function statistik(?TahunAkademik $tahunAkademik): array
+    private function bolehSalahSatu(User $user, array $izin): bool
     {
-        $mahasiswa = MahasiswaProfile::query()->whereHas('user')
-            ->selectRaw('status, count(*) as jumlah')->groupBy('status')->pluck('jumlah', 'status');
+        return array_intersect($izin, $user->permissionKeys()) !== [];
+    }
 
-        return [
+    /**
+     * Hanya kartu yang diizinkan untuk role pengguna yang dikirim (dan dihitung), urut sesuai IZIN_STATISTIK.
+     *
+     * @return array<string, int>
+     */
+    private function statistik(User $user, ?TahunAkademik $tahunAkademik): array
+    {
+        $kunci = array_keys(array_filter(self::IZIN_STATISTIK, fn (array $izin): bool => $this->bolehSalahSatu($user, $izin)));
+        $mahasiswa = array_intersect($kunci, ['mahasiswa_aktif', 'mahasiswa_cuti', 'mahasiswa_lulus']) === [] ? collect()
+            : MahasiswaProfile::query()->whereHas('user')->selectRaw('status, count(*) as jumlah')->groupBy('status')->pluck('jumlah', 'status');
+
+        return collect($kunci)->mapWithKeys(fn (string $k): array => [$k => match ($k) {
             'mahasiswa_aktif' => (int) ($mahasiswa['Aktif'] ?? 0),
             'mahasiswa_cuti' => (int) ($mahasiswa['Cuti'] ?? 0),
             'mahasiswa_lulus' => (int) ($mahasiswa['Lulus'] ?? 0),
             'dosen_aktif' => DosenProfile::query()->whereHas('user')->where('status', 'Aktif')->count(),
             'kelas_kuliah' => $tahunAkademik === null ? 0 : KelasKuliah::query()->where('tahun_akademik_id', $tahunAkademik->id)->count(),
             'program_studi' => ProgramStudi::query()->count(),
+        }])->all();
+    }
+
+    /**
+     * Lima bukti bayar terbaru yang menunggu verifikasi dari tagihan semester, remidi, dan susulan.
+     *
+     * @return list<array{jenis: string, mahasiswa: string|null, nim: string|null, keterangan: string|null, total: int, diunggah: string|null, tautan: string}>
+     */
+    private function buktiTerbaru(): array
+    {
+        $mhs = ['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name'];
+        $kelas = ['kelasKuliah:id,kode_kelas,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,nama_matkul'];
+        $baris = fn (string $jenis, $t, ?string $keterangan, string $rute, int|string|null $taId): array => [
+            'jenis' => $jenis,
+            'mahasiswa' => $t->mahasiswa?->user?->name,
+            'nim' => $t->mahasiswa?->nim,
+            'keterangan' => $keterangan,
+            'total' => (int) $t->total,
+            'diunggah' => $t->bukti_diunggah_at?->toIso8601String(),
+            'tautan' => route($rute, ['tahun_akademik_id' => $taId, 'status' => TagihanSemester::MENUNGGU]),
         ];
+        $terbaru = fn (Builder $q) => $q->where('status', TagihanSemester::MENUNGGU)->latest('bukti_diunggah_at')->limit(5)->get();
+
+        return collect()
+            ->concat($terbaru(TagihanSemester::query()->with([...$mhs, 'tahunAkademik']))
+                ->map(fn (TagihanSemester $t) => $baris('Semester', $t, $t->tahunAkademik?->label(), 'admin.tagihan.index', $t->tahun_akademik_id)))
+            ->concat($terbaru(TagihanRemidi::query()->with([...$mhs, ...$kelas]))
+                ->map(fn (TagihanRemidi $t) => $baris('Remidi', $t, $t->kelasKuliah?->mataKuliah?->nama_matkul, 'admin.tagihan-remidi.index', $t->kelasKuliah?->tahun_akademik_id)))
+            ->concat($terbaru(TagihanSusulan::query()->with([...$mhs, ...$kelas]))
+                ->map(fn (TagihanSusulan $t) => $baris('Susulan', $t, $t->kelasKuliah?->mataKuliah?->nama_matkul, 'admin.tagihan-susulan.index', $t->kelasKuliah?->tahun_akademik_id)))
+            ->sortByDesc('diunggah')->take(5)->values()->all();
     }
 
     /**

@@ -3,12 +3,33 @@ import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import { rupiah } from '@/lib/tagihanRemidi';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { BookOpen, CalendarRange, ChevronRight, CircleCheck, GraduationCap, PauseCircle, School, TriangleAlert, Users } from 'lucide-vue-next';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import {
+    BookOpen,
+    CalendarRange,
+    ChevronRight,
+    CircleCheck,
+    GraduationCap,
+    LayoutGrid,
+    PauseCircle,
+    School,
+    TriangleAlert,
+    Users,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 
 type Tindakan = { judul: string; keterangan: string | null; jumlah: number; tautan: string; penting: boolean };
+type KunciStatistik = 'mahasiswa_aktif' | 'mahasiswa_cuti' | 'mahasiswa_lulus' | 'dosen_aktif' | 'kelas_kuliah' | 'program_studi';
+type BuktiBayar = {
+    jenis: string;
+    mahasiswa: string | null;
+    nim: string | null;
+    keterangan: string | null;
+    total: number;
+    diunggah: string | null;
+    tautan: string;
+};
 
 const props = defineProps<{
     tahunAkademik: {
@@ -18,15 +39,10 @@ const props = defineProps<{
         tanggal_krs_awal: string | null;
         tanggal_krs_akhir: string | null;
     } | null;
-    statistik: {
-        mahasiswa_aktif: number;
-        mahasiswa_cuti: number;
-        mahasiswa_lulus: number;
-        dosen_aktif: number;
-        kelas_kuliah: number;
-        program_studi: number;
-    };
-    tindakan: Tindakan[];
+    /** Hanya kartu yang diizinkan untuk role pengguna yang dikirim server. */
+    statistik: Partial<Record<KunciStatistik, number>>;
+    /** Null bila role tidak memegang satu pun izin sumber tindak lanjut. */
+    tindakan: Tindakan[] | null;
     /** Rekap tagihan semester tahun akademik aktif; null bila tanpa izin admin.tagihan atau belum ada TA aktif. */
     tagihan: {
         total: number;
@@ -39,42 +55,58 @@ const props = defineProps<{
         nominal_lunas: number;
         tautan: string;
     } | null;
+    /** Bukti bayar terbaru yang menunggu verifikasi; null tanpa izin admin.tagihan. */
+    buktiTerbaru: BuktiBayar[] | null;
     perkuliahanHariIni: { dijadwalkan: number; berlangsung: number; selesai: number; tautan: string } | null;
-    mahasiswaPerProdi: { nama: string; jumlah: number }[];
+    mahasiswaPerProdi: { nama: string; jumlah: number }[] | null;
     pengingatTugasAkhir: { pesan: { teks: string; penting: boolean }[]; tautan: string } | null;
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [{ title: 'Dashboard Admin', href: '/admin' }];
 const { can } = usePermissions();
+const page = usePage<SharedData>();
+
+// Judul mengikuti nama role (mis. "Dashboard Direktorat Keuangan"), karena halaman ini juga dipakai role karyawan.
+const judul = computed(() => (page.props.auth.role?.name ? `Dashboard ${page.props.auth.role.name}` : 'Dashboard'));
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [{ title: judul.value, href: '/admin' }]);
 
 const angka = new Intl.NumberFormat('id-ID');
 
-const kartuStatistik = computed(() => [
-    {
-        label: 'Mahasiswa Aktif',
-        nilai: props.statistik.mahasiswa_aktif,
-        ikon: Users,
-        href: can('admin.users.mahasiswa') ? '/admin/users/mahasiswa' : null,
-    },
-    { label: 'Dosen Aktif', nilai: props.statistik.dosen_aktif, ikon: GraduationCap, href: can('admin.users.dosen') ? '/admin/users/dosen' : null },
-    {
-        label: 'Kelas Kuliah',
-        nilai: props.statistik.kelas_kuliah,
-        ikon: School,
-        href: can('admin.kelas-kuliah') ? route('admin.kelas-kuliah.index') : null,
-        catatan: 'tahun akademik aktif',
-    },
-    {
-        label: 'Program Studi',
-        nilai: props.statistik.program_studi,
-        ikon: BookOpen,
-        href: can('admin.program-studi') ? route('admin.program-studi.index') : null,
-    },
-    { label: 'Mahasiswa Cuti', nilai: props.statistik.mahasiswa_cuti, ikon: PauseCircle, href: null },
-    { label: 'Mahasiswa Lulus', nilai: props.statistik.mahasiswa_lulus, ikon: CircleCheck, href: null },
-]);
+const kartuStatistik = computed(() =>
+    [
+        {
+            kunci: 'mahasiswa_aktif',
+            label: 'Mahasiswa Aktif',
+            ikon: Users,
+            href: can('admin.users.mahasiswa') ? '/admin/users/mahasiswa' : null,
+        },
+        { kunci: 'dosen_aktif', label: 'Dosen Aktif', ikon: GraduationCap, href: can('admin.users.dosen') ? '/admin/users/dosen' : null },
+        {
+            kunci: 'kelas_kuliah',
+            label: 'Kelas Kuliah',
+            ikon: School,
+            href: can('admin.kelas-kuliah') ? route('admin.kelas-kuliah.index') : null,
+            catatan: 'tahun akademik aktif',
+        },
+        {
+            kunci: 'program_studi',
+            label: 'Program Studi',
+            ikon: BookOpen,
+            href: can('admin.program-studi') ? route('admin.program-studi.index') : null,
+        },
+        {
+            kunci: 'mahasiswa_cuti',
+            label: 'Mahasiswa Cuti',
+            ikon: PauseCircle,
+            href: can('admin.pengajuan-cuti') ? route('admin.pengajuan-cuti.index') : null,
+        },
+        { kunci: 'mahasiswa_lulus', label: 'Mahasiswa Lulus', ikon: CircleCheck, href: null },
+    ].flatMap((k) => {
+        const nilai = props.statistik[k.kunci as KunciStatistik];
+        return nilai === undefined ? [] : [{ ...k, nilai }];
+    }),
+);
 
-const totalTindakan = computed(() => props.tindakan.reduce((jumlah, t) => jumlah + t.jumlah, 0));
+const totalTindakan = computed(() => (props.tindakan ?? []).reduce((jumlah, t) => jumlah + t.jumlah, 0));
 
 const persen = (bagian: number, keseluruhan: number) => (keseluruhan > 0 ? Math.round((bagian / keseluruhan) * 100) : 0);
 
@@ -90,7 +122,7 @@ const segmenTagihan = computed(() => {
     ];
 });
 
-const prodiTerbanyak = computed(() => Math.max(1, ...props.mahasiswaPerProdi.map((p) => p.jumlah)));
+const prodiTerbanyak = computed(() => Math.max(1, ...(props.mahasiswaPerProdi ?? []).map((p) => p.jumlah)));
 
 const masaKrs = computed(() => {
     const ta = props.tahunAkademik;
@@ -99,18 +131,23 @@ const masaKrs = computed(() => {
     const status = hariIni < ta.tanggal_krs_awal ? 'belum dibuka' : hariIni > ta.tanggal_krs_akhir ? 'sudah ditutup' : 'sedang dibuka';
     return { teks: `${formatTanggal(ta.tanggal_krs_awal, false)} – ${formatTanggal(ta.tanggal_krs_akhir, false)}`, status };
 });
+
+// Tata letak mengikuti bagian yang benar-benar tampil untuk role ini: kolom kiri (daftar) dan kolom kanan (ringkasan).
+const adaKiri = computed(() => props.tindakan !== null || !!props.buktiTerbaru || !!props.pengingatTugasAkhir || !!props.mahasiswaPerProdi);
+const adaKanan = computed(() => !!props.tagihan || !!props.perkuliahanHariIni || !!masaKrs.value);
+const kosong = computed(() => !adaKiri.value && !adaKanan.value && kartuStatistik.value.length === 0);
 </script>
 
 <template>
-    <Head title="Dashboard Admin" />
+    <Head :title="judul" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Dashboard Admin</h1>
-                        <p class="deskripsi-halaman">Ringkasan akademik dan pekerjaan yang menunggu tindak lanjut admin.</p>
+                        <h1 class="judul-halaman">{{ judul }}</h1>
+                        <p class="deskripsi-halaman">Ringkasan dan pekerjaan yang menunggu tindak lanjut, sesuai hak akses role Anda.</p>
                     </div>
                     <div v-if="props.tahunAkademik" class="kartu flex items-center gap-3 px-4 py-2.5">
                         <CalendarRange class="size-5 shrink-0 text-[#0075de]" />
@@ -131,7 +168,7 @@ const masaKrs = computed(() => {
                     >
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <div v-if="kartuStatistik.length" class="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]">
                     <component
                         :is="k.href ? Link : 'div'"
                         v-for="k in kartuStatistik"
@@ -149,9 +186,17 @@ const masaKrs = computed(() => {
                     </component>
                 </div>
 
-                <div class="grid gap-6 lg:grid-cols-3">
-                    <div class="flex flex-col gap-6 lg:col-span-2">
-                        <section class="kartu p-6">
+                <section v-if="kosong" class="kartu flex flex-col items-center gap-2 px-6 py-12 text-center">
+                    <LayoutGrid class="size-8 text-[#a39e98]" />
+                    <p class="font-medium text-black dark:text-foreground">Belum ada ringkasan untuk role Anda</p>
+                    <p class="max-w-md text-sm text-[#615d59] dark:text-muted-foreground">
+                        Menu yang dapat Anda buka tersedia di sidebar. Ringkasan di halaman ini mengikuti hak akses yang diatur di Kelola Role.
+                    </p>
+                </section>
+
+                <div v-if="adaKiri || adaKanan" class="grid gap-6" :class="{ 'lg:grid-cols-3': adaKiri && adaKanan }">
+                    <div v-if="adaKiri" class="flex flex-col gap-6" :class="{ 'lg:col-span-2': adaKanan }">
+                        <section v-if="props.tindakan !== null" class="kartu p-6">
                             <div class="flex items-center justify-between gap-3">
                                 <h2 class="judul-bagian">Perlu ditindaklanjuti</h2>
                                 <span
@@ -184,8 +229,47 @@ const masaKrs = computed(() => {
                                 </li>
                             </ul>
                             <p v-else class="mt-3 flex items-center gap-2 text-sm text-[#615d59] dark:text-muted-foreground">
-                                <CircleCheck class="size-4 text-[#1aae39]" /> Tidak ada pengajuan atau bukti bayar yang menunggu.
+                                <CircleCheck class="size-4 text-[#1aae39]" /> Tidak ada pekerjaan yang menunggu.
                             </p>
+                        </section>
+
+                        <section v-if="props.buktiTerbaru" class="flex flex-col gap-3">
+                            <h2 class="judul-bagian">Bukti bayar terbaru menunggu verifikasi</h2>
+                            <div class="tabel-wadah">
+                                <div class="tabel-gulir">
+                                    <table class="tabel min-w-[640px]">
+                                        <thead>
+                                            <tr>
+                                                <th>Mahasiswa</th>
+                                                <th>Tagihan</th>
+                                                <th class="text-right">Nominal</th>
+                                                <th>Diunggah</th>
+                                                <th class="kolom-aksi"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(b, i) in props.buktiTerbaru" :key="i">
+                                                <td>
+                                                    <p class="font-medium text-black dark:text-foreground">{{ b.mahasiswa ?? '-' }}</p>
+                                                    <p class="teks-bantu">{{ b.nim ?? '-' }}</p>
+                                                </td>
+                                                <td>
+                                                    <p>{{ b.jenis }}</p>
+                                                    <p v-if="b.keterangan" class="teks-bantu">{{ b.keterangan }}</p>
+                                                </td>
+                                                <td class="text-right tabular-nums">{{ rupiah(b.total) }}</td>
+                                                <td class="whitespace-nowrap">{{ formatTanggal(b.diunggah, false) }}</td>
+                                                <td class="kolom-aksi">
+                                                    <Link :href="b.tautan" class="text-sm font-medium text-[#0075de] hover:underline">Periksa</Link>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="!props.buktiTerbaru.length" class="baris-kosong">
+                                                <td colspan="5" class="tabel-kosong">Tidak ada bukti bayar yang menunggu verifikasi.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </section>
 
                         <section v-if="props.pengingatTugasAkhir" class="kartu p-6">
@@ -203,7 +287,7 @@ const masaKrs = computed(() => {
                             >
                         </section>
 
-                        <section class="kartu p-6">
+                        <section v-if="props.mahasiswaPerProdi" class="kartu p-6">
                             <h2 class="judul-bagian">Mahasiswa aktif per program studi</h2>
                             <ul v-if="props.mahasiswaPerProdi.length" class="mt-4 flex flex-col gap-3">
                                 <li
@@ -227,7 +311,7 @@ const masaKrs = computed(() => {
                         </section>
                     </div>
 
-                    <div class="flex flex-col gap-6">
+                    <div v-if="adaKanan" :class="adaKiri ? 'flex flex-col gap-6' : 'grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-3'">
                         <section v-if="props.tagihan" class="kartu p-6">
                             <div class="flex items-center justify-between gap-3">
                                 <h2 class="judul-bagian">Tagihan semester</h2>

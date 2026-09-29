@@ -52,7 +52,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
     {
         label: 'Admin',
         entries: [
-            { title: 'Dashboard Admin', href: '/admin', icon: LayoutGrid, permission: 'admin.dashboard' },
+            { title: 'Dashboard', href: '/admin', icon: LayoutGrid, permission: 'admin.dashboard' },
             {
                 title: 'Master Akademik',
                 icon: Database,
