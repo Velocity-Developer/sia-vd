@@ -77,6 +77,7 @@ const akademikDosen = [
     { label: 'Jabatan Fungsional', key: 'jabatan_fungsional' },
     { label: 'Pendidikan Terakhir', key: 'pendidikan_terakhir' },
     { label: 'Status Kepegawaian', key: 'status_kepegawaian' },
+    { label: 'Status', key: 'status' },
     { label: 'Program Studi', key: 'prodi_name' },
     { label: 'Jenjang', key: 'prodi_jenjang' },
     { label: 'Fakultas', key: 'fakultas_name' },

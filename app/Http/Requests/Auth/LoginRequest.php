@@ -51,7 +51,7 @@ class LoginRequest extends FormRequest
             'password' => $this->string('password')->toString(),
         ];
 
-        if (! Auth::attempt($kredensial, $this->boolean('remember'))) {
+        if (! Auth::validate($kredensial)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -60,6 +60,15 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        // Status baru diperiksa sesudah kata sandi cocok, agar status akun tidak bocor ke orang lain.
+        /** @var User $user */
+        $user = Auth::getLastAttempted();
+        if (($alasan = $user->alasanTidakBolehMasuk()) !== null) {
+            throw ValidationException::withMessages(['username' => $alasan]);
+        }
+
+        Auth::login($user, $this->boolean('remember'));
     }
 
     /**

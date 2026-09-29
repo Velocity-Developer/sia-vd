@@ -50,16 +50,17 @@ it('creates dosen and edits users with self-excluded unique fields', function ()
         'jenis_kelamin' => 'Laki-laki', 'agama' => 'Islam', 'no_telepon' => '08123456789',
         'alamat' => 'Jl. Merdeka', 'kewarganegaraan' => 'Indonesia',
         'jabatan_fungsional' => 'Asisten Ahli', 'pendidikan_terakhir' => 'S2',
-        'status_kepegawaian' => 'Tetap', 'prodi_id' => $prodi->id,
+        'status_kepegawaian' => 'Tetap', 'status' => 'Aktif', 'prodi_id' => $prodi->id,
     ];
 
     $this->actingAs($admin)->post(route('admin.users.dosen.store'), $payload)->assertRedirect()->assertSessionHas('success', 'Dosen berhasil ditambahkan. Tautan verifikasi dikirim ke baru@example.com.');
 
     $this->actingAs($admin)->put(route('admin.users.dosen.update', $dosen), array_replace($payload, [
-        'name' => 'Dosen Diubah', 'username' => $dosen->username, 'email' => $dosen->email, 'nidn' => $dosen->dosenProfile->nidn,
+        'name' => 'Dosen Diubah', 'username' => $dosen->username, 'email' => $dosen->email, 'nidn' => $dosen->dosenProfile->nidn, 'status' => 'Nonaktif',
     ]))->assertRedirect()->assertSessionDoesntHaveErrors()->assertSessionHas('success', 'Dosen berhasil diperbarui.');
 
-    expect(User::find($dosen->id)->name)->toBe('Dosen Diubah');
+    expect(User::find($dosen->id)->name)->toBe('Dosen Diubah')
+        ->and($dosen->dosenProfile->fresh()->status)->toBe('Nonaktif');
 
     $this->actingAs($admin)->delete(route('admin.users.dosen.destroy', $dosen))->assertRedirect()->assertSessionHas('success', 'Dosen berhasil dihapus.');
 });
@@ -69,7 +70,7 @@ it('validates required profile fields and new dropdown values', function () {
     $this->actingAs($admin)->post(route('admin.users.dosen.store'), [])->assertSessionHasErrors([
         'role_id', 'name', 'username', 'email', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama',
         'no_telepon', 'alamat', 'kewarganegaraan', 'nidn', 'jabatan_fungsional',
-        'pendidikan_terakhir', 'status_kepegawaian', 'password',
+        'pendidikan_terakhir', 'status_kepegawaian', 'status', 'password',
     ]);
 
     $dosenWali = User::factory()->dosen()->create();
@@ -119,7 +120,7 @@ it('assigns only roles that match the managed user type', function () {
         'jenis_kelamin' => 'Laki-laki', 'agama' => 'Islam', 'no_telepon' => '08123456789',
         'alamat' => 'Jl. Merdeka', 'kewarganegaraan' => 'Indonesia',
         'jabatan_fungsional' => 'Lektor', 'pendidikan_terakhir' => 'S3',
-        'status_kepegawaian' => 'Tetap', 'prodi_id' => createProgramStudi()->id,
+        'status_kepegawaian' => 'Tetap', 'status' => 'Aktif', 'prodi_id' => createProgramStudi()->id,
     ];
 
     $this->actingAs($admin)->put(route('admin.users.dosen.update', $dosen), $payload + ['role_id' => Role::system(UserType::Mahasiswa)->id])

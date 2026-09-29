@@ -94,6 +94,7 @@ Karena daftar rute berbeda per grup, login dan logout memakai *full reload* (`In
 2. Pengguna mengisi kolom **NIM / NIDN / Username**, `password`, dan opsi `remember`.
    - `User::usernameUntukMasuk()` mencari akun berurutan: `users.username`, lalu `mahasiswa_profiles.nim`, lalu `dosen_profiles.nidn` (spasi di tepi dibuang). Username didahulukan bila kebetulan sama dengan NIM/NIDN akun lain.
    - Pesan gagal: "NIM/NIDN/username atau kata sandi tidak cocok."
+   - Sesudah kata sandi cocok, status profil diperiksa (`User::alasanTidakBolehMasuk`): **dosen berstatus `Nonaktif`** dan **mahasiswa berstatus selain `Aktif`** (Nonaktif, Cuti, Lulus, Dropout, dst.) ditolak dengan pesan yang menyebut statusnya. Status tidak disebut bila kata sandi salah. Admin/karyawan tidak diperiksa.
 3. Batas percobaan:
    - 5 percobaan per kombinasi `username|IP` (`LoginRequest`), lalu terkunci sementara;
    - `throttle:20,1` per IP pada rute `POST login`.
@@ -103,6 +104,7 @@ Karena daftar rute berbeda per grup, login dan logout memakai *full reload* (`In
    - `/dashboard` sebagai cadangan.
 5. Akun yang emailnya belum terverifikasi tetap bisa masuk, tetapi rute ber-middleware `verified` mengalihkannya ke halaman **Verifikasi Email** (lihat 2.4).
 6. `AuthenticateSession` aktif. Mengganti kata sandi di pengaturan profil mengakhiri sesi di perangkat lain.
+7. Middleware `PastikanAkunAktif` (grup web) memeriksa aturan status yang sama di setiap permintaan: sesi yang masih terbuka langsung diakhiri dan dialihkan ke login (muat ulang penuh) beserta pesannya begitu admin menonaktifkan dosen atau mengubah status mahasiswa.
 
 ### 2.2 Logout
 
@@ -202,9 +204,9 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 **Field per jenis:**
 
 - Karyawan: `nomor_induk`.
-- Dosen: `nidn` (unik), jabatan fungsional, pendidikan, status kepegawaian, `prodi_id`.
+- Dosen: `nidn` (unik), jabatan fungsional, pendidikan, status kepegawaian, `status` (`Aktif`/`Nonaktif`, bawaan `Aktif`; nonaktif = tidak dapat masuk, lihat 2.1), `prodi_id`.
 - Mahasiswa: `nim` (unik), `angkatan` (wajib, 4 digit), `status`, `dosen_wali_id`, `prodi_id`, sekolah asal, `nisn` (10 digit, unik), `email_alternatif`, data orang tua.
-  - Pilihan `status`: `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`. Status `Transfer Masuk` dihapus 28 Sep 2026; mahasiswa yang berstatus itu diubah menjadi `Aktif` saat migrasi.
+  - Pilihan `status`: `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`. Hanya `Aktif` yang dapat masuk (lihat 2.1). Status `Transfer Masuk` dihapus 28 Sep 2026; mahasiswa yang berstatus itu diubah menjadi `Aktif` saat migrasi.
   - **Semester tidak disimpan**, tetapi dihitung dari angkatan (`MahasiswaProfile::semesterPada`): `(tahun pertama tahun akademik − angkatan) × 2 + (Ganjil ? 1 : 2)`. Angkatan 2024 berada di semester 1 pada 2024/2025 Ganjil dan semester 5 pada 2026/2027 Ganjil. Semester tetap bertambah selama mahasiswa cuti. Hasilnya kosong bila mahasiswa belum mulai kuliah. Detail pengguna menampilkan semester pada tahun akademik aktif.
 
 **Hapus pengguna ditolak bila:**
@@ -942,7 +944,7 @@ Tiga pengajuan berurutan di menu **Tugas Akhir & Wisuda** (mahasiswa, izin `maha
 - **Syarat daftar:** TA `selesai` (lulus pendadaran, revisi sudah disahkan), SKS minimal (sama dengan pendadaran), tidak ada nilai E, **semua** mata kuliah termasuk TA sudah dinilai, dan ada periode yang dibuka.
 - **Form:** periode, **data ijazah** (nama, tempat dan tanggal lahir; terisi dari profil dan boleh dikoreksi), ukuran toga (S–XXL), pas foto (JPG/PNG, maks 2 MB), naskah final (PDF, maks 20 MB), bukti bebas pinjam dan **bukti bayar wisuda**.
 - Admin melihat data ijazah yang **berbeda dari profil** ditandai. Persetujuan memeriksa ulang kuota periode; mahasiswa masuk **Daftar Mahasiswa Wisuda** (`wisuda`, satu per mahasiswa). Daftar bisa dicetak (PDF).
-- **Generate SKL** (per mahasiswa atau massal) membekukan tanggal lulus (tanggal pendadaran), IPK dan total SKS dari transkrip, dan **predikat** (> 3,50 Dengan Pujian; > 3,00 Sangat Memuaskan; ≥ 2,76 Memuaskan; selain itu Cukup), memberi nomor urut per tahun (`001/SKL/IX/2026`), dan mengubah status mahasiswa menjadi **Lulus**. SKL (PDF) memakai data ijazah yang dikonfirmasi di form; bisa diunduh mahasiswa pemiliknya dan admin.
+- **Generate SKL** (per mahasiswa atau massal) membekukan tanggal lulus (tanggal pendadaran), IPK dan total SKS dari transkrip, dan **predikat** (> 3,50 Dengan Pujian; > 3,00 Sangat Memuaskan; ≥ 2,76 Memuaskan; selain itu Cukup), memberi nomor urut per tahun (`001/SKL/IX/2026`), dan mengubah status mahasiswa menjadi **Lulus**. SKL (PDF) memakai data ijazah yang dikonfirmasi di form; diunduh oleh admin. Mahasiswa pemiliknya berstatus Lulus sehingga tidak dapat masuk lagi (lihat 2.1); rute unduhannya tetap mengizinkan pemilik bila aturan masuk kelak diberi pengecualian.
 
 ### 14.6 Biaya dan pengingat
 

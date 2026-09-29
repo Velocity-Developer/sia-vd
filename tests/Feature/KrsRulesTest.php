@@ -43,9 +43,10 @@ it('rejects KRS from a student who is not active', function () {
     [$mahasiswa, $kelas] = krsSetup();
     $mahasiswa->mahasiswaProfile->update(['status' => 'Cuti']);
 
-    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelas))
-        ->assertSessionHas('krs_error', fn (string $message): bool => str_contains($message, 'Cuti'));
+    // Mahasiswa yang tidak aktif sudah dikeluarkan sebelum sampai ke aturan KRS.
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelas))->assertRedirect(route('login'));
 
+    $this->assertGuest();
     expect(Krs::count())->toBe(0);
 });
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\PastikanAkunAktif;
 use App\Http\Middleware\PastikanTagihanLunas;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // Sesi terikat ke kata sandi: begitu kata sandi diubah (oleh pemilik akun maupun admin),
             // sesi lain yang masih terbuka ikut berakhir.
             AuthenticateSession::class,
+            PastikanAkunAktif::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

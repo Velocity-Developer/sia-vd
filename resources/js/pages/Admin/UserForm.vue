@@ -25,7 +25,7 @@ const roleFields =
     props.type === 'karyawan'
         ? ['nomor_induk']
         : props.type === 'dosen'
-          ? ['nidn', 'jabatan_fungsional', 'pendidikan_terakhir', 'status_kepegawaian', 'prodi_id']
+          ? ['nidn', 'jabatan_fungsional', 'pendidikan_terakhir', 'status_kepegawaian', 'status', 'prodi_id']
           : props.type === 'mahasiswa'
             ? [
                   'nim',
@@ -97,7 +97,9 @@ const labels: Record<string, string> = {
     password_confirmation: 'Konfirmasi Kata Sandi',
 };
 const agama = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu'];
-const statuses = ['Aktif', 'Nonaktif', 'Lulus', 'Dropout', 'Cuti', 'Mengundurkan Diri', 'Meninggal'];
+// Dosen hanya Aktif/Nonaktif; mahasiswa berstatus selain Aktif juga tidak dapat masuk.
+const statuses =
+    props.type === 'dosen' ? ['Aktif', 'Nonaktif'] : ['Aktif', 'Nonaktif', 'Lulus', 'Dropout', 'Cuti', 'Mengundurkan Diri', 'Meninggal'];
 const pekerjaanOptions = [
     'Tidak Bekerja',
     'Karyawan Swasta',
@@ -159,7 +161,7 @@ const form = useForm<Record<string, string>>({
     ...Object.fromEntries(
         [...common, ...roleFields, 'jenis_kelamin', 'agama', 'alamat', 'password', 'password_confirmation'].map((field) => [
             field,
-            props.user?.[field] == null ? '' : String(props.user[field]),
+            props.user?.[field] == null ? (field === 'status' && props.type === 'dosen' ? 'Aktif' : '') : String(props.user[field]),
         ]),
     ),
 });

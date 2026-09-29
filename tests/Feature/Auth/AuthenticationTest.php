@@ -108,3 +108,43 @@ test('NIM tak dikenal ditolak dengan pesan biasa', function () {
 
     $this->assertGuest();
 });
+
+test('dosen nonaktif ditolak masuk dengan pesan', function () {
+    $dosen = User::factory()->dosen()->create();
+    $dosen->dosenProfile->update(['status' => 'Nonaktif']);
+
+    $this->post('/login', ['username' => $dosen->username, 'password' => 'password'])
+        ->assertSessionHasErrors(['username' => 'Akun dosen Anda berstatus nonaktif. Hubungi admin akademik untuk mengaktifkan kembali.']);
+
+    $this->assertGuest();
+});
+
+test('mahasiswa berstatus selain aktif ditolak masuk dengan pesan', function (string $status) {
+    $mahasiswa = User::factory()->create();
+    $mahasiswa->mahasiswaProfile->update(['status' => $status]);
+
+    $this->post('/login', ['username' => $mahasiswa->username, 'password' => 'password'])
+        ->assertSessionHasErrors(['username' => "Akun tidak dapat digunakan karena status mahasiswa Anda: {$status}. Hubungi admin akademik."]);
+
+    $this->assertGuest();
+})->with(['Nonaktif', 'Cuti', 'Lulus']);
+
+test('status akun tidak dibocorkan bila kata sandi salah', function () {
+    $dosen = User::factory()->dosen()->create();
+    $dosen->dosenProfile->update(['status' => 'Nonaktif']);
+
+    $this->post('/login', ['username' => $dosen->username, 'password' => 'salah'])
+        ->assertSessionHasErrors(['username' => 'NIM/NIDN/username atau kata sandi tidak cocok.']);
+});
+
+test('sesi yang terbuka berakhir begitu akun dinonaktifkan', function () {
+    $dosen = User::factory()->dosen()->create();
+    $this->actingAs($dosen)->get(route('dosen.dashboard'))->assertOk();
+
+    $dosen->dosenProfile->update(['status' => 'Nonaktif']);
+
+    $this->withHeader('X-Inertia', 'true')->get(route('dosen.dashboard'))
+        ->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', route('login'));
+    $this->assertGuest();
+});

@@ -136,9 +136,11 @@ flowchart TD
     B --> C["Isi NIM / NIDN / username, password, remember"]
     C --> D{"Lebih dari 5 percobaan per username+IP<br/>atau 20 per menit per IP?"}
     D -- Ya --> D1["Ditolak: coba lagi nanti"]
-    D -- Tidak --> E0["Cari akun: username, lalu NIM,<br/>lalu NIDN"] --> E{"Auth attempt<br/>dengan username akun itu"}
+    D -- Tidak --> E0["Cari akun: username, lalu NIM,<br/>lalu NIDN"] --> E{"Cek kata sandi<br/>dengan username akun itu"}
     E -- Gagal --> E1["Pesan gagal pada field username"] --> C
-    E -- Berhasil --> F["Regenerasi sesi"]
+    E -- Cocok --> S{"Dosen Nonaktif atau<br/>mahasiswa berstatus selain Aktif?"}
+    S -- Ya --> S1["Ditolak: pesan menyebut statusnya"] --> C
+    S -- Tidak --> F["Masuk, regenerasi sesi"]
     F --> G{"Punya permission<br/>jenis.dashboard?"}
     G -- Ya --> H["Ke dashboard sesuai jenis pengguna"]
     G -- Tidak --> I{"Punya dashboard lain?<br/>admin, dosen, mahasiswa"}
@@ -150,7 +152,9 @@ flowchart TD
     K --> V{"Email sudah terverifikasi?"}
     V -- Tidak --> V1["Halaman Verifikasi Email<br/>(kirim ulang tautan)"]
     V -- Ya --> L["Setiap rute dijaga auth + verified + can:permission<br/>Gate::before membaca permission role<br/>Kelola User/Role: konfirmasi kata sandi"]
-    L --> M{"Rute halaman bersama?"}
+    L --> P{"Status akun berubah jadi<br/>tidak boleh masuk?"}
+    P -- Ya --> P1["PastikanAkunAktif: sesi diakhiri,<br/>ke login dengan pesan"]
+    P -- Tidak --> M{"Rute halaman bersama?"}
     M -- Ya --> N["Peran dari nama rute admin.* atau dosen.*<br/>dosen hanya kelas yang diampu, selain itu 403"]
     M -- Tidak --> O["Halaman modul"]
 ```
