@@ -185,135 +185,109 @@ const berkasWisuda = [
 
 const menunggu = (t: Tahap) => (t.pengajuan?.status === 'menunggu_pembimbing' ? 'menunggu persetujuan pembimbing' : 'menunggu diproses admin');
 
-const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
-const area =
-    'min-h-28 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] text-black placeholder:text-[#a39e98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
 const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
 </script>
 
 <template>
     <Head title="Tugas Akhir & Wisuda" />
     <AppLayout :breadcrumbs="[{ title: 'Tugas Akhir & Wisuda', href: route('mahasiswa.tugas-akhir') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">Tugas Akhir & Wisuda</h1>
-                    <p class="text-sm text-[#615d59]">Ajukan tugas akhir, daftar pendadaran, lalu daftar wisuda secara berurutan.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Tugas Akhir & Wisuda</h1>
+                        <p class="deskripsi-halaman">Ajukan tugas akhir, daftar pendadaran, lalu daftar wisuda secara berurutan.</p>
+                    </div>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
                 <ol class="grid gap-3 sm:grid-cols-3">
                     <li
                         v-for="t in tahapan"
                         :key="t.no"
-                        class="flex items-start gap-3 rounded-xl border bg-white p-4"
-                        :class="t.aktif ? 'border-[#0075de]/40' : 'border-[#e6e6e6] opacity-70'"
+                        class="kartu flex items-start gap-3 p-4"
+                        :class="t.aktif ? 'border-[#0075de]/40 dark:border-[#0075de]/40' : 'opacity-70'"
                     >
                         <span
                             class="flex size-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                            :class="t.aktif ? 'bg-[#0075de] text-white' : 'bg-[#f6f5f4] text-[#a39e98]'"
+                            :class="t.aktif ? 'bg-[#0075de] text-white' : 'bg-[#f6f5f4] text-[#a39e98] dark:bg-muted'"
                             >{{ t.no }}</span
                         >
                         <span class="grid gap-0.5">
-                            <span class="flex items-center gap-1.5 font-medium text-black"
+                            <span class="flex items-center gap-1.5 text-sm font-medium text-black dark:text-foreground"
                                 >{{ t.judul }} <Lock v-if="!t.aktif" class="size-3.5 text-[#a39e98]"
                             /></span>
-                            <span class="text-xs text-[#615d59]">{{ t.keterangan }}</span>
+                            <span class="teks-bantu">{{ t.keterangan }}</span>
                         </span>
                     </li>
                 </ol>
 
                 <!-- Tahap 1: tugas akhir -->
-                <section v-if="props.tugasAkhir" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
+                <section v-if="props.tugasAkhir" class="kartu p-6">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tugas Akhir Anda</h2>
+                        <h2 class="judul-bagian">Tugas Akhir Anda</h2>
                         <span
                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                             :class="props.tugasAkhir.status === 'selesai' ? 'bg-[#eaf7ed] text-[#1aae39]' : 'bg-[#f2f9ff] text-[#0075de]'"
                             >{{ props.tugasAkhir.status === 'selesai' ? 'Selesai' : 'Berjalan' }}</span
                         >
                     </div>
-                    <p class="mt-3 text-lg font-semibold leading-snug text-black">{{ props.tugasAkhir.judul }}</p>
+                    <p class="mt-3 text-lg font-semibold leading-snug text-black dark:text-foreground">{{ props.tugasAkhir.judul }}</p>
                     <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
                         <div>
-                            <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Bidang</dt>
-                            <dd class="mt-1 text-black">{{ props.tugasAkhir.bidang }}</dd>
+                            <dt class="teks-bantu uppercase tracking-[0.04em]">Bidang</dt>
+                            <dd class="mt-1 text-black dark:text-foreground">{{ props.tugasAkhir.bidang }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Pembimbing</dt>
-                            <dd v-for="(nama, i) in props.tugasAkhir.pembimbing" :key="nama" class="mt-1 text-black">{{ i + 1 }}. {{ nama }}</dd>
+                            <dt class="teks-bantu uppercase tracking-[0.04em]">Pembimbing</dt>
+                            <dd v-for="(nama, i) in props.tugasAkhir.pembimbing" :key="nama" class="mt-1 text-black dark:text-foreground">
+                                {{ i + 1 }}. {{ nama }}
+                            </dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Disahkan</dt>
-                            <dd class="mt-1 text-black">{{ formatTanggal(props.tugasAkhir.disahkan_at, false) }}</dd>
+                            <dt class="teks-bantu uppercase tracking-[0.04em]">Disahkan</dt>
+                            <dd class="mt-1 text-black dark:text-foreground">{{ formatTanggal(props.tugasAkhir.disahkan_at, false) }}</dd>
                         </div>
                     </dl>
                 </section>
 
-                <section v-else class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tahap 1 · Pengajuan Tugas Akhir/Skripsi</h2>
+                <section v-else class="kartu p-6">
+                    <h2 class="judul-bagian">Tahap 1 · Pengajuan Tugas Akhir/Skripsi</h2>
                     <DaftarSyarat class="mt-4" :syarat="ta.syarat" />
-                    <div
-                        v-if="ta.keadaan === 'belum_memenuhi'"
-                        class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
-                        role="status"
-                    >
+                    <div v-if="ta.keadaan === 'belum_memenuhi'" class="alert-gagal mt-4" role="status">
                         Anda belum memenuhi syarat pengajuan tugas akhir. Form terbuka setelah semua syarat di atas terpenuhi.
                     </div>
-                    <div
-                        v-else-if="ta.keadaan === 'menunggu'"
-                        class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
-                        role="status"
-                    >
+                    <div v-else-if="ta.keadaan === 'menunggu'" class="alert-info mt-4" role="status">
                         Pengajuan dikirim {{ formatTanggal(ta.pengajuan?.diajukan_at, false) }} dan sedang {{ menunggu(ta) }}. Form terbuka lagi
                         setelah ada keputusan.
                     </div>
-                    <div
-                        v-else-if="ta.keadaan === 'perbaikan'"
-                        class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
-                        role="status"
-                    >
+                    <div v-else-if="ta.keadaan === 'perbaikan'" class="alert-gagal mt-4" role="status">
                         <span class="font-medium">Diminta perbaikan:</span> {{ ta.pengajuan?.catatan }}
                     </div>
-                    <div
-                        v-else-if="ta.pengajuan?.status === 'ditolak'"
-                        class="mt-4 rounded-lg border border-[#f3c5c0] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]"
-                        role="status"
-                    >
+                    <div v-else-if="ta.pengajuan?.status === 'ditolak'" class="alert-gagal mt-4" role="status">
                         <span class="font-medium">Pengajuan sebelumnya ditolak:</span> {{ ta.pengajuan.catatan }} Anda bisa mengajukan lagi.
                     </div>
 
                     <form class="mt-5" @submit.prevent="kirimTa">
                         <fieldset :disabled="!terbuka(ta) || formTa.processing" class="grid gap-4 disabled:opacity-60">
                             <div class="grid gap-2">
-                                <Label for="judul">Judul</Label>
-                                <Input id="judul" v-model="formTa.judul" :class="inp" maxlength="300" required />
+                                <Label for="judul" class="label-isian">Judul</Label>
+                                <Input id="judul" v-model="formTa.judul" maxlength="300" required />
                                 <InputError :message="formTa.errors.judul" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="bidang">Bidang / topik</Label>
-                                <Input
-                                    id="bidang"
-                                    v-model="formTa.bidang"
-                                    :class="inp"
-                                    maxlength="150"
-                                    placeholder="Mis. Sistem Informasi"
-                                    required
-                                />
+                                <Label for="bidang" class="label-isian">Bidang / topik</Label>
+                                <Input id="bidang" v-model="formTa.bidang" maxlength="150" placeholder="Mis. Sistem Informasi" required />
                                 <InputError :message="formTa.errors.bidang" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="ringkasan">Ringkasan proposal</Label>
+                                <Label for="ringkasan" class="label-isian">Ringkasan proposal</Label>
                                 <textarea
                                     id="ringkasan"
                                     v-model="formTa.ringkasan"
-                                    :class="area"
+                                    class="isian isian-area min-h-28"
                                     maxlength="5000"
                                     placeholder="Latar belakang, rumusan masalah, dan metode singkat"
                                     required
@@ -322,7 +296,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                             </div>
                             <div class="grid items-start gap-4 sm:grid-cols-2">
                                 <div class="grid content-start gap-2">
-                                    <Label for="usulan_pembimbing_1_id">Usulan pembimbing 1</Label>
+                                    <Label for="usulan_pembimbing_1_id" class="label-isian">Usulan pembimbing 1</Label>
                                     <SearchSelect
                                         id="usulan_pembimbing_1_id"
                                         v-model="formTa.usulan_pembimbing_1_id"
@@ -334,7 +308,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                     <InputError :message="formTa.errors.usulan_pembimbing_1_id" />
                                 </div>
                                 <div class="grid content-start gap-2">
-                                    <Label for="usulan_pembimbing_2_id" class="flex items-center justify-between">
+                                    <Label for="usulan_pembimbing_2_id" class="label-isian flex items-center justify-between">
                                         <span>Usulan pembimbing 2 <span class="font-normal text-[#a39e98]">(opsional)</span></span>
                                         <button
                                             v-if="formTa.usulan_pembimbing_2_id && terbuka(ta)"
@@ -368,7 +342,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                 @pilih="formTa.proposal = $event"
                             />
                             <div v-if="terbuka(ta)" class="flex justify-end">
-                                <Button type="submit" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">
+                                <Button type="submit">
                                     {{ ta.keadaan === 'perbaikan' ? 'Kirim Perbaikan' : 'Kirim Pengajuan' }}
                                 </Button>
                             </div>
@@ -377,43 +351,43 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                 </section>
 
                 <!-- Tahap 2: pendadaran -->
-                <section v-if="pd.keadaan !== 'terkunci'" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tahap 2 · Pendadaran</h2>
+                <section v-if="pd.keadaan !== 'terkunci'" class="kartu p-6">
+                    <h2 class="judul-bagian">Tahap 2 · Pendadaran</h2>
 
-                    <div v-if="pd.hasil?.hasil" class="mt-4 rounded-lg border border-[#e6e6e6] px-4 py-3 text-sm">
+                    <div v-if="pd.hasil?.hasil" class="mt-4 rounded-lg border border-[#e6e6e6] px-4 py-3 text-sm dark:border-border">
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-medium text-black">Hasil pendadaran {{ formatTanggal(pd.hasil.tanggal, false) }}</span>
+                            <span class="font-medium text-black dark:text-foreground"
+                                >Hasil pendadaran {{ formatTanggal(pd.hasil.tanggal, false) }}</span
+                            >
                             <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="HASIL_PENDADARAN[pd.hasil.hasil].kelas">{{
                                 HASIL_PENDADARAN[pd.hasil.hasil].label
                             }}</span>
-                            <span class="text-[#615d59]">Nilai {{ pd.hasil.nilai_akhir }} ({{ pd.hasil.huruf }})</span>
+                            <span class="text-[#615d59] dark:text-muted-foreground">Nilai {{ pd.hasil.nilai_akhir }} ({{ pd.hasil.huruf }})</span>
                         </div>
-                        <p v-if="pd.hasil.catatan_hasil" class="mt-1 whitespace-pre-line text-[#31302e]">{{ pd.hasil.catatan_hasil }}</p>
+                        <p v-if="pd.hasil.catatan_hasil" class="mt-1 whitespace-pre-line text-[#31302e] dark:text-foreground">
+                            {{ pd.hasil.catatan_hasil }}
+                        </p>
                         <p v-if="pd.hasil.revisi_disahkan_at" class="mt-1 text-[#1aae39]">
                             Revisi disahkan {{ formatTanggal(pd.hasil.revisi_disahkan_at, false) }}. Tugas akhir selesai.
                         </p>
-                        <p v-if="pd.hasil.hasil === 'tidak_lulus' && !pd.jadwal" class="mt-1 text-[#b42318]">
+                        <p v-if="pd.hasil.hasil === 'tidak_lulus' && !pd.jadwal" class="mt-1 text-[#dd5b00]">
                             Anda bisa mendaftar pendadaran ulang di bawah ini.
                         </p>
                     </div>
 
                     <template v-if="pd.jadwal">
-                        <div
-                            v-if="pd.jadwal.status === 'dijadwalkan'"
-                            class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
-                            role="status"
-                        >
+                        <div v-if="pd.jadwal.status === 'dijadwalkan'" class="alert-info mt-4" role="status">
                             Pendadaran Anda sudah dijadwalkan. Hadir tepat waktu dan bawa naskah.
                         </div>
                         <KartuJadwal class="mt-4" :jadwal="pd.jadwal" />
 
                         <form
                             v-if="pd.jadwal.status === 'revisi'"
-                            class="mt-5 grid gap-3 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] p-4"
+                            class="mt-5 grid gap-3 rounded-lg border border-[#f4cfb6] bg-[#fdf3ec] p-4 dark:border-orange-900 dark:bg-orange-950/40"
                             @submit.prevent="kirimRevisi"
                         >
-                            <p class="text-sm font-medium text-[#b25000]">Revisi naskah</p>
-                            <p v-if="pd.hasil?.revisi_diunggah_at" class="text-sm text-[#31302e]">
+                            <p class="text-sm font-medium text-[#a84400] dark:text-orange-300">Revisi naskah</p>
+                            <p v-if="pd.hasil?.revisi_diunggah_at" class="text-sm text-[#31302e] dark:text-foreground">
                                 Naskah revisi dikirim {{ formatTanggal(pd.hasil.revisi_diunggah_at, false) }} dan menunggu pengesahan ketua penguji.
                                 <a
                                     :href="route('berkas.naskah-revisi', pd.jadwal.id)"
@@ -424,7 +398,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                 >
                             </p>
                             <template v-else>
-                                <p v-if="pd.hasil?.catatan_revisi" class="text-sm text-[#b42318]">
+                                <p v-if="pd.hasil?.catatan_revisi" class="text-sm text-[#dd5b00]">
                                     <span class="font-medium">Revisi dikembalikan:</span> {{ pd.hasil.catatan_revisi }}
                                 </p>
                                 <InputBerkas
@@ -437,12 +411,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                     @pilih="formRevisi.naskah_revisi = $event"
                                 />
                                 <div class="flex justify-end">
-                                    <Button
-                                        type="submit"
-                                        :disabled="formRevisi.processing"
-                                        class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]"
-                                        >Kirim Revisi</Button
-                                    >
+                                    <Button type="submit" :disabled="formRevisi.processing">Kirim Revisi</Button>
                                 </div>
                             </template>
                         </form>
@@ -450,41 +419,25 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
 
                     <template v-else-if="pd.keadaan !== 'selesai'">
                         <DaftarSyarat class="mt-4" :syarat="pd.syarat" />
-                        <div
-                            v-if="pd.keadaan === 'belum_memenuhi'"
-                            class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
-                            role="status"
-                        >
+                        <div v-if="pd.keadaan === 'belum_memenuhi'" class="alert-gagal mt-4" role="status">
                             Anda belum memenuhi syarat pendaftaran pendadaran. Form terbuka setelah semua syarat di atas terpenuhi.
                         </div>
-                        <div
-                            v-else-if="pd.keadaan === 'menunggu'"
-                            class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
-                            role="status"
-                        >
+                        <div v-else-if="pd.keadaan === 'menunggu'" class="alert-info mt-4" role="status">
                             Pendaftaran dikirim {{ formatTanggal(pd.pengajuan?.diajukan_at, false) }} dan sedang {{ menunggu(pd) }}. Form terbuka lagi
                             setelah ada keputusan.
                         </div>
-                        <div
-                            v-else-if="pd.keadaan === 'perbaikan'"
-                            class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
-                            role="status"
-                        >
+                        <div v-else-if="pd.keadaan === 'perbaikan'" class="alert-gagal mt-4" role="status">
                             <span class="font-medium">Diminta perbaikan:</span> {{ pd.pengajuan?.catatan }}
                         </div>
-                        <div
-                            v-else-if="pd.pengajuan?.status === 'ditolak'"
-                            class="mt-4 rounded-lg border border-[#f3c5c0] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]"
-                            role="status"
-                        >
+                        <div v-else-if="pd.pengajuan?.status === 'ditolak'" class="alert-gagal mt-4" role="status">
                             <span class="font-medium">Pendaftaran sebelumnya ditolak:</span> {{ pd.pengajuan.catatan }} Anda bisa mendaftar lagi.
                         </div>
 
                         <form class="mt-5" @submit.prevent="kirimPd">
                             <fieldset :disabled="!terbuka(pd) || formPd.processing" class="grid gap-4 disabled:opacity-60">
                                 <div class="grid gap-2">
-                                    <Label for="judul_final">Judul final</Label>
-                                    <Input id="judul_final" v-model="formPd.judul" :class="inp" maxlength="300" required />
+                                    <Label for="judul_final" class="label-isian">Judul final</Label>
+                                    <Input id="judul_final" v-model="formPd.judul" maxlength="300" required />
                                     <InputError :message="formPd.errors.judul" />
                                 </div>
                                 <div class="grid items-start gap-4 sm:grid-cols-3">
@@ -525,11 +478,11 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                         @pilih="formPd.bukti_bayar = $event"
                                     />
                                 </div>
-                                <p class="text-xs text-[#615d59]">
+                                <p class="teks-bantu">
                                     Pendaftaran diperiksa salah satu pembimbing dulu, lalu admin menjadwalkan pendadaran dan menetapkan tiga penguji.
                                 </p>
                                 <div v-if="terbuka(pd)" class="flex justify-end">
-                                    <Button type="submit" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">
+                                    <Button type="submit">
                                         {{ pd.keadaan === 'perbaikan' ? 'Kirim Perbaikan' : 'Daftar Pendadaran' }}
                                     </Button>
                                 </div>
@@ -539,18 +492,18 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                 </section>
 
                 <!-- Tahap 3: wisuda -->
-                <section v-if="ws.keadaan !== 'terkunci'" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tahap 3 · Wisuda</h2>
+                <section v-if="ws.keadaan !== 'terkunci'" class="kartu p-6">
+                    <h2 class="judul-bagian">Tahap 3 · Wisuda</h2>
 
                     <template v-if="ws.wisuda">
-                        <div class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]" role="status">
+                        <div class="alert-info mt-4" role="status">
                             Anda terdaftar sebagai peserta {{ ws.wisuda.periode?.nama }} pada {{ formatTanggal(ws.wisuda.periode?.tanggal_acara)
                             }}<span v-if="ws.wisuda.periode?.tempat">, {{ ws.wisuda.periode.tempat }}</span
                             >.
                         </div>
                         <dl v-if="ws.wisuda.nomor_skl" class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
                             <div>
-                                <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Surat Keterangan Lulus</dt>
+                                <dt class="teks-bantu uppercase tracking-[0.04em]">Surat Keterangan Lulus</dt>
                                 <dd class="mt-1">
                                     <a
                                         :href="route('berkas.skl', ws.wisuda.id)"
@@ -559,62 +512,43 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                         class="inline-flex items-center gap-1 font-medium text-[#0075de] hover:underline"
                                         ><FileText class="size-4" /> Unduh SKL</a
                                     >
-                                    <span class="block text-xs text-[#a39e98]">No. {{ ws.wisuda.nomor_skl }}</span>
+                                    <span class="teks-bantu block">No. {{ ws.wisuda.nomor_skl }}</span>
                                 </dd>
                             </div>
                             <div>
-                                <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Tanggal lulus</dt>
-                                <dd class="mt-1 text-black">{{ formatTanggal(ws.wisuda.tanggal_lulus, false) }}</dd>
+                                <dt class="teks-bantu uppercase tracking-[0.04em]">Tanggal lulus</dt>
+                                <dd class="mt-1 text-black dark:text-foreground">{{ formatTanggal(ws.wisuda.tanggal_lulus, false) }}</dd>
                             </div>
                             <div>
-                                <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">IPK & predikat</dt>
-                                <dd class="mt-1 text-black">{{ ws.wisuda.ipk?.toFixed(2) }} · {{ ws.wisuda.predikat }}</dd>
+                                <dt class="teks-bantu uppercase tracking-[0.04em]">IPK & predikat</dt>
+                                <dd class="mt-1 text-black dark:text-foreground">{{ ws.wisuda.ipk?.toFixed(2) }} · {{ ws.wisuda.predikat }}</dd>
                             </div>
                         </dl>
-                        <p v-else class="mt-3 text-sm text-[#615d59]">Surat keterangan lulus (SKL) diterbitkan admin dan bisa diunduh di sini.</p>
+                        <p v-else class="mt-3 text-sm text-[#615d59] dark:text-muted-foreground">
+                            Surat keterangan lulus (SKL) diterbitkan admin dan bisa diunduh di sini.
+                        </p>
                     </template>
 
                     <template v-else>
                         <DaftarSyarat class="mt-4" :syarat="ws.syarat" />
-                        <div
-                            v-if="ws.keadaan === 'belum_memenuhi'"
-                            class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
-                            role="status"
-                        >
+                        <div v-if="ws.keadaan === 'belum_memenuhi'" class="alert-gagal mt-4" role="status">
                             Anda belum memenuhi syarat pendaftaran wisuda. Form terbuka setelah semua syarat di atas terpenuhi.
                         </div>
-                        <div
-                            v-else-if="ws.keadaan === 'menunggu'"
-                            class="mt-4 rounded-lg border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
-                            role="status"
-                        >
+                        <div v-else-if="ws.keadaan === 'menunggu'" class="alert-info mt-4" role="status">
                             Pendaftaran dikirim {{ formatTanggal(ws.pengajuan?.diajukan_at, false) }} dan sedang menunggu diproses admin.
                         </div>
-                        <div
-                            v-else-if="ws.keadaan === 'perbaikan'"
-                            class="mt-4 rounded-lg border border-[#f5d0b5] bg-[#fff8f2] px-4 py-3 text-sm text-[#b25000]"
-                            role="status"
-                        >
+                        <div v-else-if="ws.keadaan === 'perbaikan'" class="alert-gagal mt-4" role="status">
                             <span class="font-medium">Diminta perbaikan:</span> {{ ws.pengajuan?.catatan }}
                         </div>
-                        <div
-                            v-else-if="ws.pengajuan?.status === 'ditolak'"
-                            class="mt-4 rounded-lg border border-[#f3c5c0] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]"
-                            role="status"
-                        >
+                        <div v-else-if="ws.pengajuan?.status === 'ditolak'" class="alert-gagal mt-4" role="status">
                             <span class="font-medium">Pendaftaran sebelumnya ditolak:</span> {{ ws.pengajuan.catatan }} Anda bisa mendaftar lagi.
                         </div>
 
                         <form class="mt-5" @submit.prevent="kirimWs">
                             <fieldset :disabled="!terbuka(ws) || formWs.processing" class="grid gap-4 disabled:opacity-60">
                                 <div class="grid gap-2">
-                                    <Label for="periode_wisuda_id">Periode wisuda</Label>
-                                    <select
-                                        id="periode_wisuda_id"
-                                        v-model="formWs.periode_wisuda_id"
-                                        class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]"
-                                        required
-                                    >
+                                    <Label for="periode_wisuda_id" class="label-isian">Periode wisuda</Label>
+                                    <select id="periode_wisuda_id" v-model="formWs.periode_wisuda_id" class="isian isian-pilih" required>
                                         <option v-for="p in ws.periodeOptions" :key="p.id" :value="p.id">
                                             {{ p.nama }} — {{ formatTanggal(p.tanggal_acara, false) }} (daftar s.d.
                                             {{ formatTanggal(p.batas_daftar, false)
@@ -623,37 +557,30 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                     </select>
                                     <InputError :message="formWs.errors.periode_wisuda_id" />
                                 </div>
-                                <div class="rounded-lg border border-[#e6e6e6] p-4">
-                                    <p class="text-sm font-medium text-black">Data ijazah</p>
-                                    <p class="text-xs text-[#615d59]">
-                                        Diisi dari profil Anda. Periksa dengan teliti dan koreksi bila ada yang salah.
-                                    </p>
+                                <div class="rounded-lg border border-[#e6e6e6] p-4 dark:border-border">
+                                    <p class="text-sm font-medium text-black dark:text-foreground">Data ijazah</p>
+                                    <p class="teks-bantu">Diisi dari profil Anda. Periksa dengan teliti dan koreksi bila ada yang salah.</p>
                                     <div class="mt-3 grid items-start gap-4 sm:grid-cols-3">
                                         <div class="grid content-start gap-2">
-                                            <Label for="nama_ijazah">Nama lengkap</Label>
-                                            <Input id="nama_ijazah" v-model="formWs.nama_ijazah" :class="inp" maxlength="150" required />
+                                            <Label for="nama_ijazah" class="label-isian">Nama lengkap</Label>
+                                            <Input id="nama_ijazah" v-model="formWs.nama_ijazah" maxlength="150" required />
                                             <InputError :message="formWs.errors.nama_ijazah" />
                                         </div>
                                         <div class="grid content-start gap-2">
-                                            <Label for="tempat_lahir">Tempat lahir</Label>
-                                            <Input id="tempat_lahir" v-model="formWs.tempat_lahir" :class="inp" maxlength="100" required />
+                                            <Label for="tempat_lahir" class="label-isian">Tempat lahir</Label>
+                                            <Input id="tempat_lahir" v-model="formWs.tempat_lahir" maxlength="100" required />
                                             <InputError :message="formWs.errors.tempat_lahir" />
                                         </div>
                                         <div class="grid content-start gap-2">
-                                            <Label for="tanggal_lahir">Tanggal lahir</Label>
-                                            <Input id="tanggal_lahir" v-model="formWs.tanggal_lahir" type="date" :class="inp" required />
+                                            <Label for="tanggal_lahir" class="label-isian">Tanggal lahir</Label>
+                                            <Input id="tanggal_lahir" v-model="formWs.tanggal_lahir" type="date" required />
                                             <InputError :message="formWs.errors.tanggal_lahir" />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="grid gap-2 sm:w-48">
-                                    <Label for="ukuran_toga">Ukuran toga</Label>
-                                    <select
-                                        id="ukuran_toga"
-                                        v-model="formWs.ukuran_toga"
-                                        class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]"
-                                        required
-                                    >
+                                    <Label for="ukuran_toga" class="label-isian">Ukuran toga</Label>
+                                    <select id="ukuran_toga" v-model="formWs.ukuran_toga" class="isian isian-pilih" required>
                                         <option value="" disabled>Pilih ukuran</option>
                                         <option v-for="u in ws.ukuranToga" :key="u" :value="u">{{ u }}</option>
                                     </select>
@@ -675,7 +602,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                     />
                                 </div>
                                 <div v-if="terbuka(ws)" class="flex justify-end">
-                                    <Button type="submit" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">
+                                    <Button type="submit">
                                         {{ ws.keadaan === 'perbaikan' ? 'Kirim Perbaikan' : 'Daftar Wisuda' }}
                                     </Button>
                                 </div>
@@ -684,22 +611,26 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                     </template>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Riwayat Pengajuan</h2>
-                    <p v-if="!props.riwayat.length" class="mt-3 text-sm text-[#615d59]">Belum ada pengajuan.</p>
-                    <div v-for="r in props.riwayat" :key="r.id" class="mt-4 border-t border-[#f0efed] pt-4 first:border-0 first:pt-0">
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Riwayat Pengajuan</h2>
+                    <p v-if="!props.riwayat.length" class="mt-3 text-sm text-[#615d59] dark:text-muted-foreground">Belum ada pengajuan.</p>
+                    <div
+                        v-for="r in props.riwayat"
+                        :key="r.id"
+                        class="mt-4 border-t border-[#e6e6e6] pt-4 first:border-0 first:pt-0 dark:border-border"
+                    >
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-medium text-black">{{ JENIS_PENGAJUAN[r.jenis] }}</span>
+                            <span class="text-sm font-medium text-black dark:text-foreground">{{ JENIS_PENGAJUAN[r.jenis] }}</span>
                             <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="STATUS_PENGAJUAN[r.status].kelas">{{
                                 STATUS_PENGAJUAN[r.status].label
                             }}</span>
                         </div>
-                        <ol class="mt-2 grid gap-1.5 border-l border-[#e6e6e6] pl-4">
-                            <li v-for="(h, i) in r.riwayat" :key="i" class="text-sm text-[#31302e]">
+                        <ol class="mt-2 grid gap-1.5 border-l border-[#e6e6e6] pl-4 dark:border-border">
+                            <li v-for="(h, i) in r.riwayat" :key="i" class="text-sm text-[#31302e] dark:text-foreground">
                                 <span class="text-xs text-[#a39e98]">{{ formatTanggal(h.waktu, false) }} {{ h.waktu?.slice(11, 16) }}</span>
                                 · {{ labelPeristiwa(h.status, i === 0) }}
                                 <span v-if="h.status !== 'dikirim' && h.oleh" class="text-[#615d59]">oleh {{ h.oleh }}</span>
-                                <span v-if="h.catatan" class="block text-xs text-[#615d59]">{{ h.catatan }}</span>
+                                <span v-if="h.catatan" class="teks-bantu block">{{ h.catatan }}</span>
                             </li>
                         </ol>
                     </div>

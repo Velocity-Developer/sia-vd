@@ -101,18 +101,13 @@ defineExpose({ kirim });
          karena menu ini punya sampai enam filter (halaman Kelas Kuliah hanya tiga). -->
     <div class="flex flex-col gap-3">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="relative w-full sm:w-80">
+            <div class="kolom-cari">
                 <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                <Input
-                    v-model="search"
-                    :placeholder="props.placeholder ?? 'Cari…'"
-                    aria-label="Cari"
-                    class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
-                />
+                <Input v-model="search" :placeholder="props.placeholder ?? 'Cari…'" aria-label="Cari" class="pl-9" />
             </div>
 
-            <p class="text-sm text-[#615d59]">
-                <span class="font-medium text-black">{{ props.total }}</span> data<span v-if="props.filter.search">
+            <p class="info-jumlah">
+                <span class="font-medium text-black dark:text-foreground">{{ props.total }}</span> data<span v-if="props.filter.search">
                     · hasil untuk "{{ props.filter.search }}"</span
                 >
             </p>

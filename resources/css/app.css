@@ -215,3 +215,124 @@ html {
         background-color: hsl(var(--muted-foreground));
     }
 }
+
+/*
+ * Standar tampilan aplikasi (lihat docs/standar-ui.md).
+ * Semua halaman memakai kelas di bawah ini agar ukuran, jarak, dan warna komponen seragam;
+ * utilitas Tailwind di elemen tetap boleh menimpa (lapisan utilities dimuat sesudah components).
+ */
+@layer components {
+    /* Kerangka halaman */
+    .halaman {
+        @apply min-h-full bg-[#f6f5f4] dark:bg-background;
+    }
+    .konten {
+        @apply mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8;
+    }
+    /* Form: kerangka sama dengan .konten (tepi kiri judul sejajar antarhalaman), isinya dibatasi 900px. */
+    .konten-form {
+        @apply mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8;
+    }
+    .konten-form > * {
+        @apply w-full max-w-[900px];
+    }
+    .kepala-halaman {
+        @apply flex flex-wrap items-start justify-between gap-4;
+    }
+    .judul-halaman {
+        @apply text-2xl font-bold leading-8 tracking-[-0.5px] text-black dark:text-foreground;
+    }
+    .deskripsi-halaman {
+        @apply mt-1 max-w-2xl text-sm leading-5 text-[#615d59] dark:text-muted-foreground;
+    }
+    .judul-bagian {
+        @apply text-base font-semibold leading-6 text-black dark:text-foreground;
+    }
+    .teks-bantu {
+        @apply text-xs leading-5 text-[#615d59] dark:text-muted-foreground;
+    }
+
+    /* Kartu & pemberitahuan */
+    .kartu {
+        @apply rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-border dark:bg-card;
+    }
+    .alert-sukses,
+    .alert-gagal,
+    .alert-info {
+        @apply rounded-lg border px-4 py-3 text-sm leading-5;
+    }
+    .alert-sukses {
+        @apply border-[#bfe6c8] bg-[#f0faf2] text-[#17702b] dark:border-green-900 dark:bg-green-950/40 dark:text-green-300;
+    }
+    .alert-gagal {
+        @apply border-[#f4cfb6] bg-[#fdf3ec] text-[#a84400] dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-300;
+    }
+    .alert-info {
+        @apply border-[#cfe2f7] bg-[#f2f8fe] text-[#0b5cad] dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300;
+    }
+
+    /* Isian form & filter: input, select, textarea, tombol pemicu dropdown */
+    .label-isian {
+        @apply text-sm font-medium leading-5 text-[#31302e] dark:text-foreground;
+    }
+    .isian {
+        @apply h-10 w-full rounded-lg border border-[#d8d5d2] bg-white px-3 py-2 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15 focus-visible:border-[#0075de] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0075de]/15 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:bg-[#f6f5f4] disabled:opacity-70 dark:border-border dark:bg-background dark:text-foreground;
+    }
+    .isian-pilih {
+        @apply appearance-none bg-[length:16px_16px] bg-[right_0.75rem_center] bg-no-repeat pr-10;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a39e98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    }
+    .isian-area {
+        @apply h-auto min-h-24 leading-6;
+    }
+    .bilah-filter {
+        @apply flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center;
+    }
+    .kolom-cari {
+        @apply relative w-full sm:w-80;
+    }
+    .info-jumlah {
+        @apply whitespace-nowrap text-sm text-[#615d59] dark:text-muted-foreground;
+    }
+
+    /* Tabel. Aturan sel memakai :where() agar kelas utilitas di sel (text-right, w-*, font-medium) tetap menang. */
+    .tabel-wadah {
+        @apply overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-border dark:bg-card;
+    }
+    .tabel-gulir {
+        @apply relative overflow-x-auto;
+    }
+    .tabel {
+        @apply w-full border-collapse text-left text-sm;
+    }
+    :where(.tabel) > :where(thead) > :where(tr) > :where(th) {
+        @apply whitespace-nowrap border-b border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3 align-middle text-xs font-semibold uppercase tracking-[0.06em] text-[#615d59] dark:border-border dark:bg-muted dark:text-muted-foreground;
+    }
+    :where(.tabel) > :where(tbody) > :where(tr) > :where(td) {
+        @apply border-t border-[#efedeb] px-4 py-3 align-middle leading-5 text-[#31302e] dark:border-border dark:text-foreground;
+    }
+    :where(.tabel) > :where(tbody) > :where(tr:first-child) > :where(td) {
+        @apply border-t-0;
+    }
+    :where(.tabel) > :where(tbody) > :where(tr:not(.baris-kosong)):hover > :where(td) {
+        @apply bg-[#fbfaf9] dark:bg-accent/40;
+    }
+    :where(.tabel) > :where(tfoot) > :where(tr) > :where(td, th) {
+        @apply border-t border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3 text-sm font-semibold text-black dark:border-border dark:bg-muted dark:text-foreground;
+    }
+    .kolom-no {
+        @apply w-14 text-center tabular-nums;
+    }
+    td.kolom-no {
+        @apply text-[#615d59] dark:text-muted-foreground;
+    }
+    .kolom-aksi {
+        @apply w-px whitespace-nowrap text-right;
+    }
+    .aksi-tabel {
+        @apply flex items-center justify-end gap-1.5;
+    }
+    .tabel-kosong {
+        @apply px-4 py-12 text-center text-sm text-[#615d59] dark:text-muted-foreground;
+    }
+}

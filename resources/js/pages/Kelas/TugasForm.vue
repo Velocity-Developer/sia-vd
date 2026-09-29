@@ -118,135 +118,104 @@ const submit = () => {
         form.post(rute('kelas-kuliah.tugas.store', props.kelasKuliah.id), { forceFormData: true });
     }
 };
-
-const inp =
-    'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
-const area =
-    'min-h-24 rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] text-black placeholder:text-[#a39e98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
 </script>
 
 <template>
     <Head :title="title" />
     <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto w-full max-w-[1000px] px-4 py-6 sm:px-6 lg:px-8">
-                <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">{{ title }}</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ title }}</h1>
+                        <p class="deskripsi-halaman">
                             Kelas {{ props.kelasKuliah?.kode_kelas }} — lengkapi judul, tenggat waktu, berkas, dan catatan.
                         </p>
                     </div>
-                    <Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)"
-                        ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                    >
+                    <Button as-child variant="outline"><Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)">Kembali</Link></Button>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01)]"
-                    role="alert"
-                >
-                    {{ page.props.flash.success }}
-                </div>
-                <div
-                    v-if="page.props.flash?.error"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                    role="alert"
-                >
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <form @submit.prevent="submit" class="space-y-4">
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Tugas</h2>
-                        <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
-                            <div class="grid gap-2">
-                                <Label for="judul_tugas" class="text-sm font-medium text-black">Judul Tugas</Label>
-                                <Input
-                                    id="judul_tugas"
-                                    v-model="form.judul_tugas"
-                                    type="text"
-                                    placeholder="cth. Tugas 1 Basis Data"
-                                    :class="inp"
-                                    required
-                                />
-                                <InputError :message="form.errors.judul_tugas" />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label for="tenggat_waktu" class="text-sm font-medium text-black">Tenggat Waktu</Label>
-                                <DateTimePicker v-model="form.tenggat_waktu" :min-date="today" placeholder="Pilih tenggat waktu" />
-                                <InputError :message="form.errors.tenggat_waktu" />
-                            </div>
+                <form class="kartu p-6" @submit.prevent="submit">
+                    <h2 class="judul-bagian">Data Tugas</h2>
+                    <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="judul_tugas" class="label-isian">Judul Tugas</Label>
+                            <Input id="judul_tugas" v-model="form.judul_tugas" type="text" placeholder="cth. Tugas 1 Basis Data" required />
+                            <InputError :message="form.errors.judul_tugas" />
                         </div>
-                        <div class="mt-4 grid gap-2">
-                            <Label for="file" class="text-sm font-medium text-black">File </Label>
-                            <input id="file" ref="fileInput" type="file" multiple class="hidden" @change="onFiles" />
-                            <Attachment
-                                state="idle"
-                                class="h-16 w-full cursor-pointer rounded-md border-2 border-dashed border-[#dddddd] bg-[#fafafa] transition-colors hover:border-[#b8cde3] hover:bg-white"
-                                :class="isDragging ? 'border-[#0075de] bg-white' : ''"
-                                @click="pickFiles"
-                                @dragover.prevent="isDragging = true"
-                                @dragleave="isDragging = false"
-                                @drop.prevent="onDrop"
-                            >
-                                <AttachmentMedia class="bg-white text-[#0075de]">
-                                    <Upload class="size-4" />
+                        <div class="grid gap-2">
+                            <Label for="tenggat_waktu" class="label-isian">Tenggat Waktu</Label>
+                            <DateTimePicker v-model="form.tenggat_waktu" :min-date="today" placeholder="Pilih tenggat waktu" />
+                            <InputError :message="form.errors.tenggat_waktu" />
+                        </div>
+                    </div>
+                    <div class="mt-4 grid gap-2">
+                        <Label for="file" class="label-isian">File </Label>
+                        <input id="file" ref="fileInput" type="file" multiple class="hidden" @change="onFiles" />
+                        <Attachment
+                            state="idle"
+                            class="h-16 w-full cursor-pointer rounded-lg border-2 border-dashed border-[#d8d5d2] bg-[#f6f5f4] transition-colors hover:border-[#0075de]/40 hover:bg-white dark:border-border dark:bg-background"
+                            :class="isDragging ? 'border-[#0075de] bg-white' : ''"
+                            @click="pickFiles"
+                            @dragover.prevent="isDragging = true"
+                            @dragleave="isDragging = false"
+                            @drop.prevent="onDrop"
+                        >
+                            <AttachmentMedia class="bg-white text-[#0075de]">
+                                <Upload class="size-4" />
+                            </AttachmentMedia>
+                            <AttachmentContent>
+                                <AttachmentTitle>{{ isDragging ? 'Lepaskan file di sini' : 'Klik atau seret file ke sini' }}</AttachmentTitle>
+                                <AttachmentDescription>
+                                    bisa pilih lebih dari 1 file, maks. 10 MB per file
+                                    <span v-if="fileCount"> — {{ fileCount }} file dipilih</span>
+                                </AttachmentDescription>
+                            </AttachmentContent>
+                        </Attachment>
+                        <div v-if="fileCount" class="grid w-full grid-cols-1 gap-2 py-1 md:grid-cols-2">
+                            <Attachment v-for="path in form.kept_files" :key="`kept-${path}`" state="done" class="w-full">
+                                <AttachmentMedia>
+                                    <FileText />
                                 </AttachmentMedia>
                                 <AttachmentContent>
-                                    <AttachmentTitle>{{ isDragging ? 'Lepaskan file di sini' : 'Klik atau seret file ke sini' }}</AttachmentTitle>
-                                    <AttachmentDescription>
-                                        bisa pilih lebih dari 1 file, maks. 10 MB per file
-                                        <span v-if="fileCount"> — {{ fileCount }} file dipilih</span>
-                                    </AttachmentDescription>
+                                    <AttachmentTitle>{{ fileLabel(path) }}</AttachmentTitle>
+                                    <AttachmentDescription>tersimpan</AttachmentDescription>
                                 </AttachmentContent>
+                                <AttachmentActions>
+                                    <AttachmentAction aria-label="Hapus berkas" @click="removeKept(path)">
+                                        <X />
+                                    </AttachmentAction>
+                                </AttachmentActions>
                             </Attachment>
-                            <div v-if="fileCount" class="grid w-full grid-cols-1 gap-2 py-1 md:grid-cols-2">
-                                <Attachment v-for="path in form.kept_files" :key="`kept-${path}`" state="done" class="w-full">
-                                    <AttachmentMedia>
-                                        <FileText />
-                                    </AttachmentMedia>
-                                    <AttachmentContent>
-                                        <AttachmentTitle>{{ fileLabel(path) }}</AttachmentTitle>
-                                        <AttachmentDescription>tersimpan</AttachmentDescription>
-                                    </AttachmentContent>
-                                    <AttachmentActions>
-                                        <AttachmentAction aria-label="Hapus berkas" @click="removeKept(path)">
-                                            <X />
-                                        </AttachmentAction>
-                                    </AttachmentActions>
-                                </Attachment>
-                                <Attachment v-for="(f, i) in form.file" :key="`new-${f.name}-${f.size}-${i}`" state="done" class="w-full">
-                                    <AttachmentMedia>
-                                        <FileText />
-                                    </AttachmentMedia>
-                                    <AttachmentContent>
-                                        <AttachmentTitle>{{ f.name }}</AttachmentTitle>
-                                        <AttachmentDescription>{{ formatSize(f.size) }} — baru</AttachmentDescription>
-                                    </AttachmentContent>
-                                    <AttachmentActions>
-                                        <AttachmentAction aria-label="Hapus berkas" @click="removeNew(i)">
-                                            <X />
-                                        </AttachmentAction>
-                                    </AttachmentActions>
-                                </Attachment>
-                            </div>
-                            <p v-else-if="props.tugas" class="text-xs text-[#615d59]">Belum ada berkas tersimpan.</p>
-                            <InputError :message="form.errors.file" />
-                            <InputError v-for="(msg, key) in form.errors" :key="key" :message="String(key).startsWith('file.') ? String(msg) : ''" />
+                            <Attachment v-for="(f, i) in form.file" :key="`new-${f.name}-${f.size}-${i}`" state="done" class="w-full">
+                                <AttachmentMedia>
+                                    <FileText />
+                                </AttachmentMedia>
+                                <AttachmentContent>
+                                    <AttachmentTitle>{{ f.name }}</AttachmentTitle>
+                                    <AttachmentDescription>{{ formatSize(f.size) }} — baru</AttachmentDescription>
+                                </AttachmentContent>
+                                <AttachmentActions>
+                                    <AttachmentAction aria-label="Hapus berkas" @click="removeNew(i)">
+                                        <X />
+                                    </AttachmentAction>
+                                </AttachmentActions>
+                            </Attachment>
                         </div>
-                        <div class="mt-4 grid gap-2">
-                            <Label for="catatan" class="text-sm font-medium text-black">Catatan </Label>
-                            <textarea id="catatan" v-model="form.catatan" placeholder="Catatan tambahan untuk tugas ini" :class="area" />
-                            <InputError :message="form.errors.catatan" />
-                        </div>
-                    </section>
-
-                    <div class="flex justify-end pt-2">
-                        <Button :disabled="form.processing" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">Simpan</Button>
+                        <p v-else-if="props.tugas" class="teks-bantu">Belum ada berkas tersimpan.</p>
+                        <InputError :message="form.errors.file" />
+                        <InputError v-for="(msg, key) in form.errors" :key="key" :message="String(key).startsWith('file.') ? String(msg) : ''" />
+                    </div>
+                    <div class="mt-4 grid gap-2">
+                        <Label for="catatan" class="label-isian">Catatan </Label>
+                        <textarea id="catatan" v-model="form.catatan" placeholder="Catatan tambahan untuk tugas ini" class="isian isian-area" />
+                        <InputError :message="form.errors.catatan" />
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <Button type="submit" :disabled="form.processing">Simpan</Button>
                     </div>
                 </form>
             </div>

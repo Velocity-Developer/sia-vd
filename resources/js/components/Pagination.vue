@@ -20,20 +20,20 @@ const tautan = computed(() => props.links.map((link) => ({ ...link, teks: teks(l
 </script>
 
 <template>
-    <nav v-if="props.total > 0" class="flex flex-wrap items-center gap-2" aria-label="Navigasi halaman">
+    <nav v-if="props.total > 0" class="flex flex-wrap items-center gap-1.5" aria-label="Navigasi halaman">
         <Link
             v-for="link in tautan"
             :key="link.label"
             :href="link.url ?? '#'"
             preserve-scroll
             preserve-state
-            class="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+            class="inline-flex h-9 min-w-9 items-center justify-center whitespace-nowrap rounded-lg border px-3 text-sm font-medium shadow-sm transition-colors"
             :class="
                 link.active
-                    ? 'border-[#0075de] bg-[#0075de] text-white'
+                    ? 'border-[#0075de] bg-[#0075de] text-white hover:bg-[#005bab]'
                     : link.url
-                      ? 'border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4]'
-                      : 'pointer-events-none border-[#e6e6e6] bg-white opacity-40'
+                      ? 'border-[#d8d5d2] bg-white text-[#31302e] hover:bg-[#f6f5f4] dark:border-border dark:bg-background dark:text-foreground dark:hover:bg-accent'
+                      : 'pointer-events-none border-[#d8d5d2] bg-white text-[#31302e] opacity-50 dark:border-border dark:bg-background dark:text-foreground'
             "
             :aria-current="link.active ? 'page' : undefined"
             >{{ link.teks }}</Link

@@ -32,11 +32,7 @@ const update = (nextDate = date.value, nextTime = time.value) => emit('update:mo
 <template>
     <Popover v-model:open="open">
         <PopoverTrigger as-child>
-            <Button
-                type="button"
-                variant="outline"
-                class="h-10 w-full justify-start gap-2 rounded-[4px] border-[#dddddd] bg-white text-left font-normal text-black"
-            >
+            <Button type="button" variant="outline" class="isian justify-start gap-2 text-left font-normal">
                 <CalendarIcon class="size-4" />{{ display }}
             </Button>
         </PopoverTrigger>
@@ -48,7 +44,7 @@ const update = (nextDate = date.value, nextTime = time.value) => emit('update:mo
                 :required="false"
                 @update:model-value="(value) => update(value)"
             />
-            <TimePicker :model-value="time" class="mt-3 h-10" @update:model-value="(value) => update(date, String(value))" />
+            <TimePicker :model-value="time" class="mt-3" @update:model-value="(value) => update(date, String(value))" />
             <Button type="button" class="mt-3 w-full" @click="open = false">Selesai</Button>
         </PopoverContent>
     </Popover>

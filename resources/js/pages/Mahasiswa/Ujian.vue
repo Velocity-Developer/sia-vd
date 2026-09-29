@@ -41,12 +41,12 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
 <template>
     <Head title="Jadwal Ujian" />
     <AppLayout :breadcrumbs="[{ title: 'Jadwal Ujian', href: route('mahasiswa.ujian') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[900px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Jadwal Ujian</h1>
-                        <p class="text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Jadwal Ujian</h1>
+                        <p class="deskripsi-halaman">
                             UTS, UAS, ujian susulan, dan remidi mata kuliah di KRS Anda. Cetak kartu ujian dan bawa saat ujian tatap muka.
                         </p>
                     </div>
@@ -57,18 +57,16 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
 
                 <section v-for="g in perJenis" :key="g.jenis" class="flex flex-col gap-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
-                        <h2 class="text-lg font-semibold text-black">{{ JENIS_UJIAN[g.jenis] }}</h2>
-                        <a :href="urlKartu(g.jenis)">
-                            <Button variant="outline" size="sm" class="bg-white"
-                                ><Download class="mr-1 size-4" /> Kartu {{ JENIS_UJIAN[g.jenis] }} (PDF)</Button
-                            >
-                        </a>
+                        <h2 class="judul-bagian">{{ JENIS_UJIAN[g.jenis] }}</h2>
+                        <Button as-child variant="outline" size="sm">
+                            <a :href="urlKartu(g.jenis)"><Download class="size-4" /> Kartu {{ JENIS_UJIAN[g.jenis] }} (PDF)</a>
+                        </Button>
                     </div>
-                    <div v-for="u in g.ujians" :key="u.id" class="rounded-xl border border-[#e6e6e6] bg-white p-4 shadow-sm">
+                    <div v-for="u in g.ujians" :key="u.id" class="kartu p-4 sm:p-6">
                         <div class="flex flex-wrap items-start justify-between gap-2">
                             <div>
-                                <p class="font-medium text-black">{{ u.nama_matkul }}</p>
-                                <p class="text-xs text-[#a39e98]">{{ u.kode_matkul }} · {{ u.kode_kelas }}</p>
+                                <p class="text-sm font-medium text-black dark:text-foreground">{{ u.nama_matkul }}</p>
+                                <p class="teks-bantu">{{ u.kode_matkul }} · {{ u.kode_kelas }}</p>
                             </div>
                             <span v-if="u.terdaftar_susulan" class="rounded bg-[#fff6e0] px-2 py-0.5 text-xs text-[#8a5a00]"
                                 >Ikut jadwal susulan</span
@@ -86,19 +84,26 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
                         </div>
                         <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-3">
                             <div>
-                                <dt class="text-xs text-[#a39e98]">Waktu</dt>
-                                <dd class="text-[#31302e]">{{ formatTanggal(u.tanggal) }}, {{ jam(u.jam_mulai) }}–{{ jam(u.jam_akhir) }}</dd>
+                                <dt class="teks-bantu">Waktu</dt>
+                                <dd class="text-[#31302e] dark:text-foreground">
+                                    {{ formatTanggal(u.tanggal) }}, {{ jam(u.jam_mulai) }}–{{ jam(u.jam_akhir) }}
+                                </dd>
                             </div>
                             <div>
-                                <dt class="text-xs text-[#a39e98]">Mode</dt>
-                                <dd class="text-[#31302e]">{{ u.label_mode }}</dd>
+                                <dt class="teks-bantu">Mode</dt>
+                                <dd class="text-[#31302e] dark:text-foreground">{{ u.label_mode }}</dd>
                             </div>
                             <div>
-                                <dt class="text-xs text-[#a39e98]">Tempat</dt>
-                                <dd class="text-[#31302e]">{{ u.mode === 'tatap_muka' ? (u.ruang ?? '-') : 'Online di SIA' }}</dd>
+                                <dt class="teks-bantu">Tempat</dt>
+                                <dd class="text-[#31302e] dark:text-foreground">
+                                    {{ u.mode === 'tatap_muka' ? (u.ruang ?? '-') : 'Online di SIA' }}
+                                </dd>
                             </div>
                         </dl>
-                        <p v-if="u.petunjuk" class="mt-3 whitespace-pre-line rounded-lg bg-[#f6f5f4] px-3 py-2 text-sm text-[#31302e]">
+                        <p
+                            v-if="u.petunjuk"
+                            class="mt-3 whitespace-pre-line rounded-lg bg-[#f6f5f4] px-3 py-2 text-sm text-[#31302e] dark:bg-muted dark:text-foreground"
+                        >
                             {{ u.petunjuk }}
                         </p>
                         <Link
@@ -110,12 +115,7 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
                     </div>
                 </section>
 
-                <p
-                    v-if="!props.ujians.length"
-                    class="rounded-xl border border-dashed border-[#e6e6e6] bg-white px-4 py-10 text-center text-sm text-[#615d59]"
-                >
-                    Belum ada jadwal ujian yang diterbitkan untuk tahun akademik ini.
-                </p>
+                <div v-if="!props.ujians.length" class="kartu tabel-kosong">Belum ada jadwal ujian yang diterbitkan untuk tahun akademik ini.</div>
             </div>
         </div>
     </AppLayout>

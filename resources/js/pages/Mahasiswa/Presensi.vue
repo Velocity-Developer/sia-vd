@@ -150,42 +150,34 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
 <template>
     <Head title="Presensi" />
     <AppLayout :breadcrumbs="[{ title: 'Presensi', href: route('mahasiswa.presensi') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[900px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">Presensi</h1>
-                    <p class="text-sm text-[#615d59]">
-                        Pindai QR di layar kelas (tombol Pindai QR atau aplikasi kamera HP), atau ketik PIN dari dosen. Minimal kehadiran untuk ujian
-                        {{ props.minKehadiran }}%; izin dan sakit dihitung tidak hadir.
-                    </p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Presensi</h1>
+                        <p class="deskripsi-halaman">
+                            Pindai QR di layar kelas (tombol Pindai QR atau aplikasi kamera HP), atau ketik PIN dari dosen. Minimal kehadiran untuk
+                            ujian {{ props.minKehadiran }}%; izin dan sakit dihitung tidak hadir.
+                        </p>
+                    </div>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="flex items-center gap-2 rounded-xl border border-[#b7e4c2] bg-[#e8f7ec] px-4 py-3 text-sm text-[#1a7f37]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses flex items-center gap-2" role="alert">
                     <CircleCheck class="size-4 shrink-0" /> {{ page.props.flash.success }}
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
+                <section class="kartu p-6">
                     <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Presensi sekarang</h2>
-                        <Button type="button" variant="ghost" size="sm" @click="muatUlang"><RefreshCw class="mr-1 size-4" /> Muat ulang</Button>
+                        <h2 class="judul-bagian">Presensi sekarang</h2>
+                        <Button type="button" variant="ghost" size="sm" @click="muatUlang"><RefreshCw class="size-4" /> Muat ulang</Button>
                     </div>
 
-                    <Button
-                        type="button"
-                        class="mt-3 h-12 w-full rounded-full bg-[#0075de] text-base text-white hover:bg-[#005bab] sm:w-auto sm:px-8"
-                        @click="bukaPindai"
-                    >
-                        <QrCode class="mr-2 size-5" /> Pindai QR
-                    </Button>
+                    <Button type="button" class="mt-3 w-full sm:w-auto" @click="bukaPindai"><QrCode class="size-5" /> Pindai QR</Button>
 
                     <div v-if="props.terbuka.length" class="mt-3 flex flex-col gap-3">
-                        <div v-for="item in props.terbuka" :key="item.id" class="rounded-lg border border-[#e6e6e6] p-4">
-                            <p class="font-medium text-black">{{ item.nama_matkul }}</p>
-                            <p class="text-xs text-[#a39e98]">
+                        <div v-for="item in props.terbuka" :key="item.id" class="rounded-lg border border-[#e6e6e6] p-4 dark:border-border">
+                            <p class="text-sm font-medium text-black dark:text-foreground">{{ item.nama_matkul }}</p>
+                            <p class="teks-bantu">
                                 {{ item.kode_kelas }} · Pertemuan {{ item.pertemuan_ke }} · {{ jam(item.jam_mulai) }}–{{ jam(item.jam_akhir) }}
                             </p>
                             <p v-if="sudahHadir(item.status_saya)" class="mt-3 flex items-center gap-1.5 text-sm font-medium text-[#1a7f37]">
@@ -201,54 +193,48 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                                         maxlength="6"
                                         placeholder="PIN 6 angka"
                                         :aria-label="`PIN presensi ${item.nama_matkul}`"
-                                        class="h-11 w-44 rounded-lg border-[#dddddd] text-center font-mono text-lg tracking-[0.3em]"
+                                        class="w-44 text-center font-mono tracking-[0.3em]"
                                     />
                                     <InputError v-if="aktif === item.id" :message="form.errors.kode" />
                                 </div>
-                                <Button
-                                    type="submit"
-                                    class="h-11 bg-[#0075de] px-5 text-white hover:bg-[#005bab]"
-                                    :disabled="form.processing || (pin[item.id] ?? '').length < 6"
-                                >
-                                    Hadir
-                                </Button>
+                                <Button type="submit" :disabled="form.processing || (pin[item.id] ?? '').length < 6"> Hadir </Button>
                             </form>
                         </div>
                     </div>
-                    <p v-else class="mt-2 text-sm text-[#615d59]">
+                    <p v-else class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                         Belum ada kelas yang membuka presensi. Tunggu dosen membuka presensi mandiri, lalu tekan Muat ulang.
                     </p>
                 </section>
 
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="text-lg font-semibold text-black">Riwayat kehadiran</h2>
+                    <h2 class="judul-bagian">Riwayat kehadiran</h2>
                     <select
                         v-if="props.tahunAkademiks.length"
                         :value="props.tahunAkademikId ?? ''"
                         aria-label="Tahun akademik"
-                        class="h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm"
+                        class="isian isian-pilih sm:w-64"
                         @change="gantiTahun"
                     >
                         <option v-for="t in props.tahunAkademiks" :key="t.id" :value="t.id">{{ t.name }}</option>
                     </select>
                 </div>
 
-                <div v-for="k in props.kelas" :key="k.id" class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
+                <div v-for="k in props.kelas" :key="k.id" class="kartu overflow-hidden">
                     <button
                         type="button"
-                        class="flex w-full flex-wrap items-center gap-3 p-4 text-left hover:bg-[#f6f5f4]/60"
+                        class="flex w-full flex-wrap items-center gap-3 p-4 text-left hover:bg-[#fbfaf9] dark:hover:bg-accent/40 sm:px-6"
                         :aria-expanded="terbukaKelas === k.id"
                         @click="terbukaKelas = terbukaKelas === k.id ? null : k.id"
                     >
                         <div class="min-w-0 flex-1">
-                            <p class="font-medium text-black">{{ k.nama_matkul }}</p>
-                            <p class="text-xs text-[#a39e98]">{{ k.kode_matkul }} · {{ k.kode_kelas }} · {{ k.dosen ?? '-' }}</p>
+                            <p class="text-sm font-medium text-black dark:text-foreground">{{ k.nama_matkul }}</p>
+                            <p class="teks-bantu">{{ k.kode_matkul }} · {{ k.kode_kelas }} · {{ k.dosen ?? '-' }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-xl font-bold" :class="dibawahBatas(k.rekap) ? 'text-[#b42318]' : 'text-black'">
+                            <p class="text-xl font-bold" :class="dibawahBatas(k.rekap) ? 'text-[#b42318]' : 'text-black dark:text-foreground'">
                                 {{ k.rekap?.persen != null ? `${k.rekap.persen}%` : '-' }}
                             </p>
-                            <p class="text-xs text-[#a39e98]">
+                            <p class="teks-bantu">
                                 {{ k.rekap ? `${k.rekap.hadir + k.rekap.terlambat}/${k.rekap.dihitung} hadir` : 'belum ada pertemuan' }}
                             </p>
                         </div>
@@ -266,11 +252,14 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                         </p>
                     </button>
 
-                    <div v-if="k.ujian.uts || k.ujian.uas" class="grid gap-2 border-t border-[#e6e6e6] px-4 py-3 text-sm sm:grid-cols-2">
+                    <div
+                        v-if="k.ujian.uts || k.ujian.uas"
+                        class="grid gap-2 border-t border-[#e6e6e6] px-4 py-3 text-sm dark:border-border sm:grid-cols-2 sm:px-6"
+                    >
                         <div v-for="j in ['uts', 'uas'] as const" :key="j">
                             <template v-if="k.ujian[j]">
                                 <p class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">{{ JENIS_PERTEMUAN[j] }}</p>
-                                <p class="text-[#31302e]">
+                                <p class="text-[#31302e] dark:text-foreground">
                                     {{ formatTanggal(k.ujian[j]!.tanggal) }} · {{ jam(k.ujian[j]!.jam_mulai) }}–{{ jam(k.ujian[j]!.jam_akhir) }}
                                     <template v-if="k.ujian[j]!.ruang"> · {{ k.ujian[j]!.ruang }}</template>
                                 </p>
@@ -283,12 +272,12 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                         </div>
                     </div>
 
-                    <div v-if="terbukaKelas === k.id" class="border-t border-[#e6e6e6]">
-                        <ul class="divide-y divide-[#e6e6e6]">
-                            <li v-for="p in k.pertemuan" :key="p.id" class="flex flex-wrap items-start gap-3 px-4 py-3 text-sm">
-                                <span class="w-8 shrink-0 font-medium text-black">{{ p.pertemuan_ke }}</span>
+                    <div v-if="terbukaKelas === k.id" class="border-t border-[#e6e6e6] dark:border-border">
+                        <ul class="divide-y divide-[#e6e6e6] dark:divide-border">
+                            <li v-for="p in k.pertemuan" :key="p.id" class="flex flex-wrap items-start gap-3 px-4 py-3 text-sm sm:px-6">
+                                <span class="w-8 shrink-0 font-medium text-black dark:text-foreground">{{ p.pertemuan_ke }}</span>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-[#31302e]">
+                                    <p class="text-[#31302e] dark:text-foreground">
                                         {{ formatTanggal(p.tanggal) }} · {{ jam(p.jam_mulai) }}–{{ jam(p.jam_akhir) }}
                                         <span
                                             v-if="p.jenis !== 'kuliah'"
@@ -328,27 +317,22 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                                 >
                                 <span v-else class="rounded px-2 py-0.5 text-xs" :class="statusTampil(p).kelas">{{ statusTampil(p).label }}</span>
                             </li>
-                            <li v-if="!k.pertemuan.length" class="px-4 py-6 text-center text-sm text-[#615d59]">Pertemuan belum dijadwalkan.</li>
+                            <li v-if="!k.pertemuan.length" class="tabel-kosong">Pertemuan belum dijadwalkan.</li>
                         </ul>
                     </div>
                 </div>
 
-                <p
-                    v-if="!props.kelas.length"
-                    class="rounded-xl border border-dashed border-[#e6e6e6] bg-white px-4 py-10 text-center text-sm text-[#615d59]"
-                >
-                    Belum ada kelas di KRS Anda untuk tahun akademik ini.
-                </p>
+                <div v-if="!props.kelas.length" class="kartu tabel-kosong">Belum ada kelas di KRS Anda untuk tahun akademik ini.</div>
 
                 <!-- Pengajuan izin/sakit -->
                 <div v-if="izinUntuk" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="izinUntuk = null">
                     <form
-                        class="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-xl bg-white p-6"
+                        class="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-xl bg-white p-6 dark:bg-card"
                         @submit.prevent="kirimIzin"
                     >
                         <div>
-                            <h2 class="text-lg font-semibold text-black">Ajukan izin/sakit</h2>
-                            <p class="mt-1 text-sm text-[#615d59]">
+                            <h2 class="judul-bagian">Ajukan izin/sakit</h2>
+                            <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                                 {{ izinUntuk.nama_matkul }} · pertemuan {{ izinUntuk.pertemuan_ke }} ({{ formatTanggal(izinUntuk.tanggal) }}).
                                 Diperiksa dosen pengampu; paling lambat {{ props.batasIzinHari }} hari sesudah pertemuan. Izin dan sakit tetap
                                 dihitung tidak hadir.
@@ -360,37 +344,30 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                                 {{ j === 'izin' ? 'Izin' : 'Sakit' }}
                             </label>
                         </div>
-                        <div class="grid gap-1.5">
-                            <label for="alasan_izin" class="text-sm font-medium text-black">Alasan</label>
-                            <textarea
-                                id="alasan_izin"
-                                v-model="izinForm.alasan"
-                                rows="3"
-                                maxlength="1000"
-                                required
-                                class="rounded-[4px] border border-[#dddddd] px-3 py-2 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
-                            />
+                        <div class="grid gap-2">
+                            <label for="alasan_izin" class="label-isian">Alasan</label>
+                            <textarea id="alasan_izin" v-model="izinForm.alasan" rows="3" maxlength="1000" required class="isian isian-area" />
                             <InputError :message="izinForm.errors.alasan ?? izinForm.errors.pertemuan_id" />
                         </div>
-                        <div class="grid gap-1.5">
-                            <label for="lampiran_izin" class="text-sm font-medium text-black">Lampiran (opsional)</label>
+                        <div class="grid gap-2">
+                            <label for="lampiran_izin" class="label-isian">Lampiran (opsional)</label>
                             <input id="lampiran_izin" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" class="text-sm" @change="pilihLampiran" />
-                            <p class="text-xs text-[#a39e98]">Mis. surat dokter. PDF/JPG/PNG, maksimal 3 berkas @5 MB.</p>
+                            <p class="teks-bantu">Mis. surat dokter. PDF/JPG/PNG, maksimal 3 berkas @5 MB.</p>
                             <InputError :message="errorLampiran" />
                         </div>
                         <div class="flex justify-end gap-2">
                             <Button type="button" variant="outline" @click="izinUntuk = null">Batal</Button>
-                            <Button type="submit" class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="izinForm.processing">Kirim</Button>
+                            <Button type="submit" :disabled="izinForm.processing">Kirim</Button>
                         </div>
                     </form>
                 </div>
 
                 <!-- Pemindai QR -->
                 <div v-if="pindaiTerbuka" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" @click.self="tutupPindai">
-                    <div class="flex w-full max-w-sm flex-col gap-3 rounded-xl bg-white p-5">
+                    <div class="flex w-full max-w-sm flex-col gap-3 rounded-xl bg-white p-6 dark:bg-card">
                         <div>
-                            <h2 class="text-lg font-semibold text-black">Pindai QR presensi</h2>
-                            <p class="text-sm text-[#615d59]">Arahkan kamera ke QR di layar kelas.</p>
+                            <h2 class="judul-bagian">Pindai QR presensi</h2>
+                            <p class="text-sm text-[#615d59] dark:text-muted-foreground">Arahkan kamera ke QR di layar kelas.</p>
                         </div>
                         <PemindaiQr v-if="!pindaiForm.hasErrors" :key="pindaiKe" ref="pemindai" @hasil="saatTerpindai" />
                         <p v-if="pindaiForm.processing" class="text-center text-sm text-[#615d59]">Mencatat presensi…</p>

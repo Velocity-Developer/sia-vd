@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { Download } from 'lucide-vue-next';
@@ -13,70 +14,68 @@ defineProps<{
 <template>
     <Head title="Transkrip Nilai" />
     <AppLayout :breadcrumbs="[{ title: 'Transkrip Nilai', href: route('mahasiswa.transkrip') }]">
-        <div class="min-h-full bg-[#f6f5f4] dark:bg-gray-950">
-            <div class="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
                     <div>
-                        <h1 class="text-[26px] font-bold tracking-[-0.625px] text-black dark:text-white">Transkrip Nilai</h1>
-                        <p class="mt-1 text-sm text-[#615d59] dark:text-gray-400">Rekapitulasi seluruh hasil studi yang telah dinilai.</p>
+                        <h1 class="judul-halaman">Transkrip Nilai</h1>
+                        <p class="deskripsi-halaman">Rekapitulasi seluruh hasil studi yang telah dinilai.</p>
                     </div>
-                    <a
-                        v-if="transkrip.length"
-                        :href="route('mahasiswa.transkrip.download')"
-                        class="inline-flex items-center gap-2 self-start rounded-lg bg-[#0075de] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#005bab] sm:self-auto"
-                    >
-                        <Download class="h-4 w-4" />
-                        Download Transkrip
-                    </a>
+                    <Button v-if="transkrip.length" as-child>
+                        <a :href="route('mahasiswa.transkrip.download')">
+                            <Download class="h-4 w-4" />
+                            Download Transkrip
+                        </a>
+                    </Button>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-3">
-                    <div class="rounded-xl border border-[#0075de] bg-[#0075de] p-5 text-white shadow-sm">
+                    <div class="rounded-xl border border-[#0075de] bg-[#0075de] p-6 text-white shadow-sm">
                         <p class="text-xs uppercase tracking-[0.08em] text-blue-100">IPK</p>
                         <p class="mt-2 text-3xl font-bold">{{ ringkasan.ipk?.toFixed(2) ?? '-' }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                        <p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</p>
-                        <p class="mt-2 text-2xl font-bold text-black dark:text-white">{{ ringkasan.totalMatkul }}</p>
+                    <div class="kartu p-6">
+                        <p class="teks-bantu uppercase tracking-[0.08em]">Mata Kuliah</p>
+                        <p class="mt-2 text-2xl font-bold text-black dark:text-foreground">{{ ringkasan.totalMatkul }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                        <p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">SKS Lulus / Total SKS</p>
-                        <p class="mt-2 text-2xl font-bold text-black dark:text-white">{{ ringkasan.totalSksLulus }} / {{ ringkasan.totalSks }}</p>
+                    <div class="kartu p-6">
+                        <p class="teks-bantu uppercase tracking-[0.08em]">SKS Lulus / Total SKS</p>
+                        <p class="mt-2 text-2xl font-bold text-black dark:text-foreground">
+                            {{ ringkasan.totalSksLulus }} / {{ ringkasan.totalSks }}
+                        </p>
                     </div>
                 </div>
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[680px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[680px]">
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">Mata Kuliah</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase text-[#a39e98]">Jenis Mata Kuliah</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-[#a39e98]">SKS</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-[#a39e98]">Nilai</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Mata Kuliah</th>
+                                    <th>Jenis Mata Kuliah</th>
+                                    <th class="text-center">SKS</th>
+                                    <th class="text-center">Nilai</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6] dark:divide-gray-800">
-                                <tr v-for="(item, index) in transkrip" :key="item.id" class="hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800">
-                                    <td class="px-4 py-4 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                    <td class="px-4 py-4">
-                                        <p class="text-sm font-semibold text-black dark:text-white">{{ item.nama }}</p>
-                                        <p class="text-xs text-[#8a8580]">
+                            <tbody>
+                                <tr v-for="(item, index) in transkrip" :key="item.id">
+                                    <td class="kolom-no">{{ index + 1 }}</td>
+                                    <td>
+                                        <p class="font-medium text-black dark:text-foreground">{{ item.nama }}</p>
+                                        <p class="teks-bantu">
                                             {{ item.kode }}<span v-if="item.diambil > 1"> · diambil {{ item.diambil }}x, nilai terbaik</span>
                                         </p>
                                     </td>
-                                    <td class="px-4 py-4 text-sm text-[#615d59] dark:text-gray-300">
-                                        {{ item.jenis }}
-                                    </td>
-                                    <td class="px-4 py-4 text-center text-sm text-[#31302e] dark:text-gray-200">{{ item.sks }}</td>
-                                    <td class="px-4 py-4 text-center">
+                                    <td>{{ item.jenis }}</td>
+                                    <td class="text-center tabular-nums">{{ item.sks }}</td>
+                                    <td class="text-center">
                                         <span
-                                            class="inline-flex min-w-9 justify-center rounded-full bg-[#eaf4ff] px-2.5 py-1 text-sm font-bold text-[#0075de]"
+                                            class="inline-flex min-w-9 justify-center rounded-full bg-[#eaf4ff] px-2.5 py-1 text-xs font-bold text-[#0075de]"
                                             >{{ item.nilai }}</span
                                         >
                                     </td>
                                 </tr>
-                                <tr v-if="!transkrip.length">
-                                    <td colspan="5" class="px-4 py-16 text-center text-sm text-[#615d59]">Belum ada nilai pada transkrip.</td>
+                                <tr v-if="!transkrip.length" class="baris-kosong">
+                                    <td colspan="5" class="tabel-kosong">Belum ada nilai pada transkrip.</td>
                                 </tr>
                             </tbody>
                         </table>

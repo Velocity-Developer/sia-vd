@@ -41,103 +41,93 @@ const prodi = () => (props.mataKuliah as any).prodi ?? null;
 <template>
     <Head :title="`Detail ${props.mataKuliah.nama_matkul}`" />
     <AppLayout :breadcrumbs="[{ title: 'Detail Mata Kuliah', href: '#' }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Detail Mata Kuliah</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan informasi mata kuliah, program studi, dan fakultas induk.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Detail Mata Kuliah</h1>
+                        <p class="deskripsi-halaman">Ringkasan informasi mata kuliah, program studi, dan fakultas induk.</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route('admin.mata-kuliah.index')"
-                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                        >
-                        <Link :href="route('admin.mata-kuliah.edit', props.mataKuliah.id)"
-                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
-                        >
+                        <Button as-child variant="outline"><Link :href="route('admin.mata-kuliah.index')">Kembali</Link></Button>
+                        <Button as-child><Link :href="route('admin.mata-kuliah.edit', props.mataKuliah.id)">Edit</Link></Button>
                     </div>
                 </div>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Mata Kuliah</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Informasi Mata Kuliah</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kode Mata Kuliah</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.mataKuliah.kode_matkul) }}</dd>
+                            <dt class="teks-bantu">Kode Mata Kuliah</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.mataKuliah.kode_matkul) }}</dd>
                         </div>
                         <div class="space-y-1 sm:col-span-2">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Nama Mata Kuliah</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.mataKuliah.nama_matkul) }}</dd>
+                            <dt class="teks-bantu">Nama Mata Kuliah</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.mataKuliah.nama_matkul) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">SKS</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.mataKuliah.sks) }}</dd>
+                            <dt class="teks-bantu">SKS</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.mataKuliah.sks) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Semester</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.mataKuliah.semester) }}</dd>
+                            <dt class="teks-bantu">Semester</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.mataKuliah.semester) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Jenis</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">
+                            <dt class="teks-bantu">Jenis</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">
                                 {{ v(props.mataKuliah.jenis) }}<span v-if="props.mataKuliah.tugas_akhir"> · TA/Skripsi</span>
                             </dd>
                         </div>
                     </dl>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Program Studi & Fakultas</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Program Studi & Fakultas</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Program Studi</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(prodi()?.nama_prodi) }}</dd>
+                            <dt class="teks-bantu">Program Studi</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(prodi()?.nama_prodi) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kode Prodi</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(prodi()?.kode_prodi) }}</dd>
+                            <dt class="teks-bantu">Kode Prodi</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(prodi()?.kode_prodi) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Jenjang</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(prodi()?.jenjang) }}</dd>
+                            <dt class="teks-bantu">Jenjang</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(prodi()?.jenjang) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Fakultas</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(prodi()?.fakultas?.nama_fakultas) }}</dd>
+                            <dt class="teks-bantu">Fakultas</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(prodi()?.fakultas?.nama_fakultas) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kode Fakultas</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(prodi()?.fakultas?.kode_fakultas) }}</dd>
+                            <dt class="teks-bantu">Kode Fakultas</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(prodi()?.fakultas?.kode_fakultas) }}</dd>
                         </div>
                     </dl>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Prasyarat</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Prasyarat</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Harus Lulus Dulu</dt>
-                            <dd v-if="props.mataKuliah.prasyarat.length" class="space-y-1 text-[15px] leading-5 text-black">
+                            <dt class="teks-bantu">Harus Lulus Dulu</dt>
+                            <dd v-if="props.mataKuliah.prasyarat.length" class="space-y-1 text-sm text-black dark:text-foreground">
                                 <p v-for="item in props.mataKuliah.prasyarat" :key="item.id">
                                     {{ item.kode_matkul }} — {{ item.nama_matkul }} <span class="text-[#a39e98]">(smt {{ item.semester }})</span>
                                 </p>
                             </dd>
-                            <dd v-else class="text-[15px] text-black">Tidak ada</dd>
+                            <dd v-else class="text-sm text-black dark:text-foreground">Tidak ada</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Menjadi Prasyarat Untuk</dt>
-                            <dd v-if="props.mataKuliah.menjadi_prasyarat.length" class="space-y-1 text-[15px] leading-5 text-black">
+                            <dt class="teks-bantu">Menjadi Prasyarat Untuk</dt>
+                            <dd v-if="props.mataKuliah.menjadi_prasyarat.length" class="space-y-1 text-sm text-black dark:text-foreground">
                                 <p v-for="item in props.mataKuliah.menjadi_prasyarat" :key="item.id">
                                     {{ item.kode_matkul }} — {{ item.nama_matkul }} <span class="text-[#a39e98]">(smt {{ item.semester }})</span>
                                 </p>
                             </dd>
-                            <dd v-else class="text-[15px] text-black">Tidak ada</dd>
+                            <dd v-else class="text-sm text-black dark:text-foreground">Tidak ada</dd>
                         </div>
                     </dl>
                 </section>

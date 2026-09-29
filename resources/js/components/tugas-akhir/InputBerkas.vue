@@ -22,7 +22,7 @@ const emit = defineEmits<{ (e: 'pilih', berkas: File | null): void }>();
 
 <template>
     <div class="grid content-start gap-2">
-        <Label :for="props.terkunci ? undefined : props.id">{{ props.label }}</Label>
+        <Label :for="props.terkunci ? undefined : props.id" class="label-isian">{{ props.label }}</Label>
         <a
             v-if="props.pengajuanId && props.sudahAda"
             :href="route('berkas.pengajuan-akademik', [props.pengajuanId, props.id])"
@@ -36,11 +36,11 @@ const emit = defineEmits<{ (e: 'pilih', berkas: File | null): void }>();
             :id="props.id"
             type="file"
             :accept="props.accept"
-            class="text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[#f2f9ff] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[#0075de]"
+            class="text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#f2f9ff] file:px-4 file:py-2 file:text-sm file:font-medium file:text-[#0075de]"
             :required="props.wajib"
             @change="emit('pilih', ($event.target as HTMLInputElement).files?.[0] ?? null)"
         />
-        <span v-if="props.sudahAda && !props.wajib && !props.terkunci" class="text-xs text-[#615d59]">Kosongkan bila tidak perlu diganti.</span>
+        <span v-if="props.sudahAda && !props.wajib && !props.terkunci" class="teks-bantu">Kosongkan bila tidak perlu diganti.</span>
         <InputError :message="props.error" />
     </div>
 </template>

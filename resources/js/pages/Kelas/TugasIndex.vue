@@ -43,16 +43,16 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
 <template>
     <Head title="Tugas" />
     <AppLayout :breadcrumbs="[{ title: 'Tugas', href: rute('tugas.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">Tugas</h1>
-                    <p class="text-sm text-[#615d59]">Tugas dari seluruh kelas beserta jumlah jawaban yang sudah masuk.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Tugas</h1>
+                        <p class="deskripsi-halaman">Tugas dari seluruh kelas beserta jumlah jawaban yang sudah masuk.</p>
+                    </div>
                 </div>
 
-                <div v-if="page.props.flash?.tugas_success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.tugas_success }}
-                </div>
+                <div v-if="page.props.flash?.tugas_success" class="alert-sukses" role="alert">{{ page.props.flash.tugas_success }}</div>
 
                 <FilterKonten
                     :url="rute('tugas.index')"
@@ -66,41 +66,41 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                     placeholder="Cari judul tugas atau kode kelas"
                 />
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[900px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[900px]">
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Judul</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kelas</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tenggat</th>
-                                    <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jawaban</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Judul</th>
+                                    <th>Kelas</th>
+                                    <th>Mata Kuliah</th>
+                                    <th>Tenggat</th>
+                                    <th class="text-center">Jawaban</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="(item, index) in props.tugas.data" :key="item.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.tugas.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3 text-[15px] font-medium text-black">{{ item.judul_tugas }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                            <tbody>
+                                <tr v-for="(item, index) in props.tugas.data" :key="item.id">
+                                    <td class="kolom-no">{{ (props.tugas.from ?? 1) + index }}</td>
+                                    <td class="font-medium text-black">{{ item.judul_tugas }}</td>
+                                    <td>
                                         <span class="block font-medium">{{ item.kelas_kuliah?.kode_kelas ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">
                                             {{ item.kelas_kuliah?.tahun_akademik?.tahun }} {{ item.kelas_kuliah?.tahun_akademik?.semester }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td>
                                         <span class="block">{{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.kelas_kuliah?.dosen?.user?.name }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px]" :class="lewat(item.tenggat_waktu) ? 'text-[#dd5b00]' : 'text-[#31302e]'">
+                                    <td :class="{ 'text-[#dd5b00]': lewat(item.tenggat_waktu) }">
                                         {{ tenggat(item.tenggat_waktu) }}
                                     </td>
-                                    <td class="px-4 py-3 text-center text-[15px] font-semibold text-black">
+                                    <td class="text-center font-semibold tabular-nums text-black">
                                         {{ item.pengumpulan_tugas_count }}
                                     </td>
-                                    <td class="px-4 py-3 text-right">
+                                    <td class="kolom-aksi">
                                         <Link
                                             v-if="item.kelas_kuliah"
                                             :href="rute('kelas-kuliah.tugas.show', [item.kelas_kuliah.id, item.id])"
@@ -110,10 +110,8 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                                         </Link>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.tugas.data.length">
-                                    <td colspan="7" class="px-4 py-14 text-center text-sm text-[#615d59]">
-                                        Tidak ada tugas yang cocok dengan filter.
-                                    </td>
+                                <tr v-if="!props.tugas.data.length" class="baris-kosong">
+                                    <td colspan="7" class="tabel-kosong">Tidak ada tugas yang cocok dengan filter.</td>
                                 </tr>
                             </tbody>
                         </table>

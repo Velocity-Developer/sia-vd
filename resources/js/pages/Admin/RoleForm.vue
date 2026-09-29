@@ -82,11 +82,6 @@ watch(
 const selectedCount = computed(() => form.permissions.length);
 
 const submit = () => (props.role ? form.put(route('admin.roles.update', props.role.id)) : form.post(route('admin.roles.store')));
-
-const inp =
-    'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
-const sel =
-    'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px] text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de] disabled:cursor-not-allowed disabled:bg-[#f6f5f4] disabled:text-[#615d59]';
 </script>
 
 <template>
@@ -97,52 +92,38 @@ const sel =
             { title, href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto w-full max-w-[1000px] px-4 py-6 sm:px-6 lg:px-8">
-                <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">{{ title }}</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">
-                            Tentukan identitas role dan menu atau fitur yang boleh diakses penggunanya.
-                        </p>
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ title }}</h1>
+                        <p class="deskripsi-halaman">Tentukan identitas role dan menu atau fitur yang boleh diakses penggunanya.</p>
                     </div>
-                    <Link :href="route('admin.roles.index')"
-                        ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                    >
+                    <Button as-child variant="outline"><Link :href="route('admin.roles.index')">Kembali</Link></Button>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01)]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div
-                    v-if="page.props.flash?.error"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
 
-                <form @submit.prevent="submit" class="space-y-4">
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Role</h2>
+                <form class="flex flex-col gap-6" @submit.prevent="submit">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Data Role</h2>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="name" class="text-sm font-medium text-black">Nama Role</Label>
-                                <Input id="name" v-model="form.name" type="text" :class="inp" placeholder="Contoh: Staf Akademik" required />
+                                <Label for="name" class="label-isian">Nama Role</Label>
+                                <Input id="name" v-model="form.name" type="text" placeholder="Contoh: Staf Akademik" required />
                                 <InputError :message="form.errors.name" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="user_type" class="text-sm font-medium text-black">Jenis Pengguna</Label>
-                                <select id="user_type" v-model="form.user_type" :class="sel" :disabled="props.typeLocked" required>
+                                <Label for="user_type" class="label-isian">Jenis Pengguna</Label>
+                                <select id="user_type" v-model="form.user_type" class="isian isian-pilih" :disabled="props.typeLocked" required>
                                     <option v-for="type in props.userTypes" :key="type.value" :value="type.value">{{ type.label }}</option>
                                 </select>
-                                <p class="text-xs leading-4 text-[#615d59]">
+                                <p class="teks-bantu">
                                     <template v-if="props.typeLocked">
                                         {{
                                             props.role?.is_system
@@ -156,34 +137,29 @@ const sel =
                             </div>
                         </div>
                         <div class="mt-4 grid gap-2">
-                            <Label for="description" class="text-sm font-medium text-black">Deskripsi</Label>
+                            <Label for="description" class="label-isian">Deskripsi</Label>
                             <textarea
                                 id="description"
                                 v-model="form.description"
                                 rows="3"
                                 placeholder="Jelaskan tugas atau tanggung jawab role ini (opsional)"
-                                class="rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] text-black placeholder:text-[#a39e98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                                class="isian isian-area"
                             />
                             <InputError :message="form.errors.description" />
                         </div>
                     </section>
 
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
+                    <section class="kartu p-6">
                         <div class="flex flex-wrap items-start justify-between gap-2">
                             <div>
-                                <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Hak Akses</h2>
-                                <p class="mt-1 text-sm leading-5 text-[#615d59]">Centang menu dan fitur yang dapat diakses oleh role ini.</p>
+                                <h2 class="judul-bagian">Hak Akses</h2>
+                                <p class="teks-bantu mt-1">Centang menu dan fitur yang dapat diakses oleh role ini.</p>
                             </div>
-                            <p class="text-sm text-[#615d59]">
+                            <p class="info-jumlah">
                                 <span class="font-medium text-black">{{ selectedCount }}</span> dipilih
                             </p>
                         </div>
-                        <p
-                            v-if="props.role && props.role.users_count > 0"
-                            class="mt-3 rounded-lg bg-[#f6f5f4] px-3 py-2 text-sm leading-5 text-[#31302e]"
-                        >
+                        <p v-if="props.role && props.role.users_count > 0" class="alert-info mt-3">
                             Perubahan hak akses langsung berlaku untuk {{ props.role.users_count }} pengguna dengan role ini.
                         </p>
                         <InputError class="mt-3" :message="form.errors.permissions" />
@@ -192,11 +168,13 @@ const sel =
                             <fieldset
                                 v-for="group in props.permissionGroups"
                                 :key="group.group"
-                                class="overflow-hidden rounded-xl border border-[#e6e6e6]"
+                                class="overflow-hidden rounded-xl border border-[#e6e6e6] dark:border-border"
                             >
                                 <legend class="sr-only">{{ group.group }}</legend>
-                                <div class="flex items-center justify-between gap-3 border-b border-[#e6e6e6] bg-[#f6f5f4] px-4 py-2.5">
-                                    <span class="text-sm font-semibold text-black">{{ group.group }}</span>
+                                <div
+                                    class="flex items-center justify-between gap-3 border-b border-[#e6e6e6] bg-[#f6f5f4] px-4 py-2.5 dark:border-border dark:bg-muted"
+                                >
+                                    <span class="text-sm font-semibold text-black dark:text-foreground">{{ group.group }}</span>
                                     <button
                                         v-if="hasSelectable(group)"
                                         type="button"
@@ -210,10 +188,10 @@ const sel =
                                     <label
                                         v-for="permission in group.permissions"
                                         :key="permission.id"
-                                        class="flex gap-3 border-t border-[#e6e6e6] bg-white px-4 py-3 first:border-t-0 sm:odd:border-r sm:[&:nth-child(2)]:border-t-0"
+                                        class="flex gap-3 border-t border-[#e6e6e6] bg-white px-4 py-3 first:border-t-0 dark:border-border dark:bg-card sm:odd:border-r sm:[&:nth-child(2)]:border-t-0"
                                         :class="
                                             isAvailable(permission) && !isLocked(permission)
-                                                ? 'cursor-pointer hover:bg-[#f6f5f4]/60'
+                                                ? 'cursor-pointer hover:bg-[#fbfaf9] dark:hover:bg-accent/40'
                                                 : 'cursor-not-allowed'
                                         "
                                     >
@@ -225,18 +203,20 @@ const sel =
                                             @change="toggle(permission, ($event.target as HTMLInputElement).checked)"
                                         />
                                         <span class="min-w-0" :class="isAvailable(permission) ? '' : 'opacity-50'">
-                                            <span class="block text-[15px] font-medium leading-5 text-black">{{ permission.name }}</span>
-                                            <span v-if="permission.description" class="mt-0.5 block text-sm leading-5 text-[#615d59]">{{
-                                                permission.description
-                                            }}</span>
-                                            <span v-if="!isAvailable(permission)" class="mt-1 block text-xs leading-4 text-[#a39e98]">
+                                            <span class="block text-sm font-medium text-black dark:text-foreground">{{ permission.name }}</span>
+                                            <span
+                                                v-if="permission.description"
+                                                class="mt-0.5 block text-sm text-[#615d59] dark:text-muted-foreground"
+                                                >{{ permission.description }}</span
+                                            >
+                                            <span v-if="!isAvailable(permission)" class="teks-bantu mt-1 block">
                                                 {{
                                                     permission.user_type
                                                         ? `Khusus role ${typeLabel(permission.user_type)}`
                                                         : `Khusus role ${typeLabel('admin')} dan ${typeLabel('dosen')}`
                                                 }}
                                             </span>
-                                            <span v-else-if="isLocked(permission)" class="mt-1 block text-xs leading-4 text-[#a39e98]">
+                                            <span v-else-if="isLocked(permission)" class="teks-bantu mt-1 block">
                                                 Wajib aktif agar Admin tidak kehilangan akses
                                             </span>
                                         </span>
@@ -246,8 +226,8 @@ const sel =
                         </div>
                     </section>
 
-                    <div class="flex justify-end pt-2">
-                        <Button :disabled="form.processing" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">Simpan</Button>
+                    <div class="flex justify-end gap-2">
+                        <Button type="submit" :disabled="form.processing">Simpan</Button>
                     </div>
                 </form>
             </div>

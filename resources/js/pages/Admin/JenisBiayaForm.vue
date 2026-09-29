@@ -97,9 +97,6 @@ const submit = () => {
 };
 
 const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nilai || 0);
-
-const inp =
-    'h-10 rounded-lg border-[#d8d5d2] bg-white text-sm text-[#31302e] shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15';
 </script>
 
 <template>
@@ -110,28 +107,32 @@ const inp =
             { title: props.jenis ? 'Ubah' : 'Tambah', href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[900px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">{{ props.jenis ? 'Ubah' : 'Tambah' }} Jenis Biaya</h1>
-                    <p class="text-sm text-[#615d59]">Tarif kosong berarti komponen ini tidak ditagihkan ke mahasiswa yang bersangkutan.</p>
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ props.jenis ? 'Ubah' : 'Tambah' }} Jenis Biaya</h1>
+                        <p class="deskripsi-halaman">Tarif kosong berarti komponen ini tidak ditagihkan ke mahasiswa yang bersangkutan.</p>
+                    </div>
+                    <Button as-child variant="outline"><Link :href="route('admin.jenis-biaya.index')">Kembali</Link></Button>
                 </div>
 
-                <form class="flex flex-col gap-5" @submit.prevent="submit">
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
-                        <div class="grid content-start gap-4 sm:grid-cols-2">
+                <form class="flex flex-col gap-6" @submit.prevent="submit">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Data Jenis Biaya</h2>
+                        <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="kode">Kode</Label>
-                                <Input id="kode" v-model="form.kode" :class="inp" placeholder="SPP-TETAP" required />
+                                <Label for="kode" class="label-isian">Kode</Label>
+                                <Input id="kode" v-model="form.kode" placeholder="SPP-TETAP" required />
                                 <InputError :message="form.errors.kode" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="nama">Nama</Label>
-                                <Input id="nama" v-model="form.nama" :class="inp" placeholder="SPP Tetap" required />
+                                <Label for="nama" class="label-isian">Nama</Label>
+                                <Input id="nama" v-model="form.nama" placeholder="SPP Tetap" required />
                                 <InputError :message="form.errors.nama" />
                             </div>
                             <div class="grid content-start gap-2">
-                                <Label for="kategori">Kategori</Label>
+                                <Label for="kategori" class="label-isian">Kategori</Label>
                                 <SelectFilter v-model="form.kategori" label="Kategori" penuh>
                                     <option value="semester">Tagihan semester</option>
                                     <option value="remidi">Remidi (per mata kuliah)</option>
@@ -140,13 +141,13 @@ const inp =
                                     <option value="wisuda">Wisuda (informasi)</option>
                                     <option value="cuti">Cuti (informasi)</option>
                                 </SelectFilter>
-                                <p class="text-xs text-[#615d59]">
+                                <p class="teks-bantu">
                                     {{ keteranganKategori }}
                                 </p>
                                 <InputError :message="form.errors.kategori" />
                             </div>
                             <div v-if="!info" class="grid content-start gap-2">
-                                <Label for="cara_hitung">Cara Hitung</Label>
+                                <Label for="cara_hitung" class="label-isian">Cara Hitung</Label>
                                 <SelectFilter v-model="form.cara_hitung" label="Cara hitung" penuh>
                                     <option value="tetap">
                                         {{
@@ -159,55 +160,53 @@ const inp =
                                     </option>
                                     <option value="per_sks">{{ perMatkul ? 'Per SKS mata kuliah' : 'Per SKS yang diambil' }}</option>
                                 </SelectFilter>
-                                <p class="text-xs text-[#615d59]">{{ keteranganHitung }}</p>
+                                <p class="teks-bantu">{{ keteranganHitung }}</p>
                                 <InputError :message="form.errors.cara_hitung" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="urutan">Urutan Tampil</Label>
-                                <Input id="urutan" v-model="form.urutan" type="number" min="0" max="999" :class="inp" />
+                                <Label for="urutan" class="label-isian">Urutan Tampil</Label>
+                                <Input id="urutan" v-model="form.urutan" type="number" min="0" max="999" />
                                 <InputError :message="form.errors.urutan" />
                             </div>
                             <div class="grid gap-2 sm:col-span-2">
-                                <Label for="keterangan">Keterangan</Label>
-                                <Input id="keterangan" v-model="form.keterangan" :class="inp" placeholder="Opsional" />
+                                <Label for="keterangan" class="label-isian">Keterangan</Label>
+                                <Input id="keterangan" v-model="form.keterangan" placeholder="Opsional" />
                                 <InputError :message="form.errors.keterangan" />
                             </div>
                         </div>
 
-                        <Label for="aktif" class="mt-4 flex w-fit items-center gap-2.5 text-sm text-[#31302e]">
+                        <Label for="aktif" class="label-isian mt-4 flex w-fit items-center gap-2.5 font-normal">
                             <Checkbox id="aktif" v-model="form.aktif" />
                             <span>Aktif — ikut ditagihkan saat tagihan diterbitkan</span>
                         </Label>
-                    </div>
+                    </section>
 
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <div class="space-y-1">
-                                <h2 class="text-lg font-semibold text-black">Tarif</h2>
-                                <p class="text-sm text-[#615d59]">
+                    <section class="kartu p-6">
+                        <div class="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                                <h2 class="judul-bagian">Tarif</h2>
+                                <p class="teks-bantu mt-1">
                                     Kosongkan program studi atau angkatan berarti berlaku untuk semua. Tarif paling khusus yang dipakai.
                                 </p>
                             </div>
-                            <Button type="button" variant="outline" class="h-9 rounded-lg border-[#d8d5d2]" @click="tambahTarif">
-                                <Plus class="size-4" /> Tambah Tarif
-                            </Button>
+                            <Button type="button" variant="outline" size="sm" @click="tambahTarif"> <Plus /> Tambah Tarif </Button>
                         </div>
 
                         <div class="mt-4 space-y-3">
                             <div
                                 v-for="(tarif, index) in form.tarif"
                                 :key="index"
-                                class="grid content-start gap-3 rounded-lg border border-[#e6e6e6] p-3 sm:grid-cols-[1fr_140px_180px_auto] sm:items-end"
+                                class="grid content-start gap-3 rounded-lg border border-[#e6e6e6] p-3 dark:border-border sm:grid-cols-[1fr_140px_180px_auto] sm:items-end"
                             >
-                                <div class="grid gap-1.5">
-                                    <Label :for="`prodi-${index}`" class="text-xs text-[#615d59]">Program Studi</Label>
+                                <div class="grid gap-2">
+                                    <Label :for="`prodi-${index}`" class="label-isian">Program Studi</Label>
                                     <SelectFilter v-model="tarif.prodi_id" label="Program studi tarif" penuh>
                                         <option :value="null">Semua Program Studi</option>
                                         <option v-for="prodi in props.prodiOptions" :key="prodi.id" :value="prodi.id">{{ prodi.name }}</option>
                                     </SelectFilter>
                                 </div>
-                                <div class="grid gap-1.5">
-                                    <Label :for="`angkatan-${index}`" class="text-xs text-[#615d59]">Angkatan</Label>
+                                <div class="grid gap-2">
+                                    <Label :for="`angkatan-${index}`" class="label-isian">Angkatan</Label>
                                     <Input
                                         :id="`angkatan-${index}`"
                                         v-model="tarif.angkatan"
@@ -215,48 +214,40 @@ const inp =
                                         min="1900"
                                         max="2999"
                                         placeholder="Semua"
-                                        :class="inp"
                                     />
                                 </div>
-                                <div class="grid gap-1.5">
-                                    <Label :for="`nominal-${index}`" class="text-xs text-[#615d59]">
-                                        Nominal {{ perSks ? 'per SKS' : 'per semester' }}
-                                    </Label>
-                                    <Input :id="`nominal-${index}`" v-model="tarif.nominal" type="number" min="0" :class="inp" required />
-                                    <span class="text-xs text-[#a39e98]">{{ rupiah(Number(tarif.nominal)) }}</span>
+                                <div class="grid gap-2">
+                                    <Label :for="`nominal-${index}`" class="label-isian"> Nominal {{ perSks ? 'per SKS' : 'per semester' }} </Label>
+                                    <Input :id="`nominal-${index}`" v-model="tarif.nominal" type="number" min="0" required />
+                                    <span class="teks-bantu">{{ rupiah(Number(tarif.nominal)) }}</span>
                                 </div>
-                                <button
+                                <Button
                                     type="button"
-                                    class="justify-self-end"
+                                    variant="outline"
+                                    size="icon-lg"
+                                    class="justify-self-end text-[#dd5b00]"
                                     title="Hapus tarif"
                                     aria-label="Hapus tarif"
                                     @click="hapusTarif(index)"
-                                >
-                                    <Button variant="outline" size="icon" class="size-9 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00]">
-                                        <Trash2 class="size-4" />
-                                    </Button>
-                                </button>
+                                    ><Trash2
+                                /></Button>
                             </div>
 
                             <p
                                 v-if="!form.tarif.length"
-                                class="rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59]"
+                                class="rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59] dark:border-border dark:text-muted-foreground"
                             >
                                 Belum ada tarif. Tanpa tarif, komponen ini tidak akan muncul di tagihan.
                             </p>
                         </div>
-                    </div>
+                    </section>
 
-                    <div class="flex items-center gap-3">
-                        <Button
-                            type="submit"
-                            :disabled="form.processing"
-                            class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
-                        >
-                            <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+                    <div class="flex justify-end gap-2">
+                        <Button as-child variant="outline"><Link :href="route('admin.jenis-biaya.index')">Batal</Link></Button>
+                        <Button type="submit" :disabled="form.processing">
+                            <LoaderCircle v-if="form.processing" class="animate-spin" />
                             Simpan
                         </Button>
-                        <Link :href="route('admin.jenis-biaya.index')" class="text-sm font-medium text-[#615d59] hover:underline">Batal</Link>
                     </div>
                 </form>
             </div>

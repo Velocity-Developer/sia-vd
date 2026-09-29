@@ -50,76 +50,52 @@ const submit = () => {
         <Head title="Pengaturan Profil" />
 
         <SettingsLayout>
-            <div class="flex flex-col space-y-6">
+            <form class="kartu p-6" @submit.prevent="submit">
                 <HeadingSmall title="Informasi Profil" description="Perbarui nama dan alamat email Anda" />
 
-                <form @submit.prevent="submit" class="space-y-6">
+                <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                     <div class="grid gap-2">
-                        <Label for="name">Nama</Label>
-                        <Input
-                            id="name"
-                            class="mt-1 block w-full"
-                            v-model="form.name"
-                            required
-                            autocomplete="name"
-                            placeholder="Nama lengkap"
-                            :disabled="props.namaTerkunci"
-                        />
-                        <p v-if="props.namaTerkunci" class="mt-1 text-xs text-muted-foreground">
-                            Nama mengikuti data akademik. Hubungi bagian akademik untuk mengubahnya.
-                        </p>
-                        <InputError class="mt-2" :message="form.errors.name" />
+                        <Label for="name" class="label-isian">Nama</Label>
+                        <Input id="name" v-model="form.name" required autocomplete="name" placeholder="Nama lengkap" :disabled="props.namaTerkunci" />
+                        <p v-if="props.namaTerkunci" class="teks-bantu">Nama mengikuti data akademik. Hubungi bagian akademik untuk mengubahnya.</p>
+                        <InputError :message="form.errors.name" />
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="email">Alamat Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            class="mt-1 block w-full"
-                            v-model="form.email"
-                            required
-                            autocomplete="username"
-                            placeholder="Alamat email"
-                        />
-                        <InputError class="mt-2" :message="form.errors.email" />
+                        <Label for="email" class="label-isian">Alamat Email</Label>
+                        <Input id="email" v-model="form.email" type="email" required autocomplete="username" placeholder="Alamat email" />
+                        <InputError :message="form.errors.email" />
+                    </div>
+                </div>
+
+                <div v-if="mustVerifyEmail && !terverifikasi" class="mt-4 grid gap-2">
+                    <div class="alert-info">
+                        Alamat email Anda belum terverifikasi. Menu lain terbuka setelah Anda mengeklik tautan di email.
+                        <Link :href="route('verification.send')" method="post" as="button" class="font-medium underline underline-offset-2">
+                            Kirim ulang email verifikasi.
+                        </Link>
                     </div>
 
-                    <div v-if="mustVerifyEmail && !terverifikasi">
-                        <p class="mt-2 text-sm text-neutral-800">
-                            Alamat email Anda belum terverifikasi. Menu lain terbuka setelah Anda mengeklik tautan di email.
-                            <Link
-                                :href="route('verification.send')"
-                                method="post"
-                                as="button"
-                                class="focus:outline-hidden rounded-md text-sm text-neutral-600 underline hover:text-neutral-900 focus:ring-2 focus:ring-offset-2"
-                            >
-                                Kirim ulang email verifikasi.
-                            </Link>
-                        </p>
-
-                        <div v-if="status === 'verification-link-sent'" class="mt-2 text-sm font-medium text-green-600">
-                            Tautan verifikasi baru sudah dikirim ke alamat email Anda.
-                        </div>
-                        <div v-if="galatKirim" class="mt-2 text-sm font-medium text-[#dd5b00]" role="alert">
-                            {{ galatKirim }}
-                        </div>
+                    <div v-if="status === 'verification-link-sent'" class="alert-sukses">
+                        Tautan verifikasi baru sudah dikirim ke alamat email Anda.
                     </div>
-
-                    <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing">Simpan</Button>
-
-                        <Transition
-                            enter-active-class="transition ease-in-out"
-                            enter-from-class="opacity-0"
-                            leave-active-class="transition ease-in-out"
-                            leave-to-class="opacity-0"
-                        >
-                            <p v-if="form.recentlySuccessful" class="text-sm text-neutral-600">Tersimpan.</p>
-                        </Transition>
+                    <div v-if="galatKirim" class="alert-gagal" role="alert">
+                        {{ galatKirim }}
                     </div>
-                </form>
-            </div>
+                </div>
+
+                <div class="mt-6 flex items-center justify-end gap-2">
+                    <Transition
+                        enter-active-class="transition ease-in-out"
+                        enter-from-class="opacity-0"
+                        leave-active-class="transition ease-in-out"
+                        leave-to-class="opacity-0"
+                    >
+                        <p v-if="form.recentlySuccessful" class="text-sm text-[#1aae39]">Tersimpan.</p>
+                    </Transition>
+                    <Button type="submit" :disabled="form.processing">Simpan</Button>
+                </div>
+            </form>
         </SettingsLayout>
     </AppLayout>
 </template>

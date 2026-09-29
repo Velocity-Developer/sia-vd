@@ -71,68 +71,58 @@ const submit = () => {
             { title: 'Jawaban Mahasiswa', href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
                     <div>
-                        <h1 class="text-[26px] font-bold text-black">{{ props.attempt.mahasiswa ?? '-' }}</h1>
-                        <p class="text-sm text-[#615d59]">
+                        <h1 class="judul-halaman">{{ props.attempt.mahasiswa ?? '-' }}</h1>
+                        <p class="deskripsi-halaman">
                             {{ props.attempt.nim ?? '-' }} · {{ props.quiz.nama_quiz }} · {{ props.kelasKuliah.kode_kelas }}
                             {{ props.kelasKuliah.nama_matkul ? `(${props.kelasKuliah.nama_matkul})` : '' }}
                         </p>
                     </div>
-                    <Link :href="props.urls.back" class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black"
-                        >Kembali</Link
-                    >
+                    <Button as-child variant="outline"><Link :href="props.urls.back">Kembali</Link></Button>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
+                <section class="kartu p-6">
                     <dl class="grid gap-4 sm:grid-cols-4">
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Mulai</dt>
-                            <dd class="font-medium">{{ formatDateTime(props.attempt.started_at) }}</dd>
+                            <dt class="teks-bantu">Mulai</dt>
+                            <dd class="text-sm font-medium text-black">{{ formatDateTime(props.attempt.started_at) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Selesai</dt>
-                            <dd class="font-medium">{{ formatDateTime(props.attempt.submitted_at) }}</dd>
+                            <dt class="teks-bantu">Selesai</dt>
+                            <dd class="text-sm font-medium text-black">{{ formatDateTime(props.attempt.submitted_at) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Score</dt>
+                            <dt class="teks-bantu">Score</dt>
                             <dd class="text-xl font-bold text-black">{{ props.attempt.score ?? '-' }}</dd>
                         </div>
                         <div v-if="props.attempt.auto_closed">
-                            <dt class="text-xs text-[#a39e98]">Keterangan</dt>
+                            <dt class="teks-bantu">Keterangan</dt>
                             <dd class="text-sm text-[#dd5b00]">Ditutup otomatis (waktu habis)</dd>
                         </div>
                     </dl>
                 </section>
 
-                <p v-if="props.nilaiTerkunci" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ props.nilaiTerkunci }}
-                </p>
+                <p v-if="props.nilaiTerkunci" class="alert-gagal">{{ props.nilaiTerkunci }}</p>
                 <form class="flex flex-col gap-4" @submit.prevent="submit">
-                    <article
-                        v-for="(item, index) in props.items"
-                        :key="item.question_id"
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm"
-                    >
+                    <article v-for="(item, index) in props.items" :key="item.question_id" class="kartu p-6">
                         <div class="flex flex-wrap items-start justify-between gap-2">
-                            <h2 class="font-medium text-black">{{ index + 1 }}. {{ item.question_text }}</h2>
-                            <span class="text-xs text-[#a39e98]"
-                                >{{ typeLabel[item.question_type] ?? item.question_type }} · {{ item.points }} poin</span
-                            >
+                            <h2 class="judul-bagian">{{ index + 1 }}. {{ item.question_text }}</h2>
+                            <span class="teks-bantu">{{ typeLabel[item.question_type] ?? item.question_type }} · {{ item.points }} poin</span>
                         </div>
 
                         <template v-if="item.question_type === 'essay'">
-                            <p class="mt-3 whitespace-pre-line rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-3 py-2 text-sm text-[#31302e]">
+                            <p
+                                class="mt-3 whitespace-pre-line rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] px-3 py-2 text-sm text-[#31302e] dark:border-border dark:bg-muted dark:text-foreground"
+                            >
                                 {{ item.answer?.[0] || 'Tidak dijawab.' }}
                             </p>
                             <div class="mt-3 flex items-center gap-2">
-                                <label :for="`poin-${item.question_id}`" class="text-sm text-[#615d59]">Poin</label>
+                                <label :for="`poin-${item.question_id}`" class="label-isian">Poin</label>
                                 <input
                                     :id="`poin-${item.question_id}`"
                                     v-model="form.points[item.question_id]"
@@ -142,7 +132,7 @@ const submit = () => {
                                     :max="item.points"
                                     step="0.5"
                                     placeholder="Belum dinilai"
-                                    class="h-9 w-32 rounded-lg border border-[#dddddd] px-3 text-sm focus:border-[#0075de] focus:outline-none"
+                                    class="isian w-32"
                                 />
                                 <span class="text-sm text-[#a39e98]">/ {{ item.points }}</span>
                             </div>
@@ -158,14 +148,14 @@ const submit = () => {
                                     :class="
                                         chosen(item, option)
                                             ? isCorrect(option)
-                                                ? 'bg-[#e8f6ec] text-[#1a7f37]'
-                                                : 'bg-[#fdecea] text-[#b42318]'
-                                            : 'text-[#31302e]'
+                                                ? 'bg-[#f0faf2] text-[#17702b]'
+                                                : 'bg-[#fdf3ec] text-[#a84400]'
+                                            : 'text-[#31302e] dark:text-foreground'
                                     "
                                 >
                                     <span class="w-4 text-center">{{ chosen(item, option) ? '●' : '○' }}</span>
                                     {{ option.text }}
-                                    <span v-if="isCorrect(option)" class="ml-auto text-xs text-[#1a7f37]">Kunci</span>
+                                    <span v-if="isCorrect(option)" class="ml-auto text-xs text-[#17702b]">Kunci</span>
                                 </li>
                             </ul>
                             <p class="mt-2 text-sm text-[#615d59]">
@@ -176,13 +166,7 @@ const submit = () => {
                     </article>
 
                     <div v-if="essays.length && !props.nilaiTerkunci" class="sticky bottom-4 flex justify-end">
-                        <Button
-                            type="submit"
-                            class="rounded-lg bg-[#0075de] text-white shadow-md hover:bg-[#005bab]"
-                            :disabled="form.processing || !props.attempt.submitted_at"
-                        >
-                            Simpan Nilai Esai
-                        </Button>
+                        <Button type="submit" :disabled="form.processing || !props.attempt.submitted_at">Simpan Nilai Esai</Button>
                     </div>
                 </form>
             </div>

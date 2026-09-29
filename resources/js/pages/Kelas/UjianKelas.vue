@@ -105,8 +105,6 @@ const rilis = (nilaiDirilis: boolean) =>
     router.put(rute('ujian.rilis-nilai', props.ujian.id), { nilai_dirilis: nilaiDirilis }, { preserveScroll: true });
 
 const labelSyarat = (s: Syarat) => (s?.dispensasi ? 'Dispensasi' : s?.memenuhi === false ? 'Tidak memenuhi' : s?.memenuhi ? 'Memenuhi' : '-');
-const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
-const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 </script>
 
 <template>
@@ -120,55 +118,55 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
             { title: `${JENIS_UJIAN[props.ujian.jenis]} ${props.kelasKuliah.kode_kelas}`, href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <p class="text-sm text-[#615d59]">{{ props.kelasKuliah.mata_kuliah?.nama_matkul }} · {{ props.kelasKuliah.kode_kelas }}</p>
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">
-                        {{ JENIS_UJIAN[props.ujian.jenis] }} — {{ props.ujian.label_mode }}
-                    </h1>
-                    <p class="text-sm text-[#31302e]">
-                        {{ formatTanggal(props.ujian.tanggal) }}, {{ jam(props.ujian.jam_mulai) }}–{{ jam(props.ujian.jam_akhir) }} ·
-                        {{ props.ujian.mode === 'tatap_muka' ? (props.ujian.ruang ?? '-') : 'Online di SIA' }}
-                        <span v-if="props.ujian.status === 'draf'" class="ml-1 rounded bg-[#f6f5f4] px-1.5 text-xs text-[#615d59]"
-                            >Draf – belum tampil ke mahasiswa</span
-                        >
-                    </p>
-                    <p v-if="props.ujian.jenis === 'remidi'" class="text-sm text-[#615d59]">
-                        Hanya peserta remidi yang tagihannya lunas.
-                        <template v-if="props.batasNilaiRemidi">Nilai remidi bisa diisi sampai {{ formatTanggal(props.batasNilaiRemidi) }}.</template>
-                    </p>
-                    <p v-else-if="jenisKhusus(props.ujian.jenis)" class="text-sm text-[#615d59]">
-                        Hanya pemohon susulan yang disetujui, tagihannya lunas, dan tidak mengikuti ujian utama. Mengerjakan susulan tidak mengubah
-                        presensi.
-                    </p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ JENIS_UJIAN[props.ujian.jenis] }} — {{ props.ujian.label_mode }}</h1>
+                        <p class="deskripsi-halaman">{{ props.kelasKuliah.mata_kuliah?.nama_matkul }} · {{ props.kelasKuliah.kode_kelas }}</p>
+                        <p class="deskripsi-halaman">
+                            {{ formatTanggal(props.ujian.tanggal) }}, {{ jam(props.ujian.jam_mulai) }}–{{ jam(props.ujian.jam_akhir) }} ·
+                            {{ props.ujian.mode === 'tatap_muka' ? (props.ujian.ruang ?? '-') : 'Online di SIA' }}
+                            <span
+                                v-if="props.ujian.status === 'draf'"
+                                class="ml-1 rounded bg-[#f6f5f4] px-1.5 text-xs text-[#615d59] dark:bg-muted dark:text-muted-foreground"
+                                >Draf – belum tampil ke mahasiswa</span
+                            >
+                        </p>
+                        <p v-if="props.ujian.jenis === 'remidi'" class="deskripsi-halaman">
+                            Hanya peserta remidi yang tagihannya lunas.
+                            <template v-if="props.batasNilaiRemidi"
+                                >Nilai remidi bisa diisi sampai {{ formatTanggal(props.batasNilaiRemidi) }}.</template
+                            >
+                        </p>
+                        <p v-else-if="jenisKhusus(props.ujian.jenis)" class="deskripsi-halaman">
+                            Hanya pemohon susulan yang disetujui, tagihannya lunas, dan tidak mengikuti ujian utama. Mengerjakan susulan tidak
+                            mengubah presensi.
+                        </p>
+                    </div>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
 
-                <p
-                    v-if="props.ujian.petunjuk"
-                    class="whitespace-pre-line rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#31302e]"
-                >
+                <p v-if="props.ujian.petunjuk" class="alert-info whitespace-pre-line">
                     {{ props.ujian.petunjuk }}
                 </p>
 
                 <!-- Soal (mode unggah berkas) -->
-                <section v-if="berkasMode" :class="kartu">
-                    <h2 class="text-lg font-semibold text-black">Berkas soal</h2>
-                    <p class="mt-1 text-sm text-[#615d59]">
+                <section v-if="berkasMode" class="kartu p-6">
+                    <h2 class="judul-bagian">Berkas soal</h2>
+                    <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                         Mahasiswa baru bisa mengunduh soal saat ujian dimulai. Soal hanya bisa diubah sebelum jam mulai.
                     </p>
-                    <ul v-if="props.ujian.soal.length" class="mt-3 divide-y divide-[#e6e6e6] rounded-lg border border-[#e6e6e6]">
+                    <ul
+                        v-if="props.ujian.soal.length"
+                        class="mt-4 divide-y divide-[#e6e6e6] rounded-lg border border-[#e6e6e6] dark:divide-border dark:border-border"
+                    >
                         <li v-for="(nama, i) in props.ujian.soal" :key="nama" class="flex items-center justify-between gap-2 px-3 py-2 text-sm">
                             <a
                                 :href="route('berkas.ujian-soal', [props.ujian.id, i])"
@@ -181,43 +179,38 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             <Button
                                 v-if="!props.sudahMulai"
                                 type="button"
-                                variant="ghost"
-                                size="sm"
+                                variant="outline"
+                                size="icon-sm"
                                 class="text-[#dd5b00]"
+                                title="Hapus"
                                 :aria-label="`Hapus ${nama}`"
                                 @click="hapusSoal(i)"
                             >
-                                <Trash2 class="size-4" />
+                                <Trash2 />
                             </Button>
                         </li>
                     </ul>
-                    <p v-else class="mt-3 text-sm text-[#dd5b00]">Belum ada berkas soal.</p>
+                    <p v-else class="mt-4 text-sm text-[#dd5b00]">Belum ada berkas soal.</p>
                     <form v-if="!props.sudahMulai" class="mt-4 flex flex-wrap items-center gap-3" @submit.prevent="unggahSoal">
                         <input ref="inputSoal" type="file" multiple class="text-sm" aria-label="Pilih berkas soal" @change="pilihSoal" />
-                        <Button
-                            type="submit"
-                            class="bg-[#0075de] text-white hover:bg-[#005bab]"
-                            :disabled="soalForm.processing || !soalForm.soal.length"
-                        >
-                            <FileUp class="mr-1 size-4" /> Unggah soal
-                        </Button>
+                        <Button type="submit" :disabled="soalForm.processing || !soalForm.soal.length"> <FileUp /> Unggah soal </Button>
                         <InputError class="w-full" :message="errorSoal" />
                     </form>
                 </section>
 
                 <!-- Pengumpulan & nilai -->
-                <section v-if="berkasMode || tatapMuka" :class="kartu">
+                <section v-if="berkasMode || tatapMuka" class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="text-lg font-semibold text-black">{{ tatapMuka ? 'Nilai ujian' : 'Jawaban mahasiswa' }}</h2>
-                            <p class="mt-1 text-sm text-[#615d59]">
+                            <h2 class="judul-bagian">{{ tatapMuka ? 'Nilai ujian' : 'Jawaban mahasiswa' }}</h2>
+                            <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                                 <template v-if="tatapMuka">{{ dinilai }} dari {{ props.peserta.length }} mahasiswa sudah dinilai.</template>
                                 <template v-else>{{ terkumpul }} dari {{ props.peserta.length }} mahasiswa mengumpulkan.</template>
                                 <template v-if="!props.sudahSelesai">{{ ' ' }}Nilai diisi setelah ujian selesai.</template>
                             </p>
                         </div>
                         <div v-if="props.sudahSelesai && !props.terkunci" class="flex items-center gap-2 text-sm">
-                            <span :class="props.ujian.nilai_dirilis ? 'text-[#1a7f37]' : 'text-[#615d59]'">
+                            <span :class="props.ujian.nilai_dirilis ? 'text-[#1a7f37]' : 'text-[#615d59] dark:text-muted-foreground'">
                                 {{ props.ujian.nilai_dirilis ? 'Nilai terlihat oleh mahasiswa' : 'Nilai belum dirilis' }}
                             </span>
                             <Button variant="outline" size="sm" @click="rilis(!props.ujian.nilai_dirilis)">
@@ -225,31 +218,32 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             </Button>
                         </div>
                     </div>
-                    <div class="mt-4 overflow-hidden rounded-lg border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[820px] text-left text-sm">
-                                <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[880px]">
+                                <thead>
                                     <tr>
-                                        <th :class="th">Mahasiswa</th>
-                                        <th v-if="props.syaratAktif" :class="th">Syarat</th>
-                                        <th v-if="berkasMode" :class="th">Jawaban</th>
-                                        <th :class="th">Nilai (0–100)</th>
+                                        <th class="kolom-no">No</th>
+                                        <th>Mahasiswa</th>
+                                        <th v-if="props.syaratAktif">Syarat</th>
+                                        <th v-if="berkasMode">Jawaban</th>
+                                        <th>Nilai (0–100)</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="p in props.peserta" :key="p.mahasiswa_id">
-                                        <td class="px-4 py-2.5">
-                                            <span class="block font-medium text-black">{{ p.nama }}</span>
-                                            <span class="block text-xs text-[#a39e98]">{{ p.nim }}</span>
+                                <tbody>
+                                    <tr v-for="(p, index) in props.peserta" :key="p.mahasiswa_id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td>
+                                            <span class="block font-medium text-black dark:text-foreground">{{ p.nama }}</span>
+                                            <span class="teks-bantu block">{{ p.nim }}</span>
                                         </td>
                                         <td
                                             v-if="props.syaratAktif"
-                                            class="px-4 py-2.5"
                                             :class="p.syarat?.memenuhi === false && !p.syarat?.dispensasi ? 'text-[#b42318]' : ''"
                                         >
                                             {{ labelSyarat(p.syarat) }}
                                         </td>
-                                        <td v-if="berkasMode" class="px-4 py-2.5">
+                                        <td v-if="berkasMode">
                                             <template v-if="p.jawaban">
                                                 <a
                                                     v-for="(nama, i) in p.jawaban.nama_berkas"
@@ -260,11 +254,11 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                                     class="block text-[#0075de] hover:underline"
                                                     >{{ nama }}</a
                                                 >
-                                                <span class="text-xs text-[#a39e98]">Dikumpulkan {{ formatJamDari(p.jawaban.dikumpulkan_at) }}</span>
+                                                <span class="teks-bantu">Dikumpulkan {{ formatJamDari(p.jawaban.dikumpulkan_at) }}</span>
                                             </template>
                                             <span v-else class="text-[#a39e98]">Belum mengumpulkan</span>
                                         </td>
-                                        <td class="px-4 py-2.5">
+                                        <td>
                                             <form
                                                 v-if="(tatapMuka || p.jawaban) && props.sudahSelesai && !props.terkunci"
                                                 class="flex flex-wrap items-center gap-2"
@@ -276,14 +270,15 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                                     min="0"
                                                     max="100"
                                                     step="0.01"
-                                                    class="h-9 w-24"
+                                                    class="w-24"
                                                     :aria-label="`Nilai ${p.nama}`"
                                                 />
                                                 <Input
                                                     v-model="nilai[p.mahasiswa_id].catatan"
                                                     maxlength="1000"
                                                     placeholder="Catatan (opsional)"
-                                                    class="h-9 w-48"
+                                                    class="w-48"
+                                                    :aria-label="`Catatan ${p.nama}`"
                                                 />
                                                 <Button type="submit" size="sm" variant="outline" :disabled="menyimpan === p.mahasiswa_id"
                                                     >Simpan</Button
@@ -291,6 +286,11 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                             </form>
                                             <span v-else-if="p.jawaban?.nilai">{{ p.jawaban.nilai }}</span>
                                             <span v-else class="text-[#a39e98]">-</span>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="!props.peserta.length" class="baris-kosong">
+                                        <td :colspan="3 + (props.syaratAktif ? 1 : 0) + (berkasMode ? 1 : 0)" class="tabel-kosong">
+                                            Belum ada peserta ujian.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -301,41 +301,38 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 
                 <!-- Mode soal di sistem -->
                 <template v-if="soalMode">
-                    <section :class="kartu">
-                        <h2 class="text-lg font-semibold text-black">Lembar soal</h2>
-                        <p class="mt-1 text-sm text-[#615d59]">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Lembar soal</h2>
+                        <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                             Disusun dengan editor quiz. Urutan soal dan opsi diacak per mahasiswa, satu kali pengerjaan, dan batas waktunya jam
                             selesai ujian. Soal terkunci setelah ujian dimulai.
                         </p>
-                        <div v-if="props.lembarSoal" class="mt-3 flex flex-wrap items-center gap-4 text-sm">
+                        <div v-if="props.lembarSoal" class="mt-4 flex flex-wrap items-center gap-4 text-sm">
                             <span>{{ props.lembarSoal.jumlah_soal }} soal · total {{ props.lembarSoal.total_poin }} poin</span>
                             <span>{{
                                 props.lembarSoal.waktu_pengerjaan ? `Durasi ${props.lembarSoal.waktu_pengerjaan} menit` : 'Durasi: sampai jam selesai'
                             }}</span>
-                            <Link
-                                :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, props.lembarSoal.id])"
-                                class="font-medium text-[#0075de] hover:underline"
-                            >
-                                {{ props.sudahMulai ? 'Lihat soal' : 'Kelola soal' }} →
-                            </Link>
+                            <Button as-child variant="outline" size="sm">
+                                <Link :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, props.lembarSoal.id])">
+                                    {{ props.sudahMulai ? 'Lihat soal' : 'Kelola soal' }} →
+                                </Link>
+                            </Button>
                             <span v-if="!props.lembarSoal.jumlah_soal && !props.sudahMulai" class="text-[#dd5b00]">Belum ada soal.</span>
                         </div>
-                        <Button v-else-if="!props.sudahMulai" class="mt-3 bg-[#0075de] text-white hover:bg-[#005bab]" @click="buatLembarSoal"
-                            >Buat lembar soal</Button
-                        >
-                        <p v-else class="mt-3 text-sm text-[#b42318]">Lembar soal tidak dibuat sebelum ujian dimulai.</p>
+                        <Button v-else-if="!props.sudahMulai" class="mt-4" @click="buatLembarSoal">Buat lembar soal</Button>
+                        <p v-else class="mt-4 text-sm text-[#b42318]">Lembar soal tidak dibuat sebelum ujian dimulai.</p>
                     </section>
 
-                    <section :class="kartu">
+                    <section class="kartu p-6">
                         <div class="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                                <h2 class="text-lg font-semibold text-black">Pengerjaan mahasiswa</h2>
-                                <p class="mt-1 text-sm text-[#615d59]">
+                                <h2 class="judul-bagian">Pengerjaan mahasiswa</h2>
+                                <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                                     {{ terkumpul }} dari {{ props.peserta.length }} mahasiswa selesai mengerjakan.
                                 </p>
                             </div>
                             <div v-if="props.sudahSelesai && !props.terkunci" class="flex items-center gap-2 text-sm">
-                                <span :class="props.ujian.nilai_dirilis ? 'text-[#1a7f37]' : 'text-[#615d59]'">
+                                <span :class="props.ujian.nilai_dirilis ? 'text-[#1a7f37]' : 'text-[#615d59] dark:text-muted-foreground'">
                                     {{ props.ujian.nilai_dirilis ? 'Nilai terlihat oleh mahasiswa' : 'Nilai belum dirilis' }}
                                 </span>
                                 <Button variant="outline" size="sm" @click="rilis(!props.ujian.nilai_dirilis)">
@@ -343,34 +340,35 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                 </Button>
                             </div>
                         </div>
-                        <div class="mt-4 overflow-hidden rounded-lg border border-[#e6e6e6]">
-                            <div class="relative overflow-x-auto">
-                                <table class="w-full min-w-[720px] text-left text-sm">
-                                    <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                        <div class="tabel-wadah mt-4">
+                            <div class="tabel-gulir">
+                                <table class="tabel min-w-[780px]">
+                                    <thead>
                                         <tr>
-                                            <th :class="th">Mahasiswa</th>
-                                            <th v-if="props.syaratAktif" :class="th">Syarat</th>
-                                            <th :class="th">Status</th>
-                                            <th :class="th">Nilai (0–100)</th>
+                                            <th class="kolom-no">No</th>
+                                            <th>Mahasiswa</th>
+                                            <th v-if="props.syaratAktif">Syarat</th>
+                                            <th>Status</th>
+                                            <th>Nilai (0–100)</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-[#e6e6e6]">
-                                        <tr v-for="p in props.peserta" :key="p.mahasiswa_id">
-                                            <td class="px-4 py-2.5">
-                                                <span class="block font-medium text-black">{{ p.nama }}</span>
-                                                <span class="block text-xs text-[#a39e98]">{{ p.nim }}</span>
+                                    <tbody>
+                                        <tr v-for="(p, index) in props.peserta" :key="p.mahasiswa_id">
+                                            <td class="kolom-no">{{ index + 1 }}</td>
+                                            <td>
+                                                <span class="block font-medium text-black dark:text-foreground">{{ p.nama }}</span>
+                                                <span class="teks-bantu block">{{ p.nim }}</span>
                                             </td>
                                             <td
                                                 v-if="props.syaratAktif"
-                                                class="px-4 py-2.5"
                                                 :class="p.syarat?.memenuhi === false && !p.syarat?.dispensasi ? 'text-[#b42318]' : ''"
                                             >
                                                 {{ labelSyarat(p.syarat) }}
                                             </td>
-                                            <td class="px-4 py-2.5">
+                                            <td>
                                                 <template v-if="p.pengerjaan?.selesai_at">
                                                     Selesai {{ formatJamDari(p.pengerjaan.selesai_at) }}
-                                                    <span v-if="p.pengerjaan.auto_closed" class="block text-xs text-[#a39e98]"
+                                                    <span v-if="p.pengerjaan.auto_closed" class="teks-bantu block"
                                                         >ditutup otomatis saat waktu habis</span
                                                     >
                                                 </template>
@@ -379,10 +377,10 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                                 >
                                                 <span v-else class="text-[#a39e98]">Belum mengerjakan</span>
                                             </td>
-                                            <td class="px-4 py-2.5">
+                                            <td>
                                                 <template v-if="p.pengerjaan?.selesai_at && props.lembarSoal">
-                                                    <span class="font-medium text-black">{{ p.pengerjaan.nilai ?? '-' }}</span>
-                                                    <span class="ml-1 text-xs text-[#a39e98]"
+                                                    <span class="font-medium text-black dark:text-foreground">{{ p.pengerjaan.nilai ?? '-' }}</span>
+                                                    <span class="teks-bantu ml-1"
                                                         >({{ p.pengerjaan.skor ?? '-' }} / {{ props.lembarSoal.total_poin }} poin)</span
                                                     >
                                                     <Link
@@ -400,6 +398,9 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                                 <span v-else class="text-[#a39e98]">-</span>
                                             </td>
                                         </tr>
+                                        <tr v-if="!props.peserta.length" class="baris-kosong">
+                                            <td :colspan="props.syaratAktif ? 5 : 4" class="tabel-kosong">Belum ada peserta ujian.</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -407,13 +408,13 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     </section>
                 </template>
 
-                <section v-if="props.ujian.mode === 'tatap_muka'" :class="kartu">
-                    <p v-if="jenisKhusus(props.ujian.jenis)" class="text-sm text-[#615d59]">
+                <section v-if="props.ujian.mode === 'tatap_muka'" class="kartu p-6">
+                    <p v-if="jenisKhusus(props.ujian.jenis)" class="text-sm text-[#615d59] dark:text-muted-foreground">
                         Ujian {{ JENIS_UJIAN[props.ujian.jenis].toLowerCase() }} tatap muka:
                         <a :href="rute('ujian.daftar-hadir', props.ujian.id)" class="text-[#0075de] hover:underline">unduh daftar hadir (PDF)</a>
                         berisi pesertanya yang sudah lunas.
                     </p>
-                    <p v-else class="text-sm text-[#615d59]">
+                    <p v-else class="text-sm text-[#615d59] dark:text-muted-foreground">
                         Ujian tatap muka: daftar hadir dicetak dari halaman
                         <Link :href="rute('presensi.kelas', props.kelasKuliah.id)" class="text-[#0075de] hover:underline">Presensi kelas</Link>
                         (tab Peserta Ujian).

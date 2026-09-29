@@ -424,202 +424,160 @@ const formatTenggat = (value: string | null | undefined): string => {
 <template>
     <Head :title="`Detail ${props.kelasKuliah.kode_kelas}`" />
     <AppLayout :breadcrumbs="[{ title: 'Detail Kelas Kuliah', href: '#' }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Detail Kelas Kuliah</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan kode kelas, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Detail Kelas Kuliah</h1>
+                        <p class="deskripsi-halaman">Ringkasan kode kelas, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
                     </div>
-                    <div class="flex gap-2">
-                        <Link :href="rute('kelas-kuliah.index')"
-                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                        >
-                        <Link v-if="can(`${props.peran}.presensi`)" :href="rute('presensi.kelas', props.kelasKuliah.id)"
-                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Presensi</Button></Link
-                        >
-                        <Link v-if="isAdmin" :href="rute('kelas-kuliah.edit', props.kelasKuliah.id)"
-                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
-                        >
+                    <div class="flex flex-wrap gap-2">
+                        <Button as-child variant="outline"><Link :href="rute('kelas-kuliah.index')">Kembali</Link></Button>
+                        <Button v-if="can(`${props.peran}.presensi`)" as-child variant="outline">
+                            <Link :href="rute('presensi.kelas', props.kelasKuliah.id)">Presensi</Link>
+                        </Button>
+                        <Button v-if="isAdmin" as-child><Link :href="rute('kelas-kuliah.edit', props.kelasKuliah.id)">Edit</Link></Button>
                     </div>
                 </div>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Kelas</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Informasi Kelas</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kode Kelas</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.kelasKuliah.kode_kelas) }}</dd>
+                            <dt class="teks-bantu">Kode Kelas</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(props.kelasKuliah.kode_kelas) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Tahun Ajaran</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">
+                            <dt class="teks-bantu">Tahun Ajaran</dt>
+                            <dd class="break-words text-sm font-medium text-black">
                                 {{ tahunAkademik() ? `${tahunAkademik()?.tahun} ${tahunAkademik()?.semester}` : '-' }}
                             </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kapasitas</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.kelasKuliah.kapasitas) }}</dd>
+                            <dt class="teks-bantu">Kapasitas</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(props.kelasKuliah.kapasitas) }}</dd>
                         </div>
                     </dl>
                 </section>
 
-                <section
-                    v-if="isAdmin"
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Dosen Pengampu</h2>
+                <section v-if="isAdmin" class="kartu p-6">
+                    <h2 class="judul-bagian">Dosen Pengampu</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Nama Dosen</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(dosen()?.user?.name) }}</dd>
+                            <dt class="teks-bantu">Nama Dosen</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(dosen()?.user?.name) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">NIDN</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(dosen()?.nidn) }}</dd>
+                            <dt class="teks-bantu">NIDN</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(dosen()?.nidn) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Jabatan Fungsional</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(dosen()?.jabatan_fungsional) }}</dd>
+                            <dt class="teks-bantu">Jabatan Fungsional</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(dosen()?.jabatan_fungsional) }}</dd>
                         </div>
                     </dl>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Mata Kuliah</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Kode Mata Kuliah</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(matkul()?.kode_matkul) }}</dd>
+                            <dt class="teks-bantu">Kode Mata Kuliah</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(matkul()?.kode_matkul) }}</dd>
                         </div>
                         <div class="space-y-1 sm:col-span-2">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Nama Mata Kuliah</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(matkul()?.nama_matkul) }}</dd>
+                            <dt class="teks-bantu">Nama Mata Kuliah</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(matkul()?.nama_matkul) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">SKS</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(matkul()?.sks) }}</dd>
+                            <dt class="teks-bantu">SKS</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(matkul()?.sks) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Semester</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(matkul()?.semester) }}</dd>
+                            <dt class="teks-bantu">Semester</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(matkul()?.semester) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Jenis</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(matkul()?.jenis) }}</dd>
+                            <dt class="teks-bantu">Jenis</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(matkul()?.jenis) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Program Studi</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(matkul()?.prodi?.nama_prodi) }}</dd>
+                            <dt class="teks-bantu">Program Studi</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(matkul()?.prodi?.nama_prodi) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Fakultas</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">
+                            <dt class="teks-bantu">Fakultas</dt>
+                            <dd class="break-words text-sm font-medium text-black">
                                 {{ v(matkul()?.prodi?.fakultas?.nama_fakultas) }}
                             </dd>
                         </div>
                     </dl>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal</h2>
+                            <h2 class="judul-bagian">Jadwal</h2>
                             <Link
                                 :href="rute('jadwal.index', { kelas_id: props.kelasKuliah.id })"
                                 class="text-xs font-medium text-[#0075de] hover:underline"
                                 >Buka di menu Jadwal Kelas →</Link
                             >
-                            <p class="text-sm leading-5 text-[#615d59]">Hari, jam, dan ruang untuk kelas ini.</p>
+                            <p class="teks-bantu">Hari, jam, dan ruang untuk kelas ini.</p>
                         </div>
-                        <Link v-if="isAdmin" :href="rute('kelas-kuliah.jadwal.create', props.kelasKuliah.id)">
-                            <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Jadwal</Button>
-                        </Link>
+                        <Button v-if="isAdmin" as-child>
+                            <Link :href="rute('kelas-kuliah.jadwal.create', props.kelasKuliah.id)"><Plus />Tambah Jadwal</Link>
+                        </Button>
                     </div>
 
-                    <div
-                        v-if="page.props.flash?.jadwal_success"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.jadwal_success }}
-                    </div>
-                    <div
-                        v-if="page.props.flash?.jadwal_error"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.jadwal_error }}
-                    </div>
+                    <div v-if="page.props.flash?.jadwal_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.jadwal_success }}</div>
+                    <div v-if="page.props.flash?.jadwal_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.jadwal_error }}</div>
 
-                    <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[640px]">
                                 <thead>
-                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Hari</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jam</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Ruang</th>
-                                        <th
-                                            v-if="isAdmin"
-                                            class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]"
-                                        >
-                                            Aksi
-                                        </th>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Hari</th>
+                                        <th>Jam</th>
+                                        <th>Ruang</th>
+                                        <th v-if="isAdmin" class="kolom-aksi">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr
-                                        v-for="jadwal in props.kelasKuliah.jadwals ?? []"
-                                        :key="jadwal.id"
-                                        class="transition-colors hover:bg-[#f6f5f4]/60"
-                                    >
-                                        <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ v(jadwal.hari) }}</td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
-                                            {{ jam(jadwal.jam_mulai) }}–{{ jam(jadwal.jam_akhir) }}
-                                        </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                <tbody>
+                                    <tr v-for="(jadwal, index) in props.kelasKuliah.jadwals ?? []" :key="jadwal.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td class="font-medium text-black">{{ v(jadwal.hari) }}</td>
+                                        <td>{{ jam(jadwal.jam_mulai) }}–{{ jam(jadwal.jam_akhir) }}</td>
+                                        <td>
                                             <span class="block">{{ v(jadwal.ruang?.kode_ruang) }} — {{ v(jadwal.ruang?.nama_ruang) }}</span>
                                         </td>
-                                        <td v-if="isAdmin" class="px-4 py-3">
-                                            <div class="flex justify-end gap-1.5">
-                                                <Link
-                                                    :href="rute('kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
-                                                    title="Edit"
-                                                    aria-label="Edit"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Pencil class="size-4"
-                                                    /></Button>
-                                                </Link>
-                                                <button type="button" title="Hapus" aria-label="Hapus" @click="removeJadwal(jadwal)">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Trash2 class="size-4"
-                                                    /></Button>
-                                                </button>
+                                        <td v-if="isAdmin" class="kolom-aksi">
+                                            <div class="aksi-tabel">
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
+                                                        title="Edit"
+                                                        aria-label="Edit"
+                                                        ><Pencil
+                                                    /></Link>
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#dd5b00]"
+                                                    title="Hapus"
+                                                    aria-label="Hapus"
+                                                    @click="removeJadwal(jadwal)"
+                                                    ><Trash2
+                                                /></Button>
                                             </div>
                                         </td>
                                     </tr>
-                                    <tr v-if="!(props.kelasKuliah.jadwals ?? []).length">
-                                        <td colspan="4" class="px-4 py-10 text-center">
-                                            <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-6">
-                                                <p class="text-sm font-medium text-black">Belum ada jadwal</p>
-                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">Tambahkan hari, jam, dan ruang untuk kelas ini.</p>
-                                            </div>
+                                    <tr v-if="!(props.kelasKuliah.jadwals ?? []).length" class="baris-kosong">
+                                        <td :colspan="isAdmin ? 5 : 4" class="tabel-kosong">
+                                            Belum ada jadwal. Tambahkan hari, jam, dan ruang untuk kelas ini.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -628,68 +586,52 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Materi</h2>
+                            <h2 class="judul-bagian">Materi</h2>
                             <Link
                                 :href="rute('materi.index', { kelas_id: props.kelasKuliah.id })"
                                 class="text-xs font-medium text-[#0075de] hover:underline"
                                 >Buka di menu Materi →</Link
                             >
-                            <p class="text-sm leading-5 text-[#615d59]">Bahan ajar per pertemuan untuk kelas ini.</p>
+                            <p class="teks-bantu">Bahan ajar per pertemuan untuk kelas ini.</p>
                         </div>
-                        <Link :href="rute('kelas-kuliah.materi.create', props.kelasKuliah.id)">
-                            <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Materi</Button>
-                        </Link>
+                        <Button as-child>
+                            <Link :href="rute('kelas-kuliah.materi.create', props.kelasKuliah.id)"><Plus />Tambah Materi</Link>
+                        </Button>
                     </div>
 
-                    <div
-                        v-if="page.props.flash?.materi_success"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.materi_success }}
-                    </div>
-                    <div
-                        v-if="page.props.flash?.materi_error"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.materi_error }}
-                    </div>
+                    <div v-if="page.props.flash?.materi_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.materi_success }}</div>
+                    <div v-if="page.props.flash?.materi_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.materi_error }}</div>
 
-                    <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[640px]">
                                 <thead>
-                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pertemuan</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Judul Materi</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Berkas</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Diunggah Oleh</th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Pertemuan</th>
+                                        <th>Judul Materi</th>
+                                        <th>Berkas</th>
+                                        <th>Diunggah Oleh</th>
+                                        <th class="kolom-aksi">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr
-                                        v-for="materi in props.kelasKuliah.materis ?? []"
-                                        :key="materi.id"
-                                        class="transition-colors hover:bg-[#f6f5f4]/60"
-                                    >
-                                        <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">Pertemuan {{ v(materi.pertemuan_ke) }}</td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                <tbody>
+                                    <tr v-for="(materi, index) in props.kelasKuliah.materis ?? []" :key="materi.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td class="font-medium text-black">Pertemuan {{ v(materi.pertemuan_ke) }}</td>
+                                        <td>
                                             <span class="block font-medium text-black">{{ v(materi.judul_materi) }}</span>
                                             <span
                                                 v-if="materi.catatan"
-                                                class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]"
+                                                class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
                                                 :title="String(materi.catatan)"
                                                 >{{ materi.catatan }}</span
                                             >
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             <ul v-if="materiFiles(materi).length" class="space-y-1">
                                                 <li v-for="(path, fileIndex) in materiFiles(materi)" :key="path">
                                                     <a
@@ -704,58 +646,43 @@ const formatTenggat = (value: string | null | undefined): string => {
                                             </ul>
                                             <span v-else>-</span>
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             {{ v(materi.uploader?.name) }}
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex justify-end gap-1.5">
-                                                <button
-                                                    type="button"
+                                        <td class="kolom-aksi">
+                                            <div class="aksi-tabel">
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#2a9d99]"
                                                     title="Duplikasi"
                                                     aria-label="Duplikasi"
                                                     @click="openDuplicate('materi', materi)"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Copy class="size-4"
-                                                    /></Button>
-                                                </button>
-                                                <Link
-                                                    :href="rute('kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
-                                                    title="Edit"
-                                                    aria-label="Edit"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Pencil class="size-4"
-                                                    /></Button>
-                                                </Link>
-                                                <button type="button" title="Hapus" aria-label="Hapus" @click="removeMateri(materi)">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Trash2 class="size-4"
-                                                    /></Button>
-                                                </button>
+                                                    ><Copy
+                                                /></Button>
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
+                                                        title="Edit"
+                                                        aria-label="Edit"
+                                                        ><Pencil
+                                                    /></Link>
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#dd5b00]"
+                                                    title="Hapus"
+                                                    aria-label="Hapus"
+                                                    @click="removeMateri(materi)"
+                                                    ><Trash2
+                                                /></Button>
                                             </div>
                                         </td>
                                     </tr>
-                                    <tr v-if="!(props.kelasKuliah.materis ?? []).length">
-                                        <td colspan="5" class="px-4 py-10 text-center">
-                                            <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-6">
-                                                <p class="text-sm font-medium text-black">Belum ada materi</p>
-                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">
-                                                    Tambahkan judul, pertemuan, berkas, dan catatan untuk kelas ini.
-                                                </p>
-                                            </div>
+                                    <tr v-if="!(props.kelasKuliah.materis ?? []).length" class="baris-kosong">
+                                        <td colspan="6" class="tabel-kosong">
+                                            Belum ada materi. Tambahkan judul, pertemuan, berkas, dan catatan untuk kelas ini.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -764,70 +691,54 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tugas</h2>
+                            <h2 class="judul-bagian">Tugas</h2>
                             <Link
                                 :href="rute('tugas.index', { kelas_id: props.kelasKuliah.id })"
                                 class="text-xs font-medium text-[#0075de] hover:underline"
                                 >Buka di menu Tugas →</Link
                             >
-                            <p class="text-sm leading-5 text-[#615d59]">Daftar tugas beserta tenggat waktu untuk kelas ini.</p>
+                            <p class="teks-bantu">Daftar tugas beserta tenggat waktu untuk kelas ini.</p>
                         </div>
-                        <Link :href="rute('kelas-kuliah.tugas.create', props.kelasKuliah.id)">
-                            <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Tugas</Button>
-                        </Link>
+                        <Button as-child>
+                            <Link :href="rute('kelas-kuliah.tugas.create', props.kelasKuliah.id)"><Plus />Tambah Tugas</Link>
+                        </Button>
                     </div>
 
-                    <div
-                        v-if="page.props.flash?.tugas_success"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.tugas_success }}
-                    </div>
-                    <div
-                        v-if="page.props.flash?.tugas_error"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.tugas_error }}
-                    </div>
+                    <div v-if="page.props.flash?.tugas_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.tugas_success }}</div>
+                    <div v-if="page.props.flash?.tugas_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.tugas_error }}</div>
 
-                    <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[640px]">
                                 <thead>
-                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Judul Tugas</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tenggat Waktu</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Berkas</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Diunggah Oleh</th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Judul Tugas</th>
+                                        <th>Tenggat Waktu</th>
+                                        <th>Berkas</th>
+                                        <th>Diunggah Oleh</th>
+                                        <th class="kolom-aksi">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr
-                                        v-for="tugas in props.kelasKuliah.tugas ?? []"
-                                        :key="tugas.id"
-                                        class="transition-colors hover:bg-[#f6f5f4]/60"
-                                    >
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                <tbody>
+                                    <tr v-for="(tugas, index) in props.kelasKuliah.tugas ?? []" :key="tugas.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td>
                                             <span class="block font-medium text-black">{{ v(tugas.judul_tugas) }}</span>
                                             <span
                                                 v-if="tugas.catatan"
-                                                class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]"
+                                                class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
                                                 :title="String(tugas.catatan)"
                                                 >{{ tugas.catatan }}</span
                                             >
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             {{ formatTenggat(tugas.tenggat_waktu) }}
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             <ul v-if="tugasFiles(tugas).length" class="space-y-1">
                                                 <li v-for="(path, fileIndex) in tugasFiles(tugas)" :key="path">
                                                     <a
@@ -842,66 +753,51 @@ const formatTenggat = (value: string | null | undefined): string => {
                                             </ul>
                                             <span v-else>-</span>
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             {{ v(tugas.uploader?.name) }}
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex justify-end gap-1.5">
-                                                <Link
-                                                    :href="rute('kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
-                                                    title="Lihat detail"
-                                                    aria-label="Lihat detail"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Eye class="size-4"
-                                                    /></Button>
-                                                </Link>
-                                                <button type="button" title="Duplikasi" aria-label="Duplikasi" @click="openDuplicate('tugas', tugas)">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Copy class="size-4"
-                                                    /></Button>
-                                                </button>
-                                                <Link
-                                                    :href="rute('kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
-                                                    title="Edit"
-                                                    aria-label="Edit"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Pencil class="size-4"
-                                                    /></Button>
-                                                </Link>
-                                                <button type="button" title="Hapus" aria-label="Hapus" @click="removeTugas(tugas)">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Trash2 class="size-4"
-                                                    /></Button>
-                                                </button>
+                                        <td class="kolom-aksi">
+                                            <div class="aksi-tabel">
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
+                                                        title="Lihat detail"
+                                                        aria-label="Lihat detail"
+                                                        ><Eye
+                                                    /></Link>
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#2a9d99]"
+                                                    title="Duplikasi"
+                                                    aria-label="Duplikasi"
+                                                    @click="openDuplicate('tugas', tugas)"
+                                                    ><Copy
+                                                /></Button>
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
+                                                        title="Edit"
+                                                        aria-label="Edit"
+                                                        ><Pencil
+                                                    /></Link>
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#dd5b00]"
+                                                    title="Hapus"
+                                                    aria-label="Hapus"
+                                                    @click="removeTugas(tugas)"
+                                                    ><Trash2
+                                                /></Button>
                                             </div>
                                         </td>
                                     </tr>
-                                    <tr v-if="!(props.kelasKuliah.tugas ?? []).length">
-                                        <td colspan="5" class="px-4 py-10 text-center">
-                                            <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-6">
-                                                <p class="text-sm font-medium text-black">Belum ada tugas</p>
-                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">
-                                                    Tambahkan judul, tenggat waktu, berkas, dan catatan untuk kelas ini.
-                                                </p>
-                                            </div>
+                                    <tr v-if="!(props.kelasKuliah.tugas ?? []).length" class="baris-kosong">
+                                        <td colspan="6" class="tabel-kosong">
+                                            Belum ada tugas. Tambahkan judul, tenggat waktu, berkas, dan catatan untuk kelas ini.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -910,132 +806,101 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Quiz</h2>
+                            <h2 class="judul-bagian">Quiz</h2>
                             <Link
                                 :href="rute('quiz.index', { kelas_id: props.kelasKuliah.id })"
                                 class="text-xs font-medium text-[#0075de] hover:underline"
                                 >Buka di menu Quiz →</Link
                             >
-                            <p class="text-sm leading-5 text-[#615d59]">Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini.</p>
+                            <p class="teks-bantu">Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini.</p>
                         </div>
-                        <Link :href="rute('kelas-kuliah.quiz.create', props.kelasKuliah.id)">
-                            <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"><Plus class="mr-1 size-4" />Tambah Quiz</Button>
-                        </Link>
+                        <Button as-child>
+                            <Link :href="rute('kelas-kuliah.quiz.create', props.kelasKuliah.id)"><Plus />Tambah Quiz</Link>
+                        </Button>
                     </div>
 
-                    <div
-                        v-if="page.props.flash?.quiz_success"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.quiz_success }}
-                    </div>
-                    <div
-                        v-if="page.props.flash?.quiz_error"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.quiz_error }}
-                    </div>
+                    <div v-if="page.props.flash?.quiz_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.quiz_success }}</div>
+                    <div v-if="page.props.flash?.quiz_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.quiz_error }}</div>
 
-                    <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[640px]">
                                 <thead>
-                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nama Quiz</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Durasi</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tenggat Waktu</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Diunggah Oleh</th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Nama Quiz</th>
+                                        <th>Durasi</th>
+                                        <th>Tenggat Waktu</th>
+                                        <th>Diunggah Oleh</th>
+                                        <th class="kolom-aksi">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr
-                                        v-for="quiz in props.kelasKuliah.quizzes ?? []"
-                                        :key="quiz.id"
-                                        class="transition-colors hover:bg-[#f6f5f4]/60"
-                                    >
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                <tbody>
+                                    <tr v-for="(quiz, index) in props.kelasKuliah.quizzes ?? []" :key="quiz.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td>
                                             <span class="block font-medium text-black">{{ v(quiz.nama_quiz) }}</span>
                                             <span
                                                 v-if="quiz.catatan"
-                                                class="mt-0.5 block max-w-md truncate text-sm text-[#615d59]"
+                                                class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
                                                 :title="String(quiz.catatan)"
                                                 >{{ quiz.catatan }}</span
                                             >
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             {{ quiz.waktu_pengerjaan ? `${quiz.waktu_pengerjaan} menit` : '-' }}
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             {{ formatTenggat(quiz.tenggat_waktu) }}
                                         </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                        <td>
                                             {{ v(quiz.uploader?.name) }}
                                         </td>
-                                        <td class="px-4 py-3">
-                                            <div class="flex justify-end gap-1.5">
-                                                <Link
-                                                    :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
-                                                    title="Detail"
-                                                    aria-label="Detail"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Eye class="size-4"
-                                                    /></Button>
-                                                </Link>
-                                                <button type="button" title="Duplikasi" aria-label="Duplikasi" @click="openDuplicate('quiz', quiz)">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Copy class="size-4"
-                                                    /></Button>
-                                                </button>
-                                                <Link
-                                                    :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
-                                                    title="Edit"
-                                                    aria-label="Edit"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Pencil class="size-4"
-                                                    /></Button>
-                                                </Link>
-                                                <button type="button" title="Hapus" aria-label="Hapus" @click="removeQuiz(quiz)">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
-                                                        aria-hidden="true"
-                                                        ><Trash2 class="size-4"
-                                                    /></Button>
-                                                </button>
+                                        <td class="kolom-aksi">
+                                            <div class="aksi-tabel">
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
+                                                        title="Detail"
+                                                        aria-label="Detail"
+                                                        ><Eye
+                                                    /></Link>
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#2a9d99]"
+                                                    title="Duplikasi"
+                                                    aria-label="Duplikasi"
+                                                    @click="openDuplicate('quiz', quiz)"
+                                                    ><Copy
+                                                /></Button>
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
+                                                        title="Edit"
+                                                        aria-label="Edit"
+                                                        ><Pencil
+                                                    /></Link>
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#dd5b00]"
+                                                    title="Hapus"
+                                                    aria-label="Hapus"
+                                                    @click="removeQuiz(quiz)"
+                                                    ><Trash2
+                                                /></Button>
                                             </div>
                                         </td>
                                     </tr>
-                                    <tr v-if="!(props.kelasKuliah.quizzes ?? []).length">
-                                        <td colspan="5" class="px-4 py-10 text-center">
-                                            <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-6">
-                                                <p class="text-sm font-medium text-black">Belum ada quiz</p>
-                                                <p class="mt-1 text-sm leading-5 text-[#615d59]">
-                                                    Tambahkan nama, durasi, tenggat waktu, dan catatan untuk kelas ini.
-                                                </p>
-                                            </div>
+                                    <tr v-if="!(props.kelasKuliah.quizzes ?? []).length" class="baris-kosong">
+                                        <td colspan="6" class="tabel-kosong">
+                                            Belum ada quiz. Tambahkan nama, durasi, tenggat waktu, dan catatan untuk kelas ini.
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1044,12 +909,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nilai Mahasiswa</h2>
+                            <h2 class="judul-bagian">Nilai Mahasiswa</h2>
                             <p v-if="props.statusNilai.final_at" class="mt-2 text-sm text-[#31302e]">
                                 <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Final</span>
                                 Difinalisasi {{ formatTanggal(props.statusNilai.final_at) }}
@@ -1067,7 +930,6 @@ const formatTenggat = (value: string | null | undefined): string => {
                             <template v-if="!props.statusNilai.final && !props.nilaiTerkunci">
                                 <Button
                                     size="sm"
-                                    class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
                                     :disabled="props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda > 0"
                                     :title="
                                         props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda
@@ -1078,114 +940,81 @@ const formatTenggat = (value: string | null | undefined): string => {
                                     >Finalisasi Nilai</Button
                                 >
                             </template>
-                            <Button
-                                v-if="isAdmin && props.statusNilai.final"
-                                size="sm"
-                                variant="outline"
-                                class="rounded-full"
-                                @click="bukaOpen = true"
+                            <Button v-if="isAdmin && props.statusNilai.final" size="sm" variant="outline" @click="bukaOpen = true"
                                 >Buka Kunci Nilai</Button
                             >
                         </div>
                     </div>
-                    <p v-if="props.statusNilai.uas_belum_selesai && !props.statusNilai.final" class="mt-2 text-xs text-[#a39e98]">
+                    <p v-if="props.statusNilai.uas_belum_selesai && !props.statusNilai.final" class="teks-bantu mt-2">
                         Nilai bisa difinalisasi setelah UAS selesai.
                     </p>
-                    <p v-else-if="props.statusNilai.susulan_tertunda && !props.statusNilai.final" class="mt-2 text-xs text-[#a39e98]">
+                    <p v-else-if="props.statusNilai.susulan_tertunda && !props.statusNilai.final" class="teks-bantu mt-2">
                         Nilai bisa difinalisasi setelah UAS susulan {{ props.statusNilai.susulan_tertunda }} mahasiswa selesai atau gugur.
                     </p>
-                    <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="relative w-full sm:max-w-sm">
+                    <div class="bilah-filter mt-4">
+                        <div class="kolom-cari">
                             <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                            <Input
-                                v-model="gradeSearch"
-                                placeholder="Cari nama mahasiswa atau NIM"
-                                class="h-9 rounded-[4px] border-[#dddddd] bg-white pl-9 text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de]"
-                            />
+                            <Input v-model="gradeSearch" placeholder="Cari nama mahasiswa atau NIM" aria-label="Cari mahasiswa" class="pl-9" />
                         </div>
-                        <p class="text-sm text-[#615d59]">
-                            <span class="font-medium text-black">{{ filteredKrs.length }}</span>
-                            mahasiswa
+                        <p class="info-jumlah sm:ml-auto">
+                            <span class="font-medium text-black">{{ filteredKrs.length }}</span> mahasiswa
                         </p>
                     </div>
-                    <div
-                        v-if="page.props.flash?.success"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.success }}
-                    </div>
-                    <div
-                        v-if="page.props.flash?.error"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                        role="alert"
-                    >
-                        {{ page.props.flash.error }}
-                    </div>
-                    <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[720px] text-left">
+                    <div v-if="page.props.flash?.success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.success }}</div>
+                    <div v-if="page.props.flash?.error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.error }}</div>
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[720px]">
                                 <thead>
-                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">No.</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Mahasiswa</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Program Studi</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai</th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Aksi</th>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Mahasiswa</th>
+                                        <th>Program Studi</th>
+                                        <th>Nilai</th>
+                                        <th class="kolom-aksi">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="(krs, index) in filteredKrs" :key="krs.id" class="hover:bg-[#f6f5f4]/60">
-                                        <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                        <td class="px-4 py-3 text-sm font-medium text-black">
+                                <tbody>
+                                    <tr v-for="(krs, index) in filteredKrs" :key="krs.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td class="font-medium text-black">
                                             {{ krs.mahasiswa?.user?.name ?? '-' }}
-                                            <span class="text-[#615d59]">({{ krs.mahasiswa?.nim ?? '-' }})</span>
+                                            <span class="font-normal text-[#615d59]">({{ krs.mahasiswa?.nim ?? '-' }})</span>
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-[#31302e]">
+                                        <td>
                                             {{ krs.mahasiswa?.prodi?.nama_prodi ?? '-' }}
                                         </td>
-                                        <td class="px-4 py-3 text-sm">
-                                            <select
-                                                v-if="editingKrs === krs.id"
-                                                v-model="grade"
-                                                class="h-9 rounded-lg border border-[#e6e6e6] bg-white px-3 text-sm"
-                                            >
+                                        <td>
+                                            <select v-if="editingKrs === krs.id" v-model="grade" aria-label="Nilai" class="isian isian-pilih w-36">
                                                 <option v-if="!jalurRemidi(krs)" value="">— Kosong —</option>
                                                 <option v-for="option in opsiHuruf(krs)" :key="option" :value="option">
                                                     {{ option }}
                                                 </option>
                                             </select>
-                                            <span v-else class="font-semibold">{{ krs.nilai ?? '-' }}</span>
+                                            <span v-else class="font-semibold text-black">{{ krs.nilai ?? '-' }}</span>
                                         </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <template v-if="editingKrs === krs.id">
-                                                <Button
-                                                    size="sm"
-                                                    class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                                                    @click="saveGrade(krs)"
-                                                    >Simpan</Button
-                                                >
-                                                <Button size="sm" variant="outline" class="ml-2 rounded-full" @click="editingKrs = null"
-                                                    >Batal</Button
-                                                >
-                                            </template>
-                                            <span v-else-if="!bolehUbahNilai(krs)" class="text-xs text-[#a39e98]">{{
-                                                menungguRemidi(krs) && !props.nilaiTerkunci ? 'Diubah lewat remidi' : 'Nilai terkunci'
-                                            }}</span>
-                                            <template v-else>
-                                                <Button size="sm" variant="outline" class="rounded-full" @click="editGrade(krs)">{{
-                                                    jalurRemidi(krs) ? 'Ubah Nilai Remidi' : 'Ubah Nilai'
-                                                }}</Button>
-                                                <Button
-                                                    v-if="isAdmin && !krs.nilai"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    class="ml-2 rounded-full text-[#dd5b00]"
-                                                    @click="cancelKrs(krs)"
-                                                    >Batalkan KRS</Button
-                                                >
-                                            </template>
+                                        <td class="kolom-aksi">
+                                            <div class="aksi-tabel">
+                                                <template v-if="editingKrs === krs.id">
+                                                    <Button size="sm" variant="outline" @click="editingKrs = null">Batal</Button>
+                                                    <Button size="sm" @click="saveGrade(krs)">Simpan</Button>
+                                                </template>
+                                                <span v-else-if="!bolehUbahNilai(krs)" class="teks-bantu">{{
+                                                    menungguRemidi(krs) && !props.nilaiTerkunci ? 'Diubah lewat remidi' : 'Nilai terkunci'
+                                                }}</span>
+                                                <template v-else>
+                                                    <Button size="sm" variant="outline" @click="editGrade(krs)">{{
+                                                        jalurRemidi(krs) ? 'Ubah Nilai Remidi' : 'Ubah Nilai'
+                                                    }}</Button>
+                                                    <Button v-if="isAdmin && !krs.nilai" size="sm" variant="destructive" @click="cancelKrs(krs)"
+                                                        >Batalkan KRS</Button
+                                                    >
+                                                </template>
+                                            </div>
                                         </td>
+                                    </tr>
+                                    <tr v-if="!filteredKrs.length" class="baris-kosong">
+                                        <td colspan="5" class="tabel-kosong">Tidak ada mahasiswa yang cocok.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1193,14 +1022,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                 </section>
 
-                <section
-                    v-if="props.remidi"
-                    id="daftar-remidi"
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section v-if="props.remidi" id="daftar-remidi" class="kartu p-6">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Daftar Remidi</h2>
+                            <h2 class="judul-bagian">Daftar Remidi</h2>
                             <p v-if="remidiDikunci" class="mt-2 text-sm text-[#31302e]">
                                 <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Dikunci</span>
                                 {{ formatTanggal(props.remidi.dikunci_at) }}
@@ -1213,7 +1038,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                 >
                                 sudah dicentang otomatis. Tambah atau coret sesuai kebutuhan, lalu kunci daftar agar tagihan remidi bisa diterbitkan.
                             </p>
-                            <p v-if="!props.remidi.ada_uas && !remidiDikunci" class="mt-1 text-xs text-[#a39e98]">
+                            <p v-if="!props.remidi.ada_uas && !remidiDikunci" class="teks-bantu mt-1">
                                 Kelas ini tidak punya jadwal UAS terbit di sistem, jadi keikutsertaan UAS tidak diperiksa.
                             </p>
                             <template v-if="remidiDikunci && remidiTampil.length">
@@ -1244,56 +1069,49 @@ const formatTenggat = (value: string | null | undefined): string => {
                             </template>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <Button
-                                v-if="!remidiDikunci"
-                                size="sm"
-                                class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                                @click="kunciRemidiOpen = true"
-                                >Kunci Daftar ({{ remidiDipilih.length }})</Button
-                            >
+                            <Button v-if="!remidiDikunci" size="sm" @click="kunciRemidiOpen = true">Kunci Daftar ({{ remidiDipilih.length }})</Button>
                             <Button
                                 v-if="remidiDikunci && props.remidi.ujian?.selesai && props.remidi.jendela_terbuka"
                                 size="sm"
-                                class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
                                 @click="finalRemidiOpen = true"
                                 >Finalisasi Remidi</Button
                             >
-                            <Button v-if="isAdmin && props.remidi.final_at" size="sm" variant="outline" class="rounded-full" @click="bukaFinalRemidi"
+                            <Button v-if="isAdmin && props.remidi.final_at" size="sm" variant="outline" @click="bukaFinalRemidi"
                                 >Buka Finalisasi Remidi</Button
                             >
                             <Button
                                 v-if="isAdmin && remidiDikunci && !remidiTampil.some((m) => m.tagihan)"
                                 size="sm"
                                 variant="outline"
-                                class="rounded-full"
                                 @click="bukaRemidi"
                                 >Buka Kunci Daftar</Button
                             >
                         </div>
                     </div>
-                    <div class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-left">
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[640px]">
                                 <thead>
-                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                        <th v-if="!remidiDikunci" class="w-10 px-4 py-3"></th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Mahasiswa</th>
+                                    <tr>
+                                        <th v-if="!remidiDikunci" class="w-10"><span class="sr-only">Pilih</span></th>
+                                        <th class="kolom-no">No</th>
+                                        <th>Mahasiswa</th>
                                         <template v-if="remidiDikunci">
-                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai Awal</th>
-                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Tagihan</th>
-                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai Remidi</th>
-                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Huruf Akhir</th>
+                                            <th>Nilai Awal</th>
+                                            <th>Tagihan</th>
+                                            <th>Nilai Remidi</th>
+                                            <th>Huruf Akhir</th>
                                         </template>
                                         <template v-else>
-                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Nilai</th>
-                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Ikut UAS</th>
-                                            <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-[#a39e98]">Keterangan</th>
+                                            <th>Nilai</th>
+                                            <th>Ikut UAS</th>
+                                            <th>Keterangan</th>
                                         </template>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="m in remidiTampil" :key="m.mahasiswa_id" class="hover:bg-[#f6f5f4]/60">
-                                        <td v-if="!remidiDikunci" class="px-4 py-3">
+                                <tbody>
+                                    <tr v-for="(m, index) in remidiTampil" :key="m.mahasiswa_id">
+                                        <td v-if="!remidiDikunci">
                                             <input
                                                 :id="`remidi-${m.mahasiswa_id}`"
                                                 v-model="remidiDipilih"
@@ -1302,41 +1120,42 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 class="size-4 accent-[#0075de]"
                                             />
                                         </td>
-                                        <td class="px-4 py-3 text-sm font-medium text-black">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td class="font-medium text-black">
                                             <label :for="`remidi-${m.mahasiswa_id}`">
                                                 {{ m.nama ?? '-' }} <span class="text-[#615d59]">({{ m.nim ?? '-' }})</span>
                                             </label>
                                         </td>
                                         <template v-if="remidiDikunci">
-                                            <td class="px-4 py-3 text-sm font-semibold text-[#dd5b00]">{{ m.nilai_awal ?? '-' }}</td>
-                                            <td class="px-4 py-3 text-sm">
+                                            <td class="font-semibold text-[#dd5b00]">{{ m.nilai_awal ?? '-' }}</td>
+                                            <td>
                                                 <span
                                                     v-if="m.tagihan"
                                                     class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
                                                     :class="STATUS_TAGIHAN_REMIDI[m.tagihan].kelas"
                                                     >{{ STATUS_TAGIHAN_REMIDI[m.tagihan].label }}</span
                                                 >
-                                                <span v-else class="text-xs text-[#a39e98]">Belum terbit</span>
+                                                <span v-else class="teks-bantu">Belum terbit</span>
                                             </td>
-                                            <td class="px-4 py-3 text-sm text-[#31302e]">{{ m.nilai_remidi ?? '-' }}</td>
-                                            <td class="px-4 py-3 text-sm font-semibold text-black">{{ m.nilai ?? '-' }}</td>
+                                            <td>{{ m.nilai_remidi ?? '-' }}</td>
+                                            <td class="font-semibold text-black">{{ m.nilai ?? '-' }}</td>
                                         </template>
                                         <template v-else>
-                                            <td class="px-4 py-3 text-sm font-semibold" :class="m.huruf_remidi ? 'text-[#dd5b00]' : ''">
+                                            <td class="font-semibold" :class="m.huruf_remidi ? 'text-[#dd5b00]' : ''">
                                                 {{ m.nilai ?? '-' }}
                                             </td>
-                                            <td class="px-4 py-3 text-sm" :class="m.ikut_uas === false ? 'text-[#dd5b00]' : 'text-[#31302e]'">
+                                            <td :class="{ 'text-[#dd5b00]': m.ikut_uas === false }">
                                                 {{ ketIkutUas(m) }}
                                             </td>
-                                            <td class="px-4 py-3 text-xs text-[#615d59]">
+                                            <td class="teks-bantu">
                                                 <span v-if="m.diusulkan">Usulan otomatis</span>
                                                 <span v-else-if="m.huruf_remidi && m.ikut_uas === false">Tidak ikut UAS</span>
                                                 <span v-else-if="remidiDipilih.includes(m.mahasiswa_id)">Ditambahkan manual</span>
                                             </td>
                                         </template>
                                     </tr>
-                                    <tr v-if="!remidiTampil.length">
-                                        <td colspan="5" class="px-4 py-8 text-center text-sm text-[#615d59]">
+                                    <tr v-if="!remidiTampil.length" class="baris-kosong">
+                                        <td colspan="6" class="tabel-kosong">
                                             {{ remidiDikunci ? 'Tidak ada peserta remidi di kelas ini.' : 'Belum ada mahasiswa di kelas ini.' }}
                                         </td>
                                     </tr>
@@ -1351,12 +1170,12 @@ const formatTenggat = (value: string | null | undefined): string => {
                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
                     @click.self="duplicateOpen = false"
                 >
-                    <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col rounded-xl bg-white p-6">
-                        <h2 class="text-lg font-semibold">Duplikasi {{ duplicateType }}</h2>
-                        <p class="mt-1 text-sm text-[#615d59]">Pilih kelas tujuan.</p>
+                    <div class="kartu flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col p-6 shadow-xl">
+                        <h2 class="judul-bagian">Duplikasi {{ duplicateType }}</h2>
+                        <p class="deskripsi-halaman">Pilih kelas tujuan.</p>
                         <div class="mt-4 flex max-h-80 flex-col gap-3 overflow-y-auto pr-2">
                             <label v-for="kelas in props.otherClasses" :key="kelas.id" class="flex gap-2 text-sm">
-                                <input v-model="duplicateTargets" type="checkbox" :value="kelas.id" />
+                                <input v-model="duplicateTargets" type="checkbox" :value="kelas.id" class="size-4 accent-[#0075de]" />
                                 {{ kelas.kode_kelas }} — {{ kelas.nama_matkul ?? '-' }}
                             </label>
                         </div>
@@ -1406,27 +1225,27 @@ const formatTenggat = (value: string | null | undefined): string => {
                     @cancel="finalisasiOpen = false"
                 />
                 <div v-if="bukaOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="bukaOpen = false">
-                    <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-                        <h3 class="text-lg font-semibold">Buka kunci nilai</h3>
-                        <p class="mt-2 text-sm text-[#615d59]">
+                    <div class="kartu w-full max-w-md p-6 shadow-xl">
+                        <h3 class="judul-bagian">Buka kunci nilai</h3>
+                        <p class="deskripsi-halaman">
                             Dosen bisa mengubah nilai kelas ini lagi sampai difinalisasi ulang atau sampai batas di bawah lewat.
                             <template v-if="props.remidi?.dikunci_at">Huruf akhir peserta remidi tetap hanya berubah lewat remidi.</template>
                         </p>
-                        <label class="mt-4 grid gap-2 text-sm">
-                            <span class="font-medium"
+                        <label class="mt-4 grid gap-2">
+                            <span class="label-isian"
                                 >Batas baru untuk kelas ini<span v-if="!props.statusNilai.batas_tahun_lewat" class="font-normal text-[#a39e98]">
                                     (opsional)</span
                                 ></span
                             >
-                            <input v-model="bukaSampai" type="date" class="h-10 rounded-[4px] border border-[#dddddd] px-3 text-[15px]" />
-                            <span v-if="props.statusNilai.batas_tahun_lewat" class="text-xs text-[#a39e98]"
+                            <input v-model="bukaSampai" type="date" class="isian" />
+                            <span v-if="props.statusNilai.batas_tahun_lewat" class="teks-bantu"
                                 >Batas input nilai tahun akademik sudah lewat, jadi kelas ini perlu batas sendiri.</span
                             >
                             <span v-if="bukaError" class="text-xs text-[#dd5b00]">{{ bukaError }}</span>
                         </label>
                         <div class="mt-6 flex justify-end gap-2">
-                            <Button variant="outline" class="rounded-full" @click="bukaOpen = false">Batal</Button>
-                            <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" @click="bukaKunci">Buka Kunci</Button>
+                            <Button variant="outline" @click="bukaOpen = false">Batal</Button>
+                            <Button @click="bukaKunci">Buka Kunci</Button>
                         </div>
                     </div>
                 </div>

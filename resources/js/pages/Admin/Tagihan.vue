@@ -173,129 +173,109 @@ const waktu = (nilai: string | null) =>
 <template>
     <Head title="Tagihan Mahasiswa" />
     <AppLayout :breadcrumbs="[{ title: 'Tagihan Mahasiswa', href: route('admin.tagihan.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Tagihan Mahasiswa</h1>
-                        <p class="text-sm text-[#615d59]">Status pembayaran tiap mahasiswa per semester.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Tagihan Mahasiswa</h1>
+                        <p class="deskripsi-halaman">Status pembayaran tiap mahasiswa per semester.</p>
                     </div>
-                    <Button
-                        class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                        :disabled="tahunAkademikId === semua"
-                        @click="terbitkan()"
-                    >
-                        Terbitkan Tagihan Semester Ini
-                    </Button>
+                    <Button :disabled="tahunAkademikId === semua" @click="terbitkan()">Terbitkan Tagihan Semester Ini</Button>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.error }}
-                </div>
-                <div v-if="!props.adaJenisBiaya" class="rounded-xl border border-[#f6d7c4] bg-[#fdf6f1] px-4 py-3 text-sm text-[#dd5b00]">
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
+                <div v-if="!props.adaJenisBiaya" class="alert-gagal">
                     Belum ada jenis biaya aktif, jadi tagihan belum bisa diterbitkan.
                     <Link :href="route('admin.jenis-biaya.index')" class="font-medium text-[#0075de] hover:underline">Atur jenis biaya</Link>
                 </div>
 
-                <div v-if="props.ringkasan.menunggu" class="rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]">
+                <div v-if="props.ringkasan.menunggu" class="alert-info">
                     {{ props.ringkasan.menunggu }} bukti bayar menunggu verifikasi.
                     <button type="button" class="font-medium underline" @click="((status = 'menunggu_verifikasi'), kirim())">Tampilkan</button>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa Aktif</p>
-                        <p class="text-[22px] font-bold text-black">{{ props.ringkasan.total }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Mahasiswa Aktif</p>
+                        <p class="text-2xl font-bold text-black dark:text-foreground">{{ props.ringkasan.total }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Lunas</p>
-                        <p class="text-[22px] font-bold text-[#1aae39]">{{ props.ringkasan.lunas }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Lunas</p>
+                        <p class="text-2xl font-bold text-[#1aae39]">{{ props.ringkasan.lunas }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Menunggu Verifikasi</p>
-                        <p class="text-[22px] font-bold text-[#0075de]">{{ props.ringkasan.menunggu }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Menunggu Verifikasi</p>
+                        <p class="text-2xl font-bold text-[#0075de]">{{ props.ringkasan.menunggu }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Belum Bayar</p>
-                        <p class="text-[22px] font-bold text-[#dd5b00]">{{ props.ringkasan.belum_bayar }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Belum Bayar</p>
+                        <p class="text-2xl font-bold text-[#dd5b00]">{{ props.ringkasan.belum_bayar }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Belum Terbit</p>
-                        <p class="text-[22px] font-bold text-black">{{ props.ringkasan.belum_terbit }}</p>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-3">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div class="relative w-full sm:w-80">
-                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                            <Input
-                                v-model="search"
-                                placeholder="Cari nama atau NIM"
-                                aria-label="Cari mahasiswa"
-                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
-                            />
-                        </div>
-                        <p class="whitespace-nowrap text-sm text-[#615d59]">
-                            <span class="font-medium text-black">{{ props.daftar.total }}</span> mahasiswa
-                        </p>
-                    </div>
-
-                    <div class="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
-                        <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="kirim">
-                            <option v-for="item in props.tahunAkademikOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-                        </SelectFilter>
-                        <SelectFilter v-model="prodiId" label="Filter program studi" @change="kirim">
-                            <option :value="semua">Semua Program Studi</option>
-                            <option v-for="item in props.prodiOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-                        </SelectFilter>
-                        <SelectFilter v-model="angkatan" label="Filter angkatan" @change="kirim">
-                            <option :value="semua">Semua Angkatan</option>
-                            <option v-for="item in props.angkatanOptions" :key="item" :value="item">{{ item }}</option>
-                        </SelectFilter>
-                        <SelectFilter v-model="status" label="Filter status pembayaran" @change="kirim">
-                            <option :value="semua">Semua Status</option>
-                            <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
-                            <option value="belum_bayar">Belum Bayar</option>
-                            <option value="ditolak">Ditolak</option>
-                            <option value="lunas">Lunas</option>
-                            <option value="belum_terbit">Belum Terbit</option>
-                        </SelectFilter>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Belum Terbit</p>
+                        <p class="text-2xl font-bold text-black dark:text-foreground">{{ props.ringkasan.belum_terbit }}</p>
                     </div>
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[1040px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="bilah-filter">
+                    <div class="kolom-cari">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                        <Input v-model="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa" class="pl-9" />
+                    </div>
+                    <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="kirim">
+                        <option v-for="item in props.tahunAkademikOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+                    </SelectFilter>
+                    <SelectFilter v-model="prodiId" label="Filter program studi" @change="kirim">
+                        <option :value="semua">Semua Program Studi</option>
+                        <option v-for="item in props.prodiOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+                    </SelectFilter>
+                    <SelectFilter v-model="angkatan" label="Filter angkatan" @change="kirim">
+                        <option :value="semua">Semua Angkatan</option>
+                        <option v-for="item in props.angkatanOptions" :key="item" :value="item">{{ item }}</option>
+                    </SelectFilter>
+                    <SelectFilter v-model="status" label="Filter status pembayaran" @change="kirim">
+                        <option :value="semua">Semua Status</option>
+                        <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
+                        <option value="belum_bayar">Belum Bayar</option>
+                        <option value="ditolak">Ditolak</option>
+                        <option value="lunas">Lunas</option>
+                        <option value="belum_terbit">Belum Terbit</option>
+                    </SelectFilter>
+                    <p class="info-jumlah sm:ml-auto">
+                        <span class="font-medium text-black">{{ props.daftar.total }}</span> mahasiswa
+                    </p>
+                </div>
+
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[1040px]">
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Program Studi</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tagihan</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Status</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">KRS</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Terakhir Diubah</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Mahasiswa</th>
+                                    <th>Program Studi</th>
+                                    <th>Tagihan</th>
+                                    <th>Status</th>
+                                    <th>KRS</th>
+                                    <th>Terakhir Diubah</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="(baris, index) in props.daftar.data" :key="baris.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.daftar.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-black">
-                                        <span class="block font-medium">{{ baris.nama }}</span>
+                            <tbody>
+                                <tr v-for="(baris, index) in props.daftar.data" :key="baris.id">
+                                    <td class="kolom-no">{{ (props.daftar.from ?? 1) + index }}</td>
+                                    <td>
+                                        <span class="block font-medium text-black">{{ baris.nama }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ baris.nim }} · Angkatan {{ baris.angkatan }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ baris.prodi ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td>{{ baris.prodi ?? '-' }}</td>
+                                    <td class="tabular-nums">
                                         <span v-if="baris.tagihan_id" class="block">{{ rupiah(baris.total) }}</span>
                                         <span v-else class="block text-[#a39e98]">Belum diterbitkan</span>
                                         <span v-if="baris.rincian_manual" class="block text-xs text-[#a39e98]">Rincian manual</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px]">
+                                    <td>
                                         <span
                                             class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
                                             :class="STATUS[baris.status].kelas"
@@ -318,7 +298,7 @@ const waktu = (nilai: string | null) =>
                                             >Lihat bukti · {{ tanggal(baris.bukti_diunggah_at) }}</a
                                         >
                                     </td>
-                                    <td class="px-4 py-3 text-[15px]">
+                                    <td>
                                         <template v-if="baris.krs_tersimpan">
                                             <span class="whitespace-nowrap rounded-full bg-[#f6f5f4] px-2 py-0.5 text-xs font-medium text-[#31302e]">
                                                 Tersimpan
@@ -333,48 +313,45 @@ const waktu = (nilai: string | null) =>
                                         </template>
                                         <span v-else class="text-xs text-[#a39e98]">Belum disimpan</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td>
                                         <template v-if="baris.diubah_pada">
                                             <span class="block text-xs text-[#615d59]">{{ waktu(baris.diubah_pada) }}</span>
                                             <span class="block text-xs text-[#a39e98]">{{ baris.diubah_oleh ?? 'sistem' }}</span>
                                         </template>
                                         <span v-else class="text-xs text-[#a39e98]">Belum pernah diubah</span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center justify-end gap-2">
-                                            <Link
-                                                :href="route('admin.tagihan.rincian', [baris.id, { tahun_akademik_id: tahunAkademikId }])"
-                                                class="text-sm font-medium text-[#0075de] hover:underline"
-                                            >
-                                                Rincian
-                                            </Link>
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
+                                            <Button as-child variant="outline" size="sm">
+                                                <Link :href="route('admin.tagihan.rincian', [baris.id, { tahun_akademik_id: tahunAkademikId }])"
+                                                    >Rincian</Link
+                                                >
+                                            </Button>
                                             <Button
                                                 v-if="baris.status === 'menunggu_verifikasi'"
-                                                variant="outline"
-                                                class="h-8 rounded-lg border-[#d8d5d2] px-3 text-sm text-[#dd5b00]"
+                                                variant="destructive"
+                                                size="sm"
                                                 @click="bukaTolak(baris)"
                                                 >Tolak</Button
                                             >
                                             <Button
                                                 v-if="baris.tagihan_id && baris.status !== 'lunas'"
-                                                class="h-8 whitespace-nowrap rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]"
+                                                size="sm"
                                                 @click="konfirmasi = { baris, aksi: 'lunas' }"
                                                 >Tandai Lunas</Button
                                             >
                                             <Button
                                                 v-if="baris.status === 'lunas'"
                                                 variant="outline"
-                                                class="h-8 whitespace-nowrap rounded-lg border-[#d8d5d2] px-3 text-sm"
+                                                size="sm"
                                                 @click="konfirmasi = { baris, aksi: 'batal-lunas' }"
                                                 >Batal Lunas</Button
                                             >
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.daftar.data.length">
-                                    <td colspan="8" class="px-4 py-14 text-center text-sm text-[#615d59]">
-                                        Tidak ada mahasiswa yang cocok dengan filter.
-                                    </td>
+                                <tr v-if="!props.daftar.data.length" class="baris-kosong">
+                                    <td colspan="8" class="tabel-kosong">Tidak ada mahasiswa yang cocok dengan filter.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -396,19 +373,19 @@ const waktu = (nilai: string | null) =>
             @cancel="konfirmasi = null"
         />
         <div v-if="tolakItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="tolakItem = null">
-            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-                <h3 class="text-lg font-semibold">Tolak bukti bayar</h3>
+            <div class="kartu w-full max-w-md p-6 shadow-xl">
+                <h3 class="judul-bagian">Tolak bukti bayar</h3>
                 <p class="mt-2 text-sm text-[#615d59]">
                     {{ tolakItem.nama }} bisa mengunggah ulang bukti bayar. Alasan penolakan ditampilkan ke mahasiswa.
                 </p>
-                <label class="mt-4 grid gap-2 text-sm">
-                    <span class="font-medium">Alasan</span>
-                    <Input v-model="alasan" placeholder="Mis. nominal tidak sesuai" class="h-10" />
+                <label class="mt-4 grid gap-2">
+                    <span class="label-isian">Alasan</span>
+                    <Input v-model="alasan" placeholder="Mis. nominal tidak sesuai" />
                     <span v-if="alasanError" class="text-xs text-[#dd5b00]">{{ alasanError }}</span>
                 </label>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button variant="outline" class="rounded-full" @click="tolakItem = null">Batal</Button>
-                    <Button class="rounded-full bg-[#dd5b00] text-white hover:bg-[#b84b00]" @click="tolak">Tolak</Button>
+                    <Button variant="outline" @click="tolakItem = null">Batal</Button>
+                    <Button variant="destructive" @click="tolak">Tolak</Button>
                 </div>
             </div>
         </div>

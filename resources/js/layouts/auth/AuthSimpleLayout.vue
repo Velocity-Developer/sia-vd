@@ -57,10 +57,10 @@ const sorotan = [
                 </div>
             </Link>
 
-            <div class="rounded-2xl border border-[#e6e6e6] bg-white p-6 shadow-lg sm:p-8">
-                <div class="mb-6 space-y-1.5">
-                    <h1 class="text-[24px] font-bold leading-8 tracking-[-0.5px] text-black">{{ title }}</h1>
-                    <p v-if="description" class="text-sm leading-5 text-[#615d59]">{{ description }}</p>
+            <div class="kartu p-6 shadow-lg sm:p-8">
+                <div class="mb-6">
+                    <h1 class="judul-halaman">{{ title }}</h1>
+                    <p v-if="description" class="deskripsi-halaman">{{ description }}</p>
                 </div>
                 <slot />
             </div>
@@ -71,7 +71,7 @@ const sorotan = [
         </div>
     </div>
 
-    <div v-else class="min-h-svh bg-[#f6f5f4] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]">
+    <div v-else class="min-h-svh bg-[#f6f5f4] dark:bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)]">
         <!-- Panel merek hanya tampil di layar lebar; di HP identitas cukup lewat kepala kartu. -->
         <aside
             class="relative hidden overflow-hidden bg-[#0075de] bg-cover bg-center p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14"
@@ -91,7 +91,7 @@ const sorotan = [
                     <AppLogoIcon v-else class="size-6 fill-current text-white" />
                 </div>
                 <div class="leading-tight">
-                    <p class="text-[15px] font-semibold">{{ institusi?.nama_pt ?? page.props.name }}</p>
+                    <p class="text-base font-semibold">{{ institusi?.nama_pt ?? page.props.name }}</p>
                     <p v-if="institusi?.singkatan" class="text-[11px] font-medium uppercase tracking-[0.12em] text-white/70">
                         {{ institusi.singkatan }}
                     </p>
@@ -100,7 +100,7 @@ const sorotan = [
 
             <div class="relative max-w-[420px]">
                 <h2 class="text-[32px] font-bold leading-[1.15] tracking-[-0.8px]">{{ tampilan?.login_judul ?? 'Sistem Informasi Akademik' }}</h2>
-                <p class="mt-3 whitespace-pre-line text-[15px] leading-6 text-white/80">
+                <p class="mt-3 whitespace-pre-line text-base leading-6 text-white/80">
                     {{ tampilan?.login_teks ?? 'Satu akun untuk rencana studi, perkuliahan, nilai, dan administrasi Anda.' }}
                 </p>
 
@@ -131,17 +131,17 @@ const sorotan = [
                         <AppLogoIcon v-else class="size-6 fill-current text-white" />
                     </div>
                     <div class="leading-tight">
-                        <p class="text-[15px] font-semibold text-black">{{ institusi?.nama_pt ?? page.props.name }}</p>
+                        <p class="text-base font-semibold text-black dark:text-foreground">{{ institusi?.nama_pt ?? page.props.name }}</p>
                         <p v-if="institusi?.singkatan" class="text-[11px] font-medium uppercase tracking-[0.1em] text-[#a39e98]">
                             {{ institusi.singkatan }}
                         </p>
                     </div>
                 </Link>
 
-                <div class="rounded-2xl border border-[#e6e6e6] bg-white p-6 shadow-sm sm:p-8">
-                    <div class="mb-6 space-y-1.5">
-                        <h1 class="text-[24px] font-bold leading-8 tracking-[-0.5px] text-black">{{ title }}</h1>
-                        <p v-if="description" class="text-sm leading-5 text-[#615d59]">{{ description }}</p>
+                <div class="kartu p-6 sm:p-8">
+                    <div class="mb-6">
+                        <h1 class="judul-halaman">{{ title }}</h1>
+                        <p v-if="description" class="deskripsi-halaman">{{ description }}</p>
                     </div>
                     <slot />
                 </div>

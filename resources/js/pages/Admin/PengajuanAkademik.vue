@@ -46,7 +46,7 @@ type Baris = {
 };
 
 const props = defineProps<{
-    pengajuan: { data: Baris[]; links: { url: string | null; label: string; active: boolean }[]; total: number };
+    pengajuan: { data: Baris[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
     filter: { jenis: JenisPengajuan; status: string | null; search: string };
     jenisTersedia: JenisPengajuan[];
     jumlahMenunggu: Partial<Record<JenisPengajuan, number>>;
@@ -129,24 +129,26 @@ const kembalikan = () => {
 <template>
     <Head title="Pengajuan TA & Wisuda" />
     <AppLayout :breadcrumbs="[{ title: 'Pengajuan TA & Wisuda', href: route('admin.pengajuan-akademik.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">Pengajuan TA & Wisuda</h1>
-                    <p class="max-w-3xl text-sm text-[#615d59]">
-                        Setujui, minta perbaikan, atau tolak pengajuan mahasiswa. Selama menunggu keputusan, mahasiswa tidak bisa mengirim pengajuan
-                        baru.
-                    </p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Pengajuan TA & Wisuda</h1>
+                        <p class="deskripsi-halaman">
+                            Setujui, minta perbaikan, atau tolak pengajuan mahasiswa. Selama menunggu keputusan, mahasiswa tidak bisa mengirim
+                            pengajuan baru.
+                        </p>
+                    </div>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
 
-                <nav class="flex gap-1 border-b border-[#e6e6e6]" aria-label="Jenis pengajuan">
+                <nav class="flex gap-1 overflow-x-auto border-b border-[#e6e6e6] dark:border-border" aria-label="Jenis pengajuan">
                     <Link
                         v-for="j in props.jenisTersedia"
                         :key="j"
@@ -161,70 +163,63 @@ const kembalikan = () => {
                     </Link>
                 </nav>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-                        <div class="relative w-full sm:w-72">
-                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                            <Input
-                                v-model="search"
-                                placeholder="Cari nama atau NIM"
-                                aria-label="Cari mahasiswa"
-                                class="h-10 rounded-lg bg-white pl-9 text-sm"
-                            />
-                        </div>
-                        <SelectFilter v-model="status" label="Filter status" @change="kirim">
-                            <option :value="semua">Semua status</option>
-                            <option v-for="(s, kunci) in STATUS_PENGAJUAN" :key="kunci" :value="kunci">{{ s.label }}</option>
-                        </SelectFilter>
+                <div class="bilah-filter">
+                    <div class="kolom-cari">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                        <Input v-model="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa" class="pl-9" />
                     </div>
-                    <p class="whitespace-nowrap text-sm text-[#615d59]">
+                    <SelectFilter v-model="status" label="Filter status" @change="kirim">
+                        <option :value="semua">Semua status</option>
+                        <option v-for="(s, kunci) in STATUS_PENGAJUAN" :key="kunci" :value="kunci">{{ s.label }}</option>
+                    </SelectFilter>
+                    <p class="info-jumlah sm:ml-auto">
                         <span class="font-medium text-black">{{ props.pengajuan.total }}</span> pengajuan
                     </p>
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[960px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[1000px]">
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pengajuan</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Status</th>
-                                    <th class="w-[260px] px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">
-                                        Aksi
-                                    </th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Mahasiswa</th>
+                                    <th>Pengajuan</th>
+                                    <th>Status</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="b in props.pengajuan.data" :key="b.id" class="align-top hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-black">
-                                        <span class="block font-medium">{{ b.nama }}</span>
+                            <tbody>
+                                <tr v-for="(b, index) in props.pengajuan.data" :key="b.id">
+                                    <td class="kolom-no">{{ (props.pengajuan.from ?? 1) + index }}</td>
+                                    <td>
+                                        <span class="block font-medium text-black">{{ b.nama }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ b.nim }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ b.prodi }}</span>
                                     </td>
-                                    <td class="max-w-[440px] px-4 py-3 text-sm text-[#31302e]">
+                                    <td class="max-w-[440px]">
                                         <template v-if="props.filter.jenis === 'wisuda'">
-                                            <span class="block text-[15px] font-medium text-black">{{ b.periode_wisuda }}</span>
+                                            <span class="block font-medium text-black">{{ b.periode_wisuda }}</span>
                                             <span class="block text-xs text-[#615d59]"
                                                 >Ijazah:
-                                                <span :class="{ 'font-medium text-[#b25000]': b.koreksi.includes('nama_ijazah') }">{{
+                                                <span :class="{ 'font-medium text-[#dd5b00]': b.koreksi.includes('nama_ijazah') }">{{
                                                     b.isian.nama_ijazah
                                                 }}</span
                                                 >,
-                                                <span :class="{ 'font-medium text-[#b25000]': b.koreksi.includes('tempat_lahir') }">{{
+                                                <span :class="{ 'font-medium text-[#dd5b00]': b.koreksi.includes('tempat_lahir') }">{{
                                                     b.isian.tempat_lahir
                                                 }}</span
                                                 >,
-                                                <span :class="{ 'font-medium text-[#b25000]': b.koreksi.includes('tanggal_lahir') }">{{
+                                                <span :class="{ 'font-medium text-[#dd5b00]': b.koreksi.includes('tanggal_lahir') }">{{
                                                     formatTanggal(b.isian.tanggal_lahir, false)
                                                 }}</span>
                                                 · toga {{ b.isian.ukuran_toga }}</span
                                             >
-                                            <span v-if="b.koreksi.length" class="block text-xs text-[#b25000]"
+                                            <span v-if="b.koreksi.length" class="block text-xs text-[#dd5b00]"
                                                 >Berbeda dari profil (koreksi mahasiswa) — periksa sebelum menyetujui.</span
                                             >
                                         </template>
-                                        <span v-else class="block text-[15px] font-medium text-black">{{ b.isian.judul }}</span>
+                                        <span v-else class="block font-medium text-black">{{ b.isian.judul }}</span>
                                         <span v-if="b.isian.bidang" class="block text-xs text-[#615d59]">Bidang: {{ b.isian.bidang }}</span>
                                         <span v-if="b.usulan_pembimbing.length" class="block text-xs text-[#615d59]"
                                             >Usulan pembimbing: {{ b.usulan_pembimbing.join(', ') }}</span
@@ -243,9 +238,11 @@ const kembalikan = () => {
                                         >
                                             {{ terbuka === b.id ? 'Sembunyikan ringkasan' : 'Lihat ringkasan' }}
                                         </button>
-                                        <span v-if="terbuka === b.id" class="mt-1 block whitespace-pre-line rounded-lg bg-[#f6f5f4] p-3 text-sm">{{
-                                            b.isian.ringkasan
-                                        }}</span>
+                                        <span
+                                            v-if="terbuka === b.id"
+                                            class="mt-1 block whitespace-pre-line rounded-lg bg-[#f6f5f4] p-3 text-sm dark:bg-muted"
+                                            >{{ b.isian.ringkasan }}</span
+                                        >
                                         <span class="mt-1 flex flex-wrap gap-3">
                                             <a
                                                 v-for="k in b.lampiran"
@@ -259,7 +256,7 @@ const kembalikan = () => {
                                         </span>
                                         <span class="mt-1 block text-xs text-[#a39e98]">Dikirim {{ formatTanggal(b.diajukan_at, false) }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td>
                                         <span
                                             class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
                                             :class="STATUS_PENGAJUAN[b.status].kelas"
@@ -290,33 +287,19 @@ const kembalikan = () => {
                                             >Surat {{ b.jadwal.nomor_surat }}</a
                                         >
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div v-if="b.status === 'menunggu'" class="flex flex-wrap items-center justify-end gap-2">
-                                            <Button
-                                                variant="outline"
-                                                class="h-8 rounded-lg border-[#d8d5d2] px-3 text-sm text-[#b25000]"
-                                                @click="bukaKembalikan(b, 'perbaikan')"
-                                                >Perbaikan</Button
-                                            >
-                                            <Button
-                                                variant="outline"
-                                                class="h-8 rounded-lg border-[#d8d5d2] px-3 text-sm text-[#b42318]"
-                                                @click="bukaKembalikan(b, 'tolak')"
-                                                >Tolak</Button
-                                            >
-                                            <Button
-                                                class="h-8 rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]"
-                                                @click="bukaSetujui(b)"
-                                                >Setujui</Button
-                                            >
+                                    <td class="kolom-aksi">
+                                        <div v-if="b.status === 'menunggu'" class="aksi-tabel">
+                                            <Button variant="outline" size="sm" @click="bukaKembalikan(b, 'perbaikan')">Perbaikan</Button>
+                                            <Button variant="destructive" size="sm" @click="bukaKembalikan(b, 'tolak')">Tolak</Button>
+                                            <Button size="sm" @click="bukaSetujui(b)">Setujui</Button>
                                         </div>
-                                        <p v-else-if="b.status === 'menunggu_pembimbing'" class="text-right text-xs text-[#a39e98]">
+                                        <p v-else-if="b.status === 'menunggu_pembimbing'" class="text-xs text-[#a39e98]">
                                             Menunggu persetujuan pembimbing
                                         </p>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.pengajuan.data.length">
-                                    <td colspan="4" class="px-4 py-14 text-center text-sm text-[#615d59]">
+                                <tr v-if="!props.pengajuan.data.length" class="baris-kosong">
+                                    <td colspan="5" class="tabel-kosong">
                                         Belum ada pengajuan {{ JENIS_PENGAJUAN[props.filter.jenis].toLowerCase() }}.
                                     </td>
                                 </tr>
@@ -349,24 +332,17 @@ const kembalikan = () => {
             @tutup="jadwalkanItem = null"
         />
         <div v-if="setujuiItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="setujuiItem = null">
-            <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="setujui">
-                <h3 class="text-lg font-semibold">Setujui tugas akhir</h3>
+            <form class="kartu w-full max-w-lg p-6 shadow-xl" @submit.prevent="setujui">
+                <h3 class="judul-bagian">Setujui tugas akhir</h3>
                 <p class="mt-1 text-sm text-[#615d59]">Sahkan judul dan tetapkan pembimbing {{ setujuiItem.nama }}. Boleh berbeda dari usulan.</p>
                 <div class="mt-4 grid gap-4">
                     <div class="grid gap-2">
-                        <Label for="setujui_judul">Judul disahkan</Label>
-                        <textarea
-                            id="setujui_judul"
-                            v-model="setujuiForm.judul"
-                            maxlength="300"
-                            rows="3"
-                            class="w-full rounded-[4px] border border-[#dddddd] px-3 py-2 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
-                            required
-                        />
+                        <Label for="setujui_judul" class="label-isian">Judul disahkan</Label>
+                        <textarea id="setujui_judul" v-model="setujuiForm.judul" maxlength="300" rows="3" class="isian isian-area" required />
                         <InputError :message="setujuiForm.errors.judul" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="pembimbing_1_id">Pembimbing 1</Label>
+                        <Label for="pembimbing_1_id" class="label-isian">Pembimbing 1</Label>
                         <SearchSelect
                             id="pembimbing_1_id"
                             v-model="setujuiForm.pembimbing_1_id"
@@ -378,7 +354,7 @@ const kembalikan = () => {
                         <InputError :message="setujuiForm.errors.pembimbing_1_id" />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="pembimbing_2_id" class="flex items-center justify-between">
+                        <Label for="pembimbing_2_id" class="label-isian flex items-center justify-between">
                             <span>Pembimbing 2 <span class="font-normal text-[#a39e98]">(opsional)</span></span>
                             <button
                                 v-if="setujuiForm.pembimbing_2_id"
@@ -400,17 +376,15 @@ const kembalikan = () => {
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button type="button" variant="outline" class="rounded-full" @click="setujuiItem = null">Batal</Button>
-                    <Button type="submit" :disabled="setujuiForm.processing" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                        >Setujui</Button
-                    >
+                    <Button type="button" variant="outline" @click="setujuiItem = null">Batal</Button>
+                    <Button type="submit" :disabled="setujuiForm.processing">Setujui</Button>
                 </div>
             </form>
         </div>
 
         <div v-if="kembalikanItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="kembalikanItem = null">
-            <form class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" @submit.prevent="kembalikan">
-                <h3 class="text-lg font-semibold">{{ kembalikanItem.aksi === 'perbaikan' ? 'Minta perbaikan' : 'Tolak pengajuan' }}</h3>
+            <form class="kartu w-full max-w-md p-6 shadow-xl" @submit.prevent="kembalikan">
+                <h3 class="judul-bagian">{{ kembalikanItem.aksi === 'perbaikan' ? 'Minta perbaikan' : 'Tolak pengajuan' }}</h3>
                 <p class="mt-2 text-sm text-[#615d59]">
                     {{
                         kembalikanItem.aksi === 'perbaikan'
@@ -419,25 +393,24 @@ const kembalikan = () => {
                     }}
                     Catatan ditampilkan ke mahasiswa.
                 </p>
-                <label class="mt-4 grid gap-2 text-sm">
-                    <span class="font-medium">Catatan</span>
+                <label class="mt-4 grid gap-2">
+                    <span class="label-isian">Catatan</span>
                     <textarea
                         v-model="catatanForm.catatan"
                         rows="3"
                         maxlength="1000"
-                        class="w-full rounded-[4px] border border-[#dddddd] px-3 py-2 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                        class="isian isian-area"
                         :placeholder="kembalikanItem.aksi === 'perbaikan' ? 'Mis. perjelas rumusan masalah' : 'Mis. topik di luar bidang prodi'"
                         required
                     />
                     <InputError :message="catatanForm.errors.catatan" />
                 </label>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button type="button" variant="outline" class="rounded-full" @click="kembalikanItem = null">Batal</Button>
+                    <Button type="button" variant="outline" @click="kembalikanItem = null">Batal</Button>
                     <Button
                         type="submit"
                         :disabled="catatanForm.processing"
-                        class="rounded-full text-white"
-                        :class="kembalikanItem.aksi === 'perbaikan' ? 'bg-[#b25000] hover:bg-[#8f4000]' : 'bg-[#dd5b00] hover:bg-[#b84b00]'"
+                        :variant="kembalikanItem.aksi === 'perbaikan' ? 'default' : 'destructive'"
                         >{{ kembalikanItem.aksi === 'perbaikan' ? 'Minta Perbaikan' : 'Tolak' }}</Button
                     >
                 </div>

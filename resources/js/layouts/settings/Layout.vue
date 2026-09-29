@@ -1,55 +1,47 @@
 <script setup lang="ts">
-import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
+import { KeyRound, UserRound } from 'lucide-vue-next';
 
-const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profil',
-        href: '/settings/profile',
-    },
-    {
-        title: 'Kata Sandi',
-        href: '/settings/password',
-    },
+const navItems = [
+    { title: 'Profil', href: '/settings/profile', ikon: UserRound },
+    { title: 'Kata Sandi', href: '/settings/password', ikon: KeyRound },
 ];
 
 // Institusi, Email, dan pengaturan lain untuk seluruh sistem ada di menu Pengaturan Sistem.
-const navItems = sidebarNavItems;
-
 const currentPath = window.location.pathname;
 </script>
 
 <template>
-    <div class="px-4 py-6">
-        <Heading title="Pengaturan Profil" description="Kelola profil dan kata sandi akun Anda" />
+    <!-- Kerangka, judul, dan gaya tab sama dengan PengaturanSistemLayout.vue; halaman tab cukup mengisi kartu. -->
+    <div class="halaman">
+        <div class="konten">
+            <div class="kepala-halaman">
+                <div>
+                    <h1 class="judul-halaman">Pengaturan Profil</h1>
+                    <p class="deskripsi-halaman">Kelola profil dan kata sandi akun Anda.</p>
+                </div>
+            </div>
 
-        <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
-            <aside class="w-full max-w-xl lg:w-48">
-                <nav class="flex flex-col space-x-0 space-y-1">
-                    <Button
+            <nav class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" aria-label="Tab pengaturan profil">
+                <div class="flex w-max gap-1 rounded-lg border border-[#e6e6e6] bg-white p-1 text-sm font-medium dark:border-border dark:bg-card">
+                    <Link
                         v-for="item in navItems"
                         :key="item.href"
-                        variant="ghost"
-                        :class="['w-full justify-start', { 'bg-muted': currentPath === item.href }]"
-                        as-child
+                        :href="item.href"
+                        class="flex h-9 items-center gap-2 whitespace-nowrap rounded-md px-4"
+                        :class="
+                            currentPath === item.href
+                                ? 'bg-[#0075de] text-white'
+                                : 'text-[#615d59] hover:bg-[#f6f5f4] dark:text-muted-foreground dark:hover:bg-accent'
+                        "
+                        :aria-current="currentPath === item.href ? 'page' : undefined"
                     >
-                        <Link :href="item.href">
-                            {{ item.title }}
-                        </Link>
-                    </Button>
-                </nav>
-            </aside>
+                        <component :is="item.ikon" class="size-4" /> {{ item.title }}
+                    </Link>
+                </div>
+            </nav>
 
-            <Separator class="my-6 md:hidden" />
-
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
-                    <slot />
-                </section>
-            </div>
+            <slot />
         </div>
     </div>
 </template>

@@ -252,90 +252,88 @@ onBeforeUnmount(stopTimers);
                   ]
         "
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
                     <div>
-                        <h1 class="text-[26px] font-bold text-black">{{ props.quiz.nama_quiz }}</h1>
-                        <p class="text-sm text-[#615d59]">
+                        <h1 class="judul-halaman">{{ props.quiz.nama_quiz }}</h1>
+                        <p class="deskripsi-halaman">
                             {{ kelas?.kode_kelas ?? '-' }} · {{ kelas?.mataKuliah?.nama_matkul ?? kelas?.mata_kuliah?.nama_matkul ?? '-' }}
                         </p>
                     </div>
-                    <Link
-                        :href="
-                            props.ujian
-                                ? route('mahasiswa.ujian.show', props.ujian.id)
-                                : kelas
-                                  ? route('mahasiswa.jadwal-kuliah.show', kelas.id)
-                                  : route('mahasiswa.jadwal-kuliah')
-                        "
-                        class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black"
-                        >Kembali</Link
-                    >
+                    <Button as-child variant="outline">
+                        <Link
+                            :href="
+                                props.ujian
+                                    ? route('mahasiswa.ujian.show', props.ujian.id)
+                                    : kelas
+                                      ? route('mahasiswa.jadwal-kuliah.show', kelas.id)
+                                      : route('mahasiswa.jadwal-kuliah')
+                            "
+                            >Kembali</Link
+                        >
+                    </Button>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Quiz</h2>
-                    <dl class="mt-4 grid gap-4 sm:grid-cols-3">
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Informasi Quiz</h2>
+                    <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Nama Quiz</dt>
-                            <dd class="font-medium">{{ props.quiz.nama_quiz }}</dd>
+                            <dt class="teks-bantu">Nama Quiz</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ props.quiz.nama_quiz }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Waktu Pengerjaan</dt>
-                            <dd class="font-medium">{{ durationLabel }}</dd>
+                            <dt class="teks-bantu">Waktu Pengerjaan</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ durationLabel }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Tenggat Pengerjaan</dt>
-                            <dd class="font-medium">{{ formatTenggat(props.quiz.tenggat_waktu) }}</dd>
+                            <dt class="teks-bantu">Tenggat Pengerjaan</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ formatTenggat(props.quiz.tenggat_waktu) }}</dd>
                         </div>
                     </dl>
-                    <div class="mt-6 border-t border-[#e6e6e6] pt-5">
-                        <h3 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Penjelasan</h3>
-                        <p class="mt-2 whitespace-pre-line text-[15px] text-[#31302e]">{{ props.quiz.catatan || '-' }}</p>
+                    <div class="mt-6 border-t border-[#e6e6e6] pt-5 dark:border-border">
+                        <h3 class="judul-bagian">Penjelasan</h3>
+                        <p class="mt-2 whitespace-pre-line text-sm text-[#31302e] dark:text-foreground">{{ props.quiz.catatan || '-' }}</p>
                     </div>
                 </section>
 
-                <section v-if="submitted" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <p v-if="props.attempt?.auto_closed" class="text-sm text-[#dd5b00]">
+                <section v-if="submitted" class="kartu p-6">
+                    <div v-if="props.attempt?.auto_closed" class="alert-gagal">
                         Waktu quiz telah habis. Jawaban terakhir yang tersimpan otomatis sudah dinilai.
-                    </p>
-                    <p v-else class="text-sm text-[#1aae39]">Quiz berhasil ter-submit.</p>
-                    <p v-if="props.attempt?.score !== null && props.attempt?.score !== undefined" class="mt-2 text-sm text-[#615d59]">
+                    </div>
+                    <div v-else class="alert-sukses">Quiz berhasil ter-submit.</div>
+                    <p
+                        v-if="props.attempt?.score !== null && props.attempt?.score !== undefined"
+                        class="mt-3 text-sm text-[#615d59] dark:text-muted-foreground"
+                    >
                         Score: {{ props.attempt.score }}
                     </p>
-                    <p v-if="props.ujian && !props.ujian.nilai_dirilis" class="mt-2 text-sm text-[#615d59]">
+                    <p v-if="props.ujian && !props.ujian.nilai_dirilis" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                         Nilai ujian akan terlihat setelah dosen merilisnya.
                     </p>
-                    <p v-if="props.essayBelumDinilai" class="mt-1 text-sm text-[#a39e98]">
+                    <p v-if="props.essayBelumDinilai" class="teks-bantu mt-1">
                         Jawaban esai masih dikoreksi dosen; score akan bertambah setelah dinilai.
                     </p>
                 </section>
-                <section v-else-if="!hasAttempt" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <div v-if="expired || deadlinePassed()" class="rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#dd5b00]">
-                        Tenggat quiz telah berakhir. Quiz tidak dapat dimulai.
-                    </div>
+                <section v-else-if="!hasAttempt" class="kartu p-6">
+                    <div v-if="expired || deadlinePassed()" class="alert-gagal">Tenggat quiz telah berakhir. Quiz tidak dapat dimulai.</div>
                     <div v-else class="flex flex-wrap items-center justify-between gap-4">
-                        <p class="text-sm text-[#615d59]">Pastikan siap sebelum menekan tombol mulai.</p>
-                        <Button class="rounded-lg bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="startForm.processing" @click="startQuiz"
-                            >Start</Button
-                        >
+                        <p class="text-sm text-[#615d59] dark:text-muted-foreground">Pastikan siap sebelum menekan tombol mulai.</p>
+                        <Button :disabled="startForm.processing" @click="startQuiz">Start</Button>
                     </div>
                 </section>
-                <section v-else-if="expired" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <p class="text-sm text-[#dd5b00]">Waktu quiz telah habis. Jawaban Anda sedang dikirim otomatis.</p>
+                <section v-else-if="expired" class="kartu p-6">
+                    <div class="alert-gagal">Waktu quiz telah habis. Jawaban Anda sedang dikirim otomatis.</div>
                 </section>
-                <form v-else class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="submitQuiz()">
-                    <div class="sticky top-4 z-10 mb-6 flex items-center justify-between rounded-lg border border-[#e6e6e6] bg-white px-4 py-3">
+                <form v-else class="kartu p-6" @submit.prevent="submitQuiz()">
+                    <div
+                        class="sticky top-4 z-10 mb-6 flex items-center justify-between rounded-lg border border-[#e6e6e6] bg-white px-4 py-3 dark:border-border dark:bg-card"
+                    >
                         <div>
-                            <span class="text-sm font-medium text-[#615d59]">Sisa waktu</span
+                            <span class="text-sm font-medium text-[#615d59] dark:text-muted-foreground">Sisa waktu</span
                             ><span class="block text-xs" :class="saveStatus === 'error' ? 'text-[#dd5b00]' : 'text-[#a39e98]'" aria-live="polite">{{
                                 saveLabel
                             }}</span>
@@ -346,34 +344,34 @@ onBeforeUnmount(stopTimers);
                         <article
                             v-for="(question, index) in props.quiz.questions ?? []"
                             :key="question.id"
-                            class="border-b border-[#e6e6e6] pb-5 last:border-0"
+                            class="border-b border-[#e6e6e6] pb-5 last:border-0 dark:border-border"
                         >
-                            <h2 class="font-medium text-black">{{ index + 1 }}. {{ question.question_text }}</h2>
+                            <h2 class="text-sm font-medium text-black dark:text-foreground">{{ index + 1 }}. {{ question.question_text }}</h2>
                             <textarea
                                 v-if="question.question_type === 'essay'"
                                 v-model="answers[question.id]"
-                                class="mt-3 min-h-24 w-full rounded-lg border border-[#dddddd] px-3 py-2 text-sm focus:border-[#0075de] focus:outline-none"
+                                class="isian isian-area mt-3"
                                 placeholder="Tulis jawaban..."
                             />
                             <div v-else class="mt-3 grid gap-2">
                                 <label
                                     v-for="option in question.question_option ?? []"
                                     :key="option.text"
-                                    class="flex items-center gap-2 text-sm text-[#31302e]"
+                                    class="flex cursor-pointer items-center gap-2 rounded-lg border border-[#e6e6e6] px-3 py-2 text-sm text-[#31302e] hover:bg-[#fbfaf9] dark:border-border dark:text-foreground dark:hover:bg-accent/40"
                                     ><input
                                         v-model="answers[question.id]"
                                         :type="question.question_type === 'multiple_choice' ? 'checkbox' : 'radio'"
                                         :name="`question-${question.id}`"
                                         :value="option.text"
-                                        class="accent-[#0075de]"
+                                        class="size-4 shrink-0 accent-[#0075de]"
                                     />{{ option.text }}</label
                                 >
                             </div>
                         </article>
                     </div>
-                    <Button type="submit" class="mt-6 rounded-lg bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="submitForm.processing"
-                        >Submit Quiz</Button
-                    >
+                    <div class="mt-6 flex justify-end">
+                        <Button type="submit" :disabled="submitForm.processing">Submit Quiz</Button>
+                    </div>
                 </form>
             </div>
         </div>

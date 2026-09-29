@@ -65,14 +65,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside));
         <button
             :id="id"
             type="button"
-            class="flex h-10 w-full items-center justify-between rounded-[4px] border border-[#dddddd] bg-white px-3 text-left text-[15px] text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de] dark:border-border dark:bg-card dark:text-foreground"
+            class="isian flex items-center justify-between gap-2 text-left"
             role="combobox"
             :aria-expanded="open"
             :aria-controls="`${id}-options`"
             @click="toggle"
             @keydown="handleKeydown"
         >
-            <span :class="{ 'text-[#a39e98]': !selected }">{{ selected?.name ?? placeholder ?? 'Pilih' }}</span>
+            <span class="truncate" :class="{ 'text-[#a39e98]': !selected }">{{ selected?.name ?? placeholder ?? 'Pilih' }}</span>
             <ChevronDown class="size-4 shrink-0 text-[#a39e98] transition-transform" :class="open ? 'rotate-180' : ''" />
         </button>
         <div
@@ -81,13 +81,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside));
             class="absolute z-10 mt-1 w-full rounded-xl border border-[#e6e6e6] bg-white p-2 text-black shadow-[0_4px_18px_rgba(0,0,0,0.04),0_23px_52px_rgba(0,0,0,0.05)] dark:border-border dark:bg-popover dark:text-popover-foreground"
             role="listbox"
         >
-            <Input
-                v-model="search"
-                :placeholder="searchPlaceholder ?? 'Cari'"
-                :aria-label="searchPlaceholder ?? 'Cari'"
-                class="h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0 dark:border-border dark:bg-background dark:text-foreground dark:placeholder:text-muted-foreground"
-                autofocus
-            />
+            <Input v-model="search" :placeholder="searchPlaceholder ?? 'Cari'" :aria-label="searchPlaceholder ?? 'Cari'" autofocus />
             <div class="mt-1 max-h-48 overflow-y-auto">
                 <template v-if="props.groups">
                     <template v-for="group in filteredGroups" :key="group.label">
@@ -96,7 +90,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside));
                             v-for="option in group.options"
                             :key="option.id"
                             type="button"
-                            class="block w-full rounded-lg px-2 py-2 text-left text-[15px] hover:bg-[#f6f5f4] dark:hover:bg-accent"
+                            class="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-[#f6f5f4] dark:hover:bg-accent"
                             role="option"
                             :aria-selected="Number(props.modelValue) === option.id"
                             @click="select(option.id)"
@@ -111,7 +105,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside));
                         v-for="option in filtered"
                         :key="option.id"
                         type="button"
-                        class="block w-full rounded-lg px-2 py-2 text-left text-[15px] hover:bg-[#f6f5f4] dark:hover:bg-accent"
+                        class="block w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-[#f6f5f4] dark:hover:bg-accent"
                         role="option"
                         :aria-selected="Number(props.modelValue) === option.id"
                         @click="select(option.id)"

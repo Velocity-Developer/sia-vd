@@ -35,50 +35,33 @@ const form = useForm({
 
 const submit = () =>
     props.programStudi ? form.put(route('admin.program-studi.update', props.programStudi.id)) : form.post(route('admin.program-studi.store'));
-
-const inp =
-    'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
-const sel =
-    'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px] text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
 </script>
 
 <template>
     <Head :title="title" />
     <AppLayout :breadcrumbs="[{ title: 'Program Studi', href: route('admin.program-studi.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto w-full max-w-[1000px] px-4 py-6 sm:px-6 lg:px-8">
-                <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">{{ title }}</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">Lengkapi data program studi, akreditasi, dan kaprodi.</p>
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ title }}</h1>
+                        <p class="deskripsi-halaman">Lengkapi data program studi, akreditasi, dan kaprodi.</p>
                     </div>
-                    <Link :href="route('admin.program-studi.index')"
-                        ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                    >
+                    <Button as-child variant="outline"><Link :href="route('admin.program-studi.index')">Kembali</Link></Button>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01)]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div
-                    v-if="page.props.flash?.error"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
 
-                <form @submit.prevent="submit" class="space-y-4">
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Program Studi</h2>
+                <form class="flex flex-col gap-6" @submit.prevent="submit">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Data Program Studi</h2>
                         <div class="mt-4 grid gap-2">
-                            <Label for="fakultas_id" class="text-sm font-medium text-black">Fakultas</Label>
+                            <Label for="fakultas_id" class="label-isian">Fakultas</Label>
                             <SearchSelect
                                 id="fakultas_id"
                                 v-model="form.fakultas_id"
@@ -91,33 +74,33 @@ const sel =
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="kode_prodi" class="text-sm font-medium text-black">Kode Program Studi</Label>
-                                <Input id="kode_prodi" v-model="form.kode_prodi" type="text" :class="inp" required />
+                                <Label for="kode_prodi" class="label-isian">Kode Program Studi</Label>
+                                <Input id="kode_prodi" v-model="form.kode_prodi" type="text" required />
                                 <InputError :message="form.errors.kode_prodi" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="nama_prodi" class="text-sm font-medium text-black">Nama Program Studi</Label>
-                                <Input id="nama_prodi" v-model="form.nama_prodi" type="text" :class="inp" required />
+                                <Label for="nama_prodi" class="label-isian">Nama Program Studi</Label>
+                                <Input id="nama_prodi" v-model="form.nama_prodi" type="text" required />
                                 <InputError :message="form.errors.nama_prodi" />
                             </div>
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="jenjang" class="text-sm font-medium text-black">Jenjang</Label>
-                                <select id="jenjang" v-model="form.jenjang" :class="sel" required>
+                                <Label for="jenjang" class="label-isian">Jenjang</Label>
+                                <select id="jenjang" v-model="form.jenjang" class="isian isian-pilih" required>
                                     <option value="">Pilih jenjang</option>
                                     <option v-for="item in jenjang" :key="item" :value="item">{{ item }}</option>
                                 </select>
                                 <InputError :message="form.errors.jenjang" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="tahun_berdiri" class="text-sm font-medium text-black">Tahun Berdiri</Label>
-                                <Input id="tahun_berdiri" v-model="form.tahun_berdiri" type="number" :class="inp" required />
+                                <Label for="tahun_berdiri" class="label-isian">Tahun Berdiri</Label>
+                                <Input id="tahun_berdiri" v-model="form.tahun_berdiri" type="number" required />
                                 <InputError :message="form.errors.tahun_berdiri" />
                             </div>
                         </div>
                         <div class="mt-4 grid gap-2">
-                            <Label for="kaprodi" class="text-sm font-medium text-black">Kaprodi</Label>
+                            <Label for="kaprodi" class="label-isian">Kaprodi</Label>
                             <SearchSelect
                                 id="kaprodi"
                                 v-model="form.kaprodi"
@@ -130,25 +113,23 @@ const sel =
                         </div>
                     </section>
 
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Akreditasi</h2>
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Akreditasi</h2>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="status_akreditasi" class="text-sm font-medium text-black">Status Akreditasi</Label>
-                                <Input id="status_akreditasi" v-model="form.status_akreditasi" type="text" :class="inp" required />
+                                <Label for="status_akreditasi" class="label-isian">Status Akreditasi</Label>
+                                <Input id="status_akreditasi" v-model="form.status_akreditasi" type="text" required />
                                 <InputError :message="form.errors.status_akreditasi" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="no_sk_akreditasi" class="text-sm font-medium text-black">Nomor SK Akreditasi</Label>
-                                <Input id="no_sk_akreditasi" v-model="form.no_sk_akreditasi" type="text" :class="inp" />
+                                <Label for="no_sk_akreditasi" class="label-isian">Nomor SK Akreditasi</Label>
+                                <Input id="no_sk_akreditasi" v-model="form.no_sk_akreditasi" type="text" />
                                 <InputError :message="form.errors.no_sk_akreditasi" />
                             </div>
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="tanggal_akreditasi_mulai" class="text-sm font-medium text-black">Tanggal Akreditasi Mulai</Label>
+                                <Label for="tanggal_akreditasi_mulai" class="label-isian">Tanggal Akreditasi Mulai</Label>
                                 <DatePicker
                                     id="tanggal_akreditasi_mulai"
                                     v-model="form.tanggal_akreditasi_mulai"
@@ -158,7 +139,7 @@ const sel =
                                 <InputError :message="form.errors.tanggal_akreditasi_mulai" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="tanggal_akreditasi_akhir" class="text-sm font-medium text-black">Tanggal Akreditasi Akhir</Label>
+                                <Label for="tanggal_akreditasi_akhir" class="label-isian">Tanggal Akreditasi Akhir</Label>
                                 <DatePicker
                                     id="tanggal_akreditasi_akhir"
                                     v-model="form.tanggal_akreditasi_akhir"
@@ -170,8 +151,8 @@ const sel =
                         </div>
                     </section>
 
-                    <div class="flex justify-end pt-2">
-                        <Button :disabled="form.processing" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">Simpan</Button>
+                    <div class="flex justify-end gap-2">
+                        <Button type="submit" :disabled="form.processing">Simpan</Button>
                     </div>
                 </form>
             </div>

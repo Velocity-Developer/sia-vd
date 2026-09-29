@@ -51,79 +51,66 @@ const info = [
 <template>
     <Head :title="`Detail ${props.fakultas.nama_fakultas}`" />
     <AppLayout :breadcrumbs="[{ title: 'Detail Fakultas', href: '#' }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Detail Fakultas</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">Ringkasan informasi fakultas, dekan, dan program studi di bawahnya.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Detail Fakultas</h1>
+                        <p class="deskripsi-halaman">Ringkasan informasi fakultas, dekan, dan program studi di bawahnya.</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route('admin.fakultas.index')"
-                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                        >
-                        <Link :href="route('admin.fakultas.edit', props.fakultas.id)"
-                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
-                        >
+                        <Button as-child variant="outline"><Link :href="route('admin.fakultas.index')">Kembali</Link></Button>
+                        <Button as-child><Link :href="route('admin.fakultas.edit', props.fakultas.id)">Edit</Link></Button>
                     </div>
                 </div>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Fakultas</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Informasi Fakultas</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div v-for="f in info" :key="f.key" class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v((props.fakultas as any)[f.key]) }}</dd>
+                            <dt class="teks-bantu">{{ f.label }}</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v((props.fakultas as any)[f.key]) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Dekan</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.fakultas.dekan?.user?.name) }}</dd>
+                            <dt class="teks-bantu">Dekan</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.fakultas.dekan?.user?.name) }}</dd>
                         </div>
                     </dl>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Program Studi ({{ prodiList().length }})</h2>
-                        <Link :href="route('admin.program-studi.index')"
-                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white"
-                                >Kelola Prodi</Button
-                            ></Link
-                        >
+                        <h2 class="judul-bagian">Program Studi ({{ prodiList().length }})</h2>
+                        <Button as-child variant="outline" size="sm"><Link :href="route('admin.program-studi.index')">Kelola Prodi</Link></Button>
                     </div>
-                    <div v-if="prodiList().length > 0" class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[640px] text-left lg:min-w-0">
+                    <div class="tabel-wadah mt-4 shadow-none">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[640px]">
                                 <thead>
-                                    <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kode</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nama Prodi</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jenjang</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Akreditasi</th>
-                                        <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kaprodi</th>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Kode</th>
+                                        <th>Nama Prodi</th>
+                                        <th>Jenjang</th>
+                                        <th>Akreditasi</th>
+                                        <th>Kaprodi</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="p in prodiList()" :key="p.id" class="hover:bg-[#f6f5f4]/60">
-                                        <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ p.kode_prodi }}</td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ p.nama_prodi }}</td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ p.jenjang }}</td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
-                                            {{ p.status_akreditasi }}
-                                        </td>
-                                        <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ kaprodiName(p) }}</td>
+                                <tbody>
+                                    <tr v-for="(p, index) in prodiList()" :key="p.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td class="font-medium text-black">{{ p.kode_prodi }}</td>
+                                        <td>{{ p.nama_prodi }}</td>
+                                        <td>{{ p.jenjang }}</td>
+                                        <td>{{ p.status_akreditasi }}</td>
+                                        <td>{{ kaprodiName(p) }}</td>
+                                    </tr>
+                                    <tr v-if="!prodiList().length" class="baris-kosong">
+                                        <td colspan="6" class="tabel-kosong">Fakultas ini belum memiliki program studi.</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                    <div v-else class="mt-4 rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8 text-center">
-                        <p class="text-sm font-medium text-black">Belum ada program studi</p>
-                        <p class="mt-1 text-sm leading-5 text-[#615d59]">Fakultas ini belum memiliki program studi.</p>
                     </div>
                 </section>
             </div>

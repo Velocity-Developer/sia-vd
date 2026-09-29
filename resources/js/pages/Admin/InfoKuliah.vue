@@ -31,81 +31,71 @@ const confirmDelete = () => {
 <template>
     <Head title="Info Kuliah" />
     <AppLayout :breadcrumbs="[{ title: 'Info Kuliah', href: route('admin.info-kuliah.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Info Kuliah</h1>
-                        <p class="text-sm leading-5 text-[#615d59]">Kelola informasi perkuliahan.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Info Kuliah</h1>
+                        <p class="deskripsi-halaman">Kelola informasi perkuliahan.</p>
                     </div>
-                    <Link :href="route('admin.info-kuliah.create')"
-                        ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Tambah Info Kuliah</Button></Link
-                    >
+                    <Button as-child><Link :href="route('admin.info-kuliah.create')">Tambah Info Kuliah</Link></Button>
                 </div>
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                    role="alert"
-                >
+
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[720px] text-left">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[720px]">
                             <thead>
-                                <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                    <th class="w-16 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">File</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Uploader</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                <tr>
+                                    <th class="kolom-no">No</th>
+                                    <th>Informasi</th>
+                                    <th>File</th>
+                                    <th>Uploader</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="(item, index) in props.infoKuliahs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
-                                        {{ (props.infoKuliahs.from ?? 1) + index }}
-                                    </td>
-                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                            <tbody>
+                                <tr v-for="(item, index) in props.infoKuliahs.data" :key="item.id">
+                                    <td class="kolom-no">{{ (props.infoKuliahs.from ?? 1) + index }}</td>
+                                    <td class="whitespace-pre-line">
                                         {{ item.information }}
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td>
                                         <a
                                             :href="route('berkas.info-kuliah', item.id)"
                                             target="_blank"
-                                            class="text-[15px] font-medium text-[#0075de] hover:underline"
+                                            class="font-medium text-[#0075de] hover:underline"
                                             >Lihat file</a
                                         >
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ item.uploader?.name ?? '-' }}</td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex justify-end gap-1.5">
-                                            <Link :href="route('admin.info-kuliah.edit', item.id)" title="Edit" aria-label="Edit"
-                                                ><Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                    ><Pencil class="size-4" /></Button></Link
-                                            ><button type="button" title="Hapus" aria-label="Hapus" @click="remove(item)">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] text-[#dd5b00] hover:bg-[#f6f5f4]"
-                                                    ><Trash2 class="size-4"
-                                                /></Button>
-                                            </button>
+                                    <td>{{ item.uploader?.name ?? '-' }}</td>
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                <Link :href="route('admin.info-kuliah.edit', item.id)" title="Edit" aria-label="Edit"
+                                                    ><Pencil
+                                                /></Link>
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon-sm"
+                                                class="text-[#dd5b00]"
+                                                title="Hapus"
+                                                aria-label="Hapus"
+                                                @click="remove(item)"
+                                                ><Trash2
+                                            /></Button>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.infoKuliahs.data.length">
-                                    <td colspan="5" class="px-4 py-16 text-center">
-                                        <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8">
-                                            <p class="text-sm font-medium text-black">Belum ada info kuliah</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">Tambahkan informasi perkuliahan baru untuk memulai.</p>
-                                        </div>
+                                <tr v-if="!props.infoKuliahs.data.length" class="baris-kosong">
+                                    <td colspan="5" class="tabel-kosong">
+                                        Belum ada info kuliah. Tambahkan informasi perkuliahan baru untuk memulai.
                                     </td>
                                 </tr>
                             </tbody>

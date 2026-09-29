@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
@@ -77,58 +78,55 @@ const formatTenggat = (value: string | null | undefined): string => {
             { title: 'Detail Kelas', href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
                     <div>
-                        <h1 class="text-[26px] font-bold text-black">Detail Kelas Kuliah</h1>
-                        <p class="text-sm text-[#615d59]">Informasi kelas dan materi perkuliahan.</p>
+                        <h1 class="judul-halaman">Detail Kelas Kuliah</h1>
+                        <p class="deskripsi-halaman">Informasi kelas dan materi perkuliahan.</p>
                     </div>
-                    <Link
-                        :href="route('mahasiswa.jadwal-kuliah')"
-                        class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black"
-                    >
-                        Kembali
-                    </Link>
+                    <Button as-child variant="outline">
+                        <Link :href="route('mahasiswa.jadwal-kuliah')">Kembali</Link>
+                    </Button>
                 </div>
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Kelas</h2>
-                    <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Informasi Kelas</h2>
+                    <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Kode Kelas</dt>
-                            <dd class="font-medium">{{ v(props.kelasKuliah.kode_kelas) }}</dd>
+                            <dt class="teks-bantu">Kode Kelas</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ v(props.kelasKuliah.kode_kelas) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Mata Kuliah</dt>
-                            <dd class="font-medium">{{ v(mataKuliah()?.nama_matkul) }}</dd>
+                            <dt class="teks-bantu">Mata Kuliah</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ v(mataKuliah()?.nama_matkul) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Dosen</dt>
-                            <dd class="font-medium">{{ v(props.kelasKuliah.dosen?.user?.name) }}</dd>
+                            <dt class="teks-bantu">Dosen</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ v(props.kelasKuliah.dosen?.user?.name) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Tahun Ajaran</dt>
-                            <dd class="font-medium">
+                            <dt class="teks-bantu">Tahun Ajaran</dt>
+                            <dd class="font-medium text-black dark:text-foreground">
                                 {{ tahunAkademik() ? `${tahunAkademik()?.tahun} ${tahunAkademik()?.semester}` : '-' }}
                             </dd>
                         </div>
                     </dl>
                 </section>
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Jadwal</h2>
                     <div v-if="props.kelasKuliah.jadwals?.length" class="mt-4 grid gap-3">
                         <div
                             v-for="(item, index) in props.kelasKuliah.jadwals"
                             :key="index"
-                            class="rounded-lg border border-[#e6e6e6] px-4 py-3 text-[15px] text-[#31302e] transition hover:border-[#0075de] hover:bg-[#f8fbff]"
+                            class="rounded-lg border border-[#e6e6e6] px-4 py-3 text-sm text-[#31302e] transition hover:border-[#0075de] hover:bg-[#f8fbff] dark:border-border dark:text-foreground dark:hover:bg-accent/40"
                         >
                             <p class="font-medium">{{ item.hari }}</p>
-                            <p class="mt-1 text-sm text-[#615d59]">
+                            <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                                 {{ jam(item.jam_mulai) }}–{{ jam(item.jam_akhir) }} · Ruang {{ item.ruang?.kode_ruang ?? '-' }}
                             </p>
                         </div>
                     </div>
-                    <p v-else class="mt-4 text-sm text-[#615d59]">Belum ada jadwal.</p>
+                    <p v-else class="mt-4 text-sm text-[#615d59] dark:text-muted-foreground">Belum ada jadwal.</p>
                 </section>
                 <section
                     v-for="section in [
@@ -137,16 +135,16 @@ const formatTenggat = (value: string | null | undefined): string => {
                         { title: 'Quiz', items: props.kelasKuliah.quizzes ?? [] },
                     ]"
                     :key="section.title"
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm"
+                    class="kartu p-6"
                 >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">
+                    <h2 class="judul-bagian">
                         {{ section.title }}
                     </h2>
                     <div v-if="section.items.length" class="mt-4 grid gap-3">
                         <div
                             v-for="item in section.items"
                             :key="item.id"
-                            class="rounded-lg border border-[#e6e6e6] px-4 py-3 text-[15px] text-[#31302e] transition hover:border-[#0075de] hover:bg-[#f8fbff]"
+                            class="rounded-lg border border-[#e6e6e6] px-4 py-3 text-sm text-[#31302e] transition hover:border-[#0075de] hover:bg-[#f8fbff] dark:border-border dark:text-foreground dark:hover:bg-accent/40"
                         >
                             <Link
                                 v-if="section.title === 'Materi'"
@@ -167,17 +165,17 @@ const formatTenggat = (value: string | null | undefined): string => {
                             </Link>
                             <div
                                 v-if="item.pertemuan_ke || item.tenggat_waktu"
-                                class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#615d59]"
+                                class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#615d59] dark:text-muted-foreground"
                             >
                                 <span v-if="item.pertemuan_ke">Pertemuan {{ item.pertemuan_ke }}</span>
                                 <span v-if="item.tenggat_waktu">Tenggat {{ formatTenggat(item.tenggat_waktu) }}</span>
                             </div>
-                            <span v-if="item.catatan" class="block text-sm text-[#615d59]">
+                            <span v-if="item.catatan" class="block text-sm text-[#615d59] dark:text-muted-foreground">
                                 {{ item.catatan }}
                             </span>
                         </div>
                     </div>
-                    <p v-else class="mt-4 text-sm text-[#615d59]">Belum ada {{ section.title.toLowerCase() }}.</p>
+                    <p v-else class="mt-4 text-sm text-[#615d59] dark:text-muted-foreground">Belum ada {{ section.title.toLowerCase() }}.</p>
                 </section>
             </div>
         </div>

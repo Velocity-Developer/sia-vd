@@ -118,7 +118,6 @@ const batalkanSusulan = () =>
     router.delete(route('mahasiswa.ujian-susulan.batalkan', props.susulan.pengajuan.id), { preserveScroll: true });
 
 const galat = computed(() => Object.entries(form.errors).find(([k]) => k.startsWith('jawaban'))?.[1]);
-const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 </script>
 
 <template>
@@ -129,51 +128,40 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
             { title: `${JENIS_UJIAN[props.ujian.jenis]} ${props.ujian.kode_kelas}`, href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[760px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <p class="text-sm text-[#615d59]">{{ props.ujian.kode_kelas }} · {{ props.ujian.label_mode }}</p>
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">
-                        {{ JENIS_UJIAN[props.ujian.jenis] }} {{ props.ujian.nama_matkul }}
-                    </h1>
-                    <p class="text-sm text-[#31302e]">
-                        {{ formatTanggal(props.ujian.tanggal) }}, {{ jam(props.ujian.jam_mulai) }}–{{ jam(props.ujian.jam_akhir) }} ·
-                        {{ props.ujian.mode === 'tatap_muka' ? (props.ujian.ruang ?? '-') : 'Online di SIA' }}
-                    </p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ JENIS_UJIAN[props.ujian.jenis] }} {{ props.ujian.nama_matkul }}</h1>
+                        <p class="deskripsi-halaman">
+                            {{ props.ujian.kode_kelas }} · {{ props.ujian.label_mode }} · {{ formatTanggal(props.ujian.tanggal) }},
+                            {{ jam(props.ujian.jam_mulai) }}–{{ jam(props.ujian.jam_akhir) }} ·
+                            {{ props.ujian.mode === 'tatap_muka' ? (props.ujian.ruang ?? '-') : 'Online di SIA' }}
+                        </p>
+                    </div>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="flex items-center gap-2 rounded-xl border border-[#b7e4c2] bg-[#e8f7ec] px-4 py-3 text-sm text-[#1a7f37]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses flex items-center gap-2" role="alert">
                     <CircleCheck class="size-4 shrink-0" /> {{ page.props.flash.success }}
                 </div>
-                <div
-                    v-if="page.props.flash?.error"
-                    class="rounded-xl border border-[#f4c3bd] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]"
-                    role="alert"
-                >
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <p
-                    v-if="props.ujian.petunjuk"
-                    class="whitespace-pre-line rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#31302e]"
-                >
-                    {{ props.ujian.petunjuk }}
-                </p>
+                <div v-if="props.ujian.petunjuk" class="alert-info whitespace-pre-line">{{ props.ujian.petunjuk }}</div>
 
-                <div v-if="!props.bolehIkut" class="rounded-xl border border-[#f4c3bd] bg-[#fdecea] px-4 py-3 text-sm text-[#b42318]">
+                <div v-if="!props.bolehIkut" class="alert-gagal">
                     {{ props.alasanTidakIkut }}
                     <template v-if="props.alasanTidakIkut?.includes('syarat kehadiran')">Hubungi dosen atau kaprodi bila ada dispensasi.</template>
                 </div>
 
-                <section v-if="props.ujian.mode === 'tatap_muka'" :class="kartu">
-                    <p class="text-sm text-[#31302e]">Ujian dilaksanakan di ruang {{ props.ujian.ruang ?? '-' }}. Bawa kartu ujian.</p>
-                    <div v-if="props.nilaiDirilis && props.jawaban" class="mt-3 rounded-lg bg-[#f6f5f4] px-4 py-3 text-sm">
-                        <p class="font-medium text-black">Nilai: {{ props.jawaban.nilai ?? 'belum dinilai' }}</p>
-                        <p v-if="props.jawaban.catatan_dosen" class="mt-1 text-[#615d59]">Catatan dosen: {{ props.jawaban.catatan_dosen }}</p>
+                <section v-if="props.ujian.mode === 'tatap_muka'" class="kartu p-6">
+                    <p class="text-sm text-[#31302e] dark:text-foreground">
+                        Ujian dilaksanakan di ruang {{ props.ujian.ruang ?? '-' }}. Bawa kartu ujian.
+                    </p>
+                    <div v-if="props.nilaiDirilis && props.jawaban" class="mt-3 rounded-lg bg-[#f6f5f4] px-4 py-3 text-sm dark:bg-muted">
+                        <p class="font-medium text-black dark:text-foreground">Nilai: {{ props.jawaban.nilai ?? 'belum dinilai' }}</p>
+                        <p v-if="props.jawaban.catatan_dosen" class="mt-1 text-[#615d59] dark:text-muted-foreground">
+                            Catatan dosen: {{ props.jawaban.catatan_dosen }}
+                        </p>
                     </div>
                     <Link :href="route('mahasiswa.ujian')" class="mt-2 inline-block text-sm font-medium text-[#0075de] hover:underline"
                         >Kembali ke jadwal ujian</Link
@@ -181,9 +169,9 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                 </section>
 
                 <template v-else-if="props.ujian.mode === 'online_berkas'">
-                    <section :class="kartu">
-                        <h2 class="text-lg font-semibold text-black">Soal</h2>
-                        <p v-if="!props.sudahMulai" class="mt-2 text-sm text-[#615d59]">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Soal</h2>
+                        <p v-if="!props.sudahMulai" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                             Soal tersedia saat ujian dimulai<template v-if="sisa !== null"
                                 >, dalam <span class="font-mono font-medium text-black">{{ format(sisa) }}</span></template
                             >.
@@ -200,12 +188,14 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                 </a>
                             </li>
                         </ul>
-                        <p v-else-if="props.bolehIkut" class="mt-2 text-sm text-[#615d59]">Dosen belum mengunggah berkas soal.</p>
+                        <p v-else-if="props.bolehIkut" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
+                            Dosen belum mengunggah berkas soal.
+                        </p>
                     </section>
 
-                    <section :class="kartu">
+                    <section class="kartu p-6">
                         <div class="flex flex-wrap items-start justify-between gap-2">
-                            <h2 class="text-lg font-semibold text-black">Jawaban Anda</h2>
+                            <h2 class="judul-bagian">Jawaban Anda</h2>
                             <span v-if="berlangsung && sisa !== null" class="rounded-full bg-[#eaf3fd] px-3 py-1 font-mono text-sm text-[#0b62b5]">
                                 Sisa waktu {{ format(sisa) }}
                             </span>
@@ -220,36 +210,34 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 
                         <form v-if="berlangsung && props.bolehIkut" class="mt-4 flex flex-wrap items-center gap-3" @submit.prevent="kumpulkan">
                             <input ref="input" type="file" multiple class="text-sm" aria-label="Pilih berkas jawaban" @change="pilih" />
-                            <Button
-                                type="submit"
-                                class="bg-[#0075de] text-white hover:bg-[#005bab]"
-                                :disabled="form.processing || !form.jawaban.length"
-                            >
-                                <FileUp class="mr-1 size-4" /> {{ props.jawaban ? 'Ganti jawaban' : 'Kumpulkan' }}
+                            <Button type="submit" :disabled="form.processing || !form.jawaban.length">
+                                <FileUp class="size-4" /> {{ props.jawaban ? 'Ganti jawaban' : 'Kumpulkan' }}
                             </Button>
-                            <p class="w-full text-xs text-[#a39e98]">
+                            <p class="teks-bantu w-full">
                                 Maks. 5 berkas @20 MB. Jawaban bisa diganti selama waktu ujian berjalan; lewat jam selesai tidak bisa dikumpulkan
                                 lagi.
                             </p>
                             <InputError class="w-full" :message="galat" />
                         </form>
-                        <p v-else-if="props.sudahSelesai" class="mt-3 text-sm text-[#615d59]">Waktu ujian sudah habis.</p>
+                        <p v-else-if="props.sudahSelesai" class="mt-3 text-sm text-[#615d59] dark:text-muted-foreground">Waktu ujian sudah habis.</p>
 
-                        <div v-if="props.nilaiDirilis && props.jawaban" class="mt-4 rounded-lg bg-[#f6f5f4] px-4 py-3 text-sm">
-                            <p class="font-medium text-black">Nilai: {{ props.jawaban.nilai ?? 'belum dinilai' }}</p>
-                            <p v-if="props.jawaban.catatan_dosen" class="mt-1 text-[#615d59]">Catatan dosen: {{ props.jawaban.catatan_dosen }}</p>
+                        <div v-if="props.nilaiDirilis && props.jawaban" class="mt-4 rounded-lg bg-[#f6f5f4] px-4 py-3 text-sm dark:bg-muted">
+                            <p class="font-medium text-black dark:text-foreground">Nilai: {{ props.jawaban.nilai ?? 'belum dinilai' }}</p>
+                            <p v-if="props.jawaban.catatan_dosen" class="mt-1 text-[#615d59] dark:text-muted-foreground">
+                                Catatan dosen: {{ props.jawaban.catatan_dosen }}
+                            </p>
                         </div>
                     </section>
                 </template>
 
-                <section v-else-if="props.ujian.mode === 'online_soal'" :class="kartu">
+                <section v-else-if="props.ujian.mode === 'online_soal'" class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-2">
-                        <h2 class="text-lg font-semibold text-black">Soal ujian</h2>
+                        <h2 class="judul-bagian">Soal ujian</h2>
                         <span v-if="berlangsung && sisa !== null" class="rounded-full bg-[#eaf3fd] px-3 py-1 font-mono text-sm text-[#0b62b5]">
                             Ujian ditutup dalam {{ format(sisa) }}
                         </span>
                     </div>
-                    <p v-if="props.lembarSoal" class="mt-1 text-sm text-[#615d59]">
+                    <p v-if="props.lembarSoal" class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                         {{ props.lembarSoal.jumlah_soal }} soal ·
                         {{
                             props.lembarSoal.waktu_pengerjaan
@@ -259,7 +247,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         · satu kali kesempatan, jawaban tersimpan otomatis.
                     </p>
 
-                    <p v-if="!props.sudahMulai" class="mt-3 text-sm text-[#615d59]">
+                    <p v-if="!props.sudahMulai" class="mt-3 text-sm text-[#615d59] dark:text-muted-foreground">
                         Ujian bisa dimulai pukul {{ jam(props.ujian.jam_mulai)
                         }}<template v-if="sisa !== null"
                             >, dalam <span class="font-mono font-medium text-black">{{ format(sisa) }}</span></template
@@ -269,7 +257,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         <p class="mt-3 flex items-center gap-1.5 text-sm text-[#1a7f37]">
                             <CircleCheck class="size-4" /> Jawaban terkirim pukul {{ formatJamDari(props.pengerjaan.selesai_at) }}.
                         </p>
-                        <p class="mt-2 text-sm text-[#31302e]">
+                        <p class="mt-2 text-sm text-[#31302e] dark:text-foreground">
                             {{
                                 props.nilaiDirilis
                                     ? `Nilai: ${props.pengerjaan.nilai ?? '-'} (${props.pengerjaan.skor ?? '-'} dari ${props.lembarSoal?.total_poin} poin)`
@@ -278,17 +266,10 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         </p>
                     </template>
                     <template v-else-if="berlangsung && props.bolehIkut">
-                        <Link
-                            v-if="props.pengerjaan && props.lembarSoal"
-                            :href="route('mahasiswa.quiz.show', props.lembarSoal.id)"
-                            class="mt-4 inline-flex h-11 items-center rounded-full bg-[#0075de] px-6 text-sm font-medium text-white hover:bg-[#005bab]"
-                            >Lanjutkan ujian</Link
-                        >
-                        <Button
-                            v-else-if="props.lembarSoal?.siap"
-                            class="mt-4 h-11 rounded-full bg-[#0075de] px-6 text-white hover:bg-[#005bab]"
-                            :disabled="mulaiForm.processing"
-                            @click="mulaiUjian"
+                        <Button v-if="props.pengerjaan && props.lembarSoal" as-child class="mt-4">
+                            <Link :href="route('mahasiswa.quiz.show', props.lembarSoal.id)">Lanjutkan ujian</Link>
+                        </Button>
+                        <Button v-else-if="props.lembarSoal?.siap" class="mt-4" :disabled="mulaiForm.processing" @click="mulaiUjian"
                             >Mulai ujian</Button
                         >
                         <p v-else class="mt-3 text-sm text-[#dd5b00]">Soal belum tersedia. Hubungi dosen atau pengawas.</p>
@@ -298,9 +279,9 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     </p>
                 </section>
 
-                <section v-if="props.susulan && (props.susulan.pengajuan || props.susulan.boleh_ajukan)" :class="kartu">
+                <section v-if="props.susulan && (props.susulan.pengajuan || props.susulan.boleh_ajukan)" class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-2">
-                        <h2 class="text-lg font-semibold text-black">Ujian susulan</h2>
+                        <h2 class="judul-bagian">Ujian susulan</h2>
                         <span
                             v-if="props.susulan.pengajuan"
                             class="rounded-full px-2.5 py-0.5 text-xs font-medium"
@@ -309,7 +290,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         >
                     </div>
                     <template v-if="props.susulan.pengajuan">
-                        <p class="mt-2 text-sm text-[#31302e]">
+                        <p class="mt-2 text-sm text-[#31302e] dark:text-foreground">
                             Diajukan {{ formatTanggal(props.susulan.pengajuan.diajukan_at) }}: {{ props.susulan.pengajuan.alasan }}
                         </p>
                         <p class="mt-1 flex flex-wrap gap-3 text-sm">
@@ -326,41 +307,33 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                         <p v-if="props.susulan.pengajuan.catatan_admin" class="mt-2 text-sm text-[#b42318]">
                             Catatan admin: {{ props.susulan.pengajuan.catatan_admin }}
                         </p>
-                        <p v-if="props.susulan.pengajuan.status === 'menunggu'" class="mt-2 text-sm text-[#615d59]">
+                        <p v-if="props.susulan.pengajuan.status === 'menunggu'" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                             Menunggu persetujuan admin. Bila Anda tetap mengikuti ujian ini, pengajuan otomatis dibatalkan.
                             <button type="button" class="font-medium text-[#b42318] hover:underline" @click="batalkanSusulan">
                                 Batalkan pengajuan
                             </button>
                         </p>
-                        <p v-else-if="props.susulan.pengajuan.status === 'disetujui'" class="mt-2 text-sm text-[#615d59]">
+                        <p v-else-if="props.susulan.pengajuan.status === 'disetujui'" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                             Disetujui. Tagihan ujian susulan akan muncul di menu Biaya Kuliah; jadwal susulan tampil setelah tagihan lunas.
                         </p>
-                        <p v-else-if="props.susulan.pengajuan.status === 'gugur'" class="mt-2 text-sm text-[#615d59]">
+                        <p v-else-if="props.susulan.pengajuan.status === 'gugur'" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                             Anda tercatat mengikuti ujian utama, jadi hak ujian susulan gugur.
                         </p>
                     </template>
                     <template v-if="props.susulan.boleh_ajukan">
-                        <p class="mt-2 text-sm text-[#615d59]">
+                        <p class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                             Tidak bisa mengikuti ujian ini? Ajukan ujian susulan paling lambat {{ formatTanggal(props.susulan.batas) }}, dengan alasan
                             dan bukti.
                         </p>
-                        <Button v-if="!bukaFormSusulan" variant="outline" class="mt-3 rounded-full" @click="bukaFormSusulan = true"
-                            >Ajukan ujian susulan</Button
-                        >
+                        <Button v-if="!bukaFormSusulan" variant="outline" class="mt-3" @click="bukaFormSusulan = true">Ajukan ujian susulan</Button>
                         <form v-else class="mt-3 grid gap-3" @submit.prevent="ajukanSusulan">
-                            <label class="grid gap-1 text-sm">
-                                <span class="font-medium text-black">Alasan</span>
-                                <textarea
-                                    v-model="formSusulan.alasan"
-                                    rows="3"
-                                    maxlength="1000"
-                                    required
-                                    class="rounded-lg border border-[#dddddd] px-3 py-2 text-sm focus:border-[#0075de] focus:outline-none"
-                                />
+                            <label class="grid gap-2">
+                                <span class="label-isian">Alasan</span>
+                                <textarea v-model="formSusulan.alasan" rows="3" maxlength="1000" required class="isian isian-area" />
                                 <InputError :message="formSusulan.errors.alasan" />
                             </label>
-                            <label class="grid gap-1 text-sm">
-                                <span class="font-medium text-black">Bukti (wajib, PDF/JPG/PNG, maks 3 berkas × 5 MB)</span>
+                            <label class="grid gap-2">
+                                <span class="label-isian">Bukti (wajib, PDF/JPG/PNG, maks 3 berkas × 5 MB)</span>
                                 <input
                                     :key="kunciLampiran"
                                     type="file"
@@ -371,14 +344,9 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                 />
                                 <InputError :message="galatLampiran" />
                             </label>
-                            <div class="flex gap-2">
-                                <Button
-                                    type="submit"
-                                    class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                                    :disabled="formSusulan.processing"
-                                    >Kirim pengajuan</Button
-                                >
-                                <Button type="button" variant="outline" class="rounded-full" @click="bukaFormSusulan = false">Batal</Button>
+                            <div class="flex justify-end gap-2">
+                                <Button type="button" variant="outline" @click="bukaFormSusulan = false">Batal</Button>
+                                <Button type="submit" :disabled="formSusulan.processing">Kirim pengajuan</Button>
                             </div>
                         </form>
                     </template>

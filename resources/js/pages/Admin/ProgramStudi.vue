@@ -64,131 +64,94 @@ const confirmDelete = () => {
 <template>
     <Head title="Program Studi" />
     <AppLayout :breadcrumbs="[{ title: 'Program Studi', href: route('admin.program-studi.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Program Studi</h1>
-                        <p class="text-sm leading-5 text-[#615d59]">Kelola program studi per fakultas, jenjang, dan kaprodi.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Program Studi</h1>
+                        <p class="deskripsi-halaman">Kelola program studi per fakultas, jenjang, dan kaprodi.</p>
                     </div>
-                    <Link :href="route('admin.program-studi.create')">
-                        <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Tambah Program Studi</Button>
-                    </Link>
+                    <Button as-child>
+                        <Link :href="route('admin.program-studi.create')">Tambah Program Studi</Link>
+                    </Button>
                 </div>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                        <div class="relative w-full sm:max-w-sm">
-                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                            <Input
-                                v-model="search"
-                                placeholder="Cari kode atau nama program studi"
-                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
-                            />
-                        </div>
-                        <SelectFilter v-model="fakultasId" label="Filter fakultas" @change="applyFilters">
-                            <option value="all">Semua Fakultas</option>
-                            <option v-for="item in props.fakultas" :key="item.id" :value="item.id">{{ item.nama_fakultas }}</option>
-                        </SelectFilter>
+                <div class="bilah-filter">
+                    <div class="kolom-cari">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                        <Input v-model="search" placeholder="Cari kode atau nama program studi" aria-label="Cari" class="pl-9" />
                     </div>
-                    <p class="whitespace-nowrap text-sm text-[#615d59]">
+                    <SelectFilter v-model="fakultasId" label="Filter fakultas" @change="applyFilters">
+                        <option value="all">Semua Fakultas</option>
+                        <option v-for="item in props.fakultas" :key="item.id" :value="item.id">{{ item.nama_fakultas }}</option>
+                    </SelectFilter>
+                    <p class="info-jumlah sm:ml-auto">
                         <span class="font-medium text-black">{{ props.programStudis.total }}</span> data<span v-if="props.search">
                             · hasil untuk "{{ props.search }}"</span
                         >
                     </p>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02),0_2.025px_7.847px_rgba(0,0,0,0.027)]"
-                    role="alert"
-                >
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <div
-                    class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[1040px] text-left lg:min-w-0">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[1040px]">
                             <thead>
-                                <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kode</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nama Program Studi</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Fakultas</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jenjang</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Akreditasi</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kaprodi</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                <tr>
+                                    <th class="kolom-no">No</th>
+                                    <th>Kode</th>
+                                    <th>Nama Program Studi</th>
+                                    <th>Fakultas</th>
+                                    <th>Jenjang</th>
+                                    <th>Akreditasi</th>
+                                    <th>Kaprodi</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="(item, index) in props.programStudis.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
-                                        {{ (props.programStudis.from ?? 0) + index }}
-                                    </td>
-                                    <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_prodi }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
-                                        {{ item.nama_prodi }}
-                                    </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
-                                        {{ item.fakultas?.nama_fakultas ?? '-' }}
-                                    </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ item.jenjang }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
-                                        {{ item.status_akreditasi }}
-                                    </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">{{ kaprodiName(item) }}</td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex justify-end gap-1.5">
-                                            <Link :href="route('admin.program-studi.show', item.id)" title="Detail" aria-label="Detail">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
-                                                    aria-hidden="true"
-                                                    ><Eye class="size-4"
-                                                /></Button>
-                                            </Link>
-                                            <Link :href="route('admin.program-studi.edit', item.id)" title="Edit" aria-label="Edit">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                    aria-hidden="true"
-                                                    ><Pencil class="size-4"
-                                                /></Button>
-                                            </Link>
-                                            <button type="button" title="Hapus" aria-label="Hapus" @click="remove(item)">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
-                                                    aria-hidden="true"
-                                                    ><Trash2 class="size-4"
-                                                /></Button>
-                                            </button>
+                            <tbody>
+                                <tr v-for="(item, index) in props.programStudis.data" :key="item.id">
+                                    <td class="kolom-no">{{ (props.programStudis.from ?? 1) + index }}</td>
+                                    <td class="font-medium text-black">{{ item.kode_prodi }}</td>
+                                    <td>{{ item.nama_prodi }}</td>
+                                    <td>{{ item.fakultas?.nama_fakultas ?? '-' }}</td>
+                                    <td>{{ item.jenjang }}</td>
+                                    <td>{{ item.status_akreditasi }}</td>
+                                    <td>{{ kaprodiName(item) }}</td>
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                                <Link :href="route('admin.program-studi.show', item.id)" title="Detail" aria-label="Detail"
+                                                    ><Eye
+                                                /></Link>
+                                            </Button>
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                <Link :href="route('admin.program-studi.edit', item.id)" title="Edit" aria-label="Edit"
+                                                    ><Pencil
+                                                /></Link>
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon-sm"
+                                                class="text-[#dd5b00]"
+                                                title="Hapus"
+                                                aria-label="Hapus"
+                                                @click="remove(item)"
+                                                ><Trash2
+                                            /></Button>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.programStudis.data.length">
-                                    <td colspan="8" class="px-4 py-16 text-center">
-                                        <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8">
-                                            <p class="text-sm font-medium text-black">Belum ada data</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">
-                                                Data program studi akan tampil di sini. Tambahkan prodi baru untuk memulai.
-                                            </p>
-                                        </div>
-                                    </td>
+                                <tr v-if="!props.programStudis.data.length" class="baris-kosong">
+                                    <td colspan="8" class="tabel-kosong">Belum ada data program studi. Tambahkan prodi baru untuk memulai.</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
+
+                <Pagination :links="props.programStudis.links" :total="props.programStudis.total" />
 
                 <AlertModal
                     :open="confirmOpen"
@@ -199,8 +162,6 @@ const confirmDelete = () => {
                     @confirm="confirmDelete"
                     @cancel="confirmOpen = false"
                 />
-
-                <Pagination :links="props.programStudis.links" :total="props.programStudis.total" />
             </div>
         </div>
     </AppLayout>

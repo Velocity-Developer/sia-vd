@@ -56,25 +56,23 @@ const hapus = () => {
 <template>
     <Head title="Jadwal Kelas" />
     <AppLayout :breadcrumbs="[{ title: 'Jadwal Kelas', href: rute('jadwal.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">{{ isAdmin ? 'Jadwal Kelas' : 'Jadwal Mengajar' }}</h1>
-                    <p class="text-sm text-[#615d59]">
-                        {{
-                            isAdmin
-                                ? 'Seluruh jadwal kelas kuliah. Jadwal ditambah dari halaman kelas.'
-                                : 'Jadwal mengajar dari kelas yang Anda ampu.'
-                        }}
-                    </p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ isAdmin ? 'Jadwal Kelas' : 'Jadwal Mengajar' }}</h1>
+                        <p class="deskripsi-halaman">
+                            {{
+                                isAdmin
+                                    ? 'Seluruh jadwal kelas kuliah. Jadwal ditambah dari halaman kelas.'
+                                    : 'Jadwal mengajar dari kelas yang Anda ampu.'
+                            }}
+                        </p>
+                    </div>
                 </div>
 
-                <div v-if="page.props.flash?.jadwal_success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.jadwal_success }}
-                </div>
-                <div v-if="page.props.flash?.jadwal_error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.jadwal_error }}
-                </div>
+                <div v-if="page.props.flash?.jadwal_success" class="alert-sukses" role="alert">{{ page.props.flash.jadwal_success }}</div>
+                <div v-if="page.props.flash?.jadwal_error" class="alert-gagal" role="alert">{{ page.props.flash.jadwal_error }}</div>
 
                 <FilterKonten
                     :url="rute('jadwal.index')"
@@ -88,46 +86,44 @@ const hapus = () => {
                     placeholder="Cari hari, ruang, atau kode kelas"
                 />
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[900px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[900px]">
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Hari &amp; Jam</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kelas</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</th>
-                                    <th v-if="isAdmin" class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Dosen</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Ruang</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Hari &amp; Jam</th>
+                                    <th>Kelas</th>
+                                    <th>Mata Kuliah</th>
+                                    <th v-if="isAdmin">Dosen</th>
+                                    <th>Ruang</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="(item, index) in props.jadwals.data" :key="item.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-[#615d59]">{{ (props.jadwals.from ?? 0) + index }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-black">
+                            <tbody>
+                                <tr v-for="(item, index) in props.jadwals.data" :key="item.id">
+                                    <td class="kolom-no">{{ (props.jadwals.from ?? 1) + index }}</td>
+                                    <td class="text-black">
                                         <span class="block font-medium">{{ item.hari }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ jam(item.jam_mulai) }}–{{ jam(item.jam_akhir) }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td>
                                         <span class="block font-medium">{{ item.kelas_kuliah?.kode_kelas ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">
                                             {{ item.kelas_kuliah?.tahun_akademik?.tahun }} {{ item.kelas_kuliah?.tahun_akademik?.semester }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td>
                                         <span class="block">{{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.kelas_kuliah?.mata_kuliah?.kode_matkul }}</span>
                                     </td>
-                                    <td v-if="isAdmin" class="px-4 py-3 text-[15px] text-[#31302e]">
-                                        {{ item.kelas_kuliah?.dosen?.user?.name ?? '-' }}
-                                    </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td v-if="isAdmin">{{ item.kelas_kuliah?.dosen?.user?.name ?? '-' }}</td>
+                                    <td>
                                         <span class="block">{{ item.ruang?.kode_ruang ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ item.ruang?.nama_ruang }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex justify-end gap-1.5">
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
                                             <Link
                                                 :href="rute('kelas-kuliah.show', item.kelas_kuliah?.id ?? 0)"
                                                 class="text-sm font-medium text-[#0075de] hover:underline"
@@ -135,37 +131,29 @@ const hapus = () => {
                                                 Buka kelas
                                             </Link>
                                             <template v-if="isAdmin && item.kelas_kuliah">
-                                                <Link
-                                                    :href="rute('kelas-kuliah.jadwal.edit', [item.kelas_kuliah.id, item.id])"
-                                                    title="Edit"
-                                                    aria-label="Edit jadwal"
-                                                >
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99]"
-                                                    >
-                                                        <Pencil class="size-4" />
-                                                    </Button>
-                                                </Link>
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.jadwal.edit', [item.kelas_kuliah.id, item.id])"
+                                                        title="Edit"
+                                                        aria-label="Edit jadwal"
+                                                        ><Pencil
+                                                    /></Link>
+                                                </Button>
                                                 <Button
                                                     variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00]"
+                                                    size="icon-sm"
+                                                    class="text-[#dd5b00]"
                                                     title="Hapus"
                                                     aria-label="Hapus jadwal"
                                                     @click="pendingHapus = item"
-                                                >
-                                                    <Trash2 class="size-4" />
-                                                </Button>
+                                                    ><Trash2
+                                                /></Button>
                                             </template>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.jadwals.data.length">
-                                    <td :colspan="isAdmin ? 7 : 6" class="px-4 py-14 text-center text-sm text-[#615d59]">
-                                        Tidak ada jadwal yang cocok dengan filter.
-                                    </td>
+                                <tr v-if="!props.jadwals.data.length" class="baris-kosong">
+                                    <td :colspan="isAdmin ? 7 : 6" class="tabel-kosong">Tidak ada jadwal yang cocok dengan filter.</td>
                                 </tr>
                             </tbody>
                         </table>

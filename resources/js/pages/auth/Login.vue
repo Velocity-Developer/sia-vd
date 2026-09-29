@@ -27,9 +27,6 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     });
 };
-
-const isian =
-    'h-11 rounded-xl border-[#d8d5d2] bg-white pl-10 text-sm text-[#31302e] shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-4 focus-visible:ring-[#0075de]/10';
 </script>
 
 <template>
@@ -39,13 +36,13 @@ const isian =
     >
         <Head title="Masuk" />
 
-        <div v-if="status" class="mb-5 rounded-xl border border-[#c9ecd2] bg-[#f2fbf4] px-4 py-3 text-sm text-[#1aae39]" role="status">
+        <div v-if="status" class="alert-sukses mb-5" role="status">
             {{ status }}
         </div>
 
         <form class="flex flex-col gap-5" @submit.prevent="submit">
             <div class="grid gap-2">
-                <Label for="username" class="text-sm font-medium text-[#31302e]">NIM / NIDN / Username</Label>
+                <Label for="username" class="label-isian">NIM / NIDN / Username</Label>
                 <div class="relative">
                     <User class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
                     <Input
@@ -57,7 +54,7 @@ const isian =
                         tabindex="1"
                         autocomplete="username"
                         placeholder="NIM, NIDN, atau username"
-                        :class="isian"
+                        class="pl-10"
                     />
                 </div>
                 <InputError :message="form.errors.username" />
@@ -65,7 +62,7 @@ const isian =
 
             <div class="grid gap-2">
                 <div class="flex items-center justify-between gap-3">
-                    <Label for="password" class="text-sm font-medium text-[#31302e]">Kata Sandi</Label>
+                    <Label for="password" class="label-isian">Kata Sandi</Label>
                     <Link
                         v-if="canResetPassword"
                         :href="route('password.request')"
@@ -85,13 +82,13 @@ const isian =
                         tabindex="2"
                         autocomplete="current-password"
                         placeholder="Masukkan kata sandi"
-                        :class="[isian, 'pr-11']"
+                        class="pl-10 pr-11"
                     />
                     <button
                         type="button"
                         tabindex="-1"
                         :aria-label="lihatSandi ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
-                        class="absolute right-2 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#a39e98] transition-colors hover:bg-[#f6f5f4] hover:text-[#615d59]"
+                        class="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#a39e98] transition-colors hover:bg-[#f6f5f4] hover:text-[#615d59] dark:hover:bg-accent"
                         @click="lihatSandi = !lihatSandi"
                     >
                         <component :is="lihatSandi ? EyeOff : Eye" class="size-4" />
@@ -100,22 +97,17 @@ const isian =
                 <InputError :message="form.errors.password" />
             </div>
 
-            <Label for="remember" class="flex w-fit items-center gap-2.5 text-sm text-[#31302e]">
+            <Label for="remember" class="label-isian flex w-fit items-center gap-2.5 font-normal">
                 <Checkbox id="remember" v-model="form.remember" tabindex="3" />
                 <span>Ingat saya di perangkat ini</span>
             </Label>
 
-            <Button
-                type="submit"
-                tabindex="4"
-                :disabled="form.processing"
-                class="h-11 w-full rounded-xl bg-[#0075de] text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#005bab]"
-            >
-                <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+            <Button type="submit" tabindex="4" :disabled="form.processing" class="w-full">
+                <LoaderCircle v-if="form.processing" class="animate-spin" />
                 {{ form.processing ? 'Memproses…' : 'Masuk' }}
             </Button>
 
-            <p class="text-center text-sm text-[#615d59]">
+            <p class="text-center text-sm text-[#615d59] dark:text-muted-foreground">
                 {{
                     canResetPassword
                         ? 'Belum punya akun? Hubungi bagian akademik kampus Anda.'

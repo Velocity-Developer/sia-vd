@@ -252,9 +252,6 @@ const infoMulai = computed(() => {
     if (props.pertemuan.terlewat) return `Jam pertemuan (${waktu}) sudah lewat. Pertemuan yang terlewat hanya bisa dicatat admin sebagai susulan.`;
     return `Pertemuan bisa dimulai ${waktu}, tidak bisa dibuka lebih awal dari jam mulai.`;
 });
-
-const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
-const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 </script>
 
 <template>
@@ -266,103 +263,97 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
             { title: `Pertemuan ${props.pertemuan.pertemuan_ke}`, href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <p class="text-sm text-[#615d59]">{{ props.kelasKuliah.mata_kuliah?.nama_matkul }} · {{ props.kelasKuliah.kode_kelas }}</p>
-                        <h1 class="flex flex-wrap items-center gap-2 text-[26px] font-bold leading-[1.23] text-black">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman flex flex-wrap items-center gap-2">
                             Pertemuan {{ props.pertemuan.pertemuan_ke }}
                             <span
                                 v-if="props.pertemuan.jenis !== 'kuliah'"
-                                class="rounded bg-[#fff6e0] px-2 py-0.5 text-sm font-semibold text-[#8a5a00]"
+                                class="rounded bg-[#fff6e0] px-2 py-0.5 text-xs font-semibold tracking-normal text-[#8a5a00]"
                             >
                                 {{ JENIS_PERTEMUAN[props.pertemuan.jenis] }}
                             </span>
-                            <span class="rounded-full px-2.5 py-0.5 text-sm font-medium" :class="statusTampil(props.pertemuan).kelas">
+                            <span class="rounded-full px-2.5 py-0.5 text-xs font-medium tracking-normal" :class="statusTampil(props.pertemuan).kelas">
                                 {{ statusTampil(props.pertemuan).label }}
                             </span>
                         </h1>
-                        <p class="text-sm text-[#31302e]">
+                        <p class="deskripsi-halaman">{{ props.kelasKuliah.mata_kuliah?.nama_matkul }} · {{ props.kelasKuliah.kode_kelas }}</p>
+                        <p class="deskripsi-halaman">
                             {{ formatTanggal(props.pertemuan.tanggal) }} · {{ jam(props.pertemuan.jam_mulai) }}–{{ jam(props.pertemuan.jam_akhir) }} ·
                             {{ props.pertemuan.ruang ? `${props.pertemuan.ruang.kode_ruang} — ${props.pertemuan.ruang.nama_ruang}` : 'Tanpa ruang' }}
                         </p>
-                        <p v-if="props.pertemuan.catatan" class="text-sm text-[#615d59]">Catatan: {{ props.pertemuan.catatan }}</p>
-                        <details v-if="props.riwayatJadwal.length" class="text-sm text-[#615d59]">
+                        <p v-if="props.pertemuan.catatan" class="deskripsi-halaman">Catatan: {{ props.pertemuan.catatan }}</p>
+                        <details v-if="props.riwayatJadwal.length" class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                             <summary class="cursor-pointer font-medium text-[#8a5a00]">Dijadwal ulang {{ props.riwayatJadwal.length }}×</summary>
                             <ul class="mt-2 space-y-2">
-                                <li v-for="r in props.riwayatJadwal" :key="r.id" class="rounded-lg border border-[#e6e6e6] bg-white px-3 py-2">
-                                    <p class="text-[#31302e]">
+                                <li v-for="r in props.riwayatJadwal" :key="r.id" class="kartu px-3 py-2">
+                                    <p class="text-[#31302e] dark:text-foreground">
                                         {{ formatTanggal(r.tanggal_lama) }} {{ r.jam_mulai_lama }}–{{ r.jam_akhir_lama
                                         }}{{ r.ruang_lama ? ` · ${r.ruang_lama}` : '' }} →
-                                        <span class="font-medium text-black"
+                                        <span class="font-medium text-black dark:text-foreground"
                                             >{{ formatTanggal(r.tanggal_baru) }} {{ r.jam_mulai_baru }}–{{ r.jam_akhir_baru
                                             }}{{ r.ruang_baru ? ` · ${r.ruang_baru}` : '' }}</span
                                         >
                                     </p>
                                     <p v-if="r.dosen_lama !== r.dosen_baru">Dosen: {{ r.dosen_lama ?? '-' }} → {{ r.dosen_baru ?? '-' }}</p>
                                     <p>Alasan: {{ r.alasan }}</p>
-                                    <p class="text-xs text-[#a39e98]">{{ r.oleh ?? 'Sistem' }} · {{ r.waktu ? formatTanggal(r.waktu) : '' }}</p>
+                                    <p class="teks-bantu">{{ r.oleh ?? 'Sistem' }} · {{ r.waktu ? formatTanggal(r.waktu) : '' }}</p>
                                 </li>
                             </ul>
                         </details>
                     </div>
-                    <Link v-if="!pengganti" :href="rute('presensi.kelas', props.kelasKuliah.id)">
-                        <Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black">Semua pertemuan</Button>
-                    </Link>
+                    <Button v-if="!pengganti" as-child variant="outline">
+                        <Link :href="rute('presensi.kelas', props.kelasKuliah.id)">Semua pertemuan</Link>
+                    </Button>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
-                <div v-if="props.terkunci" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#615d59]">
-                    Tahun akademik kelas ini sudah tidak aktif. Presensi hanya bisa diubah admin.
-                </div>
+                <div v-if="props.terkunci" class="alert-info">Tahun akademik kelas ini sudah tidak aktif. Presensi hanya bisa diubah admin.</div>
 
                 <!-- Presensi dosen -->
-                <section :class="kartu">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Presensi dosen &amp; jurnal</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Presensi dosen &amp; jurnal</h2>
 
-                    <dl class="mt-3 grid gap-4 text-sm sm:grid-cols-3">
+                    <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Dosen</dt>
-                            <dd class="font-medium text-black">
+                            <dt class="teks-bantu">Dosen</dt>
+                            <dd class="font-medium text-black dark:text-foreground">
                                 {{ props.pertemuan.dosen?.user?.name ?? props.kelasKuliah.dosen?.user?.name ?? '-' }}
                                 <span
                                     v-if="props.pertemuan.dosen_id && props.pertemuan.dosen_id !== props.kelasKuliah.dosen_id"
-                                    class="text-xs text-[#a39e98]"
+                                    class="teks-bantu font-normal"
                                     >(pengganti)</span
                                 >
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Jam masuk</dt>
-                            <dd class="font-medium text-black">{{ formatJamDari(props.pertemuan.dosen_masuk_at) }}</dd>
+                            <dt class="teks-bantu">Jam masuk</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ formatJamDari(props.pertemuan.dosen_masuk_at) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Jam keluar</dt>
-                            <dd class="font-medium text-black">{{ formatJamDari(props.pertemuan.dosen_keluar_at) }}</dd>
+                            <dt class="teks-bantu">Jam keluar</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ formatJamDari(props.pertemuan.dosen_keluar_at) }}</dd>
                         </div>
                     </dl>
 
                     <div v-if="status === 'dijadwalkan'" class="mt-4 flex flex-wrap items-center gap-3">
-                        <Button v-if="props.bisaDimulai" class="h-11 rounded-full bg-[#0075de] px-6 text-white hover:bg-[#005bab]" @click="mulai">
-                            <Play class="mr-1 size-4" /> {{ isAdmin ? 'Buka pertemuan' : 'Mulai kuliah' }}
+                        <Button v-if="props.bisaDimulai" size="lg" @click="mulai">
+                            <Play /> {{ isAdmin ? 'Buka pertemuan' : 'Mulai kuliah' }}
                         </Button>
-                        <div v-else-if="!props.terkunci && props.bisaKelola" class="text-sm text-[#615d59]">
+                        <div v-else-if="!props.terkunci && props.bisaKelola" class="text-sm text-[#615d59] dark:text-muted-foreground">
                             <p>{{ infoMulai }}</p>
-                            <p v-if="hitungMundur" class="mt-1 font-medium text-black">
+                            <p v-if="hitungMundur" class="mt-1 font-medium text-black dark:text-foreground">
                                 Tombol mulai muncul dalam <span class="font-mono">{{ hitungMundur }}</span>
                             </p>
                         </div>
-                        <p v-if="isAdmin && props.bisaDimulai && props.pertemuan.terlewat" class="text-xs text-[#a39e98]">
+                        <p v-if="isAdmin && props.bisaDimulai && props.pertemuan.terlewat" class="teks-bantu">
                             Pertemuan ini terlewat. Admin bisa membukanya untuk mencatat presensi susulan secara manual (tanpa QR/PIN); jam masuk
                             dosen tidak tercatat.
                         </p>
@@ -370,29 +361,24 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 
                     <form
                         v-if="isAdmin && status === 'dijadwalkan'"
-                        class="mt-4 flex flex-wrap items-end gap-3 border-t border-[#e6e6e6] pt-4"
+                        class="mt-4 flex flex-wrap items-end gap-3 border-t border-[#e6e6e6] pt-4 dark:border-border"
                         @submit.prevent="simpanPengganti"
                     >
-                        <div class="grid min-w-[260px] flex-1 gap-1.5">
-                            <Label for="dosen_id" class="text-sm">Dosen yang mengajar</Label>
-                            <select
-                                id="dosen_id"
-                                v-model="penggantiForm.dosen_id"
-                                class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]"
-                            >
+                        <div class="grid min-w-[260px] flex-1 gap-2">
+                            <Label for="dosen_id" class="label-isian">Dosen yang mengajar</Label>
+                            <select id="dosen_id" v-model="penggantiForm.dosen_id" class="isian isian-pilih">
                                 <option v-for="d in props.dosenOptions" :key="d.id" :value="d.id">
                                     {{ d.name }}{{ d.id === props.kelasKuliah.dosen_id ? ' (pengampu)' : '' }}
                                 </option>
                             </select>
                         </div>
-                        <div class="grid min-w-[260px] flex-1 gap-1.5">
-                            <Label for="alasan_pengganti" class="text-sm">Alasan penggantian</Label>
-                            <input
+                        <div class="grid min-w-[260px] flex-1 gap-2">
+                            <Label for="alasan_pengganti" class="label-isian">Alasan penggantian</Label>
+                            <Input
                                 id="alasan_pengganti"
                                 v-model="penggantiForm.alasan"
                                 maxlength="255"
                                 placeholder="mis. Dosen pengampu dinas luar kota"
-                                class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]"
                             />
                         </div>
                         <Button type="submit" variant="outline" :disabled="penggantiForm.processing || !penggantiForm.isDirty">Simpan dosen</Button>
@@ -407,61 +393,44 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                     </form>
 
                     <form v-if="status === 'berlangsung' || status === 'selesai'" class="mt-4 grid gap-2" @submit.prevent="simpanJurnal">
-                        <Label for="topik">Topik / realisasi materi</Label>
+                        <Label for="topik" class="label-isian">Topik / realisasi materi</Label>
                         <textarea
                             id="topik"
                             v-model="jurnalForm.topik"
                             rows="3"
                             :disabled="props.terkunci || !props.bisaKelola"
                             placeholder="Materi yang disampaikan pada pertemuan ini"
-                            class="rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de] disabled:bg-[#f6f5f4]"
+                            class="isian isian-area"
                         />
                         <InputError :message="jurnalForm.errors.topik" />
                         <div v-if="!props.terkunci && props.bisaKelola" class="flex flex-wrap justify-end gap-2">
                             <Button type="submit" variant="outline" :disabled="jurnalForm.processing || !jurnalForm.isDirty">Simpan jurnal</Button>
-                            <Button
-                                v-if="status === 'berlangsung'"
-                                type="button"
-                                class="bg-[#1a7f37] text-white hover:bg-[#146c2e]"
-                                :disabled="jurnalForm.processing"
-                                @click="selesaikan"
-                            >
-                                <Square class="mr-1 size-4" /> Selesaikan pertemuan
+                            <Button v-if="status === 'berlangsung'" type="button" :disabled="jurnalForm.processing" @click="selesaikan">
+                                <Square /> Selesaikan pertemuan
                             </Button>
                         </div>
                     </form>
                 </section>
 
                 <!-- Presensi mandiri -->
-                <section v-if="status === 'berlangsung' && !props.terkunci && props.bisaKelola" :class="kartu">
+                <section v-if="status === 'berlangsung' && !props.terkunci && props.bisaKelola" class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Presensi mandiri (QR / PIN)</h2>
-                            <p class="mt-1 max-w-xl text-sm text-[#615d59]">
+                            <h2 class="judul-bagian">Presensi mandiri (QR / PIN)</h2>
+                            <p class="mt-1 max-w-xl text-sm text-[#615d59] dark:text-muted-foreground">
                                 Mahasiswa memindai QR atau mengetik PIN di menu Presensi. Kode berganti tiap 30 detik, jadi foto QR yang dikirim ke
                                 teman cepat kedaluwarsa. Anda tetap bisa mengoreksi status secara manual.
                             </p>
                         </div>
-                        <Button v-if="props.mandiriTerbuka" type="button" variant="outline" class="text-[#dd5b00]" @click="tutupMandiri"
-                            >Tutup</Button
-                        >
+                        <Button v-if="props.mandiriTerbuka" type="button" variant="outline" @click="tutupMandiri">Tutup</Button>
                     </div>
 
                     <form v-if="!props.mandiriTerbuka" class="mt-4 flex flex-wrap items-end gap-3" @submit.prevent="bukaMandiri">
-                        <div class="grid gap-1.5">
-                            <Label for="menit" class="text-sm">Dibuka selama (menit)</Label>
-                            <Input
-                                id="menit"
-                                v-model="mandiriForm.menit"
-                                type="number"
-                                min="1"
-                                max="180"
-                                class="h-10 w-28 rounded-[4px] border-[#dddddd]"
-                            />
+                        <div class="grid gap-2">
+                            <Label for="menit" class="label-isian">Dibuka selama (menit)</Label>
+                            <Input id="menit" v-model="mandiriForm.menit" type="number" min="1" max="180" class="w-28" />
                         </div>
-                        <Button type="submit" class="h-10 bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="mandiriForm.processing">
-                            <QrCode class="mr-1 size-4" /> Buka presensi mandiri
-                        </Button>
+                        <Button type="submit" :disabled="mandiriForm.processing"> <QrCode /> Buka presensi mandiri </Button>
                         <InputError class="w-full" :message="mandiriForm.errors.menit" />
                     </form>
 
@@ -473,28 +442,21 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             @tertutup="presensiTertutup"
                         />
                         <form class="flex flex-wrap items-end gap-3" @submit.prevent="bukaMandiri">
-                            <div class="grid gap-1.5">
-                                <Label for="menit" class="text-sm">Perpanjang dari sekarang (menit)</Label>
-                                <Input
-                                    id="menit"
-                                    v-model="mandiriForm.menit"
-                                    type="number"
-                                    min="1"
-                                    max="180"
-                                    class="h-10 w-28 rounded-[4px] border-[#dddddd]"
-                                />
+                            <div class="grid gap-2">
+                                <Label for="menit" class="label-isian">Perpanjang dari sekarang (menit)</Label>
+                                <Input id="menit" v-model="mandiriForm.menit" type="number" min="1" max="180" class="w-28" />
                             </div>
-                            <Button type="submit" variant="outline" class="h-10" :disabled="mandiriForm.processing">Perpanjang</Button>
+                            <Button type="submit" variant="outline" :disabled="mandiriForm.processing">Perpanjang</Button>
                         </form>
                     </div>
                 </section>
 
                 <!-- Presensi mahasiswa -->
-                <section :class="kartu">
+                <section class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Presensi mahasiswa</h2>
-                            <p v-if="status === 'dijadwalkan'" class="mt-1 text-sm text-[#615d59]">
+                            <h2 class="judul-bagian">Presensi mahasiswa</h2>
+                            <p v-if="status === 'dijadwalkan'" class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                                 Daftar hadir {{ props.jumlahPeserta }} mahasiswa muncul setelah pertemuan dimulai.
                             </p>
                             <div v-else class="mt-2 flex flex-wrap gap-2 text-xs">
@@ -504,25 +466,27 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                             </div>
                         </div>
                         <Button v-if="bisaIsi && baris.length" type="button" variant="outline" size="sm" @click="tandaiSemuaHadir">
-                            <CheckCheck class="mr-1 size-4" /> Alpa → Hadir semua
+                            <CheckCheck /> Alpa → Hadir semua
                         </Button>
                     </div>
 
-                    <div v-if="baris.length" class="mt-4 overflow-hidden rounded-xl border border-[#e6e6e6]">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[720px] text-left">
-                                <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                    <div v-if="baris.length" class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[780px]">
+                                <thead>
                                     <tr>
-                                        <th :class="th">Mahasiswa</th>
-                                        <th :class="th">Status</th>
-                                        <th :class="th">Keterangan</th>
+                                        <th class="kolom-no">No</th>
+                                        <th>Mahasiswa</th>
+                                        <th>Status</th>
+                                        <th>Keterangan</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
+                                <tbody>
                                     <tr v-for="(item, index) in baris" :key="item.mahasiswa_id">
-                                        <td class="px-4 py-2.5">
-                                            <span class="block text-[15px] font-medium text-black">{{ props.presensi[index]?.nama }}</span>
-                                            <span class="block text-xs text-[#a39e98]">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td>
+                                            <span class="block font-medium text-black dark:text-foreground">{{ props.presensi[index]?.nama }}</span>
+                                            <span class="teks-bantu block">
                                                 {{ props.presensi[index]?.nim }}
                                                 <template v-if="['qr', 'pin'].includes(props.presensi[index]?.metode ?? '')">
                                                     · {{ props.presensi[index]?.metode.toUpperCase() }}
@@ -546,12 +510,13 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                             >
                                             <span
                                                 v-if="props.presensi[index]?.pengajuan"
-                                                class="mt-1 inline-flex rounded bg-[#f6f5f4] px-1.5 py-0.5 text-xs text-[#615d59]"
+                                                class="mt-1 inline-flex rounded bg-[#f6f5f4] px-1.5 py-0.5 text-xs text-[#615d59] dark:bg-muted dark:text-muted-foreground"
                                                 >Pengajuan {{ props.presensi[index]?.pengajuan?.jenis }}:
                                                 {{ props.presensi[index]?.pengajuan?.status }}</span
                                             >
                                         </td>
-                                        <td class="px-4 py-2.5">
+                                        <td>
+                                            <!-- Tombol status presensi (kontrol khusus): ukuran seragam 36px, radius 8px. -->
                                             <div class="flex gap-1" role="radiogroup" :aria-label="`Status ${props.presensi[index]?.nama}`">
                                                 <button
                                                     v-for="s in STATUS_PRESENSI"
@@ -561,11 +526,11 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                                     :aria-checked="item.status === s.value"
                                                     :title="s.label"
                                                     :disabled="!bisaIsi"
-                                                    class="size-9 rounded-md border text-sm font-semibold transition-colors disabled:cursor-not-allowed"
+                                                    class="size-9 rounded-lg border text-sm font-semibold transition-colors disabled:cursor-not-allowed"
                                                     :class="
                                                         item.status === s.value
                                                             ? s.kelas
-                                                            : 'border-[#e6e6e6] bg-white text-[#a39e98] hover:bg-[#f6f5f4]'
+                                                            : 'border-[#e6e6e6] bg-white text-[#a39e98] hover:bg-[#f6f5f4] dark:border-border dark:bg-background dark:hover:bg-accent'
                                                     "
                                                     @click="item.status = s.value"
                                                 >
@@ -573,13 +538,12 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
                                                 </button>
                                             </div>
                                         </td>
-                                        <td class="px-4 py-2.5">
+                                        <td>
                                             <Input
                                                 v-model="item.keterangan"
                                                 maxlength="255"
                                                 :disabled="!bisaIsi"
                                                 :placeholder="item.status === 'izin' || item.status === 'sakit' ? 'Alasan izin/sakit' : ''"
-                                                class="h-9 rounded-[4px] border-[#dddddd] text-sm"
                                             />
                                         </td>
                                     </tr>
@@ -590,9 +554,7 @@ const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm';
 
                     <div v-if="bisaIsi && baris.length" class="mt-4 flex flex-wrap items-center justify-end gap-3">
                         <span v-if="berubah.length" class="text-sm text-[#dd5b00]">{{ berubah.length }} perubahan belum disimpan</span>
-                        <Button class="bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="menyimpan || !berubah.length" @click="simpanPresensi">
-                            Simpan presensi
-                        </Button>
+                        <Button :disabled="menyimpan || !berubah.length" @click="simpanPresensi">Simpan presensi</Button>
                     </div>
                 </section>
             </div>

@@ -8,9 +8,15 @@ defineProps<{ title: string }>();
 <template>
     <Head :title="title" />
     <AppLayout :breadcrumbs="[{ title, href: '#' }]">
-        <div class="p-4">
-            <h1 class="text-xl font-semibold">{{ title }}</h1>
-            <p class="mt-2 text-muted-foreground">Halaman {{ title }} sedang disiapkan.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ title }}</h1>
+                        <p class="deskripsi-halaman">Halaman {{ title }} sedang disiapkan.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>

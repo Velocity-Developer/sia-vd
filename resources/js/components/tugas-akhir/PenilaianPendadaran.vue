@@ -55,9 +55,6 @@ const bukaTolakRevisi = ref(false);
 const revisiForm = useForm({ catatan: '' });
 const tolakRevisi = () =>
     revisiForm.post(route('dosen.pendadaran.revisi.tolak', j().id), { preserveScroll: true, onSuccess: () => (bukaTolakRevisi.value = false) });
-
-const area =
-    'w-full rounded-[4px] border border-[#dddddd] px-3 py-2 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
 </script>
 
 <template>
@@ -68,9 +65,9 @@ const area =
             <span class="w-fit rounded-full px-2 py-0.5 text-xs font-medium" :class="HASIL_PENDADARAN[jadwal.hasil].kelas">{{
                 HASIL_PENDADARAN[jadwal.hasil].label
             }}</span>
-            <span class="text-xs text-[#615d59]">Nilai {{ jadwal.nilai_akhir }} ({{ jadwal.huruf }})</span>
+            <span class="teks-bantu">Nilai {{ jadwal.nilai_akhir }} ({{ jadwal.huruf }})</span>
             <template v-if="jadwal.status === 'revisi'">
-                <span v-if="jadwal.revisi_diunggah_at" class="text-xs text-[#31302e]">
+                <span v-if="jadwal.revisi_diunggah_at" class="text-xs text-[#31302e] dark:text-foreground">
                     Revisi dikirim {{ formatTanggal(jadwal.revisi_diunggah_at, false) }} ·
                     <a :href="route('berkas.naskah-revisi', jadwal.id)" target="_blank" rel="noopener" class="text-[#0075de] hover:underline"
                         >naskah</a
@@ -78,27 +75,20 @@ const area =
                 </span>
                 <span v-else class="text-xs text-[#a39e98]">Menunggu naskah revisi</span>
                 <div v-if="jadwal.ketua && jadwal.revisi_diunggah_at" class="flex flex-wrap gap-2">
-                    <Button variant="outline" class="h-8 rounded-lg px-3 text-sm text-[#b25000]" @click="bukaTolakRevisi = true">Kembalikan</Button>
-                    <Button class="h-8 rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]" @click="sahkan = true"
-                        >Sahkan Revisi</Button
-                    >
+                    <Button variant="outline" size="sm" @click="bukaTolakRevisi = true">Kembalikan</Button>
+                    <Button size="sm" @click="sahkan = true">Sahkan Revisi</Button>
                 </div>
             </template>
         </template>
 
         <template v-else-if="jadwal.status === 'dijadwalkan'">
-            <span v-if="jadwal.nilai_saya" class="text-xs text-[#31302e]">Nilai Anda: {{ jadwal.nilai_saya.nilai }}</span>
+            <span v-if="jadwal.nilai_saya" class="text-xs text-[#31302e] dark:text-foreground">Nilai Anda: {{ jadwal.nilai_saya.nilai }}</span>
             <span class="text-xs text-[#a39e98]">{{ jadwal.jumlah_nilai }}/3 penguji sudah menilai</span>
             <div class="flex flex-wrap gap-2">
-                <Button v-if="jadwal.boleh_dinilai" variant="outline" class="h-8 rounded-lg px-3 text-sm" @click="isiNilai">
+                <Button v-if="jadwal.boleh_dinilai" variant="outline" size="sm" @click="isiNilai">
                     {{ jadwal.nilai_saya ? 'Ubah Nilai' : 'Isi Nilai' }}
                 </Button>
-                <Button
-                    v-if="jadwal.ketua && jadwal.usulan"
-                    class="h-8 rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]"
-                    @click="tetapkan"
-                    >Tetapkan Hasil</Button
-                >
+                <Button v-if="jadwal.ketua && jadwal.usulan" size="sm" @click="tetapkan">Tetapkan Hasil</Button>
             </div>
             <span v-if="!jadwal.boleh_dinilai && jadwal.peran !== 'Pembimbing'" class="text-xs text-[#a39e98]"
                 >Nilai diisi sejak pendadaran dimulai.</span
@@ -107,22 +97,22 @@ const area =
     </div>
 
     <div v-if="bukaNilai" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="bukaNilai = false">
-        <form class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" @submit.prevent="simpanNilai">
-            <h3 class="text-lg font-semibold">Nilai pendadaran</h3>
-            <p class="mt-1 text-sm text-[#615d59]">{{ jadwal.nama }} · sebagai {{ jadwal.peran }}</p>
+        <form class="kartu w-full max-w-md p-6" @submit.prevent="simpanNilai">
+            <h3 class="judul-bagian">Nilai pendadaran</h3>
+            <p class="teks-bantu mt-1">{{ jadwal.nama }} · sebagai {{ jadwal.peran }}</p>
             <div class="mt-4 grid gap-2">
-                <Label for="nilai_pendadaran">Nilai (0–100)</Label>
-                <Input id="nilai_pendadaran" v-model="nilaiForm.nilai" type="number" min="0" max="100" step="0.01" class="h-10 w-32" required />
+                <Label for="nilai_pendadaran" class="label-isian">Nilai (0–100)</Label>
+                <Input id="nilai_pendadaran" v-model="nilaiForm.nilai" type="number" min="0" max="100" step="0.01" class="w-32" required />
                 <InputError :message="nilaiForm.errors.nilai" />
             </div>
             <div class="mt-4 grid gap-2">
-                <Label for="catatan_nilai">Catatan <span class="font-normal text-[#a39e98]">(opsional)</span></Label>
-                <textarea id="catatan_nilai" v-model="nilaiForm.catatan" rows="3" maxlength="1000" :class="area" />
+                <Label for="catatan_nilai" class="label-isian">Catatan <span class="font-normal text-[#a39e98]">(opsional)</span></Label>
+                <textarea id="catatan_nilai" v-model="nilaiForm.catatan" rows="3" maxlength="1000" class="isian isian-area" />
                 <InputError :message="nilaiForm.errors.catatan" />
             </div>
             <div class="mt-6 flex justify-end gap-2">
-                <Button type="button" variant="outline" class="rounded-full" @click="bukaNilai = false">Batal</Button>
-                <Button type="submit" :disabled="nilaiForm.processing" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Simpan</Button>
+                <Button type="button" variant="outline" @click="bukaNilai = false">Batal</Button>
+                <Button type="submit" :disabled="nilaiForm.processing">Simpan</Button>
             </div>
         </form>
     </div>
@@ -132,12 +122,12 @@ const area =
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
         @click.self="bukaHasil = false"
     >
-        <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="simpanHasil">
-            <h3 class="text-lg font-semibold">Tetapkan hasil pendadaran</h3>
-            <p class="mt-1 text-sm text-[#615d59]">{{ jadwal.nama }}</p>
+        <form class="kartu w-full max-w-lg p-6" @submit.prevent="simpanHasil">
+            <h3 class="judul-bagian">Tetapkan hasil pendadaran</h3>
+            <p class="teks-bantu mt-1">{{ jadwal.nama }}</p>
             <table class="mt-4 w-full text-sm">
-                <tr v-for="n in jadwal.nilai_penguji" :key="n.peran" class="border-b border-[#f0efed]">
-                    <td class="py-1.5 text-[#615d59]">{{ n.peran }}</td>
+                <tr v-for="n in jadwal.nilai_penguji" :key="n.peran" class="border-b border-[#e6e6e6] dark:border-border">
+                    <td class="py-1.5 text-[#615d59] dark:text-muted-foreground">{{ n.peran }}</td>
                     <td class="py-1.5 text-right font-medium">{{ n.nilai }}</td>
                 </tr>
                 <tr>
@@ -149,7 +139,7 @@ const area =
                 Usulan: {{ jadwal.usulan.lulus ? 'lulus' : 'tidak lulus' }} berdasarkan skala nilai.
             </p>
             <fieldset class="mt-4 grid gap-2">
-                <legend class="mb-1 text-sm font-medium">Hasil</legend>
+                <legend class="label-isian mb-1">Hasil</legend>
                 <label v-for="(h, kode) in HASIL_PENDADARAN" :key="kode" class="flex items-center gap-2 text-sm">
                     <input
                         v-model="hasilForm.hasil"
@@ -163,7 +153,7 @@ const area =
                 <InputError :message="hasilForm.errors.hasil" />
             </fieldset>
             <div class="mt-4 grid gap-2">
-                <Label for="catatan_hasil">
+                <Label for="catatan_hasil" class="label-isian">
                     {{ hasilForm.hasil === 'lulus_revisi' ? 'Bagian yang harus direvisi' : 'Catatan' }}
                     <span v-if="hasilForm.hasil !== 'lulus_revisi'" class="font-normal text-[#a39e98]">(opsional)</span>
                 </Label>
@@ -172,19 +162,17 @@ const area =
                     v-model="hasilForm.catatan_hasil"
                     rows="4"
                     maxlength="3000"
-                    :class="area"
+                    class="isian isian-area"
                     :required="hasilForm.hasil === 'lulus_revisi'"
                 />
                 <InputError :message="hasilForm.errors.catatan_hasil" />
             </div>
-            <p class="mt-3 text-xs text-[#615d59]">
+            <p class="teks-bantu mt-3">
                 Lulus: nilai huruf langsung masuk ke mata kuliah TA/Skripsi. Lulus dengan revisi: nilai masuk setelah Anda mengesahkan revisi.
             </p>
             <div class="mt-6 flex justify-end gap-2">
-                <Button type="button" variant="outline" class="rounded-full" @click="bukaHasil = false">Batal</Button>
-                <Button type="submit" :disabled="hasilForm.processing" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                    >Tetapkan</Button
-                >
+                <Button type="button" variant="outline" @click="bukaHasil = false">Batal</Button>
+                <Button type="submit" :disabled="hasilForm.processing">Tetapkan</Button>
             </div>
         </form>
     </div>
@@ -200,16 +188,14 @@ const area =
         @cancel="sahkan = false"
     />
     <div v-if="bukaTolakRevisi" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="bukaTolakRevisi = false">
-        <form class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" @submit.prevent="tolakRevisi">
-            <h3 class="text-lg font-semibold">Kembalikan revisi</h3>
-            <p class="mt-2 text-sm text-[#615d59]">{{ jadwal.nama }} mengunggah ulang naskah sesuai catatan Anda.</p>
-            <textarea v-model="revisiForm.catatan" rows="3" maxlength="1000" :class="[area, 'mt-4']" required />
+        <form class="kartu w-full max-w-md p-6" @submit.prevent="tolakRevisi">
+            <h3 class="judul-bagian">Kembalikan revisi</h3>
+            <p class="teks-bantu mt-1">{{ jadwal.nama }} mengunggah ulang naskah sesuai catatan Anda.</p>
+            <textarea v-model="revisiForm.catatan" rows="3" maxlength="1000" class="isian isian-area mt-4" aria-label="Catatan revisi" required />
             <InputError :message="revisiForm.errors.catatan" />
             <div class="mt-6 flex justify-end gap-2">
-                <Button type="button" variant="outline" class="rounded-full" @click="bukaTolakRevisi = false">Batal</Button>
-                <Button type="submit" :disabled="revisiForm.processing" class="rounded-full bg-[#b25000] text-white hover:bg-[#8f4000]"
-                    >Kembalikan</Button
-                >
+                <Button type="button" variant="outline" @click="bukaTolakRevisi = false">Batal</Button>
+                <Button type="submit" variant="destructive" :disabled="revisiForm.processing">Kembalikan</Button>
             </div>
         </form>
     </div>

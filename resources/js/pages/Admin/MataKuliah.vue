@@ -64,84 +64,69 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
 <template>
     <Head title="Mata Kuliah" />
     <AppLayout :breadcrumbs="[{ title: 'Mata Kuliah', href: route('admin.mata-kuliah.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Mata Kuliah</h1>
-                        <p class="text-sm leading-5 text-[#615d59]">Kelola mata kuliah per program studi, SKS, dan semester.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Mata Kuliah</h1>
+                        <p class="deskripsi-halaman">Kelola mata kuliah per program studi, SKS, dan semester.</p>
                     </div>
-                    <Link :href="route('admin.mata-kuliah.create')">
-                        <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Tambah Mata Kuliah</Button>
-                    </Link>
+                    <Button as-child><Link :href="route('admin.mata-kuliah.create')">Tambah Mata Kuliah</Link></Button>
                 </div>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                        <div class="relative w-full sm:max-w-sm">
-                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                            <Input
-                                v-model="search"
-                                placeholder="Cari kode atau nama mata kuliah"
-                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
-                            />
-                        </div>
-                        <SelectFilter v-model="programStudiId" label="Filter program studi" @change="applyFilters">
-                            <option value="all">Semua Program Studi</option>
-                            <option v-for="prodi in props.programStudis" :key="prodi.id" :value="prodi.id">
-                                {{ prodi.nama_prodi }} ({{ prodi.jenjang }})
-                            </option>
-                        </SelectFilter>
+                <div class="bilah-filter">
+                    <div class="kolom-cari">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                        <Input v-model="search" placeholder="Cari kode atau nama mata kuliah" aria-label="Cari" class="pl-9" />
                     </div>
-                    <p class="whitespace-nowrap text-sm text-[#615d59]">
+                    <SelectFilter v-model="programStudiId" label="Filter program studi" @change="applyFilters">
+                        <option value="all">Semua Program Studi</option>
+                        <option v-for="prodi in props.programStudis" :key="prodi.id" :value="prodi.id">
+                            {{ prodi.nama_prodi }} ({{ prodi.jenjang }})
+                        </option>
+                    </SelectFilter>
+
+                    <p class="info-jumlah sm:ml-auto">
                         <span class="font-medium text-black">{{ props.mataKuliahs.total }}</span> data<span v-if="props.search">
                             · hasil untuk "{{ props.search }}"</span
                         >
                     </p>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02),0_2.025px_7.847px_rgba(0,0,0,0.027)]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
 
-                <div
-                    class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[1040px] text-left lg:min-w-0">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[1040px]">
                             <thead>
-                                <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kode</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Nama Mata Kuliah</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">SKS</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Semester</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jenis</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Program Studi</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                <tr>
+                                    <th class="kolom-no">No</th>
+                                    <th>Kode</th>
+                                    <th>Nama Mata Kuliah</th>
+                                    <th>SKS</th>
+                                    <th>Semester</th>
+                                    <th>Jenis</th>
+                                    <th>Program Studi</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="(item, index) in props.mataKuliahs.data" :key="item.id" class="transition-colors hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59]">
-                                        {{ (props.mataKuliahs.from ?? 0) + index }}
-                                    </td>
-                                    <td class="px-4 py-3 text-[15px] font-medium leading-5 text-black">{{ item.kode_matkul }}</td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                            <tbody>
+                                <tr v-for="(item, index) in props.mataKuliahs.data" :key="item.id">
+                                    <td class="kolom-no">{{ (props.mataKuliahs.from ?? 1) + index }}</td>
+                                    <td class="font-medium text-black">{{ item.kode_matkul }}</td>
+                                    <td>
                                         {{ item.nama_matkul }}
                                     </td>
-                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">{{ item.sks }}</td>
-                                    <td class="px-4 py-3 text-center text-[15px] leading-5 text-[#31302e]">
+                                    <td class="text-center">{{ item.sks }}</td>
+                                    <td class="text-center">
                                         {{ item.semester }}
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td>
                                         <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium" :class="jenisBadge(item.jenis)">{{
                                             item.jenis
                                         }}</span>
@@ -151,50 +136,35 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                                             >TA/Skripsi</span
                                         >
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e]">
+                                    <td>
                                         <span class="block">{{ item.prodi?.nama_prodi ?? '-' }}</span>
-                                        <span class="block text-xs text-[#a39e98]">{{ item.prodi?.fakultas?.nama_fakultas ?? '' }}</span>
+                                        <span class="teks-bantu block">{{ item.prodi?.fakultas?.nama_fakultas ?? '' }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex justify-end gap-1.5">
-                                            <Link :href="route('admin.mata-kuliah.show', item.id)" title="Detail" aria-label="Detail">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#0075de] hover:bg-[#f6f5f4]"
-                                                    aria-hidden="true"
-                                                    ><Eye class="size-4"
-                                                /></Button>
-                                            </Link>
-                                            <Link :href="route('admin.mata-kuliah.edit', item.id)" title="Edit" aria-label="Edit">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#2a9d99] hover:bg-[#f6f5f4]"
-                                                    aria-hidden="true"
-                                                    ><Pencil class="size-4"
-                                                /></Button>
-                                            </Link>
-                                            <button type="button" title="Hapus" aria-label="Hapus" @click="remove(item)">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon"
-                                                    class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4]"
-                                                    aria-hidden="true"
-                                                    ><Trash2 class="size-4"
-                                                /></Button>
-                                            </button>
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]"
+                                                ><Link :href="route('admin.mata-kuliah.show', item.id)" title="Detail" aria-label="Detail"
+                                                    ><Eye /></Link
+                                            ></Button>
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]"
+                                                ><Link :href="route('admin.mata-kuliah.edit', item.id)" title="Edit" aria-label="Edit"
+                                                    ><Pencil /></Link
+                                            ></Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon-sm"
+                                                class="text-[#dd5b00]"
+                                                title="Hapus"
+                                                aria-label="Hapus"
+                                                @click="remove(item)"
+                                                ><Trash2
+                                            /></Button>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.mataKuliahs.data.length">
-                                    <td colspan="8" class="px-4 py-16 text-center">
-                                        <div class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8">
-                                            <p class="text-sm font-medium text-black">Belum ada data</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59]">
-                                                Data mata kuliah akan tampil di sini. Tambahkan mata kuliah baru untuk memulai.
-                                            </p>
-                                        </div>
+                                <tr v-if="!props.mataKuliahs.data.length" class="baris-kosong">
+                                    <td colspan="8" class="tabel-kosong">
+                                        Data mata kuliah akan tampil di sini. Tambahkan mata kuliah baru untuk memulai.
                                     </td>
                                 </tr>
                             </tbody>

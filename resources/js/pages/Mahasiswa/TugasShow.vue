@@ -162,78 +162,66 @@ const submit = () => {
             { title: props.tugas.judul_tugas, href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
                     <div>
-                        <h1 class="text-[26px] font-bold text-black">{{ props.tugas.judul_tugas }}</h1>
-                        <p class="text-sm text-[#615d59]">Detail tugas perkuliahan.</p>
+                        <h1 class="judul-halaman">{{ props.tugas.judul_tugas }}</h1>
+                        <p class="deskripsi-halaman">Detail tugas perkuliahan.</p>
                     </div>
-                    <Link :href="kembaliHref()" class="rounded-lg border border-[#e6e6e6] bg-white px-4 py-2 text-sm font-medium text-black">
-                        Kembali
-                    </Link>
+                    <Button as-child variant="outline">
+                        <Link :href="kembaliHref()">Kembali</Link>
+                    </Button>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] shadow-sm"
-                    role="alert"
-                >
-                    {{ page.props.flash.success }}
-                </div>
-                <div
-                    v-if="page.props.flash?.error"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00] shadow-sm"
-                    role="alert"
-                >
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <dl class="grid gap-4 sm:grid-cols-2">
+                <section class="kartu p-6">
+                    <dl class="grid gap-4 text-sm sm:grid-cols-2">
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Kelas</dt>
-                            <dd class="font-medium">
+                            <dt class="teks-bantu">Kelas</dt>
+                            <dd class="font-medium text-black dark:text-foreground">
                                 {{ kelas()?.kode_kelas ?? '-' }} —
                                 {{ kelas()?.mataKuliah?.nama_matkul ?? kelas()?.mata_kuliah?.nama_matkul ?? '-' }}
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Tenggat</dt>
-                            <dd class="font-medium">{{ formatTenggat(props.tugas.tenggat_waktu) }}</dd>
+                            <dt class="teks-bantu">Tenggat</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ formatTenggat(props.tugas.tenggat_waktu) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs text-[#a39e98]">Diunggah oleh</dt>
-                            <dd class="font-medium">{{ props.tugas.uploader?.name ?? '-' }}</dd>
+                            <dt class="teks-bantu">Diunggah oleh</dt>
+                            <dd class="font-medium text-black dark:text-foreground">{{ props.tugas.uploader?.name ?? '-' }}</dd>
                         </div>
                     </dl>
-                    <div class="mt-6 border-t border-[#e6e6e6] pt-5">
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Catatan</h2>
-                        <p class="mt-2 whitespace-pre-line text-[15px] text-[#31302e]">
+                    <div class="mt-6 border-t border-[#e6e6e6] pt-5 dark:border-border">
+                        <h2 class="judul-bagian">Catatan</h2>
+                        <p class="mt-2 whitespace-pre-line text-sm text-[#31302e] dark:text-foreground">
                             {{ props.tugas.catatan || '-' }}
                         </p>
                     </div>
-                    <div class="mt-6 border-t border-[#e6e6e6] pt-5">
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">File Tugas</h2>
+                    <div class="mt-6 border-t border-[#e6e6e6] pt-5 dark:border-border">
+                        <h2 class="judul-bagian">File Tugas</h2>
                         <div v-if="files(props.tugas.file).length" class="mt-3 space-y-2">
                             <a
                                 v-for="(path, fileIndex) in files(props.tugas.file)"
                                 :key="path"
                                 :href="route('berkas.tugas', [props.tugas.id, fileIndex])"
                                 target="_blank"
-                                class="flex items-center justify-between rounded-lg border border-[#e6e6e6] px-3 py-2 text-sm text-[#0075de] transition hover:border-[#0075de] hover:bg-[#f8fbff]"
+                                class="flex items-center justify-between rounded-lg border border-[#e6e6e6] px-3 py-2 text-sm text-[#0075de] transition hover:border-[#0075de] hover:bg-[#f8fbff] dark:border-border dark:hover:bg-accent/40"
                             >
                                 {{ fileName(path) }}
                             </a>
                         </div>
-                        <p v-else class="mt-2 text-sm text-[#615d59]">Tidak ada file.</p>
+                        <p v-else class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">Tidak ada file.</p>
                     </div>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pengumpulan Jawaban</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Pengumpulan Jawaban</h2>
 
-                    <div v-if="props.submission" class="mt-3 space-y-1 text-sm text-[#615d59]">
+                    <div v-if="props.submission" class="mt-3 space-y-1 text-sm text-[#615d59] dark:text-muted-foreground">
                         <p>
                             Jawaban tersimpan:
                             <a
@@ -249,18 +237,14 @@ const submit = () => {
                         <p v-if="props.submission.nilai">Nilai {{ props.submission.nilai }}</p>
                     </div>
 
-                    <p v-if="lewatTenggat" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#dd5b00]">
-                        Tenggat waktu telah berakhir. Jawaban tidak dapat diunggah lagi.
-                    </p>
-                    <p v-else-if="sudahDinilai" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#615d59]">
-                        Jawaban sudah dinilai dosen dan tidak dapat diganti lagi.
-                    </p>
+                    <div v-if="lewatTenggat" class="alert-gagal mt-4">Tenggat waktu telah berakhir. Jawaban tidak dapat diunggah lagi.</div>
+                    <div v-else-if="sudahDinilai" class="alert-info mt-4">Jawaban sudah dinilai dosen dan tidak dapat diganti lagi.</div>
 
                     <form v-else class="mt-4 space-y-3" @submit.prevent="submit">
                         <input ref="fileInput" type="file" multiple class="hidden" @change="onFiles" />
                         <Attachment
                             state="idle"
-                            class="h-16 w-full cursor-pointer rounded-md border-2 border-dashed border-[#dddddd] bg-[#fafafa] transition-colors hover:border-[#b8cde3] hover:bg-white"
+                            class="h-16 w-full cursor-pointer rounded-lg border-2 border-dashed border-[#d8d5d2] bg-[#fbfaf9] transition-colors hover:border-[#b8cde3] hover:bg-white dark:border-border dark:bg-muted"
                             :class="isDragging ? 'border-[#0075de] bg-white' : ''"
                             @click="pickFiles"
                             @dragover.prevent="isDragging = true"
@@ -303,13 +287,11 @@ const submit = () => {
 
                         <InputError :message="form.errors.file_jawaban" />
 
-                        <Button
-                            type="submit"
-                            class="rounded-lg bg-[#0075de] px-4 py-2 text-sm font-medium text-white hover:bg-[#005bab]"
-                            :disabled="form.processing"
-                        >
-                            {{ props.submission ? 'Ganti Jawaban' : 'Kirim Jawaban' }}
-                        </Button>
+                        <div class="flex justify-end">
+                            <Button type="submit" :disabled="form.processing">
+                                {{ props.submission ? 'Ganti Jawaban' : 'Kirim Jawaban' }}
+                            </Button>
+                        </div>
                     </form>
                 </section>
             </div>

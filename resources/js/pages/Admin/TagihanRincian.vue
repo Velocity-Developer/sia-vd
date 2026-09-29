@@ -61,9 +61,6 @@ const simpan = () => {
     })).put(route('admin.tagihan.rincian.simpan', props.mahasiswa.id), { preserveScroll: true });
 };
 
-const inp =
-    'h-10 rounded-lg border-[#d8d5d2] bg-white text-sm text-[#31302e] shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15';
-
 const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nilai || 0);
 </script>
 
@@ -75,27 +72,26 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
             { title: 'Rincian', href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[900px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">{{ props.mahasiswa.nama }}</h1>
-                    <p class="text-sm text-[#615d59]">
-                        {{ props.mahasiswa.nim }} · {{ props.mahasiswa.prodi ?? '-' }} · Angkatan {{ props.mahasiswa.angkatan }} ·
-                        {{ props.tahunAkademik ?? 'Tahun akademik tidak dipilih' }}
-                    </p>
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ props.mahasiswa.nama }}</h1>
+                        <p class="deskripsi-halaman">
+                            {{ props.mahasiswa.nim }} · {{ props.mahasiswa.prodi ?? '-' }} · Angkatan {{ props.mahasiswa.angkatan }} ·
+                            {{ props.tahunAkademik ?? 'Tahun akademik tidak dipilih' }}
+                        </p>
+                    </div>
+                    <Button as-child variant="outline"><Link :href="route('admin.tagihan.index')">Kembali</Link></Button>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <div class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
+                <div class="kartu p-6">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Status</p>
+                            <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Status</p>
                             <span
                                 v-if="props.tagihan"
                                 class="mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium"
@@ -108,8 +104,8 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                             >
                         </div>
                         <div class="text-right">
-                            <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Total Tagihan</p>
-                            <p class="text-[22px] font-bold text-black">{{ rupiah(props.tagihan?.total ?? 0) }}</p>
+                            <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Total Tagihan</p>
+                            <p class="text-2xl font-bold tabular-nums text-black dark:text-foreground">{{ rupiah(props.tagihan?.total ?? 0) }}</p>
                         </div>
                     </div>
 
@@ -124,7 +120,7 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                             }}<template v-if="props.tagihan.diverifikasi_oleh"> · diverifikasi {{ props.tagihan.diverifikasi_oleh }}</template
                             >.
                         </p>
-                        <p v-if="props.tagihan.status === 'ditolak'" class="text-[#b42318]">Bukti ditolak: {{ props.tagihan.alasan_tolak }}</p>
+                        <p v-if="props.tagihan.status === 'ditolak'" class="text-[#dd5b00]">Bukti ditolak: {{ props.tagihan.alasan_tolak }}</p>
                         <p v-if="props.tagihan.ada_bukti">
                             Bukti diunggah {{ tanggal(props.tagihan.bukti_diunggah_at) }}.
                             <a
@@ -148,75 +144,71 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                     </div>
                 </div>
 
-                <form class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm" @submit.prevent="simpan">
+                <form class="kartu p-6" @submit.prevent="simpan">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
-                            <h2 class="text-lg font-semibold text-black">Rincian Tagihan</h2>
+                            <h2 class="judul-bagian">Rincian Tagihan</h2>
                             <p class="text-sm text-[#615d59]">
                                 Boleh diketik manual, mis. keringanan atau biaya tambahan. Total ikut menyesuaikan. Rincian manual tidak ditimpa saat
                                 tagihan diterbitkan ulang.
                             </p>
-                            <p v-if="props.tagihan?.rincian_manual" class="text-xs font-medium text-[#a39e98]">Rincian saat ini diketik manual.</p>
+                            <p v-if="props.tagihan?.rincian_manual" class="teks-bantu font-medium">Rincian saat ini diketik manual.</p>
                             <p v-if="lunas" class="text-xs font-medium text-[#dd5b00]">
                                 Tagihan sudah lunas, rincian tidak bisa diubah. Batalkan status lunasnya dulu dari daftar tagihan.
                             </p>
                         </div>
-                        <Button type="button" variant="outline" class="h-9 rounded-lg border-[#d8d5d2]" @click="tambahBaris">
-                            <Plus class="size-4" /> Tambah Baris
-                        </Button>
+                        <Button type="button" variant="outline" size="sm" @click="tambahBaris"> <Plus /> Tambah Baris </Button>
                     </div>
 
                     <div class="mt-4 space-y-3">
                         <div
                             v-for="(item, index) in form.items"
                             :key="index"
-                            class="grid content-start gap-3 rounded-lg border border-[#e6e6e6] p-3 sm:grid-cols-[1fr_200px_auto] sm:items-end"
+                            class="grid content-start gap-3 rounded-lg border border-[#e6e6e6] p-3 dark:border-border sm:grid-cols-[1fr_200px_auto] sm:items-end"
                         >
-                            <div class="grid gap-1.5">
-                                <Label :for="`nama-${index}`" class="text-xs text-[#615d59]">Komponen</Label>
-                                <Input :id="`nama-${index}`" v-model="item.nama" :class="inp" placeholder="SPP Tetap" required />
+                            <div class="grid gap-2">
+                                <Label :for="`nama-${index}`" class="label-isian">Komponen</Label>
+                                <Input :id="`nama-${index}`" v-model="item.nama" placeholder="SPP Tetap" required />
                                 <InputError :message="galat(index, 'nama')" />
                             </div>
-                            <div class="grid gap-1.5">
-                                <Label :for="`subtotal-${index}`" class="text-xs text-[#615d59]">Nominal</Label>
-                                <Input :id="`subtotal-${index}`" v-model="item.subtotal" type="number" min="0" :class="inp" required />
-                                <span class="text-xs text-[#a39e98]">{{ rupiah(Number(item.subtotal)) }}</span>
+                            <div class="grid gap-2">
+                                <Label :for="`subtotal-${index}`" class="label-isian">Nominal</Label>
+                                <Input :id="`subtotal-${index}`" v-model="item.subtotal" type="number" min="0" required />
+                                <span class="teks-bantu">{{ rupiah(Number(item.subtotal)) }}</span>
                                 <InputError :message="galat(index, 'subtotal')" />
                             </div>
-                            <button type="button" class="justify-self-end" title="Hapus baris" aria-label="Hapus baris" @click="hapusBaris(index)">
-                                <Button variant="outline" size="icon" class="size-9 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00]">
-                                    <Trash2 class="size-4" />
-                                </Button>
-                            </button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                class="justify-self-end text-[#dd5b00]"
+                                title="Hapus baris"
+                                aria-label="Hapus baris"
+                                @click="hapusBaris(index)"
+                            >
+                                <Trash2 />
+                            </Button>
                         </div>
 
                         <p
                             v-if="!form.items.length"
-                            class="rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59]"
+                            class="rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59] dark:border-border"
                         >
                             Belum ada rincian. Tambahkan baris (tagihan ikut diterbitkan saat disimpan), atau terbitkan tagihan massal dari halaman
                             daftar.
                         </p>
                     </div>
 
-                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e6e6] pt-4">
+                    <div class="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e6e6] pt-4 dark:border-border">
                         <p class="text-sm text-[#615d59]">
-                            Total baru: <span class="text-[17px] font-bold text-black">{{ rupiah(totalBaru) }}</span>
+                            Total baru: <span class="text-base font-bold tabular-nums text-black">{{ rupiah(totalBaru) }}</span>
                         </p>
-                        <Button
-                            type="submit"
-                            :disabled="form.processing || !props.tahunAkademikId || lunas || !form.items.length"
-                            class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
-                        >
-                            <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+                        <Button type="submit" :disabled="form.processing || !props.tahunAkademikId || lunas || !form.items.length">
+                            <LoaderCircle v-if="form.processing" class="animate-spin" />
                             Simpan Rincian
                         </Button>
                     </div>
                 </form>
-
-                <Link :href="route('admin.tagihan.index')" class="text-sm font-medium text-[#0075de] hover:underline"
-                    >← Kembali ke daftar tagihan</Link
-                >
             </div>
         </div>
     </AppLayout>

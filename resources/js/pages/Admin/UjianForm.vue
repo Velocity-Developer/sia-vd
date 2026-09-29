@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import DatePicker from '@/components/DatePicker.vue';
 import InputError from '@/components/InputError.vue';
 import SearchSelect from '@/components/SearchSelect.vue';
+import TimePicker from '@/components/TimePicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,9 +84,6 @@ watch(
     },
 );
 const judul = computed(() => (props.ujian ? 'Ubah Jadwal Ujian' : 'Tambah Jadwal Ujian'));
-
-const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
-const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]';
 </script>
 
 <template>
@@ -95,26 +94,26 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
             { title: judul, href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[860px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">{{ judul }}</h1>
-                        <p v-if="props.ujian" class="text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ judul }}</h1>
+                        <p v-if="props.ujian" class="deskripsi-halaman">
                             {{ JENIS_UJIAN[props.ujian.jenis] }} · {{ props.ujian.kelas_kuliah?.kode_kelas }} —
                             {{ props.ujian.kelas_kuliah?.mata_kuliah?.nama_matkul }}
                         </p>
                     </div>
-                    <Link :href="route('admin.ujian.index', { tahun_akademik_id: props.tahunAkademikId })">
-                        <Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black">Kembali</Button>
-                    </Link>
+                    <Button as-child variant="outline">
+                        <Link :href="route('admin.ujian.index', { tahun_akademik_id: props.tahunAkademikId })">Kembali</Link>
+                    </Button>
                 </div>
 
-                <form class="flex flex-col gap-4" @submit.prevent="simpan">
-                    <section v-if="!props.ujian" class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                        <div class="grid content-start items-start gap-4 sm:grid-cols-[1fr,300px]">
-                            <div class="grid content-start gap-2">
-                                <Label for="kelas_id">Kelas</Label>
+                <form class="flex flex-col gap-6" @submit.prevent="simpan">
+                    <section v-if="!props.ujian" class="kartu p-6">
+                        <div class="grid items-start gap-4 sm:grid-cols-[1fr,300px]">
+                            <div class="grid gap-2">
+                                <Label for="kelas_id" class="label-isian">Kelas</Label>
                                 <SearchSelect
                                     id="kelas_id"
                                     v-model="form.kelas_id"
@@ -123,10 +122,10 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                     search-placeholder="Cari kode kelas atau mata kuliah"
                                     required
                                 />
-                                <p v-if="remidi && !props.kelasRemidiOptions.length" class="text-xs text-[#a39e98]">
+                                <p v-if="remidi && !props.kelasRemidiOptions.length" class="teks-bantu">
                                     Belum ada kelas yang daftar remidinya dikunci dan punya peserta lunas.
                                 </p>
-                                <p v-if="susulan && !opsiKelas.length" class="text-xs text-[#a39e98]">
+                                <p v-if="susulan && !opsiKelas.length" class="teks-bantu">
                                     Belum ada kelas dengan pemohon susulan yang disetujui dan tagihannya lunas.
                                 </p>
                                 <p v-if="jumlahMenunggu" class="text-xs text-[#dd5b00]">
@@ -135,8 +134,8 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                                 </p>
                                 <InputError :message="form.errors.kelas_id" />
                             </div>
-                            <div class="grid content-start gap-2">
-                                <Label>Jenis ujian</Label>
+                            <div class="grid gap-2">
+                                <Label class="label-isian">Jenis ujian</Label>
                                 <div class="flex min-h-10 flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                                     <label v-for="(label, j) in JENIS_UJIAN" :key="j" class="flex items-center gap-2">
                                         <input v-model="form.jenis" type="radio" :value="j" class="size-4 accent-[#0075de]" /> {{ label }}
@@ -147,85 +146,83 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                         </div>
                     </section>
 
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                        <h2 class="text-lg font-semibold text-black">Mode ujian</h2>
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Mode ujian</h2>
                         <div class="mt-4 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Mode ujian">
                             <label
                                 v-for="m in MODE_UJIAN"
                                 :key="m.value"
                                 class="flex cursor-pointer gap-3 rounded-lg border p-3"
-                                :class="form.mode === m.value ? 'border-[#0075de] bg-[#f6f9fd]' : 'border-[#e6e6e6]'"
+                                :class="form.mode === m.value ? 'border-[#0075de] bg-[#0075de]/5' : 'border-[#e6e6e6] dark:border-border'"
                             >
                                 <input v-model="form.mode" type="radio" :value="m.value" class="mt-1 size-4 shrink-0 accent-[#0075de]" />
                                 <span>
-                                    <span class="block text-sm font-medium text-black">{{ m.label }}</span>
-                                    <span class="block text-xs text-[#615d59]">{{ m.teks }}</span>
+                                    <span class="block text-sm font-medium text-black dark:text-foreground">{{ m.label }}</span>
+                                    <span class="teks-bantu block">{{ m.teks }}</span>
                                 </span>
                             </label>
                         </div>
                         <InputError :message="form.errors.mode" />
                     </section>
 
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                        <h2 class="text-lg font-semibold text-black">Waktu &amp; tempat</h2>
-                        <div class="mt-4 grid content-start items-start gap-4 sm:grid-cols-3">
-                            <div class="grid content-start gap-2">
-                                <Label for="tanggal">Tanggal</Label>
-                                <Input id="tanggal" v-model="form.tanggal" type="date" :class="inp" required />
-                                <p v-if="susulan" class="text-xs text-[#a39e98]">
-                                    Tidak sebelum ujian utamanya, paling lambat batas input nilai kelas.
-                                </p>
-                                <p v-if="remidi && props.batasRemidi.bayar" class="text-xs text-[#a39e98]">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Waktu &amp; tempat</h2>
+                        <div class="mt-4 grid items-start gap-4 sm:grid-cols-3">
+                            <div class="grid gap-2">
+                                <Label for="tanggal" class="label-isian">Tanggal</Label>
+                                <DatePicker id="tanggal" v-model="form.tanggal" placeholder="Pilih tanggal" />
+                                <p v-if="susulan" class="teks-bantu">Tidak sebelum ujian utamanya, paling lambat batas input nilai kelas.</p>
+                                <p v-if="remidi && props.batasRemidi.bayar" class="teks-bantu">
                                     Sesudah {{ formatTanggal(props.batasRemidi.bayar, false) }} s.d.
                                     {{ formatTanggal(props.batasRemidi.nilai, false) }}
                                 </p>
                                 <InputError :message="form.errors.tanggal" />
                             </div>
-                            <div class="grid content-start gap-2">
-                                <Label for="jam_mulai">Jam mulai</Label>
-                                <Input id="jam_mulai" v-model="form.jam_mulai" type="time" :class="inp" required />
+                            <div class="grid gap-2">
+                                <Label for="jam_mulai" class="label-isian">Jam mulai</Label>
+                                <TimePicker id="jam_mulai" v-model="form.jam_mulai" required />
                                 <InputError :message="form.errors.jam_mulai" />
                             </div>
-                            <div class="grid content-start gap-2">
-                                <Label for="jam_akhir">Jam selesai</Label>
-                                <Input id="jam_akhir" v-model="form.jam_akhir" type="time" :class="inp" required />
+                            <div class="grid gap-2">
+                                <Label for="jam_akhir" class="label-isian">Jam selesai</Label>
+                                <TimePicker id="jam_akhir" v-model="form.jam_akhir" required />
                                 <InputError :message="form.errors.jam_akhir" />
                             </div>
-                            <div v-if="form.mode === 'tatap_muka'" class="grid content-start gap-2 sm:col-span-2">
-                                <Label for="ruang_id">Ruang</Label>
-                                <select id="ruang_id" v-model="form.ruang_id" :class="sel" required>
+                            <div v-if="form.mode === 'tatap_muka'" class="grid gap-2 sm:col-span-2">
+                                <Label for="ruang_id" class="label-isian">Ruang</Label>
+                                <select id="ruang_id" v-model="form.ruang_id" class="isian isian-pilih" required>
                                     <option value="">Pilih ruang</option>
                                     <option v-for="r in props.ruangOptions" :key="r.id" :value="r.id">{{ r.name }}</option>
                                 </select>
                                 <InputError :message="form.errors.ruang_id" />
                             </div>
                             <p v-else class="text-sm text-[#615d59] sm:col-span-2">Ujian online dikerjakan di SIA, tanpa ruang.</p>
-                            <div class="grid content-start gap-2">
-                                <Label for="pengawas">Pengawas (opsional)</Label>
-                                <Input id="pengawas" v-model="form.pengawas" maxlength="255" :class="inp" />
+                            <div class="grid gap-2">
+                                <Label for="pengawas" class="label-isian">Pengawas (opsional)</Label>
+                                <Input id="pengawas" v-model="form.pengawas" maxlength="255" />
                                 <InputError :message="form.errors.pengawas" />
                             </div>
-                            <div class="grid content-start gap-2 sm:col-span-3">
-                                <Label for="petunjuk">Petunjuk untuk mahasiswa (opsional)</Label>
+                            <div class="grid gap-2 sm:col-span-3">
+                                <Label for="petunjuk" class="label-isian">Petunjuk untuk mahasiswa (opsional)</Label>
                                 <textarea
                                     id="petunjuk"
                                     v-model="form.petunjuk"
                                     rows="3"
                                     maxlength="5000"
                                     placeholder="mis. Buku tertutup, bawa kalkulator, datang 15 menit lebih awal"
-                                    class="rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                                    class="isian isian-area"
                                 />
                                 <InputError :message="form.errors.petunjuk" />
                             </div>
                         </div>
-                        <label v-if="bentrokMahasiswa || form.abaikan_bentrok_mahasiswa" class="mt-4 flex items-center gap-2 text-sm text-[#8a5a00]">
+                        <label v-if="bentrokMahasiswa || form.abaikan_bentrok_mahasiswa" class="mt-4 flex items-center gap-2 text-sm text-[#dd5b00]">
                             <input v-model="form.abaikan_bentrok_mahasiswa" type="checkbox" class="size-4 accent-[#0075de]" />
                             Tetap simpan walau ada mahasiswa dengan dua ujian di jam yang sama
                         </label>
                     </section>
 
-                    <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                        <h2 class="text-lg font-semibold text-black">Status</h2>
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Status</h2>
                         <div class="mt-3 flex flex-wrap gap-6 text-sm">
                             <label class="flex items-center gap-2"
                                 ><input v-model="form.status" type="radio" value="draf" class="size-4 accent-[#0075de]" /> Draf (belum tampil ke
@@ -238,10 +235,11 @@ const sel = 'h-10 w-full rounded-[4px] border border-[#dddddd] bg-white px-3 tex
                         <InputError :message="form.errors.status" />
                     </section>
 
-                    <div class="flex justify-end">
-                        <Button type="submit" class="h-10 rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]" :disabled="form.processing"
-                            >Simpan</Button
-                        >
+                    <div class="flex justify-end gap-2">
+                        <Button as-child variant="outline">
+                            <Link :href="route('admin.ujian.index', { tahun_akademik_id: props.tahunAkademikId })">Batal</Link>
+                        </Button>
+                        <Button type="submit" :disabled="form.processing">Simpan</Button>
                     </div>
                 </form>
             </div>

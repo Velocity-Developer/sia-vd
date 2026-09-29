@@ -37,16 +37,12 @@ const kirim = () =>
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"
                 aria-label="Berkas bukti bayar"
-                class="min-w-0 text-sm file:mr-3 file:rounded-full file:border file:border-[#dddddd] file:bg-white file:px-3 file:py-1.5 file:text-sm"
+                class="min-w-0 text-sm text-[#615d59] file:mr-3 file:h-9 file:cursor-pointer file:rounded-lg file:border file:border-solid file:border-[#d8d5d2] file:bg-white file:px-3 file:text-sm file:font-medium file:text-[#31302e] file:shadow-sm hover:file:bg-[#f6f5f4] dark:text-muted-foreground dark:file:border-border dark:file:bg-background dark:file:text-foreground"
                 @change="pilih"
             />
-            <Button
-                size="sm"
-                class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                :disabled="!form.bukti || form.processing"
-                @click="kirim"
-                >{{ props.labelKirim ?? (props.adaBukti ? 'Ganti Bukti' : 'Kirim Bukti') }}</Button
-            >
+            <Button size="sm" :disabled="!form.bukti || form.processing" @click="kirim">{{
+                props.labelKirim ?? (props.adaBukti ? 'Ganti Bukti' : 'Kirim Bukti')
+            }}</Button>
         </div>
         <InputError :message="form.errors.bukti" />
     </div>

@@ -113,37 +113,29 @@ const ibu = [
 <template>
     <Head :title="props.title" />
     <AppLayout :breadcrumbs="[{ title: detailTitle, href: '#' }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <!-- Header on paper -->
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">{{ props.title }}</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">{{ detailSubtitle }}</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ props.title }}</h1>
+                        <p class="deskripsi-halaman">{{ detailSubtitle }}</p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="route(`admin.users.${props.type}`)"
-                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                        >
-                        <Link :href="route(`admin.users.${props.type}.edit`, props.user.id)"
-                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
-                        >
+                        <Button as-child variant="outline"><Link :href="route(`admin.users.${props.type}`)">Kembali</Link></Button>
+                        <Button as-child><Link :href="route(`admin.users.${props.type}.edit`, props.user.id)">Edit</Link></Button>
                     </div>
                 </div>
 
-                <!-- Akun — feature-card on paper -->
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Akun</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Akun</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div v-for="f in akun" :key="f.key" class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                            <dd class="break-all text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
+                            <dt class="teks-bantu">{{ f.label }}</dt>
+                            <dd class="break-all text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Verifikasi Email</dt>
-                            <dd class="text-[15px] font-medium leading-5">
+                            <dt class="teks-bantu">Verifikasi Email</dt>
+                            <dd class="text-sm font-medium">
                                 <span v-if="props.user.email_verified_at" class="text-[#1aae39]"
                                     >Terverifikasi {{ v(props.user.email_verified_at) }}</span
                                 >
@@ -152,73 +144,57 @@ const ibu = [
                         </div>
                     </dl>
                     <div v-if="!props.user.email_verified_at && props.bolehKelola" class="mt-4 flex flex-wrap gap-2">
-                        <Button
-                            variant="outline"
-                            class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white"
-                            :disabled="memproses"
-                            @click="aksiVerifikasi('verifikasi-email')"
+                        <Button variant="outline" size="sm" :disabled="memproses" @click="aksiVerifikasi('verifikasi-email')"
                             >Kirim Ulang Tautan Verifikasi</Button
                         >
-                        <Button
-                            variant="outline"
-                            class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white"
-                            :disabled="memproses"
-                            @click="aksiVerifikasi('tandai-terverifikasi')"
+                        <Button variant="outline" size="sm" :disabled="memproses" @click="aksiVerifikasi('tandai-terverifikasi')"
                             >Tandai Terverifikasi</Button
                         >
                     </div>
-                    <p v-if="page.props.flash?.success" class="mt-3 text-sm text-[#1aae39]" role="status">{{ page.props.flash.success }}</p>
-                    <p v-if="page.props.flash?.error" class="mt-3 text-sm text-[#dd5b00]" role="alert">{{ page.props.flash.error }}</p>
+                    <p v-if="page.props.flash?.success" class="alert-sukses mt-4" role="status">{{ page.props.flash.success }}</p>
+                    <p v-if="page.props.flash?.error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.error }}</p>
                 </section>
 
                 <!-- Data Pribadi -->
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Pribadi</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Data Pribadi</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div v-for="f in pribadi" :key="f.key" class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
+                            <dt class="teks-bantu">{{ f.label }}</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
                         </div>
                     </dl>
                 </section>
 
                 <template v-if="isMahasiswa">
                     <!-- Data Akademik -->
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Akademik</h2>
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Data Akademik</h2>
                         <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div v-for="f in akademik" :key="f.key" class="space-y-1">
-                                <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                                <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
+                                <dt class="teks-bantu">{{ f.label }}</dt>
+                                <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
                             </div>
                         </dl>
                     </section>
 
                     <!-- Ayah & Ibu — 2-up on desktop -->
-                    <div class="grid gap-4 lg:grid-cols-2">
-                        <section
-                            class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                        >
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Ayah</h2>
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        <section class="kartu p-6">
+                            <h2 class="judul-bagian">Data Ayah</h2>
                             <dl class="mt-4 grid gap-4">
                                 <div v-for="f in ayah" :key="f.key" class="space-y-1">
-                                    <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                                    <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
+                                    <dt class="teks-bantu">{{ f.label }}</dt>
+                                    <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
                                 </div>
                             </dl>
                         </section>
-                        <section
-                            class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                        >
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Ibu</h2>
+                        <section class="kartu p-6">
+                            <h2 class="judul-bagian">Data Ibu</h2>
                             <dl class="mt-4 grid gap-4">
                                 <div v-for="f in ibu" :key="f.key" class="space-y-1">
-                                    <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                                    <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
+                                    <dt class="teks-bantu">{{ f.label }}</dt>
+                                    <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
                                 </div>
                             </dl>
                         </section>
@@ -226,28 +202,24 @@ const ibu = [
                 </template>
 
                 <template v-else-if="isDosen">
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Akademik Dosen</h2>
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Data Akademik Dosen</h2>
                         <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div v-for="f in akademikDosen" :key="f.key" class="space-y-1">
-                                <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                                <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
+                                <dt class="teks-bantu">{{ f.label }}</dt>
+                                <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
                             </div>
                         </dl>
                     </section>
                 </template>
 
                 <template v-else>
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Identitas Karyawan</h2>
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Identitas Karyawan</h2>
                         <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div v-for="f in identitasKaryawan" :key="f.key" class="space-y-1">
-                                <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">{{ f.label }}</dt>
-                                <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.user[f.key]) }}</dd>
+                                <dt class="teks-bantu">{{ f.label }}</dt>
+                                <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
                             </div>
                         </dl>
                     </section>

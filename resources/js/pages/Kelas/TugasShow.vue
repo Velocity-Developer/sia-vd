@@ -80,46 +80,47 @@ const saveGrade = (submission: Submission) => {
             { title: 'Detail Tugas', href: '#' },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
                     <div>
-                        <h1 class="text-[26px] font-bold text-black">Detail Tugas</h1>
-                        <p class="text-sm text-[#615d59]">Informasi tugas dan daftar mahasiswa yang sudah mengumpulkan jawaban.</p>
+                        <h1 class="judul-halaman">Detail Tugas</h1>
+                        <p class="deskripsi-halaman">Informasi tugas dan daftar mahasiswa yang sudah mengumpulkan jawaban.</p>
                     </div>
-                    <Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)"
-                        ><Button variant="outline" class="rounded-lg bg-white">Kembali</Button></Link
-                    >
+                    <Button as-child variant="outline"><Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)">Kembali</Link></Button>
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Tugas</h2>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
+
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Informasi Tugas</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>
-                            <dt class="text-xs uppercase text-[#a39e98]">Judul</dt>
-                            <dd class="text-[15px] font-medium text-black">{{ props.tugas.judul_tugas }}</dd>
+                            <dt class="teks-bantu">Judul</dt>
+                            <dd class="text-sm font-medium text-black">{{ props.tugas.judul_tugas }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase text-[#a39e98]">Kelas</dt>
-                            <dd class="text-[15px] font-medium text-black">
+                            <dt class="teks-bantu">Kelas</dt>
+                            <dd class="text-sm font-medium text-black">
                                 {{ props.kelasKuliah.kode_kelas }} ·
                                 {{ (props.kelasKuliah.mataKuliah ?? props.kelasKuliah.mata_kuliah)?.nama_matkul ?? '-' }}
                             </dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase text-[#a39e98]">Tenggat Waktu</dt>
-                            <dd class="text-[15px] text-[#31302e]">{{ formatDate(props.tugas.tenggat_waktu) }}</dd>
+                            <dt class="teks-bantu">Tenggat Waktu</dt>
+                            <dd class="text-sm text-[#31302e]">{{ formatDate(props.tugas.tenggat_waktu) }}</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase text-[#a39e98]">Diunggah Oleh</dt>
-                            <dd class="text-[15px] text-[#31302e]">{{ props.tugas.uploader?.name ?? '-' }}</dd>
+                            <dt class="teks-bantu">Diunggah Oleh</dt>
+                            <dd class="text-sm text-[#31302e]">{{ props.tugas.uploader?.name ?? '-' }}</dd>
                         </div>
                     </dl>
                     <div v-if="props.tugas.catatan" class="mt-4">
-                        <dt class="text-xs uppercase text-[#a39e98]">Catatan</dt>
+                        <p class="teks-bantu">Catatan</p>
                         <p class="mt-1 whitespace-pre-line text-sm text-[#31302e]">{{ props.tugas.catatan }}</p>
                     </div>
-                    <ul v-if="files(props.tugas.file).length" class="mt-4 space-y-1">
+                    <ul v-if="files(props.tugas.file).length" class="mt-4 space-y-1 text-sm">
                         <li v-for="(path, fileIndex) in files(props.tugas.file)" :key="path">
                             <a
                                 :href="route('berkas.tugas', [props.tugas.id, fileIndex])"
@@ -132,86 +133,70 @@ const saveGrade = (submission: Submission) => {
                     </ul>
                 </section>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pengumpulan Jawaban</h2>
-                    <div v-if="page.props.flash?.success" class="mt-4 rounded-xl border border-[#e6e6e6] px-4 py-3 text-sm text-[#1aae39]">
-                        {{ page.props.flash.success }}
-                    </div>
-                    <div v-if="page.props.flash?.error" class="mt-4 rounded-xl border border-[#e6e6e6] px-4 py-3 text-sm text-[#dd5b00]">
-                        {{ page.props.flash.error }}
-                    </div>
-                    <div class="relative mt-4 overflow-hidden overflow-x-auto rounded-xl border border-[#e6e6e6]">
-                        <table class="w-full min-w-[760px] text-left">
-                            <thead>
-                                <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Mahasiswa</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Dikumpulkan</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Jawaban</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Nilai</th>
-                                    <th class="px-4 py-3 text-right text-xs uppercase text-[#a39e98]">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr
-                                    v-for="(submission, index) in props.tugas.pengumpulan_tugas ?? []"
-                                    :key="submission.id"
-                                    class="hover:bg-[#f6f5f4]/60"
-                                >
-                                    <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                    <td class="px-4 py-3 text-sm">
-                                        <span class="font-medium text-black">{{ submission.mahasiswa?.user?.name ?? '-' }}</span
-                                        ><span class="block text-[#615d59]">{{ submission.mahasiswa?.nim ?? '-' }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">
-                                        {{ formatDate(submission.submitted_at) }}
-                                    </td>
-                                    <td class="px-4 py-3 text-sm">
-                                        <ul class="space-y-1">
-                                            <li v-for="(path, fileIndex) in files(submission.file_jawaban)" :key="path">
-                                                <a
-                                                    :href="route('berkas.pengumpulan', [submission.id, fileIndex])"
-                                                    target="_blank"
-                                                    rel="noopener"
-                                                    class="text-[#0075de] hover:underline"
-                                                    >{{ fileName(path) }}</a
-                                                >
-                                            </li>
-                                        </ul>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm">
-                                        <input
-                                            v-if="editing === submission.id"
-                                            v-model="grade"
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            class="h-9 w-24 rounded-lg border border-[#e6e6e6] px-3"
-                                        /><span v-else class="font-semibold">{{ submission.nilai ?? '-' }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <template v-if="editing === submission.id"
-                                            ><Button
-                                                size="sm"
-                                                class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                                                @click="saveGrade(submission)"
-                                                >Simpan</Button
-                                            ><Button size="sm" variant="outline" class="ml-2 rounded-full" @click="editing = null"
-                                                >Batal</Button
-                                            ></template
-                                        ><span v-else-if="props.nilaiTerkunci" class="text-xs text-[#a39e98]">Nilai terkunci</span
-                                        ><Button v-else size="sm" variant="outline" class="rounded-full" @click="editGrade(submission)"
-                                            >Ubah Nilai</Button
-                                        >
-                                    </td>
-                                </tr>
-                                <tr v-if="!(props.tugas.pengumpulan_tugas ?? []).length">
-                                    <td colspan="6" class="px-4 py-10 text-center text-sm text-[#615d59]">
-                                        Belum ada mahasiswa yang mengumpulkan jawaban.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Pengumpulan Jawaban</h2>
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[760px]">
+                                <thead>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Mahasiswa</th>
+                                        <th>Dikumpulkan</th>
+                                        <th>Jawaban</th>
+                                        <th>Nilai</th>
+                                        <th class="kolom-aksi">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(submission, index) in props.tugas.pengumpulan_tugas ?? []" :key="submission.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td>
+                                            <span class="font-medium text-black">{{ submission.mahasiswa?.user?.name ?? '-' }}</span
+                                            ><span class="block text-xs text-[#a39e98]">{{ submission.mahasiswa?.nim ?? '-' }}</span>
+                                        </td>
+                                        <td>{{ formatDate(submission.submitted_at) }}</td>
+                                        <td>
+                                            <ul class="space-y-1">
+                                                <li v-for="(path, fileIndex) in files(submission.file_jawaban)" :key="path">
+                                                    <a
+                                                        :href="route('berkas.pengumpulan', [submission.id, fileIndex])"
+                                                        target="_blank"
+                                                        rel="noopener"
+                                                        class="text-[#0075de] hover:underline"
+                                                        >{{ fileName(path) }}</a
+                                                    >
+                                                </li>
+                                            </ul>
+                                        </td>
+                                        <td>
+                                            <input
+                                                v-if="editing === submission.id"
+                                                v-model="grade"
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                aria-label="Nilai"
+                                                class="isian w-24"
+                                            /><span v-else class="font-semibold tabular-nums text-black">{{ submission.nilai ?? '-' }}</span>
+                                        </td>
+                                        <td class="kolom-aksi">
+                                            <div class="aksi-tabel">
+                                                <template v-if="editing === submission.id">
+                                                    <Button variant="outline" size="sm" @click="editing = null">Batal</Button>
+                                                    <Button size="sm" @click="saveGrade(submission)">Simpan</Button>
+                                                </template>
+                                                <span v-else-if="props.nilaiTerkunci" class="teks-bantu">Nilai terkunci</span>
+                                                <Button v-else variant="outline" size="sm" @click="editGrade(submission)">Ubah Nilai</Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="!(props.tugas.pengumpulan_tugas ?? []).length" class="baris-kosong">
+                                        <td colspan="6" class="tabel-kosong">Belum ada mahasiswa yang mengumpulkan jawaban.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
             </div>

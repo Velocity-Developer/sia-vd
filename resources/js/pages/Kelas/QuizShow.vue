@@ -331,45 +331,36 @@ const formatTenggat = (value: string | null | undefined): string => {
 
     return `${day} ${months[Number(month) - 1]} ${year}, ${hour}:${minute}`;
 };
-
-const inp =
-    'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
-const area =
-    'min-h-24 rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] text-black placeholder:text-[#a39e98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
-const sel =
-    'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px] text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
 </script>
 
 <template>
     <Head :title="`Detail ${props.quiz.nama_quiz}`" />
     <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="relative mx-auto flex w-full max-w-[1000px] flex-col gap-4 px-4 py-6 pb-28 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">
                             {{ props.ujian ? `Lembar Soal ${props.ujian.jenis.toUpperCase()}` : 'Detail Quiz' }}
                         </h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">
+                        <p class="deskripsi-halaman">
                             Kelas {{ v(props.kelasKuliah?.kode_kelas)
                             }}{{ props.kelasKuliah?.tahun_ajaran ? ` — ${v(props.kelasKuliah.tahun_ajaran)}` : '' }}
                         </p>
                     </div>
                     <div class="flex gap-2">
-                        <Link :href="props.ujian ? rute('ujian.show', props.ujian.id) : rute('kelas-kuliah.show', props.kelasKuliah.id)"
-                            ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                        >
-                        <Link :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, props.quiz.id])"
-                            ><Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Edit</Button></Link
-                        >
+                        <Button as-child variant="outline">
+                            <Link :href="props.ujian ? rute('ujian.show', props.ujian.id) : rute('kelas-kuliah.show', props.kelasKuliah.id)"
+                                >Kembali</Link
+                            >
+                        </Button>
+                        <Button as-child>
+                            <Link :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, props.quiz.id])">Edit</Link>
+                        </Button>
                     </div>
                 </div>
 
-                <p
-                    v-if="props.ujian"
-                    class="rounded-xl border px-4 py-3 text-sm"
-                    :class="props.ujian.sudah_mulai ? 'border-[#f4c3bd] bg-[#fdecea] text-[#b42318]' : 'border-[#cfe3f7] bg-[#eaf3fd] text-[#0b62b5]'"
-                >
+                <p v-if="props.ujian" :class="props.ujian.sudah_mulai ? 'alert-gagal' : 'alert-info'">
                     {{
                         props.ujian.sudah_mulai
                             ? 'Ujian sudah dimulai; soal terkunci dan tidak bisa diubah lagi.'
@@ -377,59 +368,45 @@ const sel =
                     }}
                 </p>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Informasi Quiz</h2>
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Informasi Quiz</h2>
                     <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Nama Quiz</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.quiz.nama_quiz) }}</dd>
+                            <dt class="teks-bantu">Nama Quiz</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(props.quiz.nama_quiz) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Waktu Pengerjaan</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ duration(props.quiz.waktu_pengerjaan) }}</dd>
+                            <dt class="teks-bantu">Waktu Pengerjaan</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ duration(props.quiz.waktu_pengerjaan) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Tenggat Waktu</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ formatTenggat(props.quiz.tenggat_waktu) }}</dd>
+                            <dt class="teks-bantu">Tenggat Waktu</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ formatTenggat(props.quiz.tenggat_waktu) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Diunggah Oleh</dt>
-                            <dd class="break-words text-[15px] font-medium leading-5 text-black">{{ v(props.quiz.uploader?.name) }}</dd>
+                            <dt class="teks-bantu">Diunggah Oleh</dt>
+                            <dd class="break-words text-sm font-medium text-black">{{ v(props.quiz.uploader?.name) }}</dd>
                         </div>
                         <div class="space-y-1 sm:col-span-2 lg:col-span-3">
-                            <dt class="text-xs font-medium uppercase tracking-[0.04em] text-[#a39e98]">Catatan</dt>
-                            <dd class="whitespace-pre-wrap break-words text-[15px] leading-5 text-black">{{ v(props.quiz.catatan) }}</dd>
+                            <dt class="teks-bantu">Catatan</dt>
+                            <dd class="whitespace-pre-wrap break-words text-sm text-black">{{ v(props.quiz.catatan) }}</dd>
                         </div>
                     </dl>
                 </section>
 
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="space-y-1">
-                            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Daftar Pertanyaan</h2>
-                            <p class="text-sm leading-5 text-[#615d59]">Soal-soal yang termasuk dalam quiz ini.</p>
+                            <h2 class="judul-bagian">Daftar Pertanyaan</h2>
+                            <p class="teks-bantu">Soal-soal yang termasuk dalam quiz ini.</p>
                         </div>
-                        <Button v-if="!isBuilderOpen" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" @click="openBuilder">
-                            <Plus class="size-4" /> Tambah Pertanyaan
-                        </Button>
+                        <Button v-if="!isBuilderOpen" @click="openBuilder"> <Plus /> Tambah Pertanyaan </Button>
                     </div>
 
-                    <div
-                        v-if="page.props.flash?.question_success"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                        role="alert"
-                    >
+                    <div v-if="page.props.flash?.question_success" class="alert-sukses mt-4" role="alert">
                         {{ page.props.flash.question_success }}
                     </div>
-                    <div
-                        v-if="page.props.flash?.question_error"
-                        class="mt-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                        role="alert"
-                    >
+                    <div v-if="page.props.flash?.question_error" class="alert-gagal mt-4" role="alert">
                         {{ page.props.flash.question_error }}
                     </div>
 
@@ -437,14 +414,14 @@ const sel =
                         <article
                             v-for="(question, index) in props.quiz.questions ?? []"
                             :key="question.id"
-                            class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white"
+                            class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white dark:border-border dark:bg-card"
                         >
                             <button
                                 type="button"
-                                class="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-[#f6f5f4]"
+                                class="flex w-full items-center justify-between gap-3 p-4 text-left hover:bg-[#f6f5f4] dark:hover:bg-accent"
                                 @click="editing[question.id] ? cancelEdit(question.id) : editQuestion(question)"
                             >
-                                <span class="min-w-0 truncate text-[15px] font-semibold leading-6 text-black"
+                                <span class="min-w-0 truncate text-sm font-semibold leading-6 text-black dark:text-foreground"
                                     >{{ index + 1 }}. {{ question.question_text }}</span
                                 >
                                 <ChevronDown
@@ -453,15 +430,15 @@ const sel =
                                     aria-hidden="true"
                                 />
                             </button>
-                            <div v-if="editing[question.id]" class="border-t border-[#e6e6e6] p-4">
+                            <div v-if="editing[question.id]" class="border-t border-[#e6e6e6] p-4 dark:border-border">
                                 <div class="grid gap-3">
-                                    <textarea v-model="editing[question.id].question_text" :class="area" />
+                                    <textarea v-model="editing[question.id].question_text" aria-label="Teks pertanyaan" class="isian isian-area" />
                                     <InputError :message="editErrorFor(question.id, 'question_text')" />
                                     <div class="grid gap-4 sm:grid-cols-2">
                                         <div class="relative grid gap-2">
                                             <select
                                                 v-model="editing[question.id].question_type"
-                                                :class="sel"
+                                                class="isian isian-pilih"
                                                 @change="onTypeChange(editing[question.id])"
                                             >
                                                 <option v-for="option in QUESTION_TYPES" :key="option.value" :value="option.value">
@@ -473,7 +450,7 @@ const sel =
                                             </div>
                                         </div>
                                         <div class="relative grid gap-2">
-                                            <Input v-model="editing[question.id].points" type="number" min="0" :class="inp" />
+                                            <Input v-model="editing[question.id].points" type="number" min="0" />
                                             <div v-if="editErrorFor(question.id, 'points')" class="absolute left-0 top-full z-10 pt-1">
                                                 <InputError :message="editErrorFor(question.id, 'points')" />
                                             </div>
@@ -494,83 +471,67 @@ const sel =
                                                 class="size-4 accent-[#0075de]"
                                                 @change="selectSingleCorrect(editing[question.id], option.id)"
                                             />
-                                            <Input
-                                                v-model="option.text"
-                                                :disabled="editing[question.id].question_type === 'true_false'"
-                                                :class="inp"
-                                            />
+                                            <Input v-model="option.text" :disabled="editing[question.id].question_type === 'true_false'" />
                                         </div>
                                     </div>
                                     <div v-else-if="editing[question.id].question_type === 'multiple_choice'" class="grid gap-2">
                                         <div v-for="option in editing[question.id].options" :key="option.id" class="flex items-center gap-2">
-                                            <Checkbox v-model="option.is_correct" class="size-4 rounded-[4px]" />
-                                            <Input v-model="option.text" :class="inp" />
+                                            <Checkbox v-model="option.is_correct" />
+                                            <Input v-model="option.text" />
                                         </div>
                                     </div>
                                     <InputError :message="editErrorFor(question.id, 'question_option')" />
                                     <InputError :message="editErrorFor(question.id, 'correct_answer')" />
                                     <div class="flex justify-end gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            class="rounded-full text-red-600 hover:text-red-700"
-                                            @click="confirmDeleteQuestion(question.id)"
-                                            >Hapus</Button
-                                        >
-                                        <Button type="button" variant="outline" class="rounded-full" @click="cancelEdit(question.id)">Batal</Button>
-                                        <Button
-                                            type="button"
-                                            class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                                            @click="saveQuestion(editing[question.id])"
-                                            >Simpan</Button
-                                        >
+                                        <Button type="button" variant="destructive" @click="confirmDeleteQuestion(question.id)">Hapus</Button>
+                                        <Button type="button" variant="outline" @click="cancelEdit(question.id)">Batal</Button>
+                                        <Button type="button" @click="saveQuestion(editing[question.id])">Simpan</Button>
                                     </div>
                                 </div>
                             </div>
                         </article>
-                        <div
+                        <p
                             v-if="!(props.quiz.questions ?? []).length"
-                            class="rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8 text-center"
+                            class="rounded-xl border border-dashed border-[#e6e6e6] px-6 py-8 text-center text-sm text-[#615d59] dark:border-border dark:text-muted-foreground"
                         >
-                            <p class="text-sm font-medium text-black">Belum ada question</p>
-                            <p class="mt-1 text-sm leading-5 text-[#615d59]">Klik Tambah Pertanyaan di tengah untuk membuat soal pertama.</p>
-                        </div>
+                            Belum ada pertanyaan. Klik Tambah Pertanyaan untuk membuat soal pertama.
+                        </p>
                     </div>
 
-                    <form v-else @submit.prevent="submit" class="mt-4 flex flex-col gap-4">
-                        <div v-for="(draft, draftIndex) in drafts" :key="draft.id" class="rounded-xl border border-[#e6e6e6] p-4">
+                    <form v-else class="mt-4 flex flex-col gap-4" @submit.prevent="submit">
+                        <div v-for="(draft, draftIndex) in drafts" :key="draft.id" class="rounded-xl border border-[#e6e6e6] p-4 dark:border-border">
                             <div class="flex items-center justify-between gap-2">
-                                <h3 class="text-sm font-semibold text-black">Pertanyaan {{ draftIndex + 1 }}</h3>
+                                <h3 class="text-sm font-semibold text-black dark:text-foreground">Pertanyaan {{ draftIndex + 1 }}</h3>
                                 <Button
                                     variant="ghost"
-                                    size="icon"
+                                    size="icon-sm"
                                     type="button"
-                                    class="size-8 rounded-full text-[#a39e98] hover:text-black"
+                                    class="text-[#a39e98]"
                                     @click="removeDraft(draft.id)"
                                     aria-label="Hapus pertanyaan"
                                 >
-                                    <X class="size-4" />
+                                    <X />
                                 </Button>
                             </div>
 
                             <div class="mt-3 grid items-start gap-3">
                                 <div class="grid gap-2">
-                                    <Label :for="`question-text-${draft.id}`" class="text-sm font-medium text-black">Text Pertanyaan</Label>
+                                    <Label :for="`question-text-${draft.id}`" class="label-isian">Text Pertanyaan</Label>
                                     <textarea
                                         :id="`question-text-${draft.id}`"
                                         v-model="draft.question_text"
                                         placeholder="Tulis pertanyaan di sini"
-                                        :class="area"
+                                        class="isian isian-area"
                                     />
                                     <InputError :message="errorFor(draftIndex, 'question_text')" />
                                 </div>
                                 <div class="mt-4 grid gap-4 sm:grid-cols-2">
                                     <div class="relative grid gap-2">
-                                        <Label :for="`question-type-${draft.id}`" class="text-sm font-medium text-black">Tipe Pertanyaan</Label>
+                                        <Label :for="`question-type-${draft.id}`" class="label-isian">Tipe Pertanyaan</Label>
                                         <select
                                             :id="`question-type-${draft.id}`"
                                             v-model="draft.question_type"
-                                            :class="sel"
+                                            class="isian isian-pilih"
                                             @change="onTypeChange(draft)"
                                         >
                                             <option v-for="option in QUESTION_TYPES" :key="option.value" :value="option.value">
@@ -582,14 +543,13 @@ const sel =
                                         </div>
                                     </div>
                                     <div class="relative grid gap-2">
-                                        <Label :for="`question-points-${draft.id}`" class="text-sm font-medium text-black">Poin</Label>
+                                        <Label :for="`question-points-${draft.id}`" class="label-isian">Poin</Label>
                                         <Input
                                             :id="`question-points-${draft.id}`"
                                             v-model="draft.points"
                                             type="number"
                                             min="0"
                                             placeholder="cth. 10"
-                                            :class="inp"
                                         />
                                         <div v-if="errorFor(draftIndex, 'points')" class="absolute left-0 top-full z-10 pt-1">
                                             <InputError :message="errorFor(draftIndex, 'points')" />
@@ -598,7 +558,7 @@ const sel =
                                 </div>
 
                                 <div v-if="draft.question_type === 'single_choice'" class="mt-4 grid gap-2">
-                                    <Label class="text-sm font-medium text-black">Opsi Jawaban</Label>
+                                    <Label class="label-isian">Opsi Jawaban</Label>
                                     <div v-for="option in draft.options" :key="option.id" class="flex items-center gap-2">
                                         <input
                                             :checked="option.is_correct"
@@ -607,74 +567,50 @@ const sel =
                                             class="size-4 accent-[#0075de]"
                                             @change="selectSingleCorrect(draft, option.id)"
                                         />
-                                        <Input
-                                            v-model="option.text"
-                                            type="text"
-                                            :placeholder="`Opsi ${draft.options.indexOf(option) + 1}`"
-                                            :class="inp"
-                                        />
+                                        <Input v-model="option.text" type="text" :placeholder="`Opsi ${draft.options.indexOf(option) + 1}`" />
                                         <Button
                                             variant="ghost"
-                                            size="icon"
+                                            size="icon-sm"
                                             type="button"
-                                            class="size-8 shrink-0 rounded-full text-[#a39e98] hover:text-black"
+                                            class="shrink-0 text-[#a39e98]"
                                             @click="removeOption(draft, option.id)"
                                             aria-label="Hapus opsi"
                                         >
-                                            <Trash2 class="size-4" />
+                                            <Trash2 />
                                         </Button>
                                     </div>
                                     <div>
-                                        <Button
-                                            variant="outline"
-                                            type="button"
-                                            class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-white"
-                                            @click="addOption(draft)"
-                                        >
-                                            <Plus class="size-4" /> Add Option
-                                        </Button>
+                                        <Button variant="outline" type="button" @click="addOption(draft)"> <Plus /> Add Option </Button>
                                     </div>
                                     <InputError :message="errorFor(draftIndex, 'question_option')" />
                                     <InputError :message="errorFor(draftIndex, 'correct_answer')" />
                                 </div>
 
                                 <div v-else-if="draft.question_type === 'multiple_choice'" class="grid gap-2">
-                                    <Label class="text-sm font-medium text-black">Opsi Jawaban</Label>
+                                    <Label class="label-isian">Opsi Jawaban</Label>
                                     <div v-for="option in draft.options" :key="option.id" class="flex items-center gap-2">
-                                        <Checkbox v-model="option.is_correct" class="size-4 rounded-[4px]" />
-                                        <Input
-                                            v-model="option.text"
-                                            type="text"
-                                            :placeholder="`Opsi ${draft.options.indexOf(option) + 1}`"
-                                            :class="inp"
-                                        />
+                                        <Checkbox v-model="option.is_correct" />
+                                        <Input v-model="option.text" type="text" :placeholder="`Opsi ${draft.options.indexOf(option) + 1}`" />
                                         <Button
                                             variant="ghost"
-                                            size="icon"
+                                            size="icon-sm"
                                             type="button"
-                                            class="size-8 shrink-0 rounded-full text-[#a39e98] hover:text-black"
+                                            class="shrink-0 text-[#a39e98]"
                                             @click="removeOption(draft, option.id)"
                                             aria-label="Hapus opsi"
                                         >
-                                            <Trash2 class="size-4" />
+                                            <Trash2 />
                                         </Button>
                                     </div>
                                     <div>
-                                        <Button
-                                            variant="outline"
-                                            type="button"
-                                            class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-white"
-                                            @click="addOption(draft)"
-                                        >
-                                            <Plus class="size-4" /> Add Option
-                                        </Button>
+                                        <Button variant="outline" type="button" @click="addOption(draft)"> <Plus /> Add Option </Button>
                                     </div>
                                     <InputError :message="errorFor(draftIndex, 'question_option')" />
                                     <InputError :message="errorFor(draftIndex, 'correct_answer')" />
                                 </div>
 
                                 <div v-else-if="draft.question_type === 'true_false'" class="grid gap-2">
-                                    <Label class="text-sm font-medium text-black">Opsi Jawaban</Label>
+                                    <Label class="label-isian">Opsi Jawaban</Label>
                                     <div v-for="option in draft.options" :key="option.id" class="flex items-center gap-2">
                                         <input
                                             :checked="option.is_correct"
@@ -683,95 +619,77 @@ const sel =
                                             class="size-4 accent-[#0075de]"
                                             @change="selectSingleCorrect(draft, option.id)"
                                         />
-                                        <Input v-model="option.text" type="text" :class="inp" disabled />
+                                        <Input v-model="option.text" type="text" disabled />
                                     </div>
                                     <InputError :message="errorFor(draftIndex, 'correct_answer')" />
                                 </div>
 
-                                <p v-else-if="draft.question_type === 'essay'" class="text-sm italic leading-5 text-[#a39e98]">
-                                    Essay tidak membutuhkan opsi jawaban.
-                                </p>
+                                <p v-else-if="draft.question_type === 'essay'" class="teks-bantu italic">Essay tidak membutuhkan opsi jawaban.</p>
                             </div>
                         </div>
 
                         <div class="flex flex-wrap items-center justify-between gap-3">
-                            <Button
-                                variant="outline"
-                                type="button"
-                                class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-white"
-                                @click="addDraft"
-                            >
-                                <Plus class="size-4" /> Add Question
-                            </Button>
+                            <Button variant="outline" type="button" @click="addDraft"> <Plus /> Add Question </Button>
                             <div class="flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    type="button"
-                                    class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-white"
-                                    @click="closeBuilder"
-                                >
-                                    Batal
-                                </Button>
-                                <Button type="submit" :disabled="canSave" class="rounded-full bg-[#0075de] px-6 text-white hover:bg-[#005bab]">
-                                    <Save class="size-4" /> Simpan
-                                </Button>
+                                <Button variant="outline" type="button" @click="closeBuilder"> Batal </Button>
+                                <Button type="submit" :disabled="canSave"> <Save /> Simpan </Button>
                             </div>
                         </div>
                         <InputError :message="form.errors.questions" />
                     </form>
                 </section>
-                <section
-                    class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                >
+                <section class="kartu p-6">
                     <div class="space-y-1">
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa yang Mengerjakan Quiz</h2>
-                        <p class="text-sm leading-5 text-[#615d59]">Daftar mahasiswa yang sudah memulai atau menyelesaikan quiz.</p>
+                        <h2 class="judul-bagian">Mahasiswa yang Mengerjakan Quiz</h2>
+                        <p class="teks-bantu">Daftar mahasiswa yang sudah memulai atau menyelesaikan quiz.</p>
                     </div>
-                    <div class="relative mt-4 overflow-x-auto rounded-xl border border-[#e6e6e6]">
-                        <table class="w-full min-w-[700px] text-left">
-                            <thead>
-                                <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Mahasiswa</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Mulai</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Selesai</th>
-                                    <th class="px-4 py-3 text-xs uppercase text-[#a39e98]">Score</th>
-                                    <th class="px-4 py-3 text-right text-xs uppercase text-[#a39e98]">Jawaban</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="(attempt, index) in props.quiz.attempts ?? []" :key="attempt.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-sm text-[#615d59]">{{ index + 1 }}</td>
-                                    <td class="px-4 py-3 text-sm">
-                                        <span class="font-medium text-black">{{ attempt.mahasiswa?.user?.name ?? '-' }}</span>
-                                        <span v-if="attempt.mahasiswa?.nim" class="block text-[#615d59]">{{ attempt.mahasiswa.nim }}</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.started_at) }}</td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">{{ formatDateTime(attempt.submitted_at) }}</td>
-                                    <td class="px-4 py-3 text-sm font-semibold text-black">
-                                        {{ attempt.score ?? '-'
-                                        }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]"
-                                            >Ditutup otomatis (waktu habis)</span
-                                        ><span v-if="attempt.essay_belum_dinilai" class="mt-0.5 block text-xs font-normal text-[#dd5b00]"
-                                            >Esai belum dinilai</span
-                                        >
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <Link
-                                            v-if="attempt.submitted_at"
-                                            :href="rute('kelas-kuliah.quiz.attempts.show', [props.kelasKuliah.id, props.quiz.id, attempt.id])"
-                                            class="text-sm font-medium text-[#0075de] hover:underline"
-                                            >{{ attempt.essay_belum_dinilai ? 'Koreksi' : 'Lihat' }}</Link
-                                        >
-                                    </td>
-                                </tr>
-                                <tr v-if="!(props.quiz.attempts ?? []).length">
-                                    <td colspan="6" class="px-4 py-10 text-center text-sm text-[#615d59]">
-                                        Belum ada mahasiswa yang mengerjakan quiz.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="tabel-wadah mt-4">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[700px]">
+                                <thead>
+                                    <tr>
+                                        <th class="kolom-no">No</th>
+                                        <th>Mahasiswa</th>
+                                        <th>Mulai</th>
+                                        <th>Selesai</th>
+                                        <th>Score</th>
+                                        <th class="kolom-aksi">Jawaban</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(attempt, index) in props.quiz.attempts ?? []" :key="attempt.id">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td>
+                                            <span class="font-medium text-black">{{ attempt.mahasiswa?.user?.name ?? '-' }}</span>
+                                            <span v-if="attempt.mahasiswa?.nim" class="block text-xs text-[#a39e98]">{{
+                                                attempt.mahasiswa.nim
+                                            }}</span>
+                                        </td>
+                                        <td>{{ formatDateTime(attempt.started_at) }}</td>
+                                        <td>{{ formatDateTime(attempt.submitted_at) }}</td>
+                                        <td class="font-semibold tabular-nums text-black">
+                                            {{ attempt.score ?? '-'
+                                            }}<span v-if="attempt.auto_closed" class="mt-0.5 block text-xs font-normal text-[#dd5b00]"
+                                                >Ditutup otomatis (waktu habis)</span
+                                            ><span v-if="attempt.essay_belum_dinilai" class="mt-0.5 block text-xs font-normal text-[#dd5b00]"
+                                                >Esai belum dinilai</span
+                                            >
+                                        </td>
+                                        <td class="kolom-aksi">
+                                            <Link
+                                                v-if="attempt.submitted_at"
+                                                :href="rute('kelas-kuliah.quiz.attempts.show', [props.kelasKuliah.id, props.quiz.id, attempt.id])"
+                                                class="text-sm font-medium text-[#0075de] hover:underline"
+                                                >{{ attempt.essay_belum_dinilai ? 'Koreksi' : 'Lihat' }}</Link
+                                            >
+                                        </td>
+                                    </tr>
+                                    <tr v-if="!(props.quiz.attempts ?? []).length" class="baris-kosong">
+                                        <td colspan="6" class="tabel-kosong">Belum ada mahasiswa yang mengerjakan quiz.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
             </div>

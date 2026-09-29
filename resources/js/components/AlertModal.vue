@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
+import { computed } from 'vue';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         open: boolean;
         title?: string;
@@ -9,6 +10,8 @@ withDefaults(
         confirmText?: string;
         cancelText?: string;
         loading?: boolean;
+        /** Tombol konfirmasi merah (aksi merusak). Bila tidak diisi, ditebak dari judul/teks tombol (Hapus, Batalkan, Tolak). */
+        destructive?: boolean;
     }>(),
     {
         title: 'Hapus data?',
@@ -16,6 +19,7 @@ withDefaults(
         confirmText: 'Ya',
         cancelText: 'Batal',
         loading: false,
+        destructive: undefined,
     },
 );
 
@@ -24,6 +28,10 @@ const emit = defineEmits<{
     (e: 'confirm'): void;
     (e: 'cancel'): void;
 }>();
+
+// Aksi merusak (hapus/batalkan/tolak) memakai tombol merah; lainnya tombol utama biru.
+const polaMerusak = /^(hapus|batalkan|tolak)/i;
+const merusak = computed(() => props.destructive ?? (polaMerusak.test(props.title) || polaMerusak.test(props.confirmText)));
 
 const close = () => {
     emit('update:open', false);
@@ -43,22 +51,14 @@ const close = () => {
         >
             <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
                 <div class="absolute inset-0 bg-black/40 backdrop-blur-[1px]" @click="close" />
-                <div
-                    class="relative w-full max-w-sm rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_8px_28px_rgba(0,0,0,0.08),0_23px_52px_rgba(0,0,0,0.08)]"
-                    @keydown.esc="close"
-                >
-                    <h2 class="text-[15px] font-semibold leading-5 text-black">{{ title }}</h2>
-                    <p class="mt-2 text-sm leading-5 text-[#615d59]">{{ description }}</p>
+                <div class="kartu relative w-full max-w-sm p-6 shadow-lg" @keydown.esc="close">
+                    <h2 class="judul-bagian">{{ title }}</h2>
+                    <p class="mt-2 text-sm leading-5 text-[#615d59] dark:text-muted-foreground">{{ description }}</p>
                     <div class="mt-6 flex justify-end gap-2">
-                        <Button
-                            v-if="cancelText"
-                            variant="outline"
-                            class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4]"
-                            @click="close"
-                        >
+                        <Button v-if="cancelText" variant="outline" @click="close">
                             {{ cancelText }}
                         </Button>
-                        <Button class="rounded-full bg-[#0075de] px-6 text-white hover:bg-[#005bab]" :disabled="loading" @click="emit('confirm')">
+                        <Button :variant="merusak ? 'destructive' : 'default'" :disabled="loading" @click="emit('confirm')">
                             {{ confirmText }}
                         </Button>
                     </div>

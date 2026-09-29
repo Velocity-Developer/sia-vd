@@ -153,39 +153,21 @@ watch(
 <template>
     <Head title="Pindah Kelas" />
     <AppLayout :breadcrumbs="[{ title: 'Pindah Kelas', href: route('admin.pindah-kelas.index') }]">
-        <div class="min-h-full bg-[#f6f5f4] dark:bg-gray-950">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black dark:text-white">Pindah Kelas</h1>
-                    <p class="text-sm leading-5 text-[#615d59] dark:text-gray-400">
-                        Kelola pengaturan form dan proses pengajuan pindah kelas mahasiswa.
-                    </p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Pindah Kelas</h1>
+                        <p class="deskripsi-halaman">Kelola pengaturan form dan proses pengajuan pindah kelas mahasiswa.</p>
+                    </div>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] dark:border-gray-800 dark:bg-gray-900"
-                    role="alert"
-                >
-                    {{ page.props.flash.success }}
-                </div>
-                <div
-                    v-if="page.props.flash?.error"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900"
-                    role="alert"
-                >
-                    {{ page.props.flash.error }}
-                </div>
-                <div
-                    v-if="warningFlash"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00] dark:border-gray-800 dark:bg-gray-900"
-                    role="alert"
-                >
-                    {{ warningFlash }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
+                <div v-if="warningFlash" class="alert-gagal" role="alert">{{ warningFlash }}</div>
 
-                <section class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e6e6e6] bg-white px-6 py-4 shadow-sm">
-                    <p class="flex items-center gap-2 text-sm text-[#31302e]">
+                <section class="kartu flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+                    <p class="flex items-center gap-2 text-sm text-[#31302e] dark:text-foreground">
                         <span class="size-2.5 rounded-full" :class="props.isActive ? 'bg-[#1aae39]' : 'bg-[#a39e98]'" aria-hidden="true" />
                         {{
                             props.isActive ? 'Form pindah kelas sedang dibuka untuk mahasiswa.' : 'Form pindah kelas sedang ditutup untuk mahasiswa.'
@@ -199,55 +181,44 @@ watch(
                     >
                 </section>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-                    <div
-                        class="flex flex-col gap-3 border-b border-[#e6e6e6] px-6 py-4 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Daftar Pengajuan</h2>
-                        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                            <div class="relative w-full sm:max-w-sm">
-                                <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                                <Input
-                                    v-model="search"
-                                    placeholder="Cari nama atau NIM mahasiswa"
-                                    class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm text-[#31302e] shadow-sm outline-none transition-colors placeholder:text-[#a39e98] hover:border-[#aaa5a0] focus:border-[#0075de] focus:ring-2 focus:ring-[#0075de]/15"
-                                />
-                            </div>
-                            <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="applyFilters">
-                                <option value="all">Semua Tahun Akademik</option>
-                                <option v-for="tahun in props.tahunAkademiks" :key="tahun.id" :value="tahun.id">
-                                    {{ tahun.tahun }} {{ tahun.semester }}
-                                </option>
-                            </SelectFilter>
-                        </div>
+                <div class="bilah-filter">
+                    <div class="kolom-cari">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                        <Input v-model="search" placeholder="Cari nama atau NIM mahasiswa" aria-label="Cari" class="pl-9" />
                     </div>
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[900px] text-left">
+                    <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="applyFilters">
+                        <option value="all">Semua Tahun Akademik</option>
+                        <option v-for="tahun in props.tahunAkademiks" :key="tahun.id" :value="tahun.id">
+                            {{ tahun.tahun }} {{ tahun.semester }}
+                        </option>
+                    </SelectFilter>
+                    <p class="info-jumlah sm:ml-auto">
+                        <span class="font-medium text-black">{{ props.pengajuans.total }}</span> pengajuan
+                    </p>
+                </div>
+
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[900px]">
                             <thead>
-                                <tr class="border-b border-[#e6e6e6] bg-[#f6f5f4] dark:border-gray-800 dark:bg-gray-800">
-                                    <th class="w-16 px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">No.</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kelas Asal</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kelas Tujuan</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Alasan</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Status</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                <tr>
+                                    <th class="kolom-no">No</th>
+                                    <th>Mahasiswa</th>
+                                    <th>Kelas Asal</th>
+                                    <th>Kelas Tujuan</th>
+                                    <th>Alasan</th>
+                                    <th>Status</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6] dark:divide-gray-800">
-                                <tr
-                                    v-for="(pengajuan, index) in props.pengajuans.data"
-                                    :key="pengajuan.id"
-                                    class="transition-colors hover:bg-[#f6f5f4]/60 dark:hover:bg-gray-800"
-                                >
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#615d59] dark:text-gray-400">
-                                        {{ (props.pengajuans.from ?? 1) + index }}
-                                    </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
-                                        <span class="block font-medium text-black dark:text-white">{{ pengajuan.mahasiswa ?? '-' }}</span>
+                            <tbody>
+                                <tr v-for="(pengajuan, index) in props.pengajuans.data" :key="pengajuan.id">
+                                    <td class="kolom-no">{{ (props.pengajuans.from ?? 1) + index }}</td>
+                                    <td>
+                                        <span class="block font-medium text-black dark:text-foreground">{{ pengajuan.mahasiswa ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.nim ?? '-' }} · {{ pengajuan.prodi ?? '-' }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td>
                                         <span class="block">{{ pengajuan.kelas_asal ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_asal_matkul ?? '' }}</span>
                                         <span
@@ -257,14 +228,12 @@ watch(
                                             <AlertTriangle class="size-3" /> Nilai: {{ pengajuan.nilai }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
+                                    <td>
                                         <span class="block">{{ pengajuan.kelas_tujuan ?? '-' }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ pengajuan.kelas_tujuan_matkul ?? '' }}</span>
                                     </td>
-                                    <td class="whitespace-pre-line px-4 py-3 text-[15px] leading-5 text-[#31302e] dark:text-gray-200">
-                                        {{ pengajuan.alasan }}
-                                    </td>
-                                    <td class="px-4 py-3">
+                                    <td class="whitespace-pre-line">{{ pengajuan.alasan }}</td>
+                                    <td>
                                         <span
                                             class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
                                             :class="statusClass[pengajuan.status] ?? ''"
@@ -277,50 +246,41 @@ watch(
                                         <span v-if="pengajuan.diproses_at" class="block text-xs text-[#a39e98]">{{
                                             formatDateTime(pengajuan.diproses_at)
                                         }}</span>
-                                        <span
-                                            v-if="pengajuan.catatan_admin"
-                                            class="mt-1 block whitespace-pre-line text-xs text-[#615d59] dark:text-gray-400"
-                                            >{{ pengajuan.catatan_admin }}</span
-                                        >
+                                        <span v-if="pengajuan.catatan_admin" class="mt-1 block whitespace-pre-line text-xs text-[#615d59]">{{
+                                            pengajuan.catatan_admin
+                                        }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div v-if="pengajuan.status === 'pending'" class="flex justify-end gap-1.5">
+                                    <td class="kolom-aksi">
+                                        <div v-if="pengajuan.status === 'pending'" class="aksi-tabel">
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                size="icon"
+                                                size="icon-sm"
                                                 title="Setujui"
                                                 aria-label="Setujui"
-                                                class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#1aae39] hover:bg-[#f6f5f4] dark:border-gray-700 dark:bg-gray-900"
+                                                class="text-[#1aae39]"
                                                 @click="askApprove(pengajuan)"
                                             >
-                                                <Check class="size-4" />
+                                                <Check />
                                             </Button>
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                size="icon"
+                                                size="icon-sm"
                                                 title="Tolak"
                                                 aria-label="Tolak"
-                                                class="size-8 rounded-full border-[#e6e6e6] bg-white text-[#dd5b00] hover:bg-[#f6f5f4] dark:border-gray-700 dark:bg-gray-900"
+                                                class="text-[#dd5b00]"
                                                 @click="askReject(pengajuan)"
                                             >
-                                                <X class="size-4" />
+                                                <X />
                                             </Button>
                                         </div>
-                                        <p v-else class="text-right text-xs text-[#a39e98]">Sudah diproses</p>
+                                        <p v-else class="text-xs text-[#a39e98]">Sudah diproses</p>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.pengajuans.data.length">
-                                    <td colspan="7" class="px-4 py-16 text-center">
-                                        <div
-                                            class="mx-auto max-w-sm rounded-xl border border-dashed border-[#e6e6e6] bg-[#f6f5f4] px-6 py-8 dark:border-gray-700 dark:bg-gray-800"
-                                        >
-                                            <p class="text-sm font-medium text-black dark:text-white">Belum ada pengajuan</p>
-                                            <p class="mt-1 text-sm leading-5 text-[#615d59] dark:text-gray-400">
-                                                Pengajuan pindah kelas dari mahasiswa akan tampil di sini.
-                                            </p>
-                                        </div>
+                                <tr v-if="!props.pengajuans.data.length" class="baris-kosong">
+                                    <td colspan="7" class="tabel-kosong">
+                                        Belum ada pengajuan. Pengajuan pindah kelas dari mahasiswa akan tampil di sini.
                                     </td>
                                 </tr>
                             </tbody>
@@ -353,11 +313,9 @@ watch(
                     >
                         <div v-if="rejectTarget" class="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
                             <div class="absolute inset-0 bg-black/40 backdrop-blur-[1px]" @click="cancelReject" />
-                            <div
-                                class="relative w-full max-w-sm rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_8px_28px_rgba(0,0,0,0.08),0_23px_52px_rgba(0,0,0,0.08)] dark:border-gray-800 dark:bg-gray-900"
-                            >
-                                <h2 class="text-[15px] font-semibold leading-5 text-black dark:text-white">Tolak pengajuan?</h2>
-                                <p class="mt-2 text-sm leading-5 text-[#615d59] dark:text-gray-400">
+                            <div class="kartu relative w-full max-w-sm p-6 shadow-xl">
+                                <h2 class="judul-bagian">Tolak pengajuan?</h2>
+                                <p class="mt-2 text-sm leading-5 text-[#615d59] dark:text-muted-foreground">
                                     Data KRS mahasiswa tidak akan diubah. Berikan alasan penolakan untuk mahasiswa.
                                 </p>
                                 <div class="mt-4 grid gap-2">
@@ -365,25 +323,14 @@ watch(
                                         v-model="rejectForm.catatan_admin"
                                         rows="4"
                                         placeholder="Tuliskan alasan penolakan"
-                                        class="w-full rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] text-black placeholder:text-[#a39e98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de] dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                                        aria-label="Alasan penolakan"
+                                        class="isian isian-area"
                                     />
                                     <InputError :message="rejectForm.errors.catatan_admin" />
                                 </div>
                                 <div class="mt-6 flex justify-end gap-2">
-                                    <Button
-                                        variant="outline"
-                                        class="rounded-full border-[#e6e6e6] bg-white text-black hover:bg-[#f6f5f4] dark:border-gray-700 dark:bg-gray-900 dark:text-white"
-                                        @click="cancelReject"
-                                    >
-                                        Batal
-                                    </Button>
-                                    <Button
-                                        class="rounded-full bg-[#dd5b00] px-6 text-white hover:bg-[#b44a00]"
-                                        :disabled="rejectForm.processing"
-                                        @click="confirmReject"
-                                    >
-                                        Tolak
-                                    </Button>
+                                    <Button variant="outline" @click="cancelReject">Batal</Button>
+                                    <Button variant="destructive" :disabled="rejectForm.processing" @click="confirmReject">Tolak</Button>
                                 </div>
                             </div>
                         </div>

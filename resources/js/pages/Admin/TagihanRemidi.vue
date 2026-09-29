@@ -130,12 +130,12 @@ const deskripsiLunas = (baris: Baris | null) =>
 <template>
     <Head title="Tagihan Remidi" />
     <AppLayout :breadcrumbs="[{ title: 'Tagihan Remidi', href: route('admin.tagihan-remidi.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Tagihan Remidi</h1>
-                        <p class="text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Tagihan Remidi</h1>
+                        <p class="deskripsi-halaman">
                             Diterbitkan dari daftar remidi yang sudah dikunci dosen.
                             <template v-if="props.batasBayar">
                                 Batas bayar:
@@ -146,47 +146,41 @@ const deskripsiLunas = (baris: Baris | null) =>
                             </template>
                         </p>
                     </div>
-                    <Button
-                        class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                        :disabled="!props.ringkasan.belum_ditagih"
-                        @click="terbitOpen = true"
-                    >
+                    <Button :disabled="!props.ringkasan.belum_ditagih" @click="terbitOpen = true">
                         Terbitkan Tagihan ({{ props.ringkasan.belum_ditagih }})
                     </Button>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
-                <div v-if="!props.adaJenisBiaya" class="rounded-xl border border-[#f6d7c4] bg-[#fdf6f1] px-4 py-3 text-sm text-[#dd5b00]">
+                <div v-if="!props.adaJenisBiaya" class="alert-gagal">
                     Belum ada jenis biaya kategori Remidi yang aktif.
                     <Link :href="route('admin.jenis-biaya.index')" class="font-medium text-[#0075de] hover:underline">Atur jenis biaya</Link>
                 </div>
-                <div v-if="!props.batasBayar" class="rounded-xl border border-[#f6d7c4] bg-[#fdf6f1] px-4 py-3 text-sm text-[#dd5b00]">
+                <div v-if="!props.batasBayar" class="alert-gagal">
                     Batas bayar remidi tahun akademik ini belum diisi.
                     <Link :href="route('admin.tahun-akademik.index')" class="font-medium text-[#0075de] hover:underline">Atur di Tahun Akademik</Link>
                 </div>
-                <div v-if="props.ringkasan.menunggu" class="rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]">
+                <div v-if="props.ringkasan.menunggu" class="alert-info">
                     {{ props.ringkasan.menunggu }} bukti bayar menunggu verifikasi. Verifikasi sebelum ujian remidi berlangsung; mahasiswa baru bisa
                     ikut remidi setelah dinyatakan lunas.
                 </div>
-                <div v-if="props.kelasBelumKunci.length" class="rounded-xl border border-[#f1d9a0] bg-[#fff6e0] px-4 py-3 text-sm text-[#8a5a00]">
+                <div v-if="props.kelasBelumKunci.length" class="alert-gagal">
                     <div class="flex flex-wrap items-center justify-between gap-3">
                         <span
                             >{{ props.kelasBelumKunci.length }} kelas sudah final tetapi daftar remidinya belum dikunci dosen, jadi belum bisa
                             ditagih.</span
                         >
-                        <Button size="sm" variant="outline" class="bg-white" @click="kunciMassalOpen = true"
-                            >Kunci semua pakai usulan otomatis</Button
-                        >
+                        <Button size="sm" variant="outline" @click="kunciMassalOpen = true">Kunci semua pakai usulan otomatis</Button>
                     </div>
                     <ul class="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                         <li v-for="k in kelasTampil" :key="k.id">
                             <Link :href="route('admin.kelas-kuliah.show', k.id)" class="font-medium hover:underline">{{ k.kode_kelas }}</Link>
-                            <span class="text-[#a37b2a]">
+                            <span class="opacity-80">
                                 · {{ k.matkul }}<template v-if="k.dosen"> · {{ k.dosen }}</template></span
                             >
                         </li>
@@ -199,71 +193,66 @@ const deskripsiLunas = (baris: Baris | null) =>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Menunggu Verifikasi</p>
-                        <p class="text-[22px] font-bold text-[#0075de]">{{ props.ringkasan.menunggu }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Menunggu Verifikasi</p>
+                        <p class="text-2xl font-bold text-[#0075de]">{{ props.ringkasan.menunggu }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Belum Bayar</p>
-                        <p class="text-[22px] font-bold text-[#dd5b00]">{{ props.ringkasan.belum_bayar + props.ringkasan.ditolak }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Belum Bayar</p>
+                        <p class="text-2xl font-bold text-[#dd5b00]">{{ props.ringkasan.belum_bayar + props.ringkasan.ditolak }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Lunas</p>
-                        <p class="text-[22px] font-bold text-[#1aae39]">{{ props.ringkasan.lunas }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Lunas</p>
+                        <p class="text-2xl font-bold text-[#1aae39]">{{ props.ringkasan.lunas }}</p>
                     </div>
-                    <div class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 shadow-sm">
-                        <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Kelas Remidi</p>
-                        <p class="text-[22px] font-bold text-black">{{ props.ringkasan.kelas_dikunci }}</p>
+                    <div class="kartu px-4 py-3">
+                        <p class="teks-bantu font-medium uppercase tracking-[0.06em]">Kelas Remidi</p>
+                        <p class="text-2xl font-bold text-black dark:text-foreground">{{ props.ringkasan.kelas_dikunci }}</p>
                     </div>
                 </div>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
-                        <div class="relative w-full sm:w-72">
-                            <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                            <Input
-                                v-model="search"
-                                placeholder="Cari nama atau NIM"
-                                aria-label="Cari mahasiswa"
-                                class="h-10 rounded-lg border-[#d8d5d2] bg-white pl-9 text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15"
-                            />
-                        </div>
-                        <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="kirim">
-                            <option v-for="item in props.tahunAkademikOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
-                        </SelectFilter>
-                        <SelectFilter v-model="status" label="Filter status" @change="kirim">
-                            <option :value="semua">Semua Status</option>
-                            <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
-                            <option value="belum_bayar">Belum Bayar</option>
-                            <option value="ditolak">Ditolak</option>
-                            <option value="lunas">Lunas</option>
-                        </SelectFilter>
+                <div class="bilah-filter">
+                    <div class="kolom-cari">
+                        <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
+                        <Input v-model="search" placeholder="Cari nama atau NIM" aria-label="Cari mahasiswa" class="pl-9" />
                     </div>
-                    <p class="whitespace-nowrap text-sm text-[#615d59]">
+                    <SelectFilter v-model="tahunAkademikId" label="Filter tahun akademik" @change="kirim">
+                        <option v-for="item in props.tahunAkademikOptions" :key="item.id" :value="item.id">{{ item.name }}</option>
+                    </SelectFilter>
+                    <SelectFilter v-model="status" label="Filter status" @change="kirim">
+                        <option :value="semua">Semua Status</option>
+                        <option value="menunggu_verifikasi">Menunggu Verifikasi</option>
+                        <option value="belum_bayar">Belum Bayar</option>
+                        <option value="ditolak">Ditolak</option>
+                        <option value="lunas">Lunas</option>
+                    </SelectFilter>
+                    <p class="info-jumlah sm:ml-auto">
                         <span class="font-medium text-black">{{ props.tagihan.total }}</span> tagihan
                     </p>
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[960px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[1000px]">
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mata Kuliah</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Tagihan</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Status</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Bukti</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Mahasiswa</th>
+                                    <th>Mata Kuliah</th>
+                                    <th>Tagihan</th>
+                                    <th>Status</th>
+                                    <th>Bukti</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="baris in props.tagihan.data" :key="baris.id" class="align-top hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-black">
-                                        <span class="block font-medium">{{ baris.nama }}</span>
+                            <tbody>
+                                <tr v-for="(baris, index) in props.tagihan.data" :key="baris.id">
+                                    <td class="kolom-no">{{ (props.tagihan.from ?? 1) + index }}</td>
+                                    <td>
+                                        <span class="block font-medium text-black">{{ baris.nama }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ baris.nim }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td>
                                         <span class="block">{{ baris.matkul }}</span>
                                         <span class="block text-xs text-[#a39e98]">Kelas {{ baris.kelas }}</span>
                                         <span
@@ -274,13 +263,13 @@ const deskripsiLunas = (baris: Baris | null) =>
                                             }}{{ baris.ujian_remidi.lewat ? ' (sudah mulai)' : '' }}</span
                                         >
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td class="tabular-nums">
                                         <span class="block">{{ rupiah(baris.total) }}</span>
                                         <span v-for="r in baris.rincian" :key="r.nama" class="block text-xs text-[#a39e98]">
                                             {{ r.nama }}<template v-if="r.jumlah > 1"> · {{ r.jumlah }} × {{ rupiah(r.nominal_satuan) }}</template>
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px]">
+                                    <td>
                                         <span
                                             class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"
                                             :class="STATUS_TAGIHAN_REMIDI[baris.status].kelas"
@@ -293,7 +282,7 @@ const deskripsiLunas = (baris: Baris | null) =>
                                             >{{ formatTanggal(baris.diverifikasi_at, false) }} · {{ baris.diverifikasi_oleh }}</span
                                         >
                                     </td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td>
                                         <template v-if="baris.ada_bukti">
                                             <a
                                                 :href="route('berkas.bukti-remidi', baris.id)"
@@ -306,25 +295,21 @@ const deskripsiLunas = (baris: Baris | null) =>
                                         </template>
                                         <span v-else class="text-xs text-[#a39e98]">Belum ada</span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div v-if="baris.status !== 'lunas'" class="flex items-center justify-end gap-2">
+                                    <td class="kolom-aksi">
+                                        <div v-if="baris.status !== 'lunas'" class="aksi-tabel">
                                             <Button
                                                 v-if="baris.status === 'menunggu_verifikasi'"
-                                                variant="outline"
-                                                class="h-8 rounded-lg border-[#d8d5d2] px-3 text-sm text-[#dd5b00]"
+                                                variant="destructive"
+                                                size="sm"
                                                 @click="bukaTolak(baris)"
                                                 >Tolak</Button
                                             >
-                                            <Button
-                                                class="h-8 rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]"
-                                                @click="lunasItem = baris"
-                                                >Tandai Lunas</Button
-                                            >
+                                            <Button size="sm" @click="lunasItem = baris">Tandai Lunas</Button>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.tagihan.data.length">
-                                    <td colspan="6" class="px-4 py-14 text-center text-sm text-[#615d59]">Belum ada tagihan remidi yang cocok.</td>
+                                <tr v-if="!props.tagihan.data.length" class="baris-kosong">
+                                    <td colspan="7" class="tabel-kosong">Belum ada tagihan remidi yang cocok.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -366,19 +351,19 @@ const deskripsiLunas = (baris: Baris | null) =>
             @cancel="lunasItem = null"
         />
         <div v-if="tolakItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="tolakItem = null">
-            <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-                <h3 class="text-lg font-semibold">Tolak bukti bayar</h3>
+            <div class="kartu w-full max-w-md p-6 shadow-xl">
+                <h3 class="judul-bagian">Tolak bukti bayar</h3>
                 <p class="mt-2 text-sm text-[#615d59]">
                     {{ tolakItem.nama }} bisa mengunggah ulang sebelum batas bayar. Alasan penolakan ditampilkan ke mahasiswa.
                 </p>
-                <label class="mt-4 grid gap-2 text-sm">
-                    <span class="font-medium">Alasan</span>
-                    <Input v-model="alasan" placeholder="Mis. nominal tidak sesuai" class="h-10" />
+                <label class="mt-4 grid gap-2">
+                    <span class="label-isian">Alasan</span>
+                    <Input v-model="alasan" placeholder="Mis. nominal tidak sesuai" />
                     <span v-if="alasanError" class="text-xs text-[#dd5b00]">{{ alasanError }}</span>
                 </label>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button variant="outline" class="rounded-full" @click="tolakItem = null">Batal</Button>
-                    <Button class="rounded-full bg-[#dd5b00] text-white hover:bg-[#b84b00]" @click="tolak">Tolak</Button>
+                    <Button variant="outline" @click="tolakItem = null">Batal</Button>
+                    <Button variant="destructive" @click="tolak">Tolak</Button>
                 </div>
             </div>
         </div>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import SelectFilter from '@/components/SelectFilter.vue';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { Download } from 'lucide-vue-next';
@@ -56,10 +58,6 @@ const perDosen = computed(() => {
         tanpa_jurnal: kelas.reduce((n, b) => n + b.tanpa_jurnal, 0),
     }));
 });
-
-const th = 'px-3 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
-const td = 'px-3 py-2.5 text-sm text-[#31302e]';
-const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
 </script>
 
 <template>
@@ -70,95 +68,96 @@ const sel = 'h-10 rounded-lg border border-[#dddddd] bg-white px-3 text-sm';
             { title: 'Laporan Kehadiran Dosen', href: route('admin.presensi.laporan-dosen') },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Laporan Kehadiran Dosen</h1>
-                        <p class="max-w-2xl text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Laporan Kehadiran Dosen</h1>
+                        <p class="deskripsi-halaman">
                             Pertemuan terlaksana dibanding rencana per kelas. Terlambat = jam masuk lewat {{ props.toleransi }} menit dari jam mulai;
                             tanpa jurnal = pertemuan selesai tanpa topik.
                         </p>
                     </div>
-                    <a
-                        :href="urlCsv"
-                        class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-[#e6e6e6] bg-white px-4 text-sm font-medium"
-                    >
-                        <Download class="size-4" /> Unduh CSV
-                    </a>
+                    <Button as-child variant="outline">
+                        <a :href="urlCsv"><Download /> Unduh CSV</a>
+                    </Button>
                 </div>
 
-                <div class="flex flex-wrap gap-3">
-                    <select
-                        :value="props.tahunAkademikId ?? ''"
-                        aria-label="Tahun akademik"
-                        :class="sel"
-                        @change="saring({ tahun_akademik_id: ($event.target as HTMLSelectElement).value })"
+                <div class="bilah-filter">
+                    <SelectFilter
+                        :model-value="props.tahunAkademikId ?? ''"
+                        label="Tahun akademik"
+                        @update:model-value="(nilai) => saring({ tahun_akademik_id: nilai })"
                     >
                         <option v-for="t in props.tahunAkademikOptions" :key="t.id" :value="t.id">{{ t.name }}</option>
-                    </select>
-                    <select
-                        :value="props.prodiId ?? ''"
-                        aria-label="Program studi"
-                        :class="sel"
-                        @change="saring({ prodi_id: ($event.target as HTMLSelectElement).value || null })"
+                    </SelectFilter>
+                    <SelectFilter
+                        :model-value="props.prodiId ?? ''"
+                        label="Program studi"
+                        @update:model-value="(nilai) => saring({ prodi_id: nilai || null })"
                     >
                         <option value="">Semua program studi</option>
                         <option v-for="p in props.prodiOptions" :key="p.id" :value="p.id">{{ p.name }}</option>
-                    </select>
+                    </SelectFilter>
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[980px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <!-- Baris dikelompokkan per dosen: kolom No menomori dosen, baris kelas di bawahnya menjorok. -->
+                        <table class="tabel min-w-[1040px]">
+                            <thead>
                                 <tr>
-                                    <th :class="th">Dosen / Kelas</th>
-                                    <th :class="[th, 'text-center']">Terlaksana</th>
-                                    <th :class="[th, 'text-center']" title="Pertemuan yang pernah dipindah tanggal, jam, ruang, atau dosennya">
+                                    <th class="kolom-no">No</th>
+                                    <th>Dosen / Kelas</th>
+                                    <th class="text-center">Terlaksana</th>
+                                    <th class="text-center" title="Pertemuan yang pernah dipindah tanggal, jam, ruang, atau dosennya">
                                         Dijadwal ulang
                                     </th>
-                                    <th :class="[th, 'text-center']" title="Jadwalnya sudah lewat tetapi tidak pernah dimulai">Terlewat</th>
-                                    <th :class="[th, 'text-center']">Oleh pengganti</th>
-                                    <th :class="[th, 'text-center']">Masuk terlambat</th>
-                                    <th :class="[th, 'text-center']">Tanpa jurnal</th>
-                                    <th :class="[th, 'text-center']">Rata hadir mhs</th>
+                                    <th class="text-center" title="Jadwalnya sudah lewat tetapi tidak pernah dimulai">Terlewat</th>
+                                    <th class="text-center">Oleh pengganti</th>
+                                    <th class="text-center">Masuk terlambat</th>
+                                    <th class="text-center">Tanpa jurnal</th>
+                                    <th class="text-center">Rata hadir mhs</th>
                                 </tr>
                             </thead>
-                            <tbody v-for="d in perDosen" :key="`${d.dosen}${d.nidn}`" class="divide-y divide-[#e6e6e6] border-b border-[#e6e6e6]">
-                                <tr class="bg-[#fbfaf9]">
-                                    <td class="px-3 py-2.5 font-medium text-black">
-                                        {{ d.dosen }} <span class="text-xs font-normal text-[#a39e98]">{{ d.nidn }}</span>
+                            <tbody v-for="(d, index) in perDosen" :key="`${d.dosen}${d.nidn}`" class="border-t border-[#e6e6e6] dark:border-border">
+                                <tr class="bg-[#fbfaf9] dark:bg-muted/40">
+                                    <td class="kolom-no">{{ index + 1 }}</td>
+                                    <td class="font-medium text-black dark:text-foreground">
+                                        {{ d.dosen }} <span class="teks-bantu font-normal">{{ d.nidn }}</span>
                                     </td>
-                                    <td :class="[td, 'text-center font-medium']">{{ d.terlaksana }} / {{ d.rencana }}</td>
-                                    <td :class="td" />
-                                    <td :class="[td, 'text-center font-medium', d.terlewat ? 'text-[#dd5b00]' : '']">{{ d.terlewat }}</td>
-                                    <td :class="td" />
-                                    <td :class="[td, 'text-center font-medium', d.terlambat ? 'text-[#dd5b00]' : '']">{{ d.terlambat }}</td>
-                                    <td :class="[td, 'text-center font-medium', d.tanpa_jurnal ? 'text-[#dd5b00]' : '']">{{ d.tanpa_jurnal }}</td>
-                                    <td :class="td" />
+                                    <td class="text-center font-medium tabular-nums">{{ d.terlaksana }} / {{ d.rencana }}</td>
+                                    <td />
+                                    <td class="text-center font-medium tabular-nums" :class="d.terlewat ? 'text-[#dd5b00]' : ''">{{ d.terlewat }}</td>
+                                    <td />
+                                    <td class="text-center font-medium tabular-nums" :class="d.terlambat ? 'text-[#dd5b00]' : ''">
+                                        {{ d.terlambat }}
+                                    </td>
+                                    <td class="text-center font-medium tabular-nums" :class="d.tanpa_jurnal ? 'text-[#dd5b00]' : ''">
+                                        {{ d.tanpa_jurnal }}
+                                    </td>
+                                    <td />
                                 </tr>
                                 <tr v-for="b in d.kelas" :key="b.kelas_id">
-                                    <td :class="[td, 'pl-7']">
+                                    <td class="kolom-no" />
+                                    <td class="pl-7">
                                         <Link :href="route('admin.presensi.kelas', b.kelas_id)" class="text-[#0075de] hover:underline">{{
                                             b.kode_kelas
                                         }}</Link>
-                                        <span class="text-xs text-[#a39e98]"> · {{ b.mata_kuliah }}</span>
+                                        <span class="teks-bantu"> · {{ b.mata_kuliah }}</span>
                                     </td>
-                                    <td :class="[td, 'text-center']">{{ b.terlaksana }} / {{ b.rencana }}</td>
-                                    <td :class="[td, 'text-center']">{{ b.dijadwal_ulang }}</td>
-                                    <td :class="[td, 'text-center', b.terlewat ? 'font-medium text-[#dd5b00]' : '']">{{ b.terlewat }}</td>
-                                    <td :class="[td, 'text-center']">{{ b.oleh_pengganti }}</td>
-                                    <td :class="[td, 'text-center']">{{ b.terlambat }}</td>
-                                    <td :class="[td, 'text-center']">{{ b.tanpa_jurnal }}</td>
-                                    <td :class="[td, 'text-center']">{{ b.rata_kehadiran === null ? '-' : `${b.rata_kehadiran}%` }}</td>
+                                    <td class="text-center tabular-nums">{{ b.terlaksana }} / {{ b.rencana }}</td>
+                                    <td class="text-center tabular-nums">{{ b.dijadwal_ulang }}</td>
+                                    <td class="text-center tabular-nums" :class="b.terlewat ? 'font-medium text-[#dd5b00]' : ''">{{ b.terlewat }}</td>
+                                    <td class="text-center tabular-nums">{{ b.oleh_pengganti }}</td>
+                                    <td class="text-center tabular-nums">{{ b.terlambat }}</td>
+                                    <td class="text-center tabular-nums">{{ b.tanpa_jurnal }}</td>
+                                    <td class="text-center tabular-nums">{{ b.rata_kehadiran === null ? '-' : `${b.rata_kehadiran}%` }}</td>
                                 </tr>
                             </tbody>
                             <tbody v-if="!perDosen.length">
-                                <tr>
-                                    <td colspan="8" class="px-4 py-14 text-center text-sm text-[#615d59]">
-                                        Tidak ada kelas pada tahun akademik ini.
-                                    </td>
+                                <tr class="baris-kosong">
+                                    <td colspan="9" class="tabel-kosong">Tidak ada kelas pada tahun akademik ini.</td>
                                 </tr>
                             </tbody>
                         </table>

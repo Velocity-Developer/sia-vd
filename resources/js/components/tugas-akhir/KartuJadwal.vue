@@ -15,9 +15,9 @@ const zona = computed(() => page.props.institusi?.zona_singkatan ?? 'WIB');
 <template>
     <dl class="grid gap-4 text-sm sm:grid-cols-3">
         <div>
-            <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Waktu</dt>
-            <dd class="mt-1 text-black">{{ formatTanggal(jadwal.tanggal) }}</dd>
-            <dd class="text-black">{{ jadwal.jam_mulai }}–{{ jadwal.jam_akhir }} {{ zona }}</dd>
+            <dt class="teks-bantu">Waktu</dt>
+            <dd class="mt-1 text-black dark:text-foreground">{{ formatTanggal(jadwal.tanggal) }}</dd>
+            <dd class="text-black dark:text-foreground">{{ jadwal.jam_mulai }}–{{ jadwal.jam_akhir }} {{ zona }}</dd>
             <dd v-if="jadwal.nomor_surat" class="mt-2">
                 <a
                     :href="route('berkas.surat-pendadaran', jadwal.id)"
@@ -26,17 +26,17 @@ const zona = computed(() => page.props.institusi?.zona_singkatan ?? 'WIB');
                     class="inline-flex items-center gap-1 text-sm font-medium text-[#0075de] hover:underline"
                     ><FileText class="size-4" /> Surat pendadaran</a
                 >
-                <span class="block text-xs text-[#a39e98]">No. {{ jadwal.nomor_surat }}</span>
+                <span class="teks-bantu block">No. {{ jadwal.nomor_surat }}</span>
             </dd>
         </div>
         <div>
-            <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Ruang</dt>
-            <dd class="mt-1 text-black">{{ jadwal.ruang ?? '-' }}</dd>
+            <dt class="teks-bantu">Ruang</dt>
+            <dd class="mt-1 text-black dark:text-foreground">{{ jadwal.ruang ?? '-' }}</dd>
         </div>
         <div>
-            <dt class="text-xs uppercase tracking-[0.04em] text-[#a39e98]">Penguji</dt>
-            <dd v-for="p in jadwal.penguji" :key="p.peran" class="mt-1 text-black">
-                {{ p.nama }} <span class="text-xs text-[#a39e98]">· {{ p.peran }}</span>
+            <dt class="teks-bantu">Penguji</dt>
+            <dd v-for="p in jadwal.penguji" :key="p.peran" class="mt-1 text-black dark:text-foreground">
+                {{ p.nama }} <span class="teks-bantu">· {{ p.peran }}</span>
             </dd>
         </div>
     </dl>

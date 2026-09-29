@@ -52,39 +52,39 @@ const kembalikan = () => {
     const { baris, aksi } = kembalikanItem.value;
     catatanForm.post(route(`dosen.bimbingan.pendadaran.${aksi}`, baris.id), { preserveScroll: true, onSuccess: () => (kembalikanItem.value = null) });
 };
-
-const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
 </script>
 
 <template>
     <Head title="Bimbingan & Pendadaran" />
     <AppLayout :breadcrumbs="[{ title: 'Bimbingan & Pendadaran', href: route('dosen.bimbingan.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">Bimbingan & Pendadaran</h1>
-                    <p class="text-sm text-[#615d59]">Mahasiswa yang tugas akhirnya Anda bimbing, pendaftaran pendadaran, dan jadwal menguji.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Bimbingan & Pendadaran</h1>
+                        <p class="deskripsi-halaman">Mahasiswa yang tugas akhirnya Anda bimbing, pendaftaran pendadaran, dan jadwal menguji.</p>
+                    </div>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
 
-                <section v-if="props.menungguPersetujuan.length" class="overflow-hidden rounded-xl border border-[#cfe3f8] bg-white shadow-sm">
-                    <div class="border-b border-[#e6e6e6] bg-[#f2f9ff] px-4 py-3">
-                        <h2 class="text-sm font-semibold text-[#005bab]">Pendaftaran pendadaran menunggu persetujuan Anda</h2>
-                        <p class="text-xs text-[#615d59]">Cukup satu pembimbing yang menyetujui; setelah itu admin menjadwalkan pendadaran.</p>
+                <section v-if="props.menungguPersetujuan.length" class="kartu overflow-hidden">
+                    <div class="border-b border-[#e6e6e6] px-6 py-4 dark:border-border">
+                        <h2 class="judul-bagian">Pendaftaran pendadaran menunggu persetujuan Anda</h2>
+                        <p class="teks-bantu">Cukup satu pembimbing yang menyetujui; setelah itu admin menjadwalkan pendadaran.</p>
                     </div>
-                    <div class="divide-y divide-[#e6e6e6]">
-                        <div v-for="p in props.menungguPersetujuan" :key="p.id" class="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
+                    <div class="divide-y divide-[#e6e6e6] dark:divide-border">
+                        <div v-for="p in props.menungguPersetujuan" :key="p.id" class="flex flex-wrap items-start justify-between gap-3 px-6 py-4">
                             <div class="min-w-0 text-sm">
-                                <span class="block font-medium text-black"
-                                    >{{ p.nama }} <span class="text-xs text-[#a39e98]">{{ p.nim }}</span></span
+                                <span class="block font-medium text-black dark:text-foreground"
+                                    >{{ p.nama }} <span class="teks-bantu">{{ p.nim }}</span></span
                                 >
-                                <span class="block text-[#31302e]">{{ p.judul }}</span>
+                                <span class="block text-[#31302e] dark:text-foreground">{{ p.judul }}</span>
                                 <span class="mt-1 flex flex-wrap gap-3">
                                     <a
                                         v-for="k in p.lampiran"
@@ -96,45 +96,35 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                         ><Paperclip class="size-3" /> {{ LABEL_LAMPIRAN[k] ?? k }}</a
                                     >
                                 </span>
-                                <span class="mt-1 block text-xs text-[#a39e98]">Dikirim {{ formatTanggal(p.diajukan_at, false) }}</span>
+                                <span class="teks-bantu mt-1 block">Dikirim {{ formatTanggal(p.diajukan_at, false) }}</span>
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                <Button
-                                    variant="outline"
-                                    class="h-8 rounded-lg border-[#d8d5d2] px-3 text-sm text-[#b25000]"
-                                    @click="bukaKembalikan(p, 'perbaikan')"
-                                    >Perbaikan</Button
-                                >
-                                <Button
-                                    variant="outline"
-                                    class="h-8 rounded-lg border-[#d8d5d2] px-3 text-sm text-[#b42318]"
-                                    @click="bukaKembalikan(p, 'tolak')"
-                                    >Tolak</Button
-                                >
-                                <Button class="h-8 rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]" @click="setujuiItem = p"
-                                    >Setujui</Button
-                                >
+                                <Button variant="outline" size="sm" @click="bukaKembalikan(p, 'perbaikan')">Perbaikan</Button>
+                                <Button variant="destructive" size="sm" @click="bukaKembalikan(p, 'tolak')">Tolak</Button>
+                                <Button size="sm" @click="setujuiItem = p">Setujui</Button>
                             </div>
                         </div>
                     </div>
                 </section>
 
                 <section class="flex flex-col gap-3">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal Pendadaran</h2>
-                    <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[820px] text-left">
-                                <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                    <h2 class="judul-bagian">Jadwal Pendadaran</h2>
+                    <div class="tabel-wadah">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[880px]">
+                                <thead>
                                     <tr>
-                                        <th :class="th">Waktu & Ruang</th>
-                                        <th :class="th">Mahasiswa</th>
-                                        <th :class="th">Penguji</th>
-                                        <th :class="th">Peran & Penilaian</th>
+                                        <th class="kolom-no">No</th>
+                                        <th>Waktu & Ruang</th>
+                                        <th>Mahasiswa</th>
+                                        <th>Penguji</th>
+                                        <th>Peran & Penilaian</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="j in props.jadwalPendadaran" :key="j.id" class="align-top">
-                                        <td class="px-4 py-3 text-sm text-black">
+                                <tbody>
+                                    <tr v-for="(j, index) in props.jadwalPendadaran" :key="j.id" class="[&>td]:align-top">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td class="text-black dark:text-foreground">
                                             <span class="block font-medium">{{ formatTanggal(j.tanggal) }}</span>
                                             <span class="block">{{ j.jam_mulai }}–{{ j.jam_akhir }} · {{ j.ruang }}</span>
                                             <a
@@ -146,9 +136,9 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                                 ><FileText class="size-3" /> Surat</a
                                             >
                                         </td>
-                                        <td class="max-w-[380px] px-4 py-3 text-sm text-[#31302e]">
-                                            <span class="block font-medium text-black"
-                                                >{{ j.nama }} <span class="text-xs text-[#a39e98]">{{ j.nim }}</span></span
+                                        <td class="max-w-[380px]">
+                                            <span class="block font-medium text-black dark:text-foreground"
+                                                >{{ j.nama }} <span class="teks-bantu font-normal">{{ j.nim }}</span></span
                                             >
                                             <span class="block">{{ j.judul }}</span>
                                             <a
@@ -160,17 +150,17 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                                 ><Paperclip class="size-3" /> Naskah</a
                                             >
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-[#31302e]">
+                                        <td>
                                             <span v-for="p in j.penguji" :key="p.peran" class="block"
-                                                >{{ p.nama }} <span class="text-xs text-[#a39e98]">· {{ p.peran }}</span></span
+                                                >{{ p.nama }} <span class="teks-bantu">· {{ p.peran }}</span></span
                                             >
                                         </td>
-                                        <td class="px-4 py-3">
+                                        <td>
                                             <PenilaianPendadaran :jadwal="j" />
                                         </td>
                                     </tr>
-                                    <tr v-if="!props.jadwalPendadaran.length">
-                                        <td colspan="4" class="px-4 py-10 text-center text-sm text-[#615d59]">Belum ada jadwal pendadaran.</td>
+                                    <tr v-if="!props.jadwalPendadaran.length" class="baris-kosong">
+                                        <td colspan="5" class="tabel-kosong">Belum ada jadwal pendadaran.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -179,27 +169,29 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                 </section>
 
                 <section class="flex flex-col gap-3">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Mahasiswa Bimbingan</h2>
-                    <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                        <div class="relative overflow-x-auto">
-                            <table class="w-full min-w-[820px] text-left">
-                                <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                    <h2 class="judul-bagian">Mahasiswa Bimbingan</h2>
+                    <div class="tabel-wadah">
+                        <div class="tabel-gulir">
+                            <table class="tabel min-w-[880px]">
+                                <thead>
                                     <tr>
-                                        <th :class="th">Mahasiswa</th>
-                                        <th :class="th">Tugas Akhir</th>
-                                        <th :class="th">Peran</th>
-                                        <th :class="th">Status</th>
+                                        <th class="kolom-no">No</th>
+                                        <th>Mahasiswa</th>
+                                        <th>Tugas Akhir</th>
+                                        <th>Peran</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-[#e6e6e6]">
-                                    <tr v-for="b in props.bimbingan" :key="b.id" class="align-top hover:bg-[#f6f5f4]/60">
-                                        <td class="px-4 py-3 text-[15px] text-black">
-                                            <span class="block font-medium">{{ b.nama }}</span>
-                                            <span class="block text-xs text-[#a39e98]">{{ b.nim }} · {{ b.prodi }}</span>
+                                <tbody>
+                                    <tr v-for="(b, index) in props.bimbingan" :key="b.id" class="[&>td]:align-top">
+                                        <td class="kolom-no">{{ index + 1 }}</td>
+                                        <td>
+                                            <span class="block font-medium text-black dark:text-foreground">{{ b.nama }}</span>
+                                            <span class="teks-bantu block">{{ b.nim }} · {{ b.prodi }}</span>
                                         </td>
-                                        <td class="max-w-[460px] px-4 py-3 text-sm text-[#31302e]">
-                                            <span class="block text-[15px] font-medium text-black">{{ b.judul }}</span>
-                                            <span class="block text-xs text-[#615d59]"
+                                        <td class="max-w-[460px]">
+                                            <span class="block font-medium text-black dark:text-foreground">{{ b.judul }}</span>
+                                            <span class="teks-bantu block"
                                                 >Bidang: {{ b.bidang }} · disahkan {{ formatTanggal(b.disahkan_at, false) }}</span
                                             >
                                             <a
@@ -211,11 +203,11 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                                 ><Paperclip class="size-3" /> Proposal</a
                                             >
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-[#31302e]">
+                                        <td>
                                             {{ b.peran }}
-                                            <span v-if="b.pembimbing_lain" class="block text-xs text-[#a39e98]">bersama {{ b.pembimbing_lain }}</span>
+                                            <span v-if="b.pembimbing_lain" class="teks-bantu block">bersama {{ b.pembimbing_lain }}</span>
                                         </td>
-                                        <td class="px-4 py-3">
+                                        <td>
                                             <span
                                                 class="rounded-full px-2 py-0.5 text-xs font-medium"
                                                 :class="b.status === 'selesai' ? 'bg-[#eaf7ed] text-[#1aae39]' : 'bg-[#f2f9ff] text-[#0075de]'"
@@ -223,8 +215,8 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                             >
                                         </td>
                                     </tr>
-                                    <tr v-if="!props.bimbingan.length">
-                                        <td colspan="4" class="px-4 py-10 text-center text-sm text-[#615d59]">Belum ada mahasiswa bimbingan.</td>
+                                    <tr v-if="!props.bimbingan.length" class="baris-kosong">
+                                        <td colspan="5" class="tabel-kosong">Belum ada mahasiswa bimbingan.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -245,27 +237,20 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
             @cancel="setujuiItem = null"
         />
         <div v-if="kembalikanItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="kembalikanItem = null">
-            <form class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" @submit.prevent="kembalikan">
-                <h3 class="text-lg font-semibold">{{ kembalikanItem.aksi === 'perbaikan' ? 'Minta perbaikan' : 'Tolak pendaftaran' }}</h3>
-                <p class="mt-2 text-sm text-[#615d59]">Catatan ditampilkan ke {{ kembalikanItem.baris.nama }}.</p>
-                <label class="mt-4 grid gap-2 text-sm">
-                    <span class="font-medium">Catatan</span>
-                    <textarea
-                        v-model="catatanForm.catatan"
-                        rows="3"
-                        maxlength="1000"
-                        class="w-full rounded-[4px] border border-[#dddddd] px-3 py-2 text-[15px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
-                        required
-                    />
+            <form class="kartu w-full max-w-md p-6" @submit.prevent="kembalikan">
+                <h3 class="judul-bagian">{{ kembalikanItem.aksi === 'perbaikan' ? 'Minta perbaikan' : 'Tolak pendaftaran' }}</h3>
+                <p class="teks-bantu mt-1">Catatan ditampilkan ke {{ kembalikanItem.baris.nama }}.</p>
+                <div class="mt-4 grid gap-2">
+                    <label for="catatan_kembalikan" class="label-isian">Catatan</label>
+                    <textarea id="catatan_kembalikan" v-model="catatanForm.catatan" rows="3" maxlength="1000" class="isian isian-area" required />
                     <InputError :message="catatanForm.errors.catatan" />
-                </label>
+                </div>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button type="button" variant="outline" class="rounded-full" @click="kembalikanItem = null">Batal</Button>
+                    <Button type="button" variant="outline" @click="kembalikanItem = null">Batal</Button>
                     <Button
                         type="submit"
                         :disabled="catatanForm.processing"
-                        class="rounded-full text-white"
-                        :class="kembalikanItem.aksi === 'perbaikan' ? 'bg-[#b25000] hover:bg-[#8f4000]' : 'bg-[#dd5b00] hover:bg-[#b84b00]'"
+                        :variant="kembalikanItem.aksi === 'perbaikan' ? 'default' : 'destructive'"
                         >{{ kembalikanItem.aksi === 'perbaikan' ? 'Minta Perbaikan' : 'Tolak' }}</Button
                     >
                 </div>

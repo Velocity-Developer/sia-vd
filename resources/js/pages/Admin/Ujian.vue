@@ -8,7 +8,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
 import { JENIS_UJIAN, MODE_UJIAN, STATUS_UJIAN, labelMode, type JenisUjian, type ModeUjian } from '@/lib/ujian';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { CalendarPlus, Pencil, Plus, Search, Send, Trash2 } from 'lucide-vue-next';
+import { CalendarPlus, Eye, Pencil, Plus, Search, Send, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 type Opsi = { id: number; name: string };
@@ -30,7 +30,7 @@ type Ujian = {
 };
 
 const props = defineProps<{
-    ujians: { data: Ujian[]; links: { url: string | null; label: string; active: boolean }[]; total: number };
+    ujians: { data: Ujian[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
     filter: { tahun_akademik_id: number | null; prodi_id: number | null; jenis: JenisUjian | null; status: 'draf' | 'terbit' | null; search: string };
     belumAda: Record<'uts' | 'uas', number>;
     remidiSiap: number;
@@ -91,83 +91,63 @@ const hapus = () => {
     if (!pendingHapus.value) return;
     router.delete(route('admin.ujian.destroy', pendingHapus.value.id), { preserveScroll: true, onFinish: () => (pendingHapus.value = null) });
 };
-
-const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
 </script>
 
 <template>
     <Head title="Jadwal Ujian" />
     <AppLayout :breadcrumbs="[{ title: 'Jadwal Ujian', href: route('admin.ujian.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Jadwal Ujian</h1>
-                        <p class="max-w-2xl text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Jadwal Ujian</h1>
+                        <p class="deskripsi-halaman">
                             Jadwal UTS/UAS per kelas beserta modenya. Pertemuan UTS/UAS kelas otomatis mengikuti tanggal, jam, dan ruang di sini.
                             Mahasiswa hanya melihat jadwal yang sudah diterbitkan.
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id })">
-                            <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]"
-                                ><Plus class="mr-1 size-4" /> Tambah jadwal</Button
+                        <Button v-if="props.jumlahDraf" variant="outline" @click="terbitkanSemua">
+                            <Send /> Terbitkan {{ props.jumlahDraf }} draf
+                        </Button>
+                        <Button as-child>
+                            <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id })"
+                                ><Plus /> Tambah jadwal</Link
                             >
-                        </Link>
-                        <Button
-                            v-if="props.jumlahDraf"
-                            variant="outline"
-                            class="rounded-lg border-[#e6e6e6] bg-white text-black"
-                            @click="terbitkanSemua"
-                        >
-                            <Send class="mr-1 size-4" /> Terbitkan {{ props.jumlahDraf }} draf
                         </Button>
                     </div>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                    role="alert"
-                >
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <div
-                    v-if="props.remidiSiap"
-                    class="flex flex-wrap items-center gap-3 rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
-                >
+                <div v-if="props.remidiSiap" class="alert-info flex flex-wrap items-center gap-3">
                     <span>{{ props.remidiSiap }} kelas punya peserta remidi yang sudah lunas tetapi belum dijadwalkan remidinya.</span>
-                    <Button size="sm" variant="outline" class="bg-white" @click="massalJenis = 'remidi'">Buat semua jadwal remidi</Button>
-                    <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: 'remidi' })">
-                        <Button size="sm" variant="outline" class="bg-white">Jadwalkan satu kelas</Button>
-                    </Link>
+                    <Button size="sm" variant="outline" @click="massalJenis = 'remidi'">Buat semua jadwal remidi</Button>
+                    <Button as-child size="sm" variant="outline">
+                        <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: 'remidi' })"
+                            >Jadwalkan satu kelas</Link
+                        >
+                    </Button>
                 </div>
                 <template v-for="j in ['uts', 'uas'] as const" :key="`susulan-${j}`">
-                    <div
-                        v-if="props.susulanSiap[j]"
-                        class="flex flex-wrap items-center gap-3 rounded-xl border border-[#cfe3f8] bg-[#f2f9ff] px-4 py-3 text-sm text-[#005bab]"
-                    >
+                    <div v-if="props.susulanSiap[j]" class="alert-info flex flex-wrap items-center gap-3">
                         <span
                             >{{ props.susulanSiap[j] }} kelas punya pemohon susulan {{ JENIS_UJIAN[j] }} yang sudah lunas tetapi belum dijadwalkan
                             susulannya.</span
                         >
-                        <Button size="sm" variant="outline" class="bg-white" @click="massalJenis = `${j}_susulan`"
+                        <Button size="sm" variant="outline" @click="massalJenis = `${j}_susulan`"
                             >Buat semua jadwal {{ JENIS_UJIAN[j] }} susulan</Button
                         >
-                        <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: `${j}_susulan` })">
-                            <Button size="sm" variant="outline" class="bg-white">Jadwalkan satu kelas</Button>
-                        </Link>
+                        <Button as-child size="sm" variant="outline">
+                            <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: `${j}_susulan` })"
+                                >Jadwalkan satu kelas</Link
+                            >
+                        </Button>
                     </div>
                 </template>
 
-                <div
-                    v-if="props.belumAda.uts || props.belumAda.uas"
-                    class="flex flex-wrap items-center gap-3 rounded-xl border border-[#f1d9a0] bg-[#fff6e0] px-4 py-3 text-sm text-[#8a5a00]"
-                >
+                <div v-if="props.belumAda.uts || props.belumAda.uas" class="alert-gagal flex flex-wrap items-center gap-3">
                     <span>Kelas yang belum punya jadwal: UTS {{ props.belumAda.uts }}, UAS {{ props.belumAda.uas }}.</span>
                     <Button
                         v-for="j in ['uts', 'uas'] as const"
@@ -175,17 +155,16 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                         :key="j"
                         size="sm"
                         variant="outline"
-                        class="bg-white"
                         @click="buatMassal(j)"
                     >
-                        <CalendarPlus class="mr-1 size-4" /> Buat semua jadwal {{ JENIS_UJIAN[j] }} dari pertemuan
+                        <CalendarPlus /> Buat semua jadwal {{ JENIS_UJIAN[j] }} dari pertemuan
                     </Button>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-3">
-                    <div class="relative w-full sm:max-w-xs">
+                <div class="bilah-filter">
+                    <div class="kolom-cari">
                         <Search class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#a39e98]" />
-                        <Input v-model="search" placeholder="Cari kelas atau mata kuliah" class="h-10 rounded-lg bg-white pl-9 text-sm" />
+                        <Input v-model="search" placeholder="Cari kelas atau mata kuliah" aria-label="Cari" class="pl-9" />
                     </div>
                     <SelectFilter v-model="tahun" label="Tahun akademik" @change="kirim">
                         <option v-for="t in props.tahunAkademikOptions" :key="t.id" :value="t.id">{{ t.name }}</option>
@@ -207,78 +186,80 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                         <option value="draf">Draf</option>
                         <option value="terbit">Terbit</option>
                     </SelectFilter>
+                    <p class="info-jumlah sm:ml-auto">
+                        <span class="font-medium text-black">{{ props.ujians.total }}</span> jadwal
+                    </p>
                 </div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[980px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[1020px]">
+                            <thead>
                                 <tr>
-                                    <th :class="th">Kelas</th>
-                                    <th :class="th">Jenis &amp; mode</th>
-                                    <th :class="th">Tanggal &amp; jam</th>
-                                    <th :class="th">Tempat</th>
-                                    <th :class="th">Status</th>
-                                    <th :class="[th, 'text-right']">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Kelas</th>
+                                    <th>Jenis &amp; mode</th>
+                                    <th>Tanggal &amp; jam</th>
+                                    <th>Tempat</th>
+                                    <th>Status</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="u in props.ujians.data" :key="u.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px]">
+                            <tbody>
+                                <tr v-for="(u, index) in props.ujians.data" :key="u.id">
+                                    <td class="kolom-no">{{ (props.ujians.from ?? 1) + index }}</td>
+                                    <td>
                                         <span class="block font-medium text-black">{{ u.kelas_kuliah?.mata_kuliah?.nama_matkul }}</span>
                                         <span class="block text-xs text-[#a39e98]">
                                             {{ u.kelas_kuliah?.kode_kelas }} · {{ u.kelas_kuliah?.dosen?.user?.name ?? '-' }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td>
                                         <span class="font-semibold text-black">{{ JENIS_UJIAN[u.jenis] }}</span>
                                         <span class="block text-xs text-[#615d59]">{{ labelMode(u.mode) }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">
+                                    <td>
                                         <span class="block">{{ formatTanggal(u.tanggal) }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ jam(u.jam_mulai) }}–{{ jam(u.jam_akhir) }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">
+                                    <td>
                                         {{ u.mode === 'tatap_muka' ? (u.ruang?.kode_ruang ?? '-') : 'Online' }}
                                         <span v-if="u.pengawas" class="block text-xs text-[#a39e98]">Pengawas: {{ u.pengawas }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td>
                                         <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="STATUS_UJIAN[u.status].kelas">{{
                                             STATUS_UJIAN[u.status].label
                                         }}</span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex items-center justify-end gap-2 text-sm font-medium">
-                                            <Link :href="route('admin.ujian.show', u.id)" class="text-[#0075de] hover:underline">Detail</Link>
-                                            <button
-                                                v-if="u.status === 'draf'"
-                                                type="button"
-                                                class="text-[#0075de] hover:underline"
-                                                @click="terbitkan(u)"
-                                            >
-                                                Terbitkan
-                                            </button>
-                                            <Link :href="route('admin.ujian.edit', u.id)" :aria-label="`Ubah jadwal ${u.kelas_kuliah?.kode_kelas}`">
-                                                <Button variant="outline" size="icon" class="size-8 rounded-full border-[#e6e6e6] text-[#2a9d99]"
-                                                    ><Pencil class="size-4"
-                                                /></Button>
-                                            </Link>
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
+                                            <Button v-if="u.status === 'draf'" variant="outline" size="sm" @click="terbitkan(u)">Terbitkan</Button>
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                                <Link :href="route('admin.ujian.show', u.id)" title="Detail" aria-label="Detail"><Eye /></Link>
+                                            </Button>
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                <Link
+                                                    :href="route('admin.ujian.edit', u.id)"
+                                                    title="Edit"
+                                                    :aria-label="`Ubah jadwal ${u.kelas_kuliah?.kode_kelas}`"
+                                                    ><Pencil
+                                                /></Link>
+                                            </Button>
                                             <Button
                                                 variant="outline"
-                                                size="icon"
-                                                class="size-8 rounded-full border-[#e6e6e6] text-[#dd5b00]"
+                                                size="icon-sm"
+                                                class="text-[#dd5b00]"
+                                                title="Hapus"
                                                 :aria-label="`Hapus jadwal ${u.kelas_kuliah?.kode_kelas}`"
                                                 @click="pendingHapus = u"
                                             >
-                                                <Trash2 class="size-4" />
+                                                <Trash2 />
                                             </Button>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.ujians.data.length">
-                                    <td colspan="6" class="px-4 py-14 text-center text-sm text-[#615d59]">
-                                        Belum ada jadwal ujian yang cocok dengan filter.
-                                    </td>
+                                <tr v-if="!props.ujians.data.length" class="baris-kosong">
+                                    <td colspan="7" class="tabel-kosong">Belum ada jadwal ujian yang cocok dengan filter.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -300,8 +281,8 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
         </div>
 
         <div v-if="massalJenis" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="massalJenis = null">
-            <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="buatMassalKhusus">
-                <h3 class="text-lg font-semibold">Buat semua jadwal {{ JENIS_UJIAN[massalJenis].toLowerCase() }}</h3>
+            <form class="kartu w-full max-w-lg p-6 shadow-xl" @submit.prevent="buatMassalKhusus">
+                <h3 class="judul-bagian">Buat semua jadwal {{ JENIS_UJIAN[massalJenis].toLowerCase() }}</h3>
                 <p class="mt-1 text-sm text-[#615d59]">
                     {{ jumlahSiap(massalJenis) }} kelas yang siap mendapat jadwal {{ JENIS_UJIAN[massalJenis].toLowerCase() }} berstatus draf dengan
                     waktu dan mode yang sama. Setelahnya sunting yang perlu berbeda, lalu terbitkan.
@@ -309,30 +290,28 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                         Kelas yang ujian utamanya sesudah tanggal ini, atau batas input nilainya sebelum tanggal ini, dilewati.</template
                     >
                 </p>
-                <div class="mt-4 grid gap-3 sm:grid-cols-3">
-                    <label class="grid content-start gap-1 text-sm"
-                        ><span class="font-medium">Tanggal</span><Input v-model="formMassal.tanggal" type="date" class="h-10" required
+                <div class="mt-4 grid items-start gap-4 sm:grid-cols-3">
+                    <label class="grid gap-2"
+                        ><span class="label-isian">Tanggal</span><Input v-model="formMassal.tanggal" type="date" required
                     /></label>
-                    <label class="grid content-start gap-1 text-sm"
-                        ><span class="font-medium">Jam mulai</span><Input v-model="formMassal.jam_mulai" type="time" class="h-10" required
+                    <label class="grid gap-2"
+                        ><span class="label-isian">Jam mulai</span><Input v-model="formMassal.jam_mulai" type="time" required
                     /></label>
-                    <label class="grid content-start gap-1 text-sm"
-                        ><span class="font-medium">Jam selesai</span><Input v-model="formMassal.jam_akhir" type="time" class="h-10" required
+                    <label class="grid gap-2"
+                        ><span class="label-isian">Jam selesai</span><Input v-model="formMassal.jam_akhir" type="time" required
                     /></label>
-                    <label class="grid content-start gap-1 text-sm sm:col-span-3">
-                        <span class="font-medium">Mode</span>
-                        <select v-model="formMassal.mode" class="h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px]">
+                    <label class="grid gap-2 sm:col-span-3">
+                        <span class="label-isian">Mode</span>
+                        <select v-model="formMassal.mode" class="isian isian-pilih">
                             <option v-for="m in MODE_UJIAN" :key="m.value" :value="m.value">{{ m.label }}</option>
                         </select>
-                        <span v-if="formMassal.mode === 'tatap_muka'" class="text-xs text-[#a39e98]">Ruang diisi per kelas sebelum diterbitkan.</span>
+                        <span v-if="formMassal.mode === 'tatap_muka'" class="teks-bantu">Ruang diisi per kelas sebelum diterbitkan.</span>
                     </label>
                 </div>
                 <p v-for="(pesan, k) in formMassal.errors" :key="k" class="mt-2 text-xs text-[#dd5b00]">{{ pesan }}</p>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button type="button" variant="outline" class="rounded-full" @click="massalJenis = null">Batal</Button>
-                    <Button type="submit" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" :disabled="formMassal.processing"
-                        >Buat Draf</Button
-                    >
+                    <Button type="button" variant="outline" @click="massalJenis = null">Batal</Button>
+                    <Button type="submit" :disabled="formMassal.processing">Buat Draf</Button>
                 </div>
             </form>
         </div>

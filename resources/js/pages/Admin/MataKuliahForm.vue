@@ -59,50 +59,33 @@ watch(kandidatPrasyarat, (kandidat) => {
 
 const submit = () =>
     props.mataKuliah ? form.put(route('admin.mata-kuliah.update', props.mataKuliah.id)) : form.post(route('admin.mata-kuliah.store'));
-
-const inp =
-    'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
-const sel =
-    'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px] text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
 </script>
 
 <template>
     <Head :title="title" />
     <AppLayout :breadcrumbs="[{ title: 'Mata Kuliah', href: route('admin.mata-kuliah.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto w-full max-w-[1000px] px-4 py-6 sm:px-6 lg:px-8">
-                <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">{{ title }}</h1>
-                        <p class="max-w-xl text-sm leading-5 text-[#615d59]">Lengkapi kode, nama, SKS, semester, jenis, dan program studi.</p>
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ title }}</h1>
+                        <p class="deskripsi-halaman">Lengkapi kode, nama, SKS, semester, jenis, dan program studi.</p>
                     </div>
-                    <Link :href="route('admin.mata-kuliah.index')"
-                        ><Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black hover:bg-white">Kembali</Button></Link
-                    >
+                    <Button as-child variant="outline"><Link :href="route('admin.mata-kuliah.index')">Kembali</Link></Button>
                 </div>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39] shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01)]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
                 </div>
-                <div
-                    v-if="page.props.flash?.error"
-                    class="mb-4 rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]"
-                    role="alert"
-                >
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
 
-                <form @submit.prevent="submit" class="space-y-4">
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Data Mata Kuliah</h2>
+                <form class="flex flex-col gap-6" @submit.prevent="submit">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Data Mata Kuliah</h2>
                         <div class="mt-4 grid gap-2">
-                            <Label for="prodi_id" class="text-sm font-medium text-black">Program Studi</Label>
+                            <Label for="prodi_id" class="label-isian">Program Studi</Label>
                             <SearchSelect
                                 id="prodi_id"
                                 v-model="form.prodi_id"
@@ -115,30 +98,30 @@ const sel =
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
-                                <Label for="kode_matkul" class="text-sm font-medium text-black">Kode Mata Kuliah</Label>
-                                <Input id="kode_matkul" v-model="form.kode_matkul" type="text" :class="inp" required />
+                                <Label for="kode_matkul" class="label-isian">Kode Mata Kuliah</Label>
+                                <Input id="kode_matkul" v-model="form.kode_matkul" type="text" required />
                                 <InputError :message="form.errors.kode_matkul" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="nama_matkul" class="text-sm font-medium text-black">Nama Mata Kuliah</Label>
-                                <Input id="nama_matkul" v-model="form.nama_matkul" type="text" :class="inp" required />
+                                <Label for="nama_matkul" class="label-isian">Nama Mata Kuliah</Label>
+                                <Input id="nama_matkul" v-model="form.nama_matkul" type="text" required />
                                 <InputError :message="form.errors.nama_matkul" />
                             </div>
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-3">
                             <div class="grid gap-2">
-                                <Label for="sks" class="text-sm font-medium text-black">SKS</Label>
-                                <Input id="sks" v-model="form.sks" type="number" min="1" max="6" :class="inp" required />
+                                <Label for="sks" class="label-isian">SKS</Label>
+                                <Input id="sks" v-model="form.sks" type="number" min="1" max="6" required />
                                 <InputError :message="form.errors.sks" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="semester" class="text-sm font-medium text-black">Semester</Label>
-                                <Input id="semester" v-model="form.semester" type="number" min="1" max="14" :class="inp" required />
+                                <Label for="semester" class="label-isian">Semester</Label>
+                                <Input id="semester" v-model="form.semester" type="number" min="1" max="14" required />
                                 <InputError :message="form.errors.semester" />
                             </div>
                             <div class="grid gap-2">
-                                <Label for="jenis" class="text-sm font-medium text-black">Jenis</Label>
-                                <select id="jenis" v-model="form.jenis" :class="sel" required>
+                                <Label for="jenis" class="label-isian">Jenis</Label>
+                                <select id="jenis" v-model="form.jenis" class="isian isian-pilih" required>
                                     <option value="">Pilih jenis</option>
                                     <option value="Wajib">Wajib</option>
                                     <option value="Pilihan">Pilihan</option>
@@ -146,11 +129,11 @@ const sel =
                                 <InputError :message="form.errors.jenis" />
                             </div>
                         </div>
-                        <label class="mt-4 flex items-start gap-3 rounded-lg border border-[#e6e6e6] px-4 py-3">
+                        <label class="mt-4 flex items-start gap-3 rounded-lg border border-[#e6e6e6] px-4 py-3 dark:border-border">
                             <input v-model="form.tugas_akhir" type="checkbox" class="mt-0.5 size-4 accent-[#0075de]" />
                             <span class="grid gap-0.5">
-                                <span class="text-sm font-medium text-black">Mata kuliah TA/Skripsi</span>
-                                <span class="text-xs text-[#615d59]"
+                                <span class="label-isian">Mata kuliah TA/Skripsi</span>
+                                <span class="teks-bantu"
                                     >Mahasiswa yang mengambil mata kuliah ini di semester aktif boleh mengajukan tugas akhir dan mendaftar
                                     pendadaran.</span
                                 >
@@ -159,27 +142,27 @@ const sel =
                         <InputError :message="form.errors.tugas_akhir" />
                     </section>
 
-                    <section
-                        class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-[0_0.175px_1.041px_rgba(0,0,0,0.01),0_0.8px_2.925px_rgba(0,0,0,0.02)]"
-                    >
-                        <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Prasyarat</h2>
-                        <p class="mt-1 text-sm text-[#615d59]">
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Prasyarat</h2>
+                        <p class="teks-bantu mt-1">
                             Mata kuliah yang harus lulus sebelum mahasiswa bisa mengambil mata kuliah ini. Pilihan berasal dari program studi yang
                             sama dengan semester lebih kecil.
                         </p>
-                        <p v-if="!form.prodi_id || !form.semester" class="mt-4 text-sm text-[#a39e98]">
+                        <p v-if="!form.prodi_id || !form.semester" class="mt-4 text-sm text-[#615d59] dark:text-muted-foreground">
                             Pilih program studi dan isi semester terlebih dahulu.
                         </p>
-                        <p v-else-if="!kandidatPrasyarat.length" class="mt-4 text-sm text-[#a39e98]">
+                        <p v-else-if="!kandidatPrasyarat.length" class="mt-4 text-sm text-[#615d59] dark:text-muted-foreground">
                             Belum ada mata kuliah dari semester sebelumnya di program studi ini.
                         </p>
                         <template v-else>
-                            <Input v-model="cariPrasyarat" type="search" placeholder="Cari kode atau nama mata kuliah" :class="`${inp} mt-4`" />
-                            <div class="mt-3 grid max-h-72 gap-1 overflow-y-auto rounded-lg border border-[#e6e6e6] p-2 sm:grid-cols-2">
+                            <Input v-model="cariPrasyarat" type="search" placeholder="Cari kode atau nama mata kuliah" class="mt-4" />
+                            <div
+                                class="mt-3 grid max-h-72 gap-1 overflow-y-auto rounded-lg border border-[#e6e6e6] p-2 dark:border-border sm:grid-cols-2"
+                            >
                                 <label
                                     v-for="item in prasyaratTampil"
                                     :key="item.id"
-                                    class="flex items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-[#f6f5f4]"
+                                    class="flex items-start gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-[#f6f5f4] dark:hover:bg-accent"
                                 >
                                     <input v-model="form.prasyarat_ids" type="checkbox" :value="item.id" class="mt-0.5 size-4 accent-[#0075de]" />
                                     <span
@@ -189,13 +172,13 @@ const sel =
                                 </label>
                                 <p v-if="!prasyaratTampil.length" class="px-2 py-1.5 text-sm text-[#a39e98]">Mata kuliah tidak ditemukan.</p>
                             </div>
-                            <p class="mt-2 text-xs text-[#615d59]">{{ form.prasyarat_ids.length }} prasyarat dipilih.</p>
+                            <p class="teks-bantu mt-2">{{ form.prasyarat_ids.length }} prasyarat dipilih.</p>
                         </template>
                         <InputError :message="form.errors.prasyarat_ids" />
                     </section>
 
-                    <div class="flex justify-end pt-2">
-                        <Button :disabled="form.processing" class="rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]">Simpan</Button>
+                    <div class="flex justify-end gap-2">
+                        <Button type="submit" :disabled="form.processing">Simpan</Button>
                     </div>
                 </form>
             </div>

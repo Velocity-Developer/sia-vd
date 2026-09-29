@@ -185,26 +185,24 @@ const jadwal = (kelas: KelasKuliah) =>
 <template>
     <Head title="Rencana Studi (KRS)" />
     <AppLayout :breadcrumbs="[{ title: 'Rencana Studi (KRS)', href: route('mahasiswa.krs') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Rencana Studi (KRS)</h1>
-                        <p class="text-sm leading-5 text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Rencana Studi (KRS)</h1>
+                        <p class="deskripsi-halaman">
                             Kelas kuliah semester Anda di tahun akademik aktif, ditambah mata kuliah yang tertunda atau perlu diulang.
                         </p>
                     </div>
-                    <a
-                        v-if="krsTahunIni.length"
-                        :href="route('mahasiswa.krs.download')"
-                        class="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-[#0075de] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#005bab] sm:self-auto"
-                    >
-                        <Download class="h-4 w-4" />
-                        Download KRS
-                    </a>
+                    <Button v-if="krsTahunIni.length" as-child>
+                        <a :href="route('mahasiswa.krs.download')">
+                            <Download class="h-4 w-4" />
+                            Download KRS
+                        </a>
+                    </Button>
                 </div>
 
-                <div class="rounded-xl border border-[#0075de] bg-[#0075de] p-5 text-white shadow-sm">
+                <div class="rounded-xl border border-[#0075de] bg-[#0075de] p-6 text-white shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-[0.08em] text-blue-100">Periode Pengambilan KRS</p>
                     <p v-if="tahunAkademik" class="mt-2 text-lg font-semibold">{{ tahunAkademik.tahun }} — {{ tahunAkademik.semester }}</p>
                     <p v-if="tahunAkademik" class="mt-1 text-sm text-blue-100">
@@ -214,20 +212,20 @@ const jadwal = (kelas: KelasKuliah) =>
                     <p v-else class="mt-3 text-sm font-medium">Periode pengambilan KRS sedang berlangsung.</p>
                 </div>
 
-                <div v-if="periodeKrsAktif" class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
+                <div v-if="periodeKrsAktif" class="kartu p-6">
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div>
-                            <p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Semester</p>
-                            <p class="mt-1 font-medium text-black">{{ mahasiswa.semester ?? '-' }}</p>
+                            <p class="teks-bantu uppercase tracking-[0.08em]">Semester</p>
+                            <p class="mt-1 text-sm font-medium text-black dark:text-foreground">{{ mahasiswa.semester ?? '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">Angkatan</p>
-                            <p class="mt-1 font-medium text-black">{{ mahasiswa.angkatan }}</p>
+                            <p class="teks-bantu uppercase tracking-[0.08em]">Angkatan</p>
+                            <p class="mt-1 text-sm font-medium text-black dark:text-foreground">{{ mahasiswa.angkatan }}</p>
                         </div>
                         <div>
-                            <p class="text-xs uppercase tracking-[0.08em] text-[#a39e98]">SKS Diambil</p>
-                            <p class="mt-1 font-medium text-black">{{ sksDiambil }} / {{ maksSks }} SKS</p>
-                            <p class="text-xs text-[#a39e98]">
+                            <p class="teks-bantu uppercase tracking-[0.08em]">SKS Diambil</p>
+                            <p class="mt-1 text-sm font-medium text-black dark:text-foreground">{{ sksDiambil }} / {{ maksSks }} SKS</p>
+                            <p class="teks-bantu">
                                 {{
                                     ipsSebelumnya
                                         ? `Berdasarkan IPS ${ipsSebelumnya.ips.toFixed(2)} (${ipsSebelumnya.tahun_akademik})`
@@ -236,50 +234,48 @@ const jadwal = (kelas: KelasKuliah) =>
                             </p>
                         </div>
                     </div>
-                    <p v-if="!bolehKrs" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#dd5b00]">
+                    <div v-if="!bolehKrs" class="alert-gagal mt-4">
                         Status akademik Anda ({{ mahasiswa.status ?? 'belum diisi' }}) tidak memungkinkan pengisian KRS, jadi tidak ada kelas yang
                         ditawarkan. Silakan hubungi bagian akademik.
-                    </p>
+                    </div>
 
-                    <div
-                        v-if="krsTersimpan"
-                        class="mt-4 rounded-lg border border-[#c9ecd2] bg-[#f2fbf4] px-4 py-3 text-sm text-[#1aae39]"
-                        role="status"
-                    >
+                    <div v-if="krsTersimpan" class="alert-sukses mt-4" role="status">
                         KRS sudah disimpan dan terkunci{{ krsDisimpanPada ? ` pada ${formatTanggal(krsDisimpanPada)}` : '' }}. Perubahan kelas hanya
                         bisa lewat form pindah kelas, atau minta admin membuka kuncinya.
                     </div>
 
-                    <div v-else-if="bolehKrs" class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e6e6] pt-4">
-                        <p class="text-sm text-[#615d59]">Setelah disimpan, KRS terkunci dan kelas tidak bisa ditambah atau dibatalkan sendiri.</p>
-                        <Button
-                            class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
-                            :disabled="sksDiambil === 0"
-                            @click="simpanKrs(false)"
-                        >
-                            Simpan KRS
-                        </Button>
+                    <div
+                        v-else-if="bolehKrs"
+                        class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e6e6] pt-4 dark:border-border"
+                    >
+                        <p class="text-sm text-[#615d59] dark:text-muted-foreground">
+                            Setelah disimpan, KRS terkunci dan kelas tidak bisa ditambah atau dibatalkan sendiri.
+                        </p>
+                        <Button :disabled="sksDiambil === 0" @click="simpanKrs(false)">Simpan KRS</Button>
                     </div>
                 </div>
 
-                <div v-if="periodeKrsAktif" class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[640px] text-left lg:min-w-0">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div v-if="periodeKrsAktif" class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[720px]">
+                            <thead>
                                 <tr>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kelas</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Dosen</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Jadwal</th>
-                                    <th class="px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Kapasitas</th>
-                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Kelas</th>
+                                    <th>Dosen</th>
+                                    <th>Jadwal</th>
+                                    <th>Kapasitas</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <template v-for="group in groupedKelasKuliahs" :key="group.matkul.kode_matkul">
-                                    <tr class="bg-[#f6f5f4]">
-                                        <td colspan="9" class="px-4 py-3 text-sm font-semibold text-black">
+                            <tbody>
+                                <template v-for="(group, groupIndex) in groupedKelasKuliahs" :key="group.matkul.kode_matkul">
+                                    <tr class="baris-kosong">
+                                        <td colspan="6" class="bg-[#f6f5f4] font-semibold text-black dark:bg-muted dark:text-foreground">
                                             {{ group.matkul.kode_matkul }} — {{ group.matkul.nama_matkul }}
-                                            <span class="font-normal text-[#615d59]">({{ group.matkul.sks }} SKS - {{ group.matkul.jenis }})</span>
+                                            <span class="font-normal text-[#615d59] dark:text-muted-foreground"
+                                                >({{ group.matkul.sks }} SKS - {{ group.matkul.jenis }})</span
+                                            >
                                             <span
                                                 v-if="labelMatkul[group.matkul.id]"
                                                 class="ml-1 rounded-full px-2 py-0.5 text-xs font-medium"
@@ -295,24 +291,27 @@ const jadwal = (kelas: KelasKuliah) =>
                                             </p>
                                         </td>
                                     </tr>
-                                    <tr v-for="kelas in group.kelas" :key="kelas.id" class="hover:bg-[#f6f5f4]/60">
-                                        <td class="px-4 py-3 text-sm font-medium text-black">{{ kelas.kode_kelas }}</td>
-                                        <td class="px-4 py-3 text-sm text-[#31302e]">{{ kelas.dosen?.user?.name ?? '-' }}</td>
-                                        <td class="px-4 py-3 text-sm text-[#31302e]">
+                                    <tr v-for="(kelas, index) in group.kelas" :key="kelas.id">
+                                        <!-- Nomor berlanjut lintas kelompok mata kuliah -->
+                                        <td class="kolom-no">
+                                            {{
+                                                groupedKelasKuliahs.slice(0, groupIndex).reduce((jumlah, g) => jumlah + g.kelas.length, 0) + index + 1
+                                            }}
+                                        </td>
+                                        <td class="font-medium text-black dark:text-foreground">{{ kelas.kode_kelas }}</td>
+                                        <td>{{ kelas.dosen?.user?.name ?? '-' }}</td>
+                                        <td>
                                             <div v-if="jadwal(kelas).length">
-                                                <div v-for="(item, index) in jadwal(kelas)" :key="index">{{ item }}</div>
+                                                <div v-for="(item, jadwalIndex) in jadwal(kelas)" :key="jadwalIndex">{{ item }}</div>
                                             </div>
                                             <span v-else>-</span>
                                         </td>
-                                        <td class="px-4 py-3 text-sm text-[#31302e]">
-                                            {{ kelas.kapasitas }} total · {{ Math.max(kelas.kapasitas - kelas.krs_count, 0) }} tersisa
-                                        </td>
-                                        <td class="px-4 py-3 text-right">
+                                        <td>{{ kelas.kapasitas }} total · {{ Math.max(kelas.kapasitas - kelas.krs_count, 0) }} tersisa</td>
+                                        <td class="kolom-aksi">
                                             <Button
                                                 v-if="isTaken(kelas.id) && krsBisaDibatalkan(kelas.id) && !krsTersimpan"
                                                 size="sm"
-                                                variant="outline"
-                                                class="text-[#dd5b00]"
+                                                variant="destructive"
                                                 @click="batalkanKelas(kelas.id)"
                                             >
                                                 Batalkan
@@ -320,11 +319,7 @@ const jadwal = (kelas: KelasKuliah) =>
                                             <Button
                                                 v-else
                                                 size="sm"
-                                                :class="
-                                                    isTaken(kelas.id)
-                                                        ? 'bg-white text-[#0075de] hover:bg-white'
-                                                        : 'bg-[#0075de] text-white hover:bg-[#005bab]'
-                                                "
+                                                :variant="isTaken(kelas.id) ? 'outline' : 'default'"
                                                 :disabled="isTaken(kelas.id) || !bolehKrs || krsTersimpan || Boolean(terkunci(kelas))"
                                                 @click="ambilKelas(kelas.id)"
                                             >
@@ -341,10 +336,8 @@ const jadwal = (kelas: KelasKuliah) =>
                                         </td>
                                     </tr>
                                 </template>
-                                <tr v-if="!kelasKuliahs.length">
-                                    <td colspan="9" class="px-4 py-14 text-center text-sm text-[#615d59]">
-                                        Belum ada kelas kuliah yang sesuai dengan data akademik Anda.
-                                    </td>
+                                <tr v-if="!kelasKuliahs.length" class="baris-kosong">
+                                    <td colspan="6" class="tabel-kosong">Belum ada kelas kuliah yang sesuai dengan data akademik Anda.</td>
                                 </tr>
                             </tbody>
                         </table>

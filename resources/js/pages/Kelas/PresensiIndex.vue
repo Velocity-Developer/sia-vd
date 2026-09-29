@@ -33,7 +33,7 @@ type PertemuanHariIni = {
 };
 
 const props = defineProps<{
-    kelas: { data: Kelas[]; links: { url: string | null; label: string; active: boolean }[]; total: number };
+    kelas: { data: Kelas[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
     hariIni: PertemuanHariIni[];
     peran: Peran;
     filter: NilaiFilter;
@@ -51,18 +51,17 @@ const rute = rutePeran(props.peran);
 const isAdmin = computed(() => props.peran === 'admin');
 // Kolom dosen perlu terlihat bila daftar tidak hanya berisi kelas sendiri.
 const tampilDosen = computed(() => isAdmin.value || props.lingkup === 'prodi');
-const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
 </script>
 
 <template>
     <Head title="Presensi" />
     <AppLayout :breadcrumbs="[{ title: 'Presensi', href: rute('presensi.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Presensi</h1>
-                        <p class="text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Presensi</h1>
+                        <p class="deskripsi-halaman">
                             {{
                                 isAdmin
                                     ? 'Pertemuan, jurnal perkuliahan, dan kehadiran mahasiswa di seluruh kelas.'
@@ -71,21 +70,24 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <Link :href="rute('presensi.izin.index')">
-                            <Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black">
+                        <Button as-child variant="outline">
+                            <Link :href="rute('presensi.izin.index')">
                                 Pengajuan izin
-                                <span v-if="props.izinMenunggu" class="ml-1.5 rounded-full bg-[#dd5b00] px-1.5 text-xs text-white">{{
+                                <span v-if="props.izinMenunggu" class="rounded-full bg-[#dd5b00] px-1.5 text-xs text-white">{{
                                     props.izinMenunggu
                                 }}</span>
-                            </Button>
-                        </Link>
-                        <Link v-if="isAdmin" :href="route('admin.presensi.laporan-dosen')">
-                            <Button variant="outline" class="rounded-lg border-[#e6e6e6] bg-white text-black">Laporan kehadiran dosen</Button>
-                        </Link>
+                            </Link>
+                        </Button>
+                        <Button v-if="isAdmin" as-child variant="outline">
+                            <Link :href="route('admin.presensi.laporan-dosen')">Laporan kehadiran dosen</Link>
+                        </Button>
                     </div>
                 </div>
 
-                <div v-if="props.bisaLingkupProdi" class="flex gap-1 rounded-lg border border-[#e6e6e6] bg-white p-1 text-sm font-medium sm:w-fit">
+                <div
+                    v-if="props.bisaLingkupProdi"
+                    class="flex gap-1 rounded-lg border border-[#e6e6e6] bg-white p-1 text-sm font-medium dark:border-border dark:bg-card sm:w-fit"
+                >
                     <Link
                         v-for="l in [
                             { value: 'saya', label: 'Kelas saya' },
@@ -94,25 +96,31 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                         :key="l.value"
                         :href="rute('presensi.index', l.value === 'prodi' ? { lingkup: 'prodi' } : {})"
                         class="flex-1 rounded-md px-4 py-2 text-center sm:flex-none"
-                        :class="props.lingkup === l.value ? 'bg-[#0075de] text-white' : 'text-[#615d59] hover:bg-[#f6f5f4]'"
+                        :class="
+                            props.lingkup === l.value
+                                ? 'bg-[#0075de] text-white'
+                                : 'text-[#615d59] hover:bg-[#f6f5f4] dark:text-muted-foreground dark:hover:bg-accent'
+                        "
                     >
                         {{ l.label }}
                     </Link>
                 </div>
 
-                <section class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
-                    <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Pertemuan hari ini</h2>
-                    <div v-if="props.hariIni.length" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Pertemuan hari ini</h2>
+                    <div v-if="props.hariIni.length" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         <Link
                             v-for="item in props.hariIni"
                             :key="item.id"
                             :href="rute('presensi.pertemuan.show', item.id)"
-                            class="rounded-lg border border-[#e6e6e6] p-4 transition-colors hover:border-[#0075de] hover:bg-[#f6f9fd]"
+                            class="rounded-lg border border-[#e6e6e6] p-4 transition-colors hover:border-[#0075de] hover:bg-[#f6f9fd] dark:border-border dark:hover:bg-accent"
                         >
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0">
-                                    <p class="truncate font-medium text-black">{{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}</p>
-                                    <p class="text-xs text-[#a39e98]">
+                                    <p class="truncate text-sm font-medium text-black dark:text-foreground">
+                                        {{ item.kelas_kuliah?.mata_kuliah?.nama_matkul ?? '-' }}
+                                    </p>
+                                    <p class="teks-bantu">
                                         {{ item.kelas_kuliah?.kode_kelas }} · Pertemuan {{ item.pertemuan_ke }}
                                         <template v-if="item.jenis !== 'kuliah'"> · {{ JENIS_PERTEMUAN[item.jenis] }}</template>
                                     </p>
@@ -121,16 +129,16 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                     {{ statusTampil(item).label }}
                                 </span>
                             </div>
-                            <p class="mt-2 text-sm text-[#31302e]">
+                            <p class="mt-2 text-sm text-[#31302e] dark:text-foreground">
                                 {{ jam(item.jam_mulai) }}–{{ jam(item.jam_akhir)
                                 }}<template v-if="item.ruang"> · {{ item.ruang.kode_ruang }}</template>
                             </p>
-                            <p v-if="item.status === 'dijadwalkan' && !item.terlewat" class="mt-1 text-xs text-[#a39e98]">
+                            <p v-if="item.status === 'dijadwalkan' && !item.terlewat" class="teks-bantu mt-1">
                                 Bisa dimulai pukul {{ jam(item.jam_mulai) }}
                             </p>
                         </Link>
                     </div>
-                    <p v-else class="mt-2 text-sm text-[#615d59]">Tidak ada pertemuan terjadwal hari ini.</p>
+                    <p v-else class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">Tidak ada pertemuan terjadwal hari ini.</p>
                 </section>
 
                 <FilterKonten
@@ -146,34 +154,34 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                     :tambahan="props.lingkup === 'prodi' ? { lingkup: 'prodi' } : {}"
                 />
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[860px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[900px]">
+                            <thead>
                                 <tr>
-                                    <th :class="th">Kelas</th>
-                                    <th :class="th">Mata Kuliah</th>
-                                    <th v-if="tampilDosen" :class="th">Dosen</th>
-                                    <th :class="th">Pertemuan</th>
-                                    <th :class="th">Peserta</th>
-                                    <th :class="th">Rata-rata hadir</th>
-                                    <th :class="[th, 'text-right']">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Kelas</th>
+                                    <th>Mata Kuliah</th>
+                                    <th v-if="tampilDosen">Dosen</th>
+                                    <th>Pertemuan</th>
+                                    <th>Peserta</th>
+                                    <th>Rata-rata hadir</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="item in props.kelas.data" :key="item.id" class="hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px]">
-                                        <span class="block font-medium text-black">{{ item.kode_kelas }}</span>
-                                        <span class="block text-xs text-[#a39e98]"
-                                            >{{ item.tahun_akademik?.tahun }} {{ item.tahun_akademik?.semester }}</span
-                                        >
+                            <tbody>
+                                <tr v-for="(item, index) in props.kelas.data" :key="item.id">
+                                    <td class="kolom-no">{{ (props.kelas.from ?? 1) + index }}</td>
+                                    <td>
+                                        <span class="block font-medium text-black dark:text-foreground">{{ item.kode_kelas }}</span>
+                                        <span class="teks-bantu block">{{ item.tahun_akademik?.tahun }} {{ item.tahun_akademik?.semester }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td>
                                         <span class="block">{{ item.mata_kuliah?.nama_matkul ?? '-' }}</span>
-                                        <span class="block text-xs text-[#a39e98]">{{ item.mata_kuliah?.kode_matkul }}</span>
+                                        <span class="teks-bantu block">{{ item.mata_kuliah?.kode_matkul }}</span>
                                     </td>
-                                    <td v-if="tampilDosen" class="px-4 py-3 text-[15px] text-[#31302e]">{{ item.dosen?.user?.name ?? '-' }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
+                                    <td v-if="tampilDosen">{{ item.dosen?.user?.name ?? '-' }}</td>
+                                    <td>
                                         <span class="block">{{ item.pertemuan_selesai }} / {{ item.jumlah_pertemuan }} selesai</span>
                                         <span v-if="item.pertemuan_dibuat < item.jumlah_pertemuan" class="block text-xs text-[#dd5b00]">
                                             {{
@@ -183,20 +191,18 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                             }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">{{ item.jumlah_peserta }}</td>
-                                    <td class="px-4 py-3 text-[15px] text-[#31302e]">
-                                        {{ item.rata_kehadiran === null ? '-' : `${item.rata_kehadiran}%` }}
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <Link :href="rute('presensi.kelas', item.id)" class="text-sm font-medium text-[#0075de] hover:underline">
-                                            Kelola
-                                        </Link>
+                                    <td class="tabular-nums">{{ item.jumlah_peserta }}</td>
+                                    <td class="tabular-nums">{{ item.rata_kehadiran === null ? '-' : `${item.rata_kehadiran}%` }}</td>
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
+                                            <Button as-child variant="outline" size="sm">
+                                                <Link :href="rute('presensi.kelas', item.id)">Kelola</Link>
+                                            </Button>
+                                        </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.kelas.data.length">
-                                    <td :colspan="tampilDosen ? 7 : 6" class="px-4 py-14 text-center text-sm text-[#615d59]">
-                                        Tidak ada kelas yang cocok dengan filter.
-                                    </td>
+                                <tr v-if="!props.kelas.data.length" class="baris-kosong">
+                                    <td :colspan="tampilDosen ? 8 : 7" class="tabel-kosong">Tidak ada kelas yang cocok dengan filter.</td>
                                 </tr>
                             </tbody>
                         </table>

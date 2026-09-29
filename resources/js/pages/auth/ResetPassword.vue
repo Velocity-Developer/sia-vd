@@ -27,9 +27,6 @@ const submit = () => {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
-
-const gayaIsian =
-    'h-10 rounded-lg border-[#d8d5d2] bg-white text-sm shadow-sm placeholder:text-[#a39e98] focus-visible:border-[#0075de] focus-visible:ring-2 focus-visible:ring-[#0075de]/15';
 </script>
 
 <template>
@@ -38,22 +35,19 @@ const gayaIsian =
 
         <!-- Tautan kedaluwarsa atau sudah dipakai dijawab sebagai galat email/token oleh Laravel;
              ditampilkan sebagai pesan utuh supaya pengguna tahu harus meminta tautan baru. -->
-        <div
-            v-if="form.errors.token || form.errors.email"
-            class="mb-4 rounded-lg border border-[#f6d7c4] bg-[#fdf6f1] px-3 py-2 text-sm text-[#dd5b00]"
-        >
+        <div v-if="form.errors.token || form.errors.email" class="alert-gagal mb-4" role="alert">
             {{ form.errors.token ?? form.errors.email }}
-            <Link :href="route('password.request')" class="font-medium text-[#0075de] hover:underline">Minta tautan baru</Link>
+            <Link :href="route('password.request')" class="font-medium underline underline-offset-2">Minta tautan baru</Link>
         </div>
 
-        <form class="flex flex-col gap-4" @submit.prevent="submit">
-            <div class="grid gap-1.5">
-                <Label for="email" class="text-sm font-medium text-[#31302e]">Email</Label>
-                <Input id="email" v-model="form.email" type="email" readonly autocomplete="email" :class="[gayaIsian, 'bg-[#f6f5f4]']" />
+        <form class="flex flex-col gap-5" @submit.prevent="submit">
+            <div class="grid gap-2">
+                <Label for="email" class="label-isian">Email</Label>
+                <Input id="email" v-model="form.email" type="email" readonly autocomplete="email" class="bg-[#f6f5f4] dark:bg-muted" />
             </div>
 
-            <div class="grid gap-1.5">
-                <Label for="password" class="text-sm font-medium text-[#31302e]">Kata Sandi Baru</Label>
+            <div class="grid gap-2">
+                <Label for="password" class="label-isian">Kata Sandi Baru</Label>
                 <div class="relative">
                     <Input
                         id="password"
@@ -63,13 +57,13 @@ const gayaIsian =
                         autofocus
                         autocomplete="new-password"
                         placeholder="Minimal 8 karakter"
-                        :class="[gayaIsian, 'pr-10']"
+                        class="pr-11"
                     />
                     <button
                         type="button"
                         tabindex="-1"
                         :aria-label="lihatSandi ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
-                        class="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-[#a39e98] transition-colors hover:bg-[#f6f5f4] hover:text-[#615d59]"
+                        class="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#a39e98] transition-colors hover:bg-[#f6f5f4] hover:text-[#615d59] dark:hover:bg-accent"
                         @click="lihatSandi = !lihatSandi"
                     >
                         <component :is="lihatSandi ? EyeOff : Eye" class="size-4" />
@@ -78,8 +72,8 @@ const gayaIsian =
                 <InputError :message="form.errors.password" />
             </div>
 
-            <div class="grid gap-1.5">
-                <Label for="password_confirmation" class="text-sm font-medium text-[#31302e]">Ulangi Kata Sandi Baru</Label>
+            <div class="grid gap-2">
+                <Label for="password_confirmation" class="label-isian">Ulangi Kata Sandi Baru</Label>
                 <Input
                     id="password_confirmation"
                     v-model="form.password_confirmation"
@@ -87,17 +81,12 @@ const gayaIsian =
                     required
                     autocomplete="new-password"
                     placeholder="Ulangi kata sandi"
-                    :class="gayaIsian"
                 />
                 <InputError :message="form.errors.password_confirmation" />
             </div>
 
-            <Button
-                type="submit"
-                :disabled="form.processing"
-                class="mt-1 h-10 w-full rounded-lg bg-[#0075de] text-sm font-medium text-white hover:bg-[#005bab]"
-            >
-                <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+            <Button type="submit" :disabled="form.processing" class="w-full">
+                <LoaderCircle v-if="form.processing" class="animate-spin" />
                 Simpan Kata Sandi
             </Button>
         </form>

@@ -21,24 +21,17 @@ const submit = () => {
     <AuthLayout title="Verifikasi Email" description="Klik tautan yang baru kami kirim ke email Anda untuk memverifikasi alamat email.">
         <Head title="Verifikasi Email" />
 
-        <div
-            v-if="status === 'verification-link-sent'"
-            class="mb-4 rounded-lg border border-[#c9ecd2] bg-[#f2fbf4] px-3 py-2 text-center text-sm text-[#1aae39]"
-        >
+        <div v-if="status === 'verification-link-sent'" class="alert-sukses mb-4 text-center" role="status">
             Tautan verifikasi baru sudah dikirim ke email Anda.
         </div>
 
-        <div
-            v-if="page.props.flash?.error"
-            class="mb-4 rounded-lg border border-[#f5d0b5] bg-[#fdf4ee] px-3 py-2 text-center text-sm text-[#dd5b00]"
-            role="alert"
-        >
+        <div v-if="page.props.flash?.error" class="alert-gagal mb-4 text-center" role="alert">
             {{ page.props.flash.error }}
         </div>
 
         <form @submit.prevent="submit" class="space-y-6 text-center">
-            <Button :disabled="form.processing" class="h-10 w-full rounded-lg bg-[#0075de] text-sm font-medium text-white hover:bg-[#005bab]">
-                <LoaderCircle v-if="form.processing" class="size-4 animate-spin" />
+            <Button type="submit" :disabled="form.processing" class="w-full">
+                <LoaderCircle v-if="form.processing" class="animate-spin" />
                 Kirim Ulang Email Verifikasi
             </Button>
 

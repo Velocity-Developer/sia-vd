@@ -26,22 +26,28 @@ const aktif = computed(() => semuaTab.find((item) => page.url.startsWith(`/penga
             ...(aktif ? [{ title: aktif.judul, href: route(`pengaturan-sistem.${aktif.nama}`) }] : []),
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1000px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] text-black">Pengaturan Sistem</h1>
-                    <p class="text-sm text-[#615d59]">Pengaturan yang berlaku untuk seluruh pengguna aplikasi.</p>
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Pengaturan Sistem</h1>
+                        <p class="deskripsi-halaman">Pengaturan yang berlaku untuk seluruh pengguna aplikasi.</p>
+                    </div>
                 </div>
 
-                <!-- Di layar sempit, tab bisa digeser ke samping. -->
+                <!-- Gaya tab sama dengan layout Pengaturan Profil (layouts/settings/Layout.vue). Di layar sempit, tab bisa digeser. -->
                 <nav class="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0" aria-label="Tab pengaturan sistem">
-                    <div class="flex w-max gap-1 rounded-lg border border-[#e6e6e6] bg-white p-1 text-sm font-medium">
+                    <div class="flex w-max gap-1 rounded-lg border border-[#e6e6e6] bg-white p-1 text-sm font-medium dark:border-border dark:bg-card">
                         <Link
                             v-for="item in tab"
                             :key="item.nama"
                             :href="route(`pengaturan-sistem.${item.nama}`)"
-                            class="flex items-center gap-2 whitespace-nowrap rounded-md px-4 py-2"
-                            :class="aktif?.nama === item.nama ? 'bg-[#0075de] text-white' : 'text-[#615d59] hover:bg-[#f6f5f4]'"
+                            class="flex h-9 items-center gap-2 whitespace-nowrap rounded-md px-4"
+                            :class="
+                                aktif?.nama === item.nama
+                                    ? 'bg-[#0075de] text-white'
+                                    : 'text-[#615d59] hover:bg-[#f6f5f4] dark:text-muted-foreground dark:hover:bg-accent'
+                            "
                             :aria-current="aktif?.nama === item.nama ? 'page' : undefined"
                         >
                             <component :is="item.ikon" class="size-4" /> {{ item.judul }}
@@ -49,16 +55,8 @@ const aktif = computed(() => semuaTab.find((item) => page.url.startsWith(`/penga
                     </div>
                 </nav>
 
-                <div
-                    v-if="page.props.flash?.success"
-                    class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]"
-                    role="alert"
-                >
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]" role="alert">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
                 <slot />
             </div>

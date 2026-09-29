@@ -8,9 +8,10 @@ defineProps<Props>();
 </script>
 
 <template>
+    <!-- Setara judul bagian/kartu standar (docs/standar-ui.md). -->
     <header>
-        <h3 class="mb-0.5 text-base font-medium">{{ title }}</h3>
-        <p v-if="description" class="text-sm text-muted-foreground">
+        <h2 class="judul-bagian">{{ title }}</h2>
+        <p v-if="description" class="teks-bantu mt-1">
             {{ description }}
         </p>
     </header>

@@ -38,9 +38,9 @@ const minimumDate = computed(() => (props.minValue ? parseDate(props.minValue) :
                 :id="props.id"
                 type="button"
                 variant="outline"
-                :class="cn('w-full justify-start gap-2 text-left font-normal', !selected && 'text-muted-foreground')"
+                :class="cn('isian justify-start gap-2 text-left font-normal', !selected && 'text-[#a39e98]')"
             >
-                <CalendarIcon class="size-4" />
+                <CalendarIcon class="size-4 text-[#615d59]" />
                 {{ display }}
             </Button>
         </PopoverTrigger>

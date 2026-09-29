@@ -24,111 +24,108 @@ const form = useForm({
 });
 const submit = () =>
     props.tahunAkademik ? form.put(route('admin.tahun-akademik.update', props.tahunAkademik.id)) : form.post(route('admin.tahun-akademik.store'));
-
-const inp =
-    'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px] text-black placeholder:text-[#a39e98] focus-visible:ring-1 focus-visible:ring-[#0075de] focus-visible:ring-offset-0';
-const sel =
-    'h-10 rounded-[4px] border border-[#dddddd] bg-white px-3 text-[15px] text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]';
 </script>
 <template>
-    <Head :title="title" /><AppLayout :breadcrumbs="[{ title: 'Tahun Akademik', href: route('admin.tahun-akademik.index') }]"
-        ><div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto max-w-[1000px] px-4 py-6">
-                <div class="mb-6 flex items-center justify-between">
-                    <h1 class="text-[26px] font-bold">{{ title }}</h1>
-                    <Link :href="route('admin.tahun-akademik.index')"><Button variant="outline">Kembali</Button></Link>
+    <Head :title="title" />
+    <AppLayout :breadcrumbs="[{ title: 'Tahun Akademik', href: route('admin.tahun-akademik.index') }]">
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">{{ title }}</h1>
+                        <p class="deskripsi-halaman">Atur periode kuliah, KRS, cuti, dan batas input nilai.</p>
+                    </div>
+                    <Button as-child variant="outline"><Link :href="route('admin.tahun-akademik.index')">Kembali</Link></Button>
                 </div>
-                <form class="space-y-4" @submit.prevent="submit">
-                    <section class="grid gap-4 rounded-xl border bg-white p-6 sm:grid-cols-2">
+                <form class="flex flex-col gap-6" @submit.prevent="submit">
+                    <section class="kartu grid items-start gap-4 p-6 sm:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="tahun">Tahun</Label>
-                            <Input id="tahun" v-model="form.tahun" placeholder="2025/2026" :class="inp" required /><InputError
-                                :message="form.errors.tahun"
-                            />
+                            <Label for="tahun" class="label-isian">Tahun</Label>
+                            <Input id="tahun" v-model="form.tahun" placeholder="2025/2026" required /><InputError :message="form.errors.tahun" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="semester">Semester</Label>
-                            <select id="semester" v-model="form.semester" :class="sel" required>
+                            <Label for="semester" class="label-isian">Semester</Label>
+                            <select id="semester" v-model="form.semester" class="isian isian-pilih" required>
                                 <option>Ganjil</option>
                                 <option>Genap</option></select
                             ><InputError :message="form.errors.semester" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="tanggal_mulai">Tanggal Mulai</Label>
+                            <Label for="tanggal_mulai" class="label-isian">Tanggal Mulai</Label>
                             <DatePicker id="tanggal_mulai" v-model="form.tanggal_mulai" placeholder="Pilih tanggal mulai" /><InputError
                                 :message="form.errors.tanggal_mulai"
                             />
-                            <p v-if="props.kelasBerpertemuan" class="text-xs text-[#a39e98]">
+                            <p v-if="props.kelasBerpertemuan" class="teks-bantu">
                                 Terkunci: {{ props.kelasBerpertemuan }} kelas sudah punya pertemuan, jadi tanggal mulai tidak bisa diubah.
                             </p>
                         </div>
                         <div class="grid gap-2">
-                            <Label for="tanggal_akhir">Tanggal Akhir</Label>
+                            <Label for="tanggal_akhir" class="label-isian">Tanggal Akhir</Label>
                             <DatePicker id="tanggal_akhir" v-model="form.tanggal_akhir" placeholder="Pilih tanggal akhir" /><InputError
                                 :message="form.errors.tanggal_akhir"
                             />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="tanggal_krs_awal">Tanggal KRS Awal</Label>
+                            <Label for="tanggal_krs_awal" class="label-isian">Tanggal KRS Awal</Label>
                             <DatePicker id="tanggal_krs_awal" v-model="form.tanggal_krs_awal" placeholder="Pilih tanggal KRS awal" />
                             <InputError :message="form.errors.tanggal_krs_awal" />
                         </div>
                         <div class="grid gap-2">
-                            <Label for="tanggal_krs_akhir">Tanggal KRS Akhir</Label>
+                            <Label for="tanggal_krs_akhir" class="label-isian">Tanggal KRS Akhir</Label>
                             <DatePicker id="tanggal_krs_akhir" v-model="form.tanggal_krs_akhir" placeholder="Pilih tanggal KRS akhir" />
                             <InputError :message="form.errors.tanggal_krs_akhir" />
                         </div>
                         <div class="grid content-start gap-2">
-                            <Label for="tanggal_cuti_awal">Buka Pengajuan Cuti</Label>
+                            <Label for="tanggal_cuti_awal" class="label-isian">Buka Pengajuan Cuti</Label>
                             <DatePicker id="tanggal_cuti_awal" v-model="form.tanggal_cuti_awal" placeholder="Pilih tanggal buka" />
-                            <p class="text-xs text-[#a39e98]">
+                            <p class="teks-bantu">
                                 Mahasiswa bisa mengajukan cuti untuk semester ini selama periode ini. Kosongkan bila tidak dibuka.
                             </p>
                             <InputError :message="form.errors.tanggal_cuti_awal" />
                         </div>
                         <div class="grid content-start gap-2">
-                            <Label for="tanggal_cuti_akhir">Tutup Pengajuan Cuti</Label>
+                            <Label for="tanggal_cuti_akhir" class="label-isian">Tutup Pengajuan Cuti</Label>
                             <DatePicker id="tanggal_cuti_akhir" v-model="form.tanggal_cuti_akhir" placeholder="Pilih tanggal tutup" />
                             <InputError :message="form.errors.tanggal_cuti_akhir" />
                         </div>
                         <div class="grid content-start gap-2">
-                            <Label for="batas_input_nilai">Batas Input Nilai</Label>
+                            <Label for="batas_input_nilai" class="label-isian">Batas Input Nilai</Label>
                             <DatePicker id="batas_input_nilai" v-model="form.batas_input_nilai" placeholder="Pilih batas input nilai" />
-                            <p class="text-xs text-[#a39e98]">
-                                Lewat tanggal ini nilai semua kelas terkunci untuk dosen. Kosongkan bila tanpa batas.
-                            </p>
+                            <p class="teks-bantu">Lewat tanggal ini nilai semua kelas terkunci untuk dosen. Kosongkan bila tanpa batas.</p>
                             <InputError :message="form.errors.batas_input_nilai" />
                         </div>
                         <div class="grid content-start gap-2">
-                            <Label for="batas_bayar_remidi">Batas Bayar Remidi</Label>
+                            <Label for="batas_bayar_remidi" class="label-isian">Batas Bayar Remidi</Label>
                             <DatePicker id="batas_bayar_remidi" v-model="form.batas_bayar_remidi" placeholder="Pilih batas bayar remidi" />
-                            <p class="text-xs text-[#a39e98]">
+                            <p class="teks-bantu">
                                 Tagihan remidi yang belum lunas sampai tanggal ini gugur. Wajib diisi sebelum menerbitkan tagihan remidi.
                             </p>
                             <InputError :message="form.errors.batas_bayar_remidi" />
                         </div>
                         <div class="grid content-start gap-2">
-                            <Label for="batas_input_nilai_remidi">Batas Input Nilai Remidi</Label>
+                            <Label for="batas_input_nilai_remidi" class="label-isian">Batas Input Nilai Remidi</Label>
                             <DatePicker
                                 id="batas_input_nilai_remidi"
                                 v-model="form.batas_input_nilai_remidi"
                                 placeholder="Pilih batas input nilai remidi"
                             />
-                            <p class="text-xs text-[#a39e98]">
+                            <p class="teks-bantu">
                                 Ujian remidi dijadwalkan sesudah batas bayar s.d. tanggal ini; lewat tanggal ini nilai remidi terkunci untuk dosen.
                             </p>
                             <InputError :message="form.errors.batas_input_nilai_remidi" />
                         </div>
                         <div class="grid gap-2 sm:col-span-2">
-                            <label class="flex items-center gap-2"><input v-model="form.status" type="checkbox" /> Aktif</label>
+                            <label class="label-isian flex items-center gap-2"
+                                ><input v-model="form.status" type="checkbox" class="size-4 accent-[#0075de]" /> Aktif</label
+                            >
                             <InputError :message="form.errors.status" />
                         </div>
                     </section>
-                    <div class="flex justify-end">
-                        <Button :disabled="form.processing" class="rounded-full bg-[#0075de] text-white">Simpan</Button>
+                    <div class="flex justify-end gap-2">
+                        <Button type="submit" :disabled="form.processing">Simpan</Button>
                     </div>
                 </form>
             </div>
-        </div></AppLayout
-    >
+        </div>
+    </AppLayout>
 </template>

@@ -61,65 +61,63 @@ const updatePassword = () => {
         <Head title="Kata Sandi" />
 
         <SettingsLayout>
-            <div class="space-y-6">
-                <HeadingSmall title="Update password" description="Ensure your account is using a long, random password to stay secure" />
+            <form class="kartu p-6" @submit.prevent="updatePassword">
+                <HeadingSmall title="Ubah Kata Sandi" description="Gunakan kata sandi yang panjang dan acak agar akun tetap aman." />
 
-                <form @submit.prevent="updatePassword" class="space-y-6">
-                    <div class="grid gap-2">
-                        <Label for="current_password">Current Password</Label>
+                <div class="mt-4 grid gap-4">
+                    <div class="grid gap-2 sm:max-w-[calc(50%-0.5rem)]">
+                        <Label for="current_password" class="label-isian">Kata Sandi Saat Ini</Label>
                         <Input
                             id="current_password"
                             ref="currentPasswordInput"
                             v-model="form.current_password"
                             type="password"
-                            class="mt-1 block w-full"
                             autocomplete="current-password"
-                            placeholder="Current password"
+                            placeholder="Kata sandi saat ini"
                         />
                         <InputError :message="form.errors.current_password" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="password">New password</Label>
-                        <Input
-                            id="password"
-                            ref="passwordInput"
-                            v-model="form.password"
-                            type="password"
-                            class="mt-1 block w-full"
-                            autocomplete="new-password"
-                            placeholder="New password"
-                        />
-                        <InputError :message="form.errors.password" />
-                    </div>
+                    <div class="grid items-start gap-4 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="password" class="label-isian">Kata Sandi Baru</Label>
+                            <Input
+                                id="password"
+                                ref="passwordInput"
+                                v-model="form.password"
+                                type="password"
+                                autocomplete="new-password"
+                                placeholder="Kata sandi baru"
+                            />
+                            <InputError :message="form.errors.password" />
+                        </div>
 
-                    <div class="grid gap-2">
-                        <Label for="password_confirmation">Confirm password</Label>
-                        <Input
-                            id="password_confirmation"
-                            v-model="form.password_confirmation"
-                            type="password"
-                            class="mt-1 block w-full"
-                            autocomplete="new-password"
-                            placeholder="Confirm password"
-                        />
-                        <InputError :message="form.errors.password_confirmation" />
+                        <div class="grid gap-2">
+                            <Label for="password_confirmation" class="label-isian">Konfirmasi Kata Sandi</Label>
+                            <Input
+                                id="password_confirmation"
+                                v-model="form.password_confirmation"
+                                type="password"
+                                autocomplete="new-password"
+                                placeholder="Ulangi kata sandi baru"
+                            />
+                            <InputError :message="form.errors.password_confirmation" />
+                        </div>
                     </div>
+                </div>
 
-                    <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing">Save password</Button>
-
-                        <Transition
-                            enter-active-class="transition ease-in-out"
-                            enter-from-class="opacity-0"
-                            leave-active-class="transition ease-in-out"
-                            leave-to-class="opacity-0"
-                        >
-                            <p v-if="form.recentlySuccessful" class="text-sm text-neutral-600">Saved</p>
-                        </Transition>
-                    </div>
-                </form>
-            </div>
+                <div class="mt-6 flex items-center justify-end gap-2">
+                    <Transition
+                        enter-active-class="transition ease-in-out"
+                        enter-from-class="opacity-0"
+                        leave-active-class="transition ease-in-out"
+                        leave-to-class="opacity-0"
+                    >
+                        <p v-if="form.recentlySuccessful" class="text-sm text-[#1aae39]">Tersimpan</p>
+                    </Transition>
+                    <Button type="submit" :disabled="form.processing">Simpan</Button>
+                </div>
+            </form>
         </SettingsLayout>
     </AppLayout>
 </template>

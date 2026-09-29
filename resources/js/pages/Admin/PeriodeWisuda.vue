@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 type Periode = {
@@ -51,60 +51,53 @@ const hapus = () => {
     if (!hapusItem.value) return;
     router.delete(route('admin.periode-wisuda.destroy', hapusItem.value.id), { preserveScroll: true, onFinish: () => (hapusItem.value = null) });
 };
-
-const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
-const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
 </script>
 
 <template>
     <Head title="Periode Wisuda" />
     <AppLayout :breadcrumbs="[{ title: 'Periode Wisuda', href: route('admin.periode-wisuda.index') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Periode Wisuda</h1>
-                        <p class="max-w-3xl text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Periode Wisuda</h1>
+                        <p class="deskripsi-halaman">
                             Mahasiswa bisa mendaftar ke periode yang belum lewat batas daftar dan kuotanya belum penuh. Buka periode untuk melihat
                             daftar mahasiswa wisuda dan menerbitkan SKL.
                         </p>
                     </div>
-                    <Button class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" @click="bukaForm(null)"
-                        ><Plus class="size-4" /> Periode Baru</Button
-                    >
+                    <Button @click="bukaForm(null)"><Plus /> Periode Baru</Button>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[860px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[900px]">
+                            <thead>
                                 <tr>
-                                    <th :class="th">Periode</th>
-                                    <th :class="th">Acara</th>
-                                    <th :class="th">Pendaftaran</th>
-                                    <th :class="th">Peserta</th>
-                                    <th :class="[th, 'text-right']">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Periode</th>
+                                    <th>Acara</th>
+                                    <th>Pendaftaran</th>
+                                    <th>Peserta</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="p in props.periode" :key="p.id" class="align-top hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3">
+                            <tbody>
+                                <tr v-for="(p, index) in props.periode" :key="p.id">
+                                    <td class="kolom-no">{{ index + 1 }}</td>
+                                    <td>
                                         <Link :href="route('admin.periode-wisuda.show', p.id)" class="font-medium text-[#0075de] hover:underline">{{
                                             p.nama
                                         }}</Link>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">
+                                    <td>
                                         {{ formatTanggal(p.tanggal_acara) }}
                                         <span v-if="p.tempat" class="block text-xs text-[#a39e98]">{{ p.tempat }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td>
                                         <span
                                             class="rounded-full px-2 py-0.5 text-xs font-medium"
                                             :class="p.dibuka ? 'bg-[#eaf7ed] text-[#1aae39]' : 'bg-[#f6f5f4] text-[#615d59]'"
@@ -112,28 +105,41 @@ const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
                                         >
                                         <span class="block text-xs text-[#a39e98]">s.d. {{ formatTanggal(p.batas_daftar, false) }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-sm text-[#31302e]">
+                                    <td class="tabular-nums">
                                         {{ p.jumlah_peserta }}{{ p.kuota ? ` / ${p.kuota}` : '' }}
                                         <span class="block text-xs text-[#a39e98]">{{ p.jumlah_skl }} SKL terbit</span>
                                     </td>
-                                    <td class="px-4 py-3">
-                                        <div class="flex justify-end gap-1">
-                                            <Button variant="ghost" size="icon" aria-label="Ubah periode" @click="bukaForm(p)"
-                                                ><Pencil class="size-4"
+                                    <td class="kolom-aksi">
+                                        <div class="aksi-tabel">
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                                <Link :href="route('admin.periode-wisuda.show', p.id)" title="Detail" aria-label="Detail"
+                                                    ><Eye
+                                                /></Link>
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon-sm"
+                                                class="text-[#2a9d99]"
+                                                title="Edit"
+                                                aria-label="Ubah periode"
+                                                @click="bukaForm(p)"
+                                                ><Pencil
                                             /></Button>
                                             <Button
-                                                variant="ghost"
-                                                size="icon"
+                                                variant="outline"
+                                                size="icon-sm"
+                                                class="text-[#dd5b00]"
+                                                title="Hapus"
                                                 aria-label="Hapus periode"
                                                 :disabled="p.jumlah_peserta > 0"
                                                 @click="hapusItem = p"
-                                                ><Trash2 class="size-4"
+                                                ><Trash2
                                             /></Button>
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.periode.length">
-                                    <td colspan="5" class="px-4 py-14 text-center text-sm text-[#615d59]">Belum ada periode wisuda.</td>
+                                <tr v-if="!props.periode.length" class="baris-kosong">
+                                    <td colspan="6" class="tabel-kosong">Belum ada periode wisuda.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -143,42 +149,44 @@ const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
         </div>
 
         <div v-if="buka" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="buka = false">
-            <form class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" @submit.prevent="simpan">
-                <h3 class="text-lg font-semibold">{{ diedit ? 'Ubah periode wisuda' : 'Periode wisuda baru' }}</h3>
+            <form class="kartu w-full max-w-lg p-6 shadow-xl" @submit.prevent="simpan">
+                <h3 class="judul-bagian">{{ diedit ? 'Ubah periode wisuda' : 'Periode wisuda baru' }}</h3>
                 <div class="mt-4 grid gap-4">
                     <div class="grid gap-2">
-                        <Label for="nama">Nama periode</Label>
-                        <Input id="nama" v-model="form.nama" :class="inp" placeholder="Mis. Wisuda Periode I 2026" maxlength="150" required />
+                        <Label for="nama" class="label-isian">Nama periode</Label>
+                        <Input id="nama" v-model="form.nama" placeholder="Mis. Wisuda Periode I 2026" maxlength="150" required />
                         <InputError :message="form.errors.nama" />
                     </div>
                     <div class="grid items-start gap-4 sm:grid-cols-2">
-                        <div class="grid content-start gap-2">
-                            <Label for="tanggal_acara">Tanggal acara</Label>
-                            <Input id="tanggal_acara" v-model="form.tanggal_acara" type="date" :class="inp" required />
+                        <div class="grid gap-2">
+                            <Label for="tanggal_acara" class="label-isian">Tanggal acara</Label>
+                            <Input id="tanggal_acara" v-model="form.tanggal_acara" type="date" required />
                             <InputError :message="form.errors.tanggal_acara" />
                         </div>
-                        <div class="grid content-start gap-2">
-                            <Label for="batas_daftar">Batas daftar</Label>
-                            <Input id="batas_daftar" v-model="form.batas_daftar" type="date" :class="inp" required />
+                        <div class="grid gap-2">
+                            <Label for="batas_daftar" class="label-isian">Batas daftar</Label>
+                            <Input id="batas_daftar" v-model="form.batas_daftar" type="date" required />
                             <InputError :message="form.errors.batas_daftar" />
                         </div>
                     </div>
                     <div class="grid items-start gap-4 sm:grid-cols-2">
-                        <div class="grid content-start gap-2">
-                            <Label for="tempat">Tempat <span class="font-normal text-[#a39e98]">(opsional)</span></Label>
-                            <Input id="tempat" v-model="form.tempat" :class="inp" maxlength="200" />
+                        <div class="grid gap-2">
+                            <Label for="tempat" class="label-isian">Tempat <span class="font-normal text-[#a39e98]">(opsional)</span></Label>
+                            <Input id="tempat" v-model="form.tempat" maxlength="200" />
                             <InputError :message="form.errors.tempat" />
                         </div>
-                        <div class="grid content-start gap-2">
-                            <Label for="kuota">Kuota <span class="font-normal text-[#a39e98]">(kosong = tanpa batas)</span></Label>
-                            <Input id="kuota" v-model="form.kuota" type="number" min="1" :class="inp" />
+                        <div class="grid gap-2">
+                            <Label for="kuota" class="label-isian"
+                                >Kuota <span class="font-normal text-[#a39e98]">(kosong = tanpa batas)</span></Label
+                            >
+                            <Input id="kuota" v-model="form.kuota" type="number" min="1" />
                             <InputError :message="form.errors.kuota" />
                         </div>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-2">
-                    <Button type="button" variant="outline" class="rounded-full" @click="buka = false">Batal</Button>
-                    <Button type="submit" :disabled="form.processing" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]">Simpan</Button>
+                    <Button type="button" variant="outline" @click="buka = false">Batal</Button>
+                    <Button type="submit" :disabled="form.processing">Simpan</Button>
                 </div>
             </form>
         </div>

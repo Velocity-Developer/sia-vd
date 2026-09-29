@@ -38,8 +38,6 @@ const terbitkan = () => {
     const url = item === 'semua' ? route('admin.periode-wisuda.skl-massal', props.periode.id) : route('admin.wisuda.skl', item.id);
     router.post(url, {}, { preserveScroll: true, onFinish: () => (sklItem.value = null) });
 };
-
-const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]';
 </script>
 
 <template>
@@ -50,56 +48,52 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
             { title: props.periode.nama, href: route('admin.periode-wisuda.show', props.periode.id) },
         ]"
     >
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="space-y-1">
-                        <h1 class="text-[26px] font-bold leading-[1.23] text-black">Daftar Mahasiswa Wisuda</h1>
-                        <p class="text-sm text-[#615d59]">
+        <div class="halaman">
+            <div class="konten">
+                <div class="kepala-halaman">
+                    <div>
+                        <h1 class="judul-halaman">Daftar Mahasiswa Wisuda</h1>
+                        <p class="deskripsi-halaman">
                             {{ props.periode.nama }} · {{ formatTanggal(props.periode.tanggal_acara)
                             }}<span v-if="props.periode.tempat"> · {{ props.periode.tempat }}</span> · {{ props.peserta.length
                             }}{{ props.periode.kuota ? ` / ${props.periode.kuota}` : '' }} peserta
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <a :href="route('admin.periode-wisuda.cetak', props.periode.id)"
-                            ><Button variant="outline" class="rounded-full bg-white"><Download class="size-4" /> Cetak Daftar</Button></a
-                        >
-                        <Button :disabled="!belumSkl" class="rounded-full bg-[#0075de] text-white hover:bg-[#005bab]" @click="sklItem = 'semua'"
-                            >Generate SKL Semua ({{ belumSkl }})</Button
-                        >
+                        <Button as-child variant="outline">
+                            <a :href="route('admin.periode-wisuda.cetak', props.periode.id)"><Download /> Cetak Daftar</a>
+                        </Button>
+                        <Button :disabled="!belumSkl" @click="sklItem = 'semua'">Generate SKL Semua ({{ belumSkl }})</Button>
                     </div>
                 </div>
 
-                <div v-if="page.props.flash?.success" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#1aae39]">
-                    {{ page.props.flash.success }}
-                </div>
-                <div v-if="page.props.flash?.error" class="rounded-xl border border-[#e6e6e6] bg-white px-4 py-3 text-sm text-[#dd5b00]">
-                    {{ page.props.flash.error }}
-                </div>
+                <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <div class="overflow-hidden rounded-xl border border-[#e6e6e6] bg-white shadow-sm">
-                    <div class="relative overflow-x-auto">
-                        <table class="w-full min-w-[960px] text-left">
-                            <thead class="border-b border-[#e6e6e6] bg-[#f6f5f4]">
+                <div class="tabel-wadah">
+                    <div class="tabel-gulir">
+                        <table class="tabel min-w-[1000px]">
+                            <thead>
                                 <tr>
-                                    <th :class="th">Mahasiswa</th>
-                                    <th :class="th">Tugas Akhir</th>
-                                    <th :class="th">Toga</th>
-                                    <th :class="th">SKL</th>
-                                    <th :class="[th, 'text-right']">Aksi</th>
+                                    <th class="kolom-no">No</th>
+                                    <th>Mahasiswa</th>
+                                    <th>Tugas Akhir</th>
+                                    <th>Toga</th>
+                                    <th>SKL</th>
+                                    <th class="kolom-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-[#e6e6e6]">
-                                <tr v-for="p in props.peserta" :key="p.id" class="align-top hover:bg-[#f6f5f4]/60">
-                                    <td class="px-4 py-3 text-[15px] text-black">
-                                        <span class="block font-medium">{{ p.nama }}</span>
+                            <tbody>
+                                <tr v-for="(p, index) in props.peserta" :key="p.id">
+                                    <td class="kolom-no">{{ index + 1 }}</td>
+                                    <td>
+                                        <span class="block font-medium text-black">{{ p.nama }}</span>
                                         <span class="block text-xs text-[#a39e98]">{{ p.nim }} · {{ p.prodi }}</span>
                                         <span class="block text-xs text-[#a39e98]">Status: {{ p.status_mahasiswa }}</span>
                                     </td>
-                                    <td class="max-w-[360px] px-4 py-3 text-sm text-[#31302e]">{{ p.judul }}</td>
-                                    <td class="px-4 py-3 text-sm">{{ p.ukuran_toga }}</td>
-                                    <td class="px-4 py-3 text-sm">
+                                    <td class="max-w-[360px]">{{ p.judul }}</td>
+                                    <td>{{ p.ukuran_toga }}</td>
+                                    <td>
                                         <template v-if="p.nomor_skl">
                                             <a
                                                 :href="route('berkas.skl', p.id)"
@@ -112,17 +106,12 @@ const th = 'px-4 py-3 text-xs font-semibold uppercase tracking-[0.08em] text-[#a
                                         </template>
                                         <span v-else class="text-xs text-[#a39e98]">Belum terbit</span>
                                     </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <Button
-                                            v-if="!p.nomor_skl"
-                                            class="h-8 rounded-lg bg-[#0075de] px-3 text-sm text-white hover:bg-[#005bab]"
-                                            @click="sklItem = p"
-                                            >Generate SKL</Button
-                                        >
+                                    <td class="kolom-aksi">
+                                        <Button v-if="!p.nomor_skl" size="sm" @click="sklItem = p">Generate SKL</Button>
                                     </td>
                                 </tr>
-                                <tr v-if="!props.peserta.length">
-                                    <td colspan="5" class="px-4 py-14 text-center text-sm text-[#615d59]">
+                                <tr v-if="!props.peserta.length" class="baris-kosong">
+                                    <td colspan="6" class="tabel-kosong">
                                         Belum ada peserta. Setujui pendaftaran di
                                         <Link
                                             :href="route('admin.pengajuan-akademik.index', { jenis: 'wisuda' })"

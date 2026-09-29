@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -77,66 +77,65 @@ const tataLetak = [
     { value: 'panel', judul: 'Panel samping', teks: 'Panel merek di kiri, form masuk di kanan' },
     { value: 'tengah', judul: 'Kartu di tengah', teks: 'Form masuk di tengah layar, logo di atasnya' },
 ] as const;
-
-const kartu = 'rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm';
-const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
 </script>
 
 <template>
     <Head title="Pengaturan Tampilan" />
     <PengaturanSistemLayout>
-        <form class="flex flex-col gap-4" @submit.prevent="simpan">
-            <section :class="kartu">
-                <h2 class="text-lg font-semibold text-black">Identitas di browser</h2>
-                <p class="mt-1 text-sm text-[#615d59]">Nama dan ikon yang tampil di tab browser serta bookmark.</p>
+        <form class="flex flex-col gap-6" @submit.prevent="simpan">
+            <section class="kartu p-6">
+                <h2 class="judul-bagian">Identitas di browser</h2>
+                <p class="teks-bantu mt-1">Nama dan ikon yang tampil di tab browser serta bookmark.</p>
 
-                <div class="mt-5 grid content-start items-start gap-6 sm:grid-cols-2">
+                <div class="mt-4 grid content-start items-start gap-6 sm:grid-cols-2">
                     <div class="grid content-start gap-2">
-                        <Label for="nama_aplikasi">Nama di tab browser</Label>
-                        <Input id="nama_aplikasi" v-model="form.nama_aplikasi" maxlength="100" :placeholder="namaBawaan" :class="inp" />
-                        <p class="text-xs text-[#a39e98]">
+                        <Label for="nama_aplikasi" class="label-isian">Nama di tab browser</Label>
+                        <Input id="nama_aplikasi" v-model="form.nama_aplikasi" maxlength="100" :placeholder="namaBawaan" />
+                        <p class="teks-bantu">
                             Kosongkan untuk memakai singkatan/nama institusi. Contoh tab: "Dashboard - {{ form.nama_aplikasi || namaBawaan }}".
                         </p>
                         <InputError :message="form.errors.nama_aplikasi" />
                     </div>
 
                     <div class="grid content-start gap-2">
-                        <Label for="favicon">Favicon</Label>
+                        <Label for="favicon" class="label-isian">Favicon</Label>
                         <div class="flex items-center gap-3">
-                            <div class="flex size-12 items-center justify-center rounded-lg border border-[#e6e6e6] bg-[#f6f5f4]">
+                            <div
+                                class="flex size-12 items-center justify-center rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] dark:border-border dark:bg-muted"
+                            >
                                 <img :src="faviconTampil" alt="Favicon" class="size-8 object-contain" />
                             </div>
-                            <label
-                                class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#dddddd] bg-white px-3 py-2 text-sm font-medium hover:bg-[#f6f5f4]"
-                            >
-                                <ImageUp class="size-4" /> Pilih berkas
+                            <label :class="[buttonVariants({ variant: 'outline', size: 'sm' }), 'cursor-pointer']">
+                                <ImageUp /> Pilih berkas
                                 <input id="favicon" type="file" accept=".png,.ico,.webp" class="sr-only" @change="pilih($event, 'favicon')" />
                             </label>
-                            <Button v-if="pratinjauFavicon" type="button" variant="ghost" size="sm" @click="hapus('favicon')"
-                                ><X class="mr-1 size-4" /> Hapus</Button
-                            >
+                            <Button v-if="pratinjauFavicon" type="button" variant="ghost" size="sm" @click="hapus('favicon')"><X /> Hapus</Button>
                         </div>
-                        <p class="text-xs text-[#a39e98]">PNG, ICO, atau WEBP persegi, maks. 512 KB. Tanpa favicon, dipakai logo institusi.</p>
+                        <p class="teks-bantu">PNG, ICO, atau WEBP persegi, maks. 512 KB. Tanpa favicon, dipakai logo institusi.</p>
                         <InputError :message="form.errors.favicon" />
                     </div>
                 </div>
             </section>
 
-            <section :class="kartu">
-                <h2 class="text-lg font-semibold text-black">Halaman masuk</h2>
-                <p class="mt-1 text-sm text-[#615d59]">Berlaku juga untuk halaman lupa dan atur ulang kata sandi.</p>
+            <section class="kartu p-6">
+                <h2 class="judul-bagian">Halaman masuk</h2>
+                <p class="teks-bantu mt-1">Berlaku juga untuk halaman lupa dan atur ulang kata sandi.</p>
 
-                <div class="mt-5 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Tata letak halaman masuk">
+                <div class="mt-4 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Tata letak halaman masuk">
                     <label
                         v-for="opsi in tataLetak"
                         :key="opsi.value"
                         class="flex cursor-pointer gap-3 rounded-lg border p-3"
-                        :class="form.login_tata_letak === opsi.value ? 'border-[#0075de] bg-[#f6f9fd]' : 'border-[#e6e6e6]'"
+                        :class="
+                            form.login_tata_letak === opsi.value
+                                ? 'border-[#0075de] bg-[#f6f9fd] dark:bg-accent'
+                                : 'border-[#e6e6e6] dark:border-border'
+                        "
                     >
                         <input v-model="form.login_tata_letak" type="radio" :value="opsi.value" class="mt-1 size-4 shrink-0 accent-[#0075de]" />
                         <span class="flex-1">
-                            <span class="block text-sm font-medium text-black">{{ opsi.judul }}</span>
-                            <span class="block text-xs text-[#615d59]">{{ opsi.teks }}</span>
+                            <span class="block text-sm font-medium text-black dark:text-foreground">{{ opsi.judul }}</span>
+                            <span class="teks-bantu block">{{ opsi.teks }}</span>
                             <!-- Sketsa kecil tata letak -->
                             <span class="mt-2 flex h-14 overflow-hidden rounded border border-[#e6e6e6] bg-[#f6f5f4]" aria-hidden="true">
                                 <template v-if="opsi.value === 'panel'">
@@ -154,40 +153,38 @@ const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
                 </div>
                 <InputError :message="form.errors.login_tata_letak" />
 
-                <div class="mt-5 grid content-start items-start gap-6 lg:grid-cols-[1fr,280px]">
+                <div class="mt-4 grid content-start items-start gap-6 lg:grid-cols-[1fr,280px]">
                     <div class="grid content-start gap-4">
                         <div class="grid content-start gap-2">
-                            <Label for="login_judul">Judul</Label>
-                            <Input id="login_judul" v-model="form.login_judul" maxlength="120" :placeholder="props.bawaan.login_judul" :class="inp" />
+                            <Label for="login_judul" class="label-isian">Judul</Label>
+                            <Input id="login_judul" v-model="form.login_judul" maxlength="120" :placeholder="props.bawaan.login_judul" />
                             <InputError :message="form.errors.login_judul" />
                         </div>
                         <div v-if="form.login_tata_letak === 'panel'" class="grid content-start gap-2">
-                            <Label for="login_teks">Teks sambutan</Label>
+                            <Label for="login_teks" class="label-isian">Teks sambutan</Label>
                             <textarea
                                 id="login_teks"
                                 v-model="form.login_teks"
                                 rows="3"
                                 maxlength="300"
                                 :placeholder="props.bawaan.login_teks"
-                                class="rounded-[4px] border border-[#dddddd] bg-white px-3 py-2 text-[15px] placeholder:text-[#a39e98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0075de]"
+                                class="isian isian-area"
                             />
-                            <p class="text-xs text-[#a39e98]">Kosongkan untuk memakai teks bawaan.</p>
+                            <p class="teks-bantu">Kosongkan untuk memakai teks bawaan.</p>
                             <InputError :message="form.errors.login_teks" />
                         </div>
-                        <p v-if="form.login_tata_letak === 'tengah'" class="-mt-2 text-xs text-[#a39e98]">
+                        <p v-if="form.login_tata_letak === 'tengah'" class="teks-bantu -mt-2">
                             Pada kartu di tengah, judul tampil di bawah nama institusi; teks sambutan dan daftar fitur tidak ditampilkan.
                         </p>
-                        <Label v-else for="login_sorotan" class="flex w-fit items-center gap-2.5 text-sm text-[#31302e]">
+                        <Label v-else for="login_sorotan" class="label-isian flex w-fit items-center gap-2.5 font-normal">
                             <Checkbox id="login_sorotan" v-model="form.login_sorotan" />
                             <span>Tampilkan daftar fitur (Rencana Studi, Materi &amp; Tugas, Hasil Studi)</span>
                         </Label>
                         <div class="grid content-start gap-2">
-                            <Label for="login_gambar">Gambar latar</Label>
+                            <Label for="login_gambar" class="label-isian">Gambar latar</Label>
                             <div class="flex items-center gap-3">
-                                <label
-                                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#dddddd] bg-white px-3 py-2 text-sm font-medium hover:bg-[#f6f5f4]"
-                                >
-                                    <ImageUp class="size-4" /> Pilih gambar
+                                <label :class="[buttonVariants({ variant: 'outline', size: 'sm' }), 'cursor-pointer']">
+                                    <ImageUp /> Pilih gambar
                                     <input
                                         id="login_gambar"
                                         type="file"
@@ -197,12 +194,10 @@ const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
                                     />
                                 </label>
                                 <Button v-if="pratinjauGambar" type="button" variant="ghost" size="sm" @click="hapus('login_gambar')"
-                                    ><X class="mr-1 size-4" /> Hapus</Button
+                                    ><X /> Hapus</Button
                                 >
                             </div>
-                            <p class="text-xs text-[#a39e98]">
-                                JPG/PNG/WEBP maks. 2 MB, mis. foto kampus. Diberi lapisan warna agar teks tetap terbaca.
-                            </p>
+                            <p class="teks-bantu">JPG/PNG/WEBP maks. 2 MB, mis. foto kampus. Diberi lapisan warna agar teks tetap terbaca.</p>
                             <InputError :message="form.errors.login_gambar" />
                         </div>
                     </div>
@@ -255,9 +250,9 @@ const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
                 </div>
             </section>
 
-            <section :class="kartu">
-                <h2 class="text-lg font-semibold text-black">Sidebar</h2>
-                <p class="mt-1 text-sm text-[#615d59]">
+            <section class="kartu p-6">
+                <h2 class="judul-bagian">Sidebar</h2>
+                <p class="teks-bantu mt-1">
                     Bentuk sidebar saat pengguna pertama kali masuk. Setelah pengguna membuka/menutup sidebar sendiri, pilihannya diingat di
                     browsernya.
                 </p>
@@ -269,22 +264,24 @@ const inp = 'h-10 rounded-[4px] border-[#dddddd] bg-white text-[15px]';
                         ]"
                         :key="opsi.value"
                         class="flex min-w-[220px] cursor-pointer items-start gap-3 rounded-lg border p-3"
-                        :class="form.sidebar_bawaan === opsi.value ? 'border-[#0075de] bg-[#f6f9fd]' : 'border-[#e6e6e6]'"
+                        :class="
+                            form.sidebar_bawaan === opsi.value
+                                ? 'border-[#0075de] bg-[#f6f9fd] dark:bg-accent'
+                                : 'border-[#e6e6e6] dark:border-border'
+                        "
                     >
                         <input v-model="form.sidebar_bawaan" type="radio" :value="opsi.value" class="mt-1 size-4 accent-[#0075de]" />
                         <span>
-                            <span class="block text-sm font-medium text-black">{{ opsi.judul }}</span>
-                            <span class="block text-xs text-[#615d59]">{{ opsi.teks }}</span>
+                            <span class="block text-sm font-medium text-black dark:text-foreground">{{ opsi.judul }}</span>
+                            <span class="teks-bantu block">{{ opsi.teks }}</span>
                         </span>
                     </label>
                 </div>
                 <InputError :message="form.errors.sidebar_bawaan" />
             </section>
 
-            <div class="flex justify-end">
-                <Button type="submit" class="h-10 rounded-full bg-[#0075de] px-8 text-white hover:bg-[#005bab]" :disabled="form.processing"
-                    >Simpan</Button
-                >
+            <div class="flex justify-end gap-2">
+                <Button type="submit" :disabled="form.processing">Simpan</Button>
             </div>
         </form>
     </PengaturanSistemLayout>

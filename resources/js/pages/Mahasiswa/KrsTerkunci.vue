@@ -20,14 +20,14 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
 <template>
     <Head title="Rencana Studi (KRS)" />
     <AppLayout :breadcrumbs="[{ title: 'Rencana Studi (KRS)', href: route('mahasiswa.krs') }]">
-        <div class="min-h-full bg-[#f6f5f4]">
-            <div class="mx-auto flex w-full max-w-[720px] flex-col gap-4 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="rounded-xl border border-[#e6e6e6] bg-white p-6 text-center shadow-sm">
+        <div class="halaman">
+            <div class="konten-form">
+                <div class="kartu p-6 text-center">
                     <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-[#fdf1e9]">
                         <Lock class="size-6 text-[#dd5b00]" />
                     </div>
-                    <h1 class="mt-4 text-[22px] font-bold leading-7 text-black">Pengisian KRS Terkunci</h1>
-                    <p class="mt-2 text-sm leading-5 text-[#615d59]">
+                    <h1 class="judul-halaman mt-4">Pengisian KRS Terkunci</h1>
+                    <p class="deskripsi-halaman mx-auto mt-2">
                         <template v-if="props.status === 'menunggu_verifikasi'">
                             Bukti bayar semester {{ props.tahunAkademik }} sudah Anda kirim dan sedang diperiksa bagian keuangan. Halaman KRS terbuka
                             dengan sendirinya setelah pembayaran dinyatakan lunas.
@@ -37,19 +37,23 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                             bagian keuangan, halaman KRS terbuka dengan sendirinya.
                         </template>
                     </p>
-                    <p v-if="props.status === 'ditolak'" class="mt-2 text-sm text-[#b42318]">
+                    <div v-if="props.status === 'ditolak'" class="alert-gagal mt-4" role="alert">
                         Bukti bayar sebelumnya ditolak: {{ props.alasanTolak }}. Silakan unggah ulang.
-                    </p>
+                    </div>
 
-                    <div class="mt-5 rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3 text-left">
+                    <div class="mt-5 rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] px-4 py-3 text-left dark:border-border dark:bg-muted">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium uppercase tracking-[0.08em] text-[#a39e98]">Total Tagihan</span>
-                            <span class="text-lg font-bold text-black">{{ rupiah(props.total) }}</span>
+                            <span class="teks-bantu font-medium uppercase tracking-[0.08em]">Total Tagihan</span>
+                            <span class="text-lg font-bold text-black dark:text-foreground">{{ rupiah(props.total) }}</span>
                         </div>
-                        <ul v-if="props.items.length" class="mt-2 space-y-1 border-t border-[#e6e6e6] pt-2">
-                            <li v-for="(item, index) in props.items" :key="index" class="flex items-center justify-between text-sm text-[#31302e]">
+                        <ul v-if="props.items.length" class="mt-2 space-y-1 border-t border-[#e6e6e6] pt-2 dark:border-border">
+                            <li
+                                v-for="(item, index) in props.items"
+                                :key="index"
+                                class="flex items-center justify-between text-sm text-[#31302e] dark:text-foreground"
+                            >
                                 <span>{{ item.nama }}</span>
-                                <span>{{ rupiah(item.subtotal) }}</span>
+                                <span class="tabular-nums">{{ rupiah(item.subtotal) }}</span>
                             </li>
                         </ul>
                     </div>
@@ -58,15 +62,13 @@ const tanggal = (nilai: string | null) => (nilai ? new Intl.DateTimeFormat('id-I
                         Periode pengisian KRS berakhir {{ tanggal(props.batasKrs) }}. Selesaikan pembayaran sebelum tanggal tersebut.
                     </p>
 
-                    <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
-                        <Link :href="route('mahasiswa.info-biaya-kuliah')">
-                            <Button class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]">
-                                Lihat Info Biaya Kuliah
-                            </Button>
-                        </Link>
-                        <Link :href="route('mahasiswa.dashboard')" class="text-sm font-medium text-[#615d59] hover:underline"
-                            >Kembali ke Beranda</Link
-                        >
+                    <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
+                        <Button as-child variant="outline">
+                            <Link :href="route('mahasiswa.dashboard')">Kembali ke Beranda</Link>
+                        </Button>
+                        <Button as-child>
+                            <Link :href="route('mahasiswa.info-biaya-kuliah')">Lihat Info Biaya Kuliah</Link>
+                        </Button>
                     </div>
                 </div>
             </div>
