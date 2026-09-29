@@ -48,6 +48,7 @@ type TagihanRemidi = {
 const props = defineProps<{
     semesterBerjalan: Tagihan | null;
     tahunAktif: string | null;
+    statusMahasiswa: string | null;
     riwayat: Tagihan[];
     dasar: Dasar | null;
     tagihanRemidi: TagihanRemidi[];
@@ -144,7 +145,12 @@ const statusTagihan = (tagihan: Tagihan | null) => STATUS_TAGIHAN_REMIDI[tagihan
                     </div>
 
                     <p v-else class="mt-4 rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59]">
-                        Tagihan semester ini belum diterbitkan. Hubungi bagian keuangan bila Anda merasa seharusnya sudah ada.
+                        <template v-if="props.statusMahasiswa && props.statusMahasiswa !== 'Aktif'">
+                            Tidak ada tagihan semester ini karena status Anda {{ props.statusMahasiswa }}.
+                        </template>
+                        <template v-else>
+                            Tagihan semester ini belum diterbitkan. Hubungi bagian keuangan bila Anda merasa seharusnya sudah ada.
+                        </template>
                     </p>
 
                     <div

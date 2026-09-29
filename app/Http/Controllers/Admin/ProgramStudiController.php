@@ -27,7 +27,7 @@ class ProgramStudiController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/ProgramStudiForm', ['programStudi' => null, 'fakultas' => Fakultas::orderBy('nama_fakultas')->get(['id', 'nama_fakultas']), 'dosen' => $this->dosen()]);
+        return Inertia::render('Admin/ProgramStudiForm', ['programStudi' => null, 'fakultas' => Fakultas::orderBy('nama_fakultas')->get(['id', 'nama_fakultas']), 'dosen' => $this->dosen(null)]);
     }
 
     public function show(ProgramStudi $programStudi): Response
@@ -39,7 +39,7 @@ class ProgramStudiController extends Controller
 
     public function edit(ProgramStudi $programStudi): Response
     {
-        return Inertia::render('Admin/ProgramStudiForm', ['programStudi' => $programStudi, 'fakultas' => Fakultas::orderBy('nama_fakultas')->get(['id', 'nama_fakultas']), 'dosen' => $this->dosen()]);
+        return Inertia::render('Admin/ProgramStudiForm', ['programStudi' => $programStudi, 'fakultas' => Fakultas::orderBy('nama_fakultas')->get(['id', 'nama_fakultas']), 'dosen' => $this->dosen($programStudi->kaprodi)]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -75,9 +75,9 @@ class ProgramStudiController extends Controller
         return to_route('admin.program-studi.index')->with('success', 'Program Studi berhasil dihapus.');
     }
 
-    private function dosen(): array
+    private function dosen(?int $terpilih): array
     {
-        return DosenProfile::with('user:id,name')->get(['id', 'user_id'])->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => $dosen->user->name])->all();
+        return DosenProfile::pilihan($terpilih)->with('user:id,name')->get(['id', 'user_id'])->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => $dosen->user->name])->all();
     }
 
     private function save(Request $request, ProgramStudi $model): void
@@ -89,7 +89,7 @@ class ProgramStudiController extends Controller
             $request->merge(['tanggal_akreditasi_akhir' => null]);
         }
 
-        $data = $request->validate(['fakultas_id' => ['required', 'exists:fakultas,id'], 'kode_prodi' => ['required', 'string', Rule::unique('program_studis')->ignore($model)], 'nama_prodi' => ['required', 'string'], 'jenjang' => ['required', 'string'], 'status_akreditasi' => ['required', 'string'], 'no_sk_akreditasi' => ['nullable', 'string'], 'tanggal_akreditasi_mulai' => ['nullable', 'date'], 'tanggal_akreditasi_akhir' => ['nullable', 'date'], 'kaprodi' => ['required', 'exists:dosen_profiles,id'], 'tahun_berdiri' => ['required', 'integer']], $this->messages(), $this->attributes());
+        $data = $request->validate(['fakultas_id' => ['required', 'exists:fakultas,id'], 'kode_prodi' => ['required', 'string', Rule::unique('program_studis')->ignore($model)], 'nama_prodi' => ['required', 'string'], 'jenjang' => ['required', 'string'], 'status_akreditasi' => ['required', 'string'], 'no_sk_akreditasi' => ['nullable', 'string'], 'tanggal_akreditasi_mulai' => ['nullable', 'date'], 'tanggal_akreditasi_akhir' => ['nullable', 'date'], 'kaprodi' => ['required', DosenProfile::rulePilihan($model->kaprodi)], 'tahun_berdiri' => ['required', 'integer']], $this->messages(), $this->attributes());
         $model->fill($data)->save();
     }
 

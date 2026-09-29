@@ -62,7 +62,7 @@ class KelasKuliahController extends Controller
         return Inertia::render('Admin/KelasKuliahForm', [
             'kelasKuliah' => null,
             'jumlahPertemuanBawaan' => PengaturanAkademik::current()->jumlah_pertemuan,
-            'dosens' => $this->dosens(),
+            'dosens' => $this->dosens(null),
             'matkulGroups' => $this->matkulGroups(),
             'tahunAkademiks' => TahunAkademik::orderByDesc('tanggal_mulai')->get(),
         ]);
@@ -252,7 +252,7 @@ class KelasKuliahController extends Controller
     {
         return Inertia::render('Admin/KelasKuliahForm', [
             'kelasKuliah' => $kelasKuliah,
-            'dosens' => $this->dosens(),
+            'dosens' => $this->dosens($kelasKuliah->dosen_id),
             'matkulGroups' => $this->matkulGroups(),
             'tahunAkademiks' => TahunAkademik::orderByDesc('tanggal_mulai')->get(),
         ]);
@@ -356,9 +356,9 @@ class KelasKuliahController extends Controller
             ])->all();
     }
 
-    private function dosens(): array
+    private function dosens(?int $terpilih): array
     {
-        return DosenProfile::with('user:id,name')->orderBy('nidn')->get()->map(fn (DosenProfile $d): array => [
+        return DosenProfile::pilihan($terpilih)->with('user:id,name')->orderBy('nidn')->get()->map(fn (DosenProfile $d): array => [
             'id' => $d->id,
             'name' => ($d->user?->name ?? '-').' — '.$d->nidn,
         ])->all();
@@ -391,7 +391,7 @@ class KelasKuliahController extends Controller
             'tahun_akademik_id' => ['required', 'exists:tahun_akademik,id'],
             'kapasitas' => ['required', 'integer', 'min:1', 'max:500'],
             'jumlah_pertemuan' => ['nullable', 'integer', 'min:1', 'max:32'],
-            'dosen_id' => ['required', 'exists:dosen_profiles,id'],
+            'dosen_id' => ['required', DosenProfile::rulePilihan($model->dosen_id)],
             'matkul_id' => ['required', 'exists:mata_kuliahs,id'],
         ], $this->messages(), $this->attributes());
 

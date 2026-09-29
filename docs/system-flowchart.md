@@ -138,7 +138,7 @@ flowchart TD
     D -- Ya --> D1["Ditolak: coba lagi nanti"]
     D -- Tidak --> E0["Cari akun: username, lalu NIM,<br/>lalu NIDN"] --> E{"Cek kata sandi<br/>dengan username akun itu"}
     E -- Gagal --> E1["Pesan gagal pada field username"] --> C
-    E -- Cocok --> S{"Dosen Nonaktif atau<br/>mahasiswa berstatus selain Aktif?"}
+    E -- Cocok --> S{"Dosen Nonaktif atau mahasiswa<br/>selain Aktif/Lulus/Cuti?"}
     S -- Ya --> S1["Ditolak: pesan menyebut statusnya"] --> C
     S -- Tidak --> F["Masuk, regenerasi sesi"]
     F --> G{"Punya permission<br/>jenis.dashboard?"}

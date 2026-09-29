@@ -127,7 +127,16 @@ test('mahasiswa berstatus selain aktif ditolak masuk dengan pesan', function (st
         ->assertSessionHasErrors(['username' => "Akun tidak dapat digunakan karena status mahasiswa Anda: {$status}. Hubungi admin akademik."]);
 
     $this->assertGuest();
-})->with(['Nonaktif', 'Cuti', 'Lulus']);
+})->with(['Nonaktif', 'Dropout', 'Mengundurkan Diri']);
+
+test('mahasiswa lulus dan cuti tetap bisa masuk', function (string $status) {
+    $mahasiswa = User::factory()->create();
+    $mahasiswa->mahasiswaProfile->update(['status' => $status]);
+
+    $this->post('/login', ['username' => $mahasiswa->username, 'password' => 'password'])->assertSessionHasNoErrors();
+
+    $this->assertAuthenticatedAs($mahasiswa);
+})->with(['Lulus', 'Cuti']);
 
 test('status akun tidak dibocorkan bila kata sandi salah', function () {
     $dosen = User::factory()->dosen()->create();

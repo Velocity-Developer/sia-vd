@@ -213,12 +213,12 @@ it('issues the graduation letter and marks the student as graduated', function (
         ->and($mhs2->mahasiswaProfile->fresh()->status)->toBe('Aktif');
     $this->actingAs($admin)->post(route('admin.wisuda.skl', $w1))->assertSessionHas('error', 'SKL mahasiswa ini sudah terbit.');
 
-    $this->actingAs($admin)->get(route('berkas.skl', $w1))->assertOk()->assertHeader('content-type', 'application/pdf');
+    $this->actingAs($mhs)->get(route('berkas.skl', $w1))->assertOk()->assertHeader('content-type', 'application/pdf');
+    $this->actingAs($admin)->get(route('berkas.skl', $w1))->assertOk();
     $this->actingAs($mhs2)->get(route('berkas.skl', $w1))->assertForbidden();
-    $this->actingAs($mhs2)->get(route('mahasiswa.tugas-akhir'))->assertOk();
-    // Status Lulus bukan Aktif, jadi mahasiswa yang SKL-nya terbit tidak dapat masuk lagi.
-    $this->actingAs($mhs)->get(route('berkas.skl', $w1))->assertRedirect(route('login'));
-    $this->assertGuest();
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page
+        ->where('pendaftaranWisuda.wisuda.nomor_skl', '001/SKL/X/2025')
+        ->where('pendaftaranWisuda.wisuda.predikat', 'Sangat Memuaskan'));
 
     // Massal: hanya yang belum punya SKL.
     $this->actingAs($admin)->post(route('admin.periode-wisuda.skl-massal', $periode))->assertSessionHas('success', '1 SKL terbit; status mahasiswanya menjadi Lulus.');

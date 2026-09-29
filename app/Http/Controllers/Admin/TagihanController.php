@@ -301,6 +301,11 @@ class TagihanController extends Controller
             ['status' => TagihanSemester::BELUM_BAYAR],
         );
 
+        // Tagihan hanya untuk mahasiswa Aktif (Cuti, Lulus, dst. tidak ditagih); yang sudah terbit tetap bisa diubah.
+        if (! $tagihan->exists && $mahasiswa->status !== 'Aktif') {
+            return back()->with('error', 'Mahasiswa berstatus '.$mahasiswa->status.' tidak ditagih.');
+        }
+
         if ($tagihan->lunas()) {
             return back()->with('error', 'Tagihan yang sudah lunas tidak bisa diubah rinciannya. Batalkan status lunasnya dulu.');
         }

@@ -24,7 +24,7 @@ class FakultasController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/FakultasForm', ['fakultas' => null, 'dosen' => $this->dosen()]);
+        return Inertia::render('Admin/FakultasForm', ['fakultas' => null, 'dosen' => $this->dosen(null)]);
     }
 
     public function show(Fakultas $fakulta): Response
@@ -36,7 +36,7 @@ class FakultasController extends Controller
 
     public function edit(Fakultas $fakulta): Response
     {
-        return Inertia::render('Admin/FakultasForm', ['fakultas' => $fakulta, 'dosen' => $this->dosen()]);
+        return Inertia::render('Admin/FakultasForm', ['fakultas' => $fakulta, 'dosen' => $this->dosen($fakulta->dekan_id)]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -68,9 +68,9 @@ class FakultasController extends Controller
         return to_route('admin.fakultas.index')->with('success', 'Fakultas berhasil dihapus.');
     }
 
-    private function dosen(): array
+    private function dosen(?int $terpilih): array
     {
-        return DosenProfile::with('user:id,name')->get(['id', 'user_id'])->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => $dosen->user->name])->all();
+        return DosenProfile::pilihan($terpilih)->with('user:id,name')->get(['id', 'user_id'])->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => $dosen->user->name])->all();
     }
 
     private function save(Request $request, Fakultas $fakulta): void
@@ -78,7 +78,7 @@ class FakultasController extends Controller
         $data = $request->validate([
             'kode_fakultas' => ['required', 'string', Rule::unique('fakultas')->ignore($fakulta)],
             'nama_fakultas' => ['required', 'string', 'max:255', Rule::unique('fakultas', 'nama_fakultas')->ignore($fakulta->id)],
-            'dekan_id' => ['required', 'exists:dosen_profiles,id'],
+            'dekan_id' => ['required', DosenProfile::rulePilihan($fakulta->dekan_id)],
             'tanggal_berdiri' => ['required', 'date'],
             'no_telp' => ['required', 'string'],
             'email' => ['required', 'email'],

@@ -148,8 +148,8 @@ class TugasAkhirController extends Controller
             'judul' => ['required', 'string', 'max:300'],
             'bidang' => ['required', 'string', 'max:150'],
             'ringkasan' => ['required', 'string', 'max:5000'],
-            'usulan_pembimbing_1_id' => ['required', 'integer', 'exists:dosen_profiles,id'],
-            'usulan_pembimbing_2_id' => ['nullable', 'integer', 'exists:dosen_profiles,id', 'different:usulan_pembimbing_1_id'],
+            'usulan_pembimbing_1_id' => ['required', 'integer', DosenProfile::rulePilihan()],
+            'usulan_pembimbing_2_id' => ['nullable', 'integer', DosenProfile::rulePilihan(), 'different:usulan_pembimbing_1_id'],
             'proposal' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:10240', 'extensions:pdf', 'mimes:pdf'],
         ], [
             'proposal.extensions' => 'Proposal harus berupa PDF.',

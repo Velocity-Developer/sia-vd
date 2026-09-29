@@ -152,7 +152,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Pesan penolakan masuk berdasarkan status profil: dosen berstatus Nonaktif dan mahasiswa
-     * berstatus selain Aktif tidak boleh masuk. Null berarti boleh masuk.
+     * berstatus di luar MahasiswaProfile::STATUS_BOLEH_MASUK tidak boleh masuk. Null berarti boleh masuk.
      */
     public function alasanTidakBolehMasuk(): ?string
     {
@@ -160,7 +160,7 @@ class User extends Authenticatable implements MustVerifyEmail
             UserType::Dosen => $this->dosenProfile()->value('status') === 'Nonaktif'
                 ? 'Akun dosen Anda berstatus nonaktif. Hubungi admin akademik untuk mengaktifkan kembali.'
                 : null,
-            UserType::Mahasiswa => ($status = $this->mahasiswaProfile()->value('status')) !== null && $status !== 'Aktif'
+            UserType::Mahasiswa => ($status = $this->mahasiswaProfile()->value('status')) !== null && ! in_array($status, MahasiswaProfile::STATUS_BOLEH_MASUK, true)
                 ? "Akun tidak dapat digunakan karena status mahasiswa Anda: {$status}. Hubungi admin akademik."
                 : null,
             default => null,

@@ -381,6 +381,21 @@ it('tidak menampilkan mahasiswa yang tidak aktif', function () {
         ->assertInertia(fn ($page) => $page->has('daftar.data', 0)->where('ringkasan.total', 0));
 });
 
+it('tidak menagih mahasiswa cuti atau lulus', function (string $status) {
+    [$mahasiswa, $kelas] = keuanganSetup();
+    jenisBiayaContoh();
+    $mahasiswa->mahasiswaProfile->update(['status' => $status]);
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->post(route('admin.tagihan.terbitkan'), ['tahun_akademik_id' => $kelas->tahun_akademik_id]);
+    $this->actingAs($admin)->put(route('admin.tagihan.rincian.simpan', $mahasiswa->mahasiswaProfile->id), [
+        'tahun_akademik_id' => $kelas->tahun_akademik_id,
+        'items' => [['nama' => 'SPP', 'subtotal' => 5_000]],
+    ])->assertSessionHas('error', "Mahasiswa berstatus {$status} tidak ditagih.");
+
+    expect(TagihanSemester::count())->toBe(0);
+})->with(['Cuti', 'Lulus']);
+
 it('menyimpan satu tagihan saja per mahasiswa per semester', function () {
     [$mahasiswa, $kelas] = keuanganSetup();
     $profil = $mahasiswa->mahasiswaProfile;

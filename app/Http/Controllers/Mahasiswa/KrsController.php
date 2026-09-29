@@ -27,12 +27,14 @@ class KrsController extends Controller
         $tahunAkademik = TahunAkademik::aktif();
         $periodeKrsAktif = $this->periodeKrsAktif($tahunAkademik);
         // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk tawaran, IPS, dan ringkasan SKS.
+        $bolehKrs = in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true);
         $semuaKrs = $this->semuaKrs($mahasiswa);
         $tawaran = new TawaranKrs($mahasiswa, $tahunAkademik, $semuaKrs);
         $kelasDiambil = $semuaKrs->pluck('kelas_id');
 
         $kelasKuliahs = KelasKuliah::query()
-            ->when(! $periodeKrsAktif, fn ($query) => $query->whereKey(0))
+            // Di luar periode atau status tidak boleh KRS (Cuti, Lulus): tidak ada kelas yang ditawarkan.
+            ->when(! $periodeKrsAktif || ! $bolehKrs, fn ($query) => $query->whereKey(0))
             ->with([
                 'mataKuliah.prodi',
                 'mataKuliah.prasyarat:mata_kuliahs.id,nama_matkul',
@@ -72,7 +74,7 @@ class KrsController extends Controller
                 'ips' => $ipsSebelumnya['ips'],
                 'tahun_akademik' => $ipsSebelumnya['tahun_akademik']->tahun.' '.$ipsSebelumnya['tahun_akademik']->semester,
             ],
-            'bolehKrs' => in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true),
+            'bolehKrs' => $bolehKrs,
             'tahunAkademik' => $tahunAkademik,
             'periodeKrsAktif' => $periodeKrsAktif,
             'krsTersimpan' => $tahunAkademik !== null && KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id),

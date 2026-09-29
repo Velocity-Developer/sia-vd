@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\DosenProfile;
 use App\Models\Fakultas;
 use App\Models\ProgramStudi;
 use App\Models\Role;
@@ -200,4 +201,28 @@ it('lets admin create, update, and delete a karyawan with a custom staff role', 
 
     $this->actingAs($admin)->delete(route('admin.users.karyawan.destroy', $rina))->assertSessionHas('success');
     expect(User::whereKey($rina->id)->exists())->toBeFalse();
+});
+
+it('hides inactive lecturers from selection lists but keeps the current choice', function () {
+    $admin = User::factory()->admin()->create();
+    $aktif = User::factory()->dosen()->create()->dosenProfile;
+    $nonaktif = User::factory()->dosen()->create()->dosenProfile;
+    $nonaktif->update(['status' => 'Nonaktif']);
+
+    $this->actingAs($admin)->get(route('admin.users.mahasiswa.create'))
+        ->assertInertia(fn ($page) => $page->where('dosenWali', fn ($opsi) => collect($opsi)->pluck('id')->contains($aktif->id)
+            && ! collect($opsi)->pluck('id')->contains($nonaktif->id)));
+    $this->actingAs($admin)->get(route('admin.kelas-kuliah.create'))
+        ->assertInertia(fn ($page) => $page->where('dosens', fn ($opsi) => ! collect($opsi)->pluck('id')->contains($nonaktif->id)));
+
+    // Mahasiswa yang dosen walinya kini nonaktif tetap bisa diedit tanpa mengganti dosen wali.
+    $mahasiswa = User::factory()->mahasiswa()->create();
+    $mahasiswa->mahasiswaProfile->update(['dosen_wali_id' => $nonaktif->id]);
+    $this->actingAs($admin)->get(route('admin.users.mahasiswa.edit', $mahasiswa))
+        ->assertInertia(fn ($page) => $page->where('dosenWali', fn ($opsi) => collect($opsi)->pluck('id')->contains($nonaktif->id)));
+
+    $validator = fn (?int $termasuk, int $id) => validator(['d' => $id], ['d' => [DosenProfile::rulePilihan($termasuk)]])->passes();
+    expect($validator(null, $aktif->id))->toBeTrue()
+        ->and($validator(null, $nonaktif->id))->toBeFalse()
+        ->and($validator($nonaktif->id, $nonaktif->id))->toBeTrue();
 });

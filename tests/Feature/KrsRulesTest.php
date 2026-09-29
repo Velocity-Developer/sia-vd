@@ -43,12 +43,21 @@ it('rejects KRS from a student who is not active', function () {
     [$mahasiswa, $kelas] = krsSetup();
     $mahasiswa->mahasiswaProfile->update(['status' => 'Cuti']);
 
-    // Mahasiswa yang tidak aktif sudah dikeluarkan sebelum sampai ke aturan KRS.
-    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelas))->assertRedirect(route('login'));
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelas))
+        ->assertSessionHas('krs_error', fn (string $message): bool => str_contains($message, 'Cuti'));
 
-    $this->assertGuest();
     expect(Krs::count())->toBe(0);
 });
+
+it('offers no classes to a student on leave or graduated', function (string $status) {
+    [$mahasiswa] = krsSetup();
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))->assertInertia(fn ($page) => $page->has('kelasKuliahs', 1));
+
+    $mahasiswa->mahasiswaProfile->update(['status' => $status]);
+
+    $this->actingAs($mahasiswa)->get(route('mahasiswa.krs'))
+        ->assertInertia(fn ($page) => $page->has('kelasKuliahs', 0)->where('bolehKrs', false));
+})->with(['Cuti', 'Lulus']);
 
 it('rejects KRS that exceeds the SKS limit', function () {
     [$mahasiswa, $kelas] = krsSetup(sks: 6);

@@ -37,6 +37,7 @@ class InfoBiayaKuliahController extends Controller
             'semesterBerjalan' => $berjalan ? $this->bentuk($berjalan) : null,
             'dasar' => $berjalan && $mahasiswa ? $this->dasarPerhitungan($mahasiswa, $berjalan, $tahunAktif) : null,
             'tahunAktif' => $tahunAktif ? $tahunAktif->tahun.' '.$tahunAktif->semester : null,
+            'statusMahasiswa' => $mahasiswa?->status,
             'riwayat' => $tagihan
                 ->filter(fn (TagihanSemester $item) => $item->tahun_akademik_id !== $tahunAktif?->id)
                 ->map(fn (TagihanSemester $item) => $this->bentuk($item))

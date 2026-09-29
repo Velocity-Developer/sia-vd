@@ -75,7 +75,7 @@ class UserController extends Controller
         return Inertia::render('Admin/UserForm', [
             'title' => 'Tambah User - '.ucfirst($type), 'type' => $type, 'user' => null,
             'roles' => $this->roleOptions($role), 'defaultRoleId' => Role::system($role)->id,
-            'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions() : [],
+            'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions(null) : [],
             'programStudi' => $type !== 'karyawan' ? $this->programStudiOptions() : [],
         ]);
     }
@@ -131,7 +131,7 @@ class UserController extends Controller
             'title' => 'Edit User - '.ucfirst($type), 'type' => $type,
             'user' => $user->only(['id', 'name', 'username', 'email', 'role_id']) + ($profile ?? []),
             'roles' => $this->roleOptions($role), 'defaultRoleId' => $user->role_id,
-            'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions() : [],
+            'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions($user->mahasiswaProfile?->dosen_wali_id) : [],
             'programStudi' => $type !== 'karyawan' ? $this->programStudiOptions() : [],
         ]);
     }
@@ -160,9 +160,9 @@ class UserController extends Controller
         }
     }
 
-    private function dosenOptions(): array
+    private function dosenOptions(?int $terpilih): array
     {
-        return DosenProfile::with('user:id,name')->get(['id', 'user_id'])->map(fn (DosenProfile $profile): array => ['id' => $profile->id, 'name' => $profile->user->name])->all();
+        return DosenProfile::pilihan($terpilih)->with('user:id,name')->get(['id', 'user_id'])->map(fn (DosenProfile $profile): array => ['id' => $profile->id, 'name' => $profile->user->name])->all();
     }
 
     private function programStudiOptions(): array
@@ -379,7 +379,7 @@ class UserController extends Controller
             $rules += ['nidn' => ['required', 'string', 'max:50', Rule::unique('dosen_profiles')->ignore($user?->dosenProfile?->id)], 'jabatan_fungsional' => ['required', 'string', 'max:100'], 'pendidikan_terakhir' => ['required', 'string', 'max:100'], 'status_kepegawaian' => ['required', 'string', 'max:100'], 'status' => ['required', Rule::in(DosenProfile::STATUS)], 'prodi_id' => ['required', 'exists:program_studis,id']];
         }
         if ($role === UserType::Mahasiswa) {
-            $rules += ['nim' => ['required', 'string', 'max:50', Rule::unique('mahasiswa_profiles')->ignore($user?->mahasiswaProfile?->id)], 'angkatan' => ['required', 'integer', 'digits:4'], 'status' => ['required', 'in:Aktif,Nonaktif,Lulus,Dropout,Cuti,Mengundurkan Diri,Meninggal'], 'dosen_wali_id' => ['required', 'exists:dosen_profiles,id'], 'prodi_id' => ['required', 'exists:program_studis,id'], 'sekolah_asal' => ['required', 'string', 'max:255'], 'nisn' => ['required', 'string', 'digits:10', Rule::unique('mahasiswa_profiles', 'nisn')->ignore($user?->mahasiswaProfile?->id)], 'email_alternatif' => ['required', 'email', 'max:255', 'different:email', Rule::unique('mahasiswa_profiles', 'email_alternatif')->ignore($user?->mahasiswaProfile?->id)], 'nama_ayah_kandung' => ['required', 'string', 'max:255'], 'nama_ibu_kandung' => ['required', 'string', 'max:255'], 'tanggal_lahir_ayah' => ['required', 'date'], 'tanggal_lahir_ibu' => ['required', 'date'], 'pendidikan_terakhir_ayah' => ['required', 'string', 'max:100'], 'pendidikan_terakhir_ibu' => ['required', 'string', 'max:100'], 'pekerjaan_ayah' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'pekerjaan_ibu' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'penghasilan_ayah' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'penghasilan_ibu' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'no_telepon_ayah' => ['required', 'string', 'max:50'], 'no_telepon_ibu' => ['required', 'string', 'max:50'], 'email_ayah' => ['required', 'email', 'max:255'], 'email_ibu' => ['required', 'email', 'max:255'], 'alamat_ayah' => ['required', 'string', 'max:1000'], 'alamat_ibu' => ['required', 'string', 'max:1000']];
+            $rules += ['nim' => ['required', 'string', 'max:50', Rule::unique('mahasiswa_profiles')->ignore($user?->mahasiswaProfile?->id)], 'angkatan' => ['required', 'integer', 'digits:4'], 'status' => ['required', 'in:Aktif,Nonaktif,Lulus,Dropout,Cuti,Mengundurkan Diri,Meninggal'], 'dosen_wali_id' => ['required', DosenProfile::rulePilihan($user?->mahasiswaProfile?->dosen_wali_id)], 'prodi_id' => ['required', 'exists:program_studis,id'], 'sekolah_asal' => ['required', 'string', 'max:255'], 'nisn' => ['required', 'string', 'digits:10', Rule::unique('mahasiswa_profiles', 'nisn')->ignore($user?->mahasiswaProfile?->id)], 'email_alternatif' => ['required', 'email', 'max:255', 'different:email', Rule::unique('mahasiswa_profiles', 'email_alternatif')->ignore($user?->mahasiswaProfile?->id)], 'nama_ayah_kandung' => ['required', 'string', 'max:255'], 'nama_ibu_kandung' => ['required', 'string', 'max:255'], 'tanggal_lahir_ayah' => ['required', 'date'], 'tanggal_lahir_ibu' => ['required', 'date'], 'pendidikan_terakhir_ayah' => ['required', 'string', 'max:100'], 'pendidikan_terakhir_ibu' => ['required', 'string', 'max:100'], 'pekerjaan_ayah' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'pekerjaan_ibu' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'penghasilan_ayah' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'penghasilan_ibu' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'no_telepon_ayah' => ['required', 'string', 'max:50'], 'no_telepon_ibu' => ['required', 'string', 'max:50'], 'email_ayah' => ['required', 'email', 'max:255'], 'email_ibu' => ['required', 'email', 'max:255'], 'alamat_ayah' => ['required', 'string', 'max:1000'], 'alamat_ibu' => ['required', 'string', 'max:1000']];
         }
         $rules['tanggal_lahir'] = ['required', 'date'];
 

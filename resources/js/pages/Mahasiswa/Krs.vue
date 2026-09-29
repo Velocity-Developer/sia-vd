@@ -35,7 +35,7 @@ type KelasKuliah = {
 
 const props = defineProps<{
     kelasKuliahs: KelasKuliah[];
-    mahasiswa: { semester: number | null; angkatan: string; prodi_id: number };
+    mahasiswa: { semester: number | null; angkatan: string; prodi_id: number; status: string | null };
     kelasDiambil: number[];
     krsTahunIni: { id: number; kelas_id: number; nilai: string | null }[];
     labelMatkul: Record<number, string>;
@@ -226,7 +226,8 @@ const jadwal = (kelas: KelasKuliah) =>
                         </div>
                     </div>
                     <p v-if="!bolehKrs" class="mt-4 rounded-lg border border-[#e6e6e6] bg-[#fafafa] px-4 py-3 text-sm text-[#dd5b00]">
-                        Status akademik Anda saat ini tidak memungkinkan pengisian KRS. Silakan hubungi bagian akademik.
+                        Status akademik Anda ({{ mahasiswa.status ?? 'belum diisi' }}) tidak memungkinkan pengisian KRS, jadi tidak ada kelas yang
+                        ditawarkan. Silakan hubungi bagian akademik.
                     </p>
 
                     <div

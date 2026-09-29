@@ -38,7 +38,8 @@ class PengajuanAkademikController extends Controller
             'search' => $request->string('search')->trim()->toString(),
         ];
 
-        $dosen = collect(DosenProfile::opsi())->pluck('name', 'id');
+        // Nama untuk ditampilkan: semua dosen, termasuk yang kini nonaktif.
+        $dosen = DosenProfile::query()->with('user:id,name')->get(['id', 'user_id'])->mapWithKeys(fn (DosenProfile $d): array => [$d->id => (string) $d->user?->name]);
         $jadwal = [];
         $pengajuan = PengajuanAkademik::query()
             ->where('jenis', $jenis)
@@ -129,8 +130,8 @@ class PengajuanAkademikController extends Controller
     {
         $data = $request->validate([
             'judul' => ['required', 'string', 'max:300'],
-            'pembimbing_1_id' => ['required', 'integer', Rule::exists('dosen_profiles', 'id')],
-            'pembimbing_2_id' => ['nullable', 'integer', Rule::exists('dosen_profiles', 'id'), 'different:pembimbing_1_id'],
+            'pembimbing_1_id' => ['required', 'integer', DosenProfile::rulePilihan()],
+            'pembimbing_2_id' => ['nullable', 'integer', DosenProfile::rulePilihan(), 'different:pembimbing_1_id'],
         ], ['pembimbing_2_id.different' => 'Pembimbing 2 harus berbeda dari pembimbing 1.'], [
             'judul' => 'Judul',
             'pembimbing_1_id' => 'Pembimbing 1',
@@ -180,9 +181,9 @@ class PengajuanAkademikController extends Controller
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_akhir' => ['required', 'date_format:H:i', 'after:jam_mulai'],
             'ruang_id' => ['required', 'integer', Rule::exists('ruangs', 'id')],
-            'penguji_1_id' => ['required', 'integer', Rule::exists('dosen_profiles', 'id')],
-            'penguji_2_id' => ['required', 'integer', Rule::exists('dosen_profiles', 'id'), 'different:penguji_1_id'],
-            'penguji_3_id' => ['required', 'integer', Rule::exists('dosen_profiles', 'id'), 'different:penguji_1_id', 'different:penguji_2_id'],
+            'penguji_1_id' => ['required', 'integer', DosenProfile::rulePilihan()],
+            'penguji_2_id' => ['required', 'integer', DosenProfile::rulePilihan(), 'different:penguji_1_id'],
+            'penguji_3_id' => ['required', 'integer', DosenProfile::rulePilihan(), 'different:penguji_1_id', 'different:penguji_2_id'],
             'abaikan_peringatan' => ['boolean'],
         ], [
             'tanggal.after_or_equal' => 'Tanggal pendadaran tidak boleh sebelum hari ini.',

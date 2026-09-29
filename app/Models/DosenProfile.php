@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class DosenProfile extends Model
 {
@@ -49,13 +52,36 @@ class DosenProfile extends Model
     }
 
     /**
+     * Dosen yang boleh dipilih di isian form: berstatus Aktif, ditambah dosen yang sudah terpilih
+     * pada data yang sedang diubah agar isian lama tetap tampil.
+     *
+     * @param  Builder<self>  $query
+     * @param  int|list<int|null>|null  $termasuk
+     */
+    public function scopePilihan(Builder $query, int|array|null $termasuk = null): void
+    {
+        $query->where(fn (Builder $query) => $query->where('status', 'Aktif')->orWhereIn('id', array_filter((array) $termasuk)));
+    }
+
+    /**
+     * Aturan validasi pasangan scopePilihan: dosen Aktif atau yang sudah terpilih sebelumnya.
+     *
+     * @param  int|list<int|null>|null  $termasuk
+     */
+    public static function rulePilihan(int|array|null $termasuk = null): Exists
+    {
+        return Rule::exists('dosen_profiles', 'id')->where(fn ($query) => $query->where('status', 'Aktif')->orWhereIn('id', array_filter((array) $termasuk)));
+    }
+
+    /**
      * Pilihan dosen untuk isian form (pembimbing, penguji), urut nama.
      *
+     * @param  int|list<int|null>|null  $termasuk
      * @return list<array{id: int, name: string}>
      */
-    public static function opsi(): array
+    public static function opsi(int|array|null $termasuk = null): array
     {
-        return static::query()->with('user:id,name')->get(['id', 'user_id'])
+        return static::query()->pilihan($termasuk)->with('user:id,name')->get(['id', 'user_id'])
             ->map(fn (self $dosen): array => ['id' => $dosen->id, 'name' => (string) $dosen->user?->name])
             ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
     }

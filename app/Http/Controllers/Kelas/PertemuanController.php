@@ -64,7 +64,7 @@ class PertemuanController extends Controller
             'durasiMandiri' => fn () => PengaturanAkademik::current()->durasi_presensi_mandiri_menit,
             'terkunci' => fn () => $this->tahunAkademikTerkunci($kelas),
             'dosenOptions' => fn () => $this->peran() === 'admin'
-                ? DosenProfile::with('user:id,name')->orderBy('nidn')->get(['id', 'user_id', 'nidn'])
+                ? DosenProfile::pilihan($pertemuan->dosen_id)->with('user:id,name')->orderBy('nidn')->get(['id', 'user_id', 'nidn'])
                     ->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => ($dosen->user?->name ?? '-').' — '.$dosen->nidn])
                 : [],
         ]);
@@ -124,7 +124,7 @@ class PertemuanController extends Controller
             'ruang_id' => ['nullable', 'exists:ruangs,id'],
             'jenis' => ['required', Rule::in(Pertemuan::JENIS)],
             'catatan' => ['nullable', 'string', 'max:255'],
-            'dosen_id' => ['nullable', 'exists:dosen_profiles,id'],
+            'dosen_id' => ['nullable', DosenProfile::rulePilihan($pertemuan->dosen_id)],
             'alasan' => ['nullable', 'string', 'max:255'],
         ], [
             'after' => ':attribute harus lebih besar dari Jam Mulai.',
