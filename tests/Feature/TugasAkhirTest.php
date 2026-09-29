@@ -256,8 +256,8 @@ it('reminds the student and the admin on the dashboard', function () {
 
     $this->actingAs($admin)->post(route('admin.pengajuan-akademik.perbaikan', PengajuanAkademik::sole()), ['catatan' => 'Perjelas metode']);
     $this->actingAs($mhs)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page
-        ->where('pengingatTugasAkhir.pesan.0', ['teks' => 'Pengajuan tugas akhir diminta perbaikan: Perjelas metode', 'penting' => true])
-        ->where('pengingatTugasAkhir.tautan', route('mahasiswa.tugas-akhir')));
+        ->where('pengingat.tugasAkhir.pesan.0', ['teks' => 'Pengajuan tugas akhir diminta perbaikan: Perjelas metode', 'penting' => true])
+        ->where('pengingat.tugasAkhir.tautan', route('mahasiswa.tugas-akhir')));
     $this->actingAs($admin)->get(route('admin.dashboard'))->assertInertia(fn ($page) => $page->where('pengingatTugasAkhir', null));
 });
 

@@ -16,6 +16,7 @@ use App\Models\TagihanSemester;
 use App\Models\TagihanSusulan;
 use App\Models\TahunAkademik;
 use App\Models\User;
+use App\PengingatCuti;
 use App\PengingatTugasAkhir;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -114,6 +115,12 @@ class DashboardController extends Controller
             $this->perJenis(PengajuanAkademik::JENIS_CUTI)->each(fn (int $jumlah, string $jenis) => $daftar->push($this->butir(
                 'Pengajuan '.strtolower(PengajuanAkademik::LABEL_JENIS[$jenis]), null, $jumlah,
                 route('admin.pengajuan-cuti.index', ['jenis' => $jenis, 'status' => PengajuanAkademik::MENUNGGU]), true)));
+
+            $cutiBerakhir = PengingatCuti::jumlahCutiBerakhir();
+            if ($cutiBerakhir > 0) {
+                $daftar->push($this->butir('Mahasiswa Cuti yang semester cutinya sudah berakhir', 'belum mengajukan aktif kembali', $cutiBerakhir,
+                    route('admin.pengajuan-cuti.index', ['jenis' => PengajuanAkademik::AKTIF_KEMBALI]), false));
+            }
         }
 
         if ($user->hasPermission('admin.ujian')) {

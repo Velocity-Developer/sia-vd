@@ -1148,9 +1148,9 @@ it('memberi tahu mahasiswa di beranda dan halaman presensi saat pertemuan dijadw
         $this->app['auth']->forgetGuards();
         $this->actingAs($user)->get(route('mahasiswa.dashboard'))
             ->assertInertia(fn ($page) => $page
-                ->has('jadwalPertemuanBerubah.pesan', 1)
-                ->where('jadwalPertemuanBerubah.pesan.0.penting', $penting)
-                ->where('jadwalPertemuanBerubah.pesan.0.teks', fn (string $teks): bool => str_contains($teks, 'pertemuan ke-2 dipindah dari Senin, 11 Agustus ke Rabu, 13 Agustus 2025')
+                ->has('pengingat.jadwal.pesan', 1)
+                ->where('pengingat.jadwal.pesan.0.penting', $penting)
+                ->where('pengingat.jadwal.pesan.0.teks', fn (string $teks): bool => str_contains($teks, 'pertemuan ke-2 dipindah dari Senin, 11 Agustus ke Rabu, 13 Agustus 2025')
                     && str_contains($teks, 'Libur nasional')));
     }
 
@@ -1161,5 +1161,5 @@ it('memberi tahu mahasiswa di beranda dan halaman presensi saat pertemuan dijadw
     $this->travelTo('2025-08-14 09:00:00');
     $this->flushSession();
     $this->app['auth']->forgetGuards();
-    $this->actingAs($lain)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page->where('jadwalPertemuanBerubah', null));
+    $this->actingAs($lain)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page->where('pengingat.jadwal', null));
 });

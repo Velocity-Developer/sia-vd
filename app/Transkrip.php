@@ -51,4 +51,22 @@ class Transkrip
             ->unique(fn (Krs $item): int => $item->kelasKuliah->matkul_id)
             ->values();
     }
+
+    /**
+     * IPK dan jumlah SKS dari nilai terbaik per mata kuliah (rumus sama dengan halaman Transkrip Nilai).
+     *
+     * @return array{ipk: float|null, sks: int, sks_lulus: int}
+     */
+    public static function ringkasan(int $mahasiswaId): array
+    {
+        $terbaik = self::terbaik(self::krs($mahasiswaId)->whereNotNull('nilai'));
+        $sks = (int) $terbaik->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
+        $mutu = $terbaik->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai));
+
+        return [
+            'ipk' => $sks > 0 ? round($mutu / $sks, 2) : null,
+            'sks' => $sks,
+            'sks_lulus' => (int) $terbaik->filter(fn (Krs $item): bool => SkalaNilai::lulus($item->nilai))->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks),
+        ];
+    }
 }

@@ -36,6 +36,7 @@ use App\Http\Controllers\Kelas\RemidiController;
 use App\Http\Controllers\Kelas\TugasController;
 use App\Http\Controllers\Kelas\UjianKelasController;
 use App\Http\Controllers\Mahasiswa\ContentController as MahasiswaContentController;
+use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 use App\Http\Controllers\Mahasiswa\HasilStudiController;
 use App\Http\Controllers\Mahasiswa\InfoBiayaKuliahController;
 use App\Http\Controllers\Mahasiswa\InfoKuliahController as MahasiswaInfoKuliahController;
@@ -56,7 +57,6 @@ use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
 use App\Models\User;
-use App\PengingatJadwalPertemuan;
 use App\PengingatRemidi;
 use App\PengingatSusulan;
 use App\PengingatTugasAkhir;
@@ -403,23 +403,7 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
 
 Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:mahasiswa.dashboard')->group(function (): void {
-        Route::get('/', fn (Request $request) => Inertia::render('Dashboard', [
-            'peringatanPresensi' => $request->user()->mahasiswaProfile && $request->user()->hasPermission('mahasiswa.presensi')
-                ? PeringatanPresensi::untukMahasiswa($request->user()->mahasiswaProfile)
-                : null,
-            'jadwalPertemuanBerubah' => $request->user()->mahasiswaProfile && $request->user()->hasPermission('mahasiswa.presensi')
-                ? PengingatJadwalPertemuan::untukMahasiswa($request->user()->mahasiswaProfile)
-                : null,
-            'remidiMahasiswa' => $request->user()->mahasiswaProfile
-                ? PengingatRemidi::untukMahasiswa($request->user()->mahasiswaProfile, $request->user()->hasPermission('mahasiswa.info-biaya'), $request->user()->hasPermission('mahasiswa.ujian'))
-                : null,
-            'susulanMahasiswa' => $request->user()->mahasiswaProfile
-                ? PengingatSusulan::untukMahasiswa($request->user()->mahasiswaProfile, $request->user()->hasPermission('mahasiswa.info-biaya'), $request->user()->hasPermission('mahasiswa.ujian'))
-                : null,
-            'pengingatTugasAkhir' => $request->user()->mahasiswaProfile && $request->user()->hasPermission('mahasiswa.tugas-akhir')
-                ? PengingatTugasAkhir::untukMahasiswa($request->user()->mahasiswaProfile)
-                : null,
-        ]))->name('mahasiswa.dashboard');
+        Route::get('/', MahasiswaDashboardController::class)->name('mahasiswa.dashboard');
 
         foreach ([
             'profile' => 'Profile', 'info-perkuliahan' => 'Info Perkuliahan',

@@ -102,7 +102,7 @@ Karena daftar rute berbeda per grup, login dan logout memakai *full reload* (`In
 4. Bila berhasil, sesi diregenerasi lalu dialihkan ke `User::homeRoute()`, dengan urutan:
    - `<jenis>.dashboard` bila pengguna punya permission-nya;
    - dashboard lain yang ia miliki (`admin`, lalu `dosen`, lalu `mahasiswa`);
-   - `/dashboard` sebagai cadangan.
+   - `/dashboard` sebagai cadangan. `/dashboard` sendiri hanya pengalih ke `homeRoute()`; halaman umumnya tampil untuk akun tanpa izin dashboard mana pun.
 5. Akun yang emailnya belum terverifikasi tetap bisa masuk, tetapi rute ber-middleware `verified` mengalihkannya ke halaman **Verifikasi Email** (lihat 2.4).
 6. `AuthenticateSession` aktif. Mengganti kata sandi di pengaturan profil mengakhiri sesi di perangkat lain.
 7. Middleware `PastikanAkunAktif` (grup web) memeriksa aturan status yang sama di setiap permintaan: sesi yang masih terbuka langsung diakhiri dan dialihkan ke login (muat ulang penuh) beserta pesannya begitu admin menonaktifkan dosen atau mengubah status mahasiswa.
@@ -984,6 +984,7 @@ Mahasiswa mengajukan di menu **Administrasi → Pengajuan Cuti** (izin `mahasisw
 
 - Hanya untuk mahasiswa berstatus `Cuti`, kapan saja (tanpa periode). Isian: keterangan (opsional).
 - Admin menyetujui → status kembali `Aktif`. Status tidak kembali Aktif secara otomatis.
+- **Pengingat di Beranda** (`App\PengingatCuti`): mahasiswa melihat status pengajuan cuti/aktif kembali (menunggu, diminta perbaikan beserta catatannya, ditolak atau aktif kembali disetujui selama 14 hari sesudah diproses, dan cuti yang disetujui untuk semester berjalan/mendatang). Bila status masih `Cuti` padahal semester aktif bukan semester cuti yang disetujui (atau semua semester cutinya sudah lewat), mahasiswa diminta mengajukan aktif kembali; status Cuti yang diubah manual tanpa pengajuan ikut dianggap berakhir begitu ada semester aktif. Dashboard admin menampilkan pengajuan cuti/aktif kembali yang menunggu dan jumlah mahasiswa Cuti yang semester cutinya sudah berakhir tetapi belum mengajukan aktif kembali.
 
 ---
 
@@ -1042,9 +1043,9 @@ Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diund
 
 ### 17.3 Beranda
 
-- **Admin:** pengingat tugas akhir (jumlah pengajuan TA/pendadaran/wisuda yang menunggu keputusan dan peserta wisuda yang belum ber-SKL). Selebihnya masih pola placeholder.
+- **Admin** (`/admin`, `Admin\DashboardController`): tahun akademik aktif; angka mahasiswa aktif/cuti/lulus, dosen aktif, kelas kuliah TA aktif, dan program studi; daftar **Perlu ditindaklanjuti** (bukti bayar tagihan semester/remidi/susulan yang menunggu verifikasi per tahun akademik, mahasiswa aktif belum ditagih, pengajuan TA/pendadaran/wisuda, cuti/aktif kembali, ujian susulan, pindah kelas, dan mahasiswa Cuti yang semester cutinya berakhir), rekap tagihan semester TA aktif (jumlah per status dan nominal terbit/diterima), perkuliahan hari ini per status, mahasiswa aktif per prodi, masa KRS, dan pengingat tugas akhir. Tiap bagian hanya tampil bila role punya izin halaman tujuannya.
 - **Dosen:** presensi hari ini, pengingat remidi, ujian susulan yang perlu disiapkan soalnya atau dinilai, serta pengingat tugas akhir (pendaftaran pendadaran menunggu persetujuan, jadwal menguji, nilai yang perlu diisi, hasil yang perlu ditetapkan ketua, revisi yang perlu disahkan).
-- **Mahasiswa:** peringatan kehadiran, pengingat remidi, pengajuan susulan yang menunggu, tagihan susulan yang belum lunas, jadwal susulan mendatang, serta pengingat tugas akhir (pengajuan yang diminta perbaikan, jadwal pendadaran, revisi yang perlu diunggah, periode wisuda, SKL terbit).
+- **Mahasiswa** (`/mahasiswa`, `Mahasiswa\DashboardController` + `App\BerandaMahasiswa`): profil singkat (NIM, prodi, angkatan, status, dosen wali), IPK dan SKS lulus (rumus sama dengan Transkrip), SKS semester ini beserta status KRS, kuliah hari ini (dengan presensinya bila tercatat), dan tugas bertenggat 7 hari ke depan yang belum dikumpulkan. Kartu **Pengingat** mengelompokkan: *Semester ini* (tagihan semester belum bayar/ditolak/diverifikasi, masa KRS dibuka tetapi KRS belum disimpan, atau KRS terkunci tagihan), *Cuti akademik* ([15](#15-cuti-dan-aktif-kembali)), *Perubahan jadwal kuliah*, dan *Tugas akhir & wisuda* (pengajuan yang diminta perbaikan, jadwal pendadaran, revisi yang perlu diunggah, periode wisuda, SKL terbit). Kartu terpisah: peringatan kehadiran, remidi, dan ujian susulan.
 
 ### 17.4 Fitur lain
 
@@ -1191,7 +1192,7 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 42. **Flash `pindah_kelas_error` dibaca di halaman mahasiswa** tetapi tidak pernah diisi controller.
 43. **Tidak ada notifikasi** (email atau lainnya) untuk hasil pindah kelas, tagihan, remidi, atau ujian susulan. Semuanya hanya lewat halaman dan pesan flash.
 44. **Info kuliah tanpa target** (prodi/kelas), dan dosen tidak punya akses.
-45. **Beranda admin dan `/dashboard` sebagian besar masih placeholder** (admin hanya berisi pengingat tugas akhir). Begitu juga profil dosen dan mahasiswa, Info Perkuliahan, dan Perpustakaan.
+45. **Beranda dosen dan halaman umum `/dashboard` masih berisi kotak placeholder** di bawah pengingatnya (beranda admin dan mahasiswa sudah lengkap sejak 29 Sep 2026). Begitu juga profil dosen dan mahasiswa, Info Perkuliahan, dan Perpustakaan.
 
 ### Ujian susulan
 
@@ -1216,6 +1217,6 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 61. **Cek bentrok pendadaran** tidak mencakup pembimbing yang bukan penguji maupun jadwal kuliah mahasiswanya sendiri.
 62. **Tidak lulus pendadaran tidak mengisi nilai KRS Skripsi.** Bila semester berakhir, KRS itu tetap tanpa nilai dan mahasiswa harus mengambil Skripsi lagi di tahun aktif untuk mendaftar ulang.
 63. **Kelas Skripsi** diperlakukan seperti kelas lain (KRS, tagihan per SKS), tetapi tidak punya jadwal, pertemuan, atau ujian; data demo membuatnya tanpa jadwal.
-64. **Beranda belum menampilkan pengingat cuti**, baik untuk mahasiswa (perbaikan diminta, cuti disetujui) maupun admin (pengajuan menunggu). Admin melihat jumlah menunggu hanya di tab halaman Pengajuan Cuti.
-65. **Status Cuti tidak berakhir sendiri.** Mahasiswa tetap `Cuti` di semester-semester berikutnya sampai pengajuan aktif kembali disetujui; tidak ada pengingat saat semester cutinya selesai.
+64. ~~Beranda belum menampilkan pengingat cuti.~~ **Selesai 29 Sep 2026:** Beranda mahasiswa dan dashboard admin menampilkan pengingat cuti/aktif kembali ([15](#15-cuti-dan-aktif-kembali)).
+65. **Status Cuti tidak berakhir sendiri.** Mahasiswa tetap `Cuti` di semester-semester berikutnya sampai pengajuan aktif kembali disetujui. Sejak 29 Sep 2026 mahasiswa dan admin **diingatkan** begitu semester cutinya selesai; statusnya tetap tidak diubah otomatis (perlu dikonfirmasi apakah perlu).
 66. **Status yang diubah manual di Manage User** (mis. Aktif → Cuti) tidak tercatat sebagai pengajuan, sehingga tidak dihitung dalam `maks_cuti`.
