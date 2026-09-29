@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
+import BagianLipat from '@/components/BagianLipat.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/composables/usePermissions';
@@ -9,7 +10,7 @@ import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { STATUS_TAGIHAN_REMIDI, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Copy, Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 
 const page = usePage<{
     flash: {
@@ -25,6 +26,21 @@ const page = usePage<{
         quiz_error?: string;
     };
 }>();
+
+// Bagian Jadwal, Materi, Tugas, Quiz, dan Nilai tertutup saat halaman dibuka. Bagian yang baru saja
+// diubah (ada pesan flash-nya) dibuka otomatis agar pesannya terlihat.
+const terbuka = reactive({ jadwal: false, materi: false, tugas: false, quiz: false, nilai: false });
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.jadwal_success || flash?.jadwal_error) terbuka.jadwal = true;
+        if (flash?.materi_success || flash?.materi_error) terbuka.materi = true;
+        if (flash?.tugas_success || flash?.tugas_error) terbuka.tugas = true;
+        if (flash?.quiz_success || flash?.quiz_error) terbuka.quiz = true;
+        if (flash?.success || flash?.error) terbuka.nilai = true;
+    },
+    { immediate: true },
+);
 
 type JadwalShow = {
     id: number;
@@ -204,6 +220,7 @@ const saveGrade = (krs: KrsShow) =>
         rute('kelas-kuliah.krs.nilai', [props.kelasKuliah.id, krs.id]),
         { nilai: grade.value || null },
         {
+            preserveState: true,
             onSuccess: () => {
                 editingKrs.value = null;
             },
@@ -284,6 +301,7 @@ const confirmCancelKrs = () => {
 
     router.delete(rute('kelas-kuliah.krs.destroy', [props.kelasKuliah.id, pendingCancelKrs.value.id]), {
         preserveScroll: true,
+        preserveState: true,
         onFinish: () => {
             pendingCancelKrs.value = null;
         },
@@ -321,6 +339,7 @@ const removeJadwal = (jadwal: JadwalShow) => {
 const confirmDelete = () => {
     if (!pendingJadwal.value) return;
     router.delete(rute('kelas-kuliah.jadwal.destroy', [props.kelasKuliah.id, pendingJadwal.value.id]), {
+        preserveState: true,
         onFinish: () => {
             confirmOpen.value = false;
             pendingJadwal.value = null;
@@ -336,6 +355,7 @@ const removeMateri = (materi: MateriShow) => {
 const confirmDeleteMateri = () => {
     if (!pendingMateri.value) return;
     router.delete(rute('kelas-kuliah.materi.destroy', [props.kelasKuliah.id, pendingMateri.value.id]), {
+        preserveState: true,
         onFinish: () => {
             confirmMateriOpen.value = false;
             pendingMateri.value = null;
@@ -351,6 +371,7 @@ const removeTugas = (tugas: TugasShow) => {
 const confirmDeleteTugas = () => {
     if (!pendingTugas.value) return;
     router.delete(rute('kelas-kuliah.tugas.destroy', [props.kelasKuliah.id, pendingTugas.value.id]), {
+        preserveState: true,
         onFinish: () => {
             confirmTugasOpen.value = false;
             pendingTugas.value = null;
@@ -366,6 +387,7 @@ const removeQuiz = (quiz: QuizShow) => {
 const confirmDeleteQuiz = () => {
     if (!pendingQuiz.value) return;
     router.delete(rute('kelas-kuliah.quiz.destroy', [props.kelasKuliah.id, pendingQuiz.value.id]), {
+        preserveState: true,
         onFinish: () => {
             confirmQuizOpen.value = false;
             pendingQuiz.value = null;
@@ -514,21 +536,24 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </dl>
                 </section>
 
-                <section class="kartu p-6">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="space-y-1">
-                            <h2 class="judul-bagian">Jadwal</h2>
-                            <Link
-                                :href="rute('jadwal.index', { kelas_id: props.kelasKuliah.id })"
-                                class="text-xs font-medium text-[#0075de] hover:underline"
-                                >Buka di menu Jadwal Kelas →</Link
-                            >
-                            <p class="teks-bantu">Hari, jam, dan ruang untuk kelas ini.</p>
-                        </div>
-                        <Button v-if="isAdmin" as-child>
+                <BagianLipat
+                    v-model:open="terbuka.jadwal"
+                    judul="Jadwal"
+                    :jumlah="(props.kelasKuliah.jadwals ?? []).length"
+                    keterangan="Hari, jam, dan ruang untuk kelas ini."
+                >
+                    <template #keterangan>
+                        <Link
+                            :href="rute('jadwal.index', { kelas_id: props.kelasKuliah.id })"
+                            class="text-xs font-medium text-[#0075de] hover:underline"
+                            >Buka di menu Jadwal Kelas →</Link
+                        >
+                    </template>
+                    <template v-if="isAdmin" #aksi>
+                        <Button as-child size="sm">
                             <Link :href="rute('kelas-kuliah.jadwal.create', props.kelasKuliah.id)"><Plus />Tambah Jadwal</Link>
                         </Button>
-                    </div>
+                    </template>
 
                     <div v-if="page.props.flash?.jadwal_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.jadwal_success }}</div>
                     <div v-if="page.props.flash?.jadwal_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.jadwal_error }}</div>
@@ -584,23 +609,26 @@ const formatTenggat = (value: string | null | undefined): string => {
                             </table>
                         </div>
                     </div>
-                </section>
+                </BagianLipat>
 
-                <section class="kartu p-6">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="space-y-1">
-                            <h2 class="judul-bagian">Materi</h2>
-                            <Link
-                                :href="rute('materi.index', { kelas_id: props.kelasKuliah.id })"
-                                class="text-xs font-medium text-[#0075de] hover:underline"
-                                >Buka di menu Materi →</Link
-                            >
-                            <p class="teks-bantu">Bahan ajar per pertemuan untuk kelas ini.</p>
-                        </div>
-                        <Button as-child>
+                <BagianLipat
+                    v-model:open="terbuka.materi"
+                    judul="Materi"
+                    :jumlah="(props.kelasKuliah.materis ?? []).length"
+                    keterangan="Bahan ajar per pertemuan untuk kelas ini."
+                >
+                    <template #keterangan>
+                        <Link
+                            :href="rute('materi.index', { kelas_id: props.kelasKuliah.id })"
+                            class="text-xs font-medium text-[#0075de] hover:underline"
+                            >Buka di menu Materi →</Link
+                        >
+                    </template>
+                    <template #aksi>
+                        <Button as-child size="sm">
                             <Link :href="rute('kelas-kuliah.materi.create', props.kelasKuliah.id)"><Plus />Tambah Materi</Link>
                         </Button>
-                    </div>
+                    </template>
 
                     <div v-if="page.props.flash?.materi_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.materi_success }}</div>
                     <div v-if="page.props.flash?.materi_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.materi_error }}</div>
@@ -689,23 +717,26 @@ const formatTenggat = (value: string | null | undefined): string => {
                             </table>
                         </div>
                     </div>
-                </section>
+                </BagianLipat>
 
-                <section class="kartu p-6">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="space-y-1">
-                            <h2 class="judul-bagian">Tugas</h2>
-                            <Link
-                                :href="rute('tugas.index', { kelas_id: props.kelasKuliah.id })"
-                                class="text-xs font-medium text-[#0075de] hover:underline"
-                                >Buka di menu Tugas →</Link
-                            >
-                            <p class="teks-bantu">Daftar tugas beserta tenggat waktu untuk kelas ini.</p>
-                        </div>
-                        <Button as-child>
+                <BagianLipat
+                    v-model:open="terbuka.tugas"
+                    judul="Tugas"
+                    :jumlah="(props.kelasKuliah.tugas ?? []).length"
+                    keterangan="Daftar tugas beserta tenggat waktu untuk kelas ini."
+                >
+                    <template #keterangan>
+                        <Link
+                            :href="rute('tugas.index', { kelas_id: props.kelasKuliah.id })"
+                            class="text-xs font-medium text-[#0075de] hover:underline"
+                            >Buka di menu Tugas →</Link
+                        >
+                    </template>
+                    <template #aksi>
+                        <Button as-child size="sm">
                             <Link :href="rute('kelas-kuliah.tugas.create', props.kelasKuliah.id)"><Plus />Tambah Tugas</Link>
                         </Button>
-                    </div>
+                    </template>
 
                     <div v-if="page.props.flash?.tugas_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.tugas_success }}</div>
                     <div v-if="page.props.flash?.tugas_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.tugas_error }}</div>
@@ -804,23 +835,26 @@ const formatTenggat = (value: string | null | undefined): string => {
                             </table>
                         </div>
                     </div>
-                </section>
+                </BagianLipat>
 
-                <section class="kartu p-6">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="space-y-1">
-                            <h2 class="judul-bagian">Quiz</h2>
-                            <Link
-                                :href="rute('quiz.index', { kelas_id: props.kelasKuliah.id })"
-                                class="text-xs font-medium text-[#0075de] hover:underline"
-                                >Buka di menu Quiz →</Link
-                            >
-                            <p class="teks-bantu">Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini.</p>
-                        </div>
-                        <Button as-child>
+                <BagianLipat
+                    v-model:open="terbuka.quiz"
+                    judul="Quiz"
+                    :jumlah="(props.kelasKuliah.quizzes ?? []).length"
+                    keterangan="Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini."
+                >
+                    <template #keterangan>
+                        <Link
+                            :href="rute('quiz.index', { kelas_id: props.kelasKuliah.id })"
+                            class="text-xs font-medium text-[#0075de] hover:underline"
+                            >Buka di menu Quiz →</Link
+                        >
+                    </template>
+                    <template #aksi>
+                        <Button as-child size="sm">
                             <Link :href="rute('kelas-kuliah.quiz.create', props.kelasKuliah.id)"><Plus />Tambah Quiz</Link>
                         </Button>
-                    </div>
+                    </template>
 
                     <div v-if="page.props.flash?.quiz_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.quiz_success }}</div>
                     <div v-if="page.props.flash?.quiz_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.quiz_error }}</div>
@@ -907,44 +941,41 @@ const formatTenggat = (value: string | null | undefined): string => {
                             </table>
                         </div>
                     </div>
-                </section>
+                </BagianLipat>
 
-                <section class="kartu p-6">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <h2 class="judul-bagian">Nilai Mahasiswa</h2>
-                            <p v-if="props.statusNilai.final_at" class="mt-2 text-sm text-[#31302e]">
-                                <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Final</span>
-                                Difinalisasi {{ formatTanggal(props.statusNilai.final_at) }}
-                                <template v-if="props.statusNilai.final_oleh">oleh {{ props.statusNilai.final_oleh }}</template>
-                            </p>
-                            <p v-else-if="props.statusNilai.final" class="mt-2 text-sm text-[#31302e]">
-                                <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Terkunci</span>
-                                Batas input nilai {{ formatTanggal(props.statusNilai.batas) }} sudah lewat.
-                            </p>
-                            <p v-else-if="props.statusNilai.batas" class="mt-2 text-sm text-[#615d59]">
-                                Batas input nilai: <span class="font-medium text-black">{{ formatTanggal(props.statusNilai.batas) }}</span>
-                            </p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
-                            <template v-if="!props.statusNilai.final && !props.nilaiTerkunci">
-                                <Button
-                                    size="sm"
-                                    :disabled="props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda > 0"
-                                    :title="
-                                        props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda
-                                            ? 'Tunggu sampai UAS (dan susulannya) selesai'
-                                            : undefined
-                                    "
-                                    @click="finalisasiOpen = true"
-                                    >Finalisasi Nilai</Button
-                                >
-                            </template>
-                            <Button v-if="isAdmin && props.statusNilai.final" size="sm" variant="outline" @click="bukaOpen = true"
-                                >Buka Kunci Nilai</Button
+                <BagianLipat v-model:open="terbuka.nilai" judul="Nilai Mahasiswa" :jumlah="(props.kelasKuliah.krs ?? []).length">
+                    <template #keterangan>
+                        <p v-if="props.statusNilai.final_at" class="text-sm text-[#31302e]">
+                            <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Final</span>
+                            Difinalisasi {{ formatTanggal(props.statusNilai.final_at) }}
+                            <template v-if="props.statusNilai.final_oleh">oleh {{ props.statusNilai.final_oleh }}</template>
+                        </p>
+                        <p v-else-if="props.statusNilai.final" class="text-sm text-[#31302e]">
+                            <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Terkunci</span>
+                            Batas input nilai {{ formatTanggal(props.statusNilai.batas) }} sudah lewat.
+                        </p>
+                        <p v-else-if="props.statusNilai.batas" class="text-sm text-[#615d59]">
+                            Batas input nilai: <span class="font-medium text-black">{{ formatTanggal(props.statusNilai.batas) }}</span>
+                        </p>
+                    </template>
+                    <template #aksi>
+                        <template v-if="!props.statusNilai.final && !props.nilaiTerkunci">
+                            <Button
+                                size="sm"
+                                :disabled="props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda > 0"
+                                :title="
+                                    props.statusNilai.uas_belum_selesai || props.statusNilai.susulan_tertunda
+                                        ? 'Tunggu sampai UAS (dan susulannya) selesai'
+                                        : undefined
+                                "
+                                @click="finalisasiOpen = true"
+                                >Finalisasi Nilai</Button
                             >
-                        </div>
-                    </div>
+                        </template>
+                        <Button v-if="isAdmin && props.statusNilai.final" size="sm" variant="outline" @click="bukaOpen = true"
+                            >Buka Kunci Nilai</Button
+                        >
+                    </template>
                     <p v-if="props.statusNilai.uas_belum_selesai && !props.statusNilai.final" class="teks-bantu mt-2">
                         Nilai bisa difinalisasi setelah UAS selesai.
                     </p>
@@ -1020,7 +1051,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                             </table>
                         </div>
                     </div>
-                </section>
+                </BagianLipat>
 
                 <section v-if="props.remidi" id="daftar-remidi" class="kartu p-6">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
