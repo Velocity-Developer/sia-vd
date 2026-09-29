@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\UjianSusulanController as AdminUjianSusulanContro
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\BimbinganController;
+use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
 use App\Http\Controllers\Dosen\PendadaranController as DosenPendadaranController;
 use App\Http\Controllers\Dosen\UjianController as DosenUjianController;
@@ -57,10 +58,6 @@ use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
 use App\Models\User;
-use App\PengingatRemidi;
-use App\PengingatSusulan;
-use App\PengingatTugasAkhir;
-use App\PeringatanPresensi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -321,20 +318,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
 
 Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas) {
     Route::middleware('can:dosen.dashboard')->group(function (): void {
-        Route::get('/', fn (Request $request) => Inertia::render('Dashboard', [
-            'presensiDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.presensi')
-                ? PeringatanPresensi::untukDosen($request->user()->dosenProfile)
-                : null,
-            'remidiDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.kelas-kuliah')
-                ? PengingatRemidi::untukDosen($request->user()->dosenProfile)
-                : null,
-            'susulanDosen' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.ujian')
-                ? PengingatSusulan::untukDosen($request->user()->dosenProfile)
-                : null,
-            'pengingatTugasAkhir' => $request->user()->dosenProfile && $request->user()->hasPermission('dosen.bimbingan')
-                ? PengingatTugasAkhir::untukDosen($request->user()->dosenProfile)
-                : null,
-        ]))->name('dosen.dashboard');
+        Route::get('/', DosenDashboardController::class)->name('dosen.dashboard');
         Route::get('profile', fn () => Inertia::render('DosenPlaceholder', ['title' => 'Profile']))->name('dosen.profile');
     });
 
