@@ -68,6 +68,23 @@ class MahasiswaProfile extends Model
         return $semester >= 1 ? $semester : null;
     }
 
+    /**
+     * Muat relasi yang dipakai blok tanda tangan dokumen PDF mahasiswa (pdf/partials/pengesahan-mahasiswa):
+     * Dosen Pembimbing Akademik dan Ketua Program Studi beserta NIDN-nya.
+     */
+    public function muatPengesahan(): static
+    {
+        return $this->loadMissing([
+            'user:id,name',
+            'dosenWali:id,user_id,nidn',
+            'dosenWali.user:id,name',
+            'prodi:id,fakultas_id,nama_prodi,jenjang,kaprodi',
+            'prodi.fakultas:id,nama_fakultas',
+            'prodi.ketuaProgramStudi:id,user_id,nidn',
+            'prodi.ketuaProgramStudi.user:id,name',
+        ]);
+    }
+
     public function krsSemester(): HasMany
     {
         return $this->hasMany(KrsSemester::class, 'mahasiswa_id');

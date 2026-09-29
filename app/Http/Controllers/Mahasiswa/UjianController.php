@@ -168,7 +168,7 @@ class UjianController extends Controller
      */
     public function kartu(Request $request): HttpResponse
     {
-        $mahasiswa = $this->mahasiswa($request)->loadMissing('user:id,name', 'prodi:id,nama_prodi,jenjang');
+        $mahasiswa = $this->mahasiswa($request)->muatPengesahan();
         $jenis = in_array($request->query('jenis'), Ujian::SEMUA_JENIS, true) ? $request->query('jenis') : Pertemuan::UTS;
         $tahun = TahunAkademik::find($request->integer('tahun_akademik_id')) ?? TahunAkademik::where('status', true)->first();
         abort_if($tahun === null, 404);

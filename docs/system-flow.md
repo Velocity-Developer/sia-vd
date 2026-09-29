@@ -427,6 +427,12 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
    - **pindah kelas** ([bagian 16](#16-pindah-kelas));
    - **admin membuka kunci KRS** dari menu Tagihan Mahasiswa, yang menghapus baris `krs_semester`. Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
 
+### 7.5 Unduh KRS (PDF)
+
+- Tombol **Download KRS** (`mahasiswa.krs.download`) tampil bila mahasiswa sudah mengambil kelas di tahun akademik aktif, baik sebelum maupun sesudah KRS disimpan. Parameter `tahun_akademik_id` opsional untuk tahun lain; tanpa kelas di tahun itu hasilnya 404.
+- Isi: identitas, semester, IPS sebelumnya dan batas SKS, tabel kode–mata kuliah–kelas–SKS–jadwal–dosen, jumlah SKS, status KRS (disimpan pada … / belum disimpan), dan blok tanda tangan ([17.6](#176-dokumen-pdf)).
+- Rute berada di grup yang sama dengan KRS, jadi ikut kunci pembayaran (`tagihan.lunas`) bila sakelarnya aktif.
+
 ---
 
 ## 8. Materi, tugas, dan quiz
@@ -626,7 +632,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 - **Mode `online_soal`:** mulai hanya bila ujian `terbit`, sedang berlangsung, dan mahasiswa boleh ikut. Soal dan opsi diacak per mahasiswa.
 - **Kehadiran otomatis:** mengumpulkan berkas atau memulai lembar soal otomatis mencatat **hadir** (metode `ujian`) di pertemuan UTS/UAS.
   - Ujian tatap muka tidak mencatat kehadiran otomatis.
-- **Kartu ujian (PDF)** per jenis berisi jadwal ujian terbit, dan kolom syarat kehadiran bila syarat aktif.
+- **Kartu ujian (PDF)** per jenis berisi jadwal ujian terbit, kolom paraf pengawas, dan kolom syarat kehadiran bila syarat aktif, ditutup blok tanda tangan dokumen mahasiswa ([17.6](#176-dokumen-pdf)).
 
 ### 10.4 Penilaian ujian
 
@@ -686,8 +692,9 @@ Yang **tidak** terkunci: presensi (hanya terkunci bila tahun akademik nonaktif),
 
 - **KHS:** semua KRS di satu tahun akademik.
   - IP = Σ(SKS × bobot) / ΣSKS, hanya atas mata kuliah yang sudah bernilai.
-  - Tersedia unduhan PDF bertanda tangan dosen wali.
-- **Transkrip:** nilai **terbaik** per mata kuliah, jumlah pengambilan, IPK, dan total SKS lulus (huruf bertanda `lulus`). Hanya tampil di layar; tidak ada PDF transkrip.
+  - Tersedia unduhan PDF (kolom bobot dan mutu, IPS) dengan blok tanda tangan dokumen mahasiswa ([17.6](#176-dokumen-pdf)).
+- **Transkrip:** nilai **terbaik** per mata kuliah, jumlah pengambilan, IPK, dan total SKS lulus (huruf bertanda `lulus`).
+  - Tombol **Download Transkrip** (`mahasiswa.transkrip.download`) mengunduh PDF: identitas (termasuk tempat/tanggal lahir dan fakultas), tabel kode–SKS–nilai–bobot–mutu dengan baris jumlah, IPK, dan blok tanda tangan ([17.6](#176-dokumen-pdf)). Tombol tampil bila sudah ada nilai.
 - **Dampak ke semester berikutnya:** huruf akhir menentukan IPS, lalu batas SKS KRS, kuota SKS tagihan, dan boleh atau tidaknya mata kuliah diulang.
 
 ---
@@ -1051,6 +1058,12 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 - profil dosen dan profil mahasiswa;
 - Info Perkuliahan;
 - seluruh menu **Perpustakaan** (Katalog, Pinjaman Aktif, Riwayat Pinjaman).
+
+### 17.6 Dokumen PDF
+
+- Semua PDF memakai kerangka `resources/views/pdf/layout.blade.php`: kertas A4 (rekap presensi mendatar), huruf serif, kop resmi (logo, nama PT, baris fakultas · program studi untuk dokumen mahasiswa, kontak) bergaris ganda, judul bergaris bawah, tabel bergaris hitam, dan kaki halaman berisi waktu cetak serta nomor halaman.
+- **Blok tanda tangan dokumen mahasiswa** (`pdf/partials/pengesahan-mahasiswa.blade.php`) dipakai di KRS, KHS, transkrip, dan kartu ujian: *Menyetujui* Dosen Pembimbing Akademik (nama + NIDN), *Mengetahui* Ketua Program Studi (nama + NIDN), dan mahasiswa (nama + NIM) di bawah tanggal cetak. Relasinya dimuat lewat `MahasiswaProfile::muatPengesahan()`; Dosen PA diambil dari `dosen_wali_id`, Kaprodi dari `program_studis.kaprodi`. Bila datanya tidak ada, nama dan NIDN diganti titik-titik untuk diisi tangan.
+- Dokumen lain (rekap presensi, daftar hadir ujian, surat pendadaran, SKL, daftar wisuda) memakai kerangka yang sama dengan penanda tangan masing-masing.
 
 ---
 

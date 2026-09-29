@@ -20,34 +20,21 @@ class HasilStudiController extends Controller
 {
     public function transkrip(Request $request): Response
     {
-        $mahasiswa = $request->user()->mahasiswaProfile;
-        abort_if($mahasiswa === null, 403);
+        return Inertia::render('Mahasiswa/TranskripNilai', $this->dataTranskrip($this->mahasiswa($request)));
+    }
 
-        $krs = Transkrip::krs($mahasiswa->id)->whereNotNull('nilai');
-        $jumlahPengambilan = $krs->countBy(fn (Krs $item): ?int => $item->kelasKuliah?->matkul_id);
-        // Mata kuliah yang diulang hanya dihitung sekali, memakai nilai terbaiknya.
-        $transkrip = Transkrip::terbaik($krs)
-            ->map(fn (Krs $item): array => [
-                'id' => $item->id,
-                'kode' => $item->kelasKuliah->mataKuliah->kode_matkul,
-                'nama' => $item->kelasKuliah->mataKuliah->nama_matkul,
-                'jenis' => $item->kelasKuliah->mataKuliah->jenis,
-                'sks' => $item->kelasKuliah->mataKuliah->sks,
-                'nilai' => strtoupper($item->nilai),
-                'bobot' => SkalaNilai::bobot($item->nilai),
-                'mutu' => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai),
-                'diambil' => $jumlahPengambilan[$item->kelasKuliah->matkul_id] ?? 1,
-            ])
-            ->sortBy('kode')
-            ->values();
-        $totalSks = $transkrip->sum('sks');
-        $totalMutu = $transkrip->sum('mutu');
-        $totalSksLulus = $transkrip->filter(fn (array $item): bool => SkalaNilai::lulus($item['nilai']))->sum('sks');
+    public function downloadTranskrip(Request $request): HttpResponse
+    {
+        $mahasiswa = $this->mahasiswa($request)->muatPengesahan();
+        $institusi = PengaturanInstitusi::current();
 
-        return Inertia::render('Mahasiswa/TranskripNilai', [
-            'transkrip' => $transkrip,
-            'ringkasan' => ['totalMatkul' => $transkrip->count(), 'totalSks' => $totalSks, 'totalSksLulus' => $totalSksLulus, 'totalMutu' => $totalMutu, 'ipk' => $totalSks > 0 ? round($totalMutu / $totalSks, 2) : null],
-        ]);
+        return Pdf::loadView('pdf.transkrip', [
+            'institusi' => $institusi,
+            'logoSrc' => $institusi->logoDataUri(),
+            'kontak' => $institusi->kontakKop(),
+            'mahasiswa' => $mahasiswa,
+            ...$this->dataTranskrip($mahasiswa),
+        ])->download("transkrip-{$mahasiswa->nim}.pdf");
     }
 
     public function index(Request $request): Response
@@ -73,7 +60,7 @@ class HasilStudiController extends Controller
             'institusi' => $institusi,
             'logoSrc' => $institusi->logoDataUri(),
             'kontak' => $institusi->kontakKop(),
-            'mahasiswa' => $mahasiswa->loadMissing('user', 'prodi', 'dosenWali.user'),
+            'mahasiswa' => $mahasiswa->muatPengesahan(),
             'tahunAkademik' => $data['tahunAkademik'],
             'krs' => $data['krs'],
             'ringkasan' => $data['ringkasan'],
@@ -90,6 +77,38 @@ class HasilStudiController extends Controller
         abort_if($mahasiswa === null, 403);
 
         return $mahasiswa;
+    }
+
+    /**
+     * @return array{transkrip: Collection<int, array<string, mixed>>, ringkasan: array{totalMatkul: int, totalSks: int, totalSksLulus: int, totalMutu: float, ipk: float|null}}
+     */
+    private function dataTranskrip(MahasiswaProfile $mahasiswa): array
+    {
+        $krs = Transkrip::krs($mahasiswa->id)->whereNotNull('nilai');
+        $jumlahPengambilan = $krs->countBy(fn (Krs $item): ?int => $item->kelasKuliah?->matkul_id);
+        // Mata kuliah yang diulang hanya dihitung sekali, memakai nilai terbaiknya.
+        $transkrip = Transkrip::terbaik($krs)
+            ->map(fn (Krs $item): array => [
+                'id' => $item->id,
+                'kode' => $item->kelasKuliah->mataKuliah->kode_matkul,
+                'nama' => $item->kelasKuliah->mataKuliah->nama_matkul,
+                'jenis' => $item->kelasKuliah->mataKuliah->jenis,
+                'sks' => $item->kelasKuliah->mataKuliah->sks,
+                'nilai' => strtoupper($item->nilai),
+                'bobot' => SkalaNilai::bobot($item->nilai),
+                'mutu' => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai),
+                'diambil' => $jumlahPengambilan[$item->kelasKuliah->matkul_id] ?? 1,
+            ])
+            ->sortBy('kode')
+            ->values();
+        $totalSks = $transkrip->sum('sks');
+        $totalMutu = $transkrip->sum('mutu');
+        $totalSksLulus = $transkrip->filter(fn (array $item): bool => SkalaNilai::lulus($item['nilai']))->sum('sks');
+
+        return [
+            'transkrip' => $transkrip,
+            'ringkasan' => ['totalMatkul' => $transkrip->count(), 'totalSks' => $totalSks, 'totalSksLulus' => $totalSksLulus, 'totalMutu' => $totalMutu, 'ipk' => $totalSks > 0 ? round($totalMutu / $totalSks, 2) : null],
+        ];
     }
 
     /**

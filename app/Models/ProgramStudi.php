@@ -28,6 +28,17 @@ class ProgramStudi extends Model
         return $this->belongsTo(DosenProfile::class, 'kaprodi');
     }
 
+    /**
+     * Baris unit di kop dokumen PDF, mis. "Fakultas Teknik · Program Studi S1 Informatika".
+     */
+    public function unitKop(): string
+    {
+        return collect([
+            $this->fakultas?->nama_fakultas ? 'Fakultas '.preg_replace('/^Fakultas\s+/i', '', $this->fakultas->nama_fakultas) : null,
+            'Program Studi '.trim(($this->jenjang ? $this->jenjang.' ' : '').$this->nama_prodi),
+        ])->filter()->implode(' · ');
+    }
+
     public function mataKuliah(): HasMany
     {
         return $this->hasMany(MataKuliah::class, 'prodi_id');

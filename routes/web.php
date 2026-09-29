@@ -444,6 +444,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
 
     Route::middleware(['can:mahasiswa.krs', 'tagihan.lunas'])->group(function (): void {
         Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
+        Route::get('krs/download', [KrsController::class, 'download'])->name('mahasiswa.krs.download');
         Route::post('krs/simpan', [KrsController::class, 'simpan'])->name('mahasiswa.krs.simpan');
         Route::post('krs/{kelasKuliah}', [KrsController::class, 'store'])->name('mahasiswa.krs.store');
         Route::delete('krs/{krs}', [KrsController::class, 'destroy'])->name('mahasiswa.krs.destroy');
@@ -453,6 +454,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('hasil-studi', [HasilStudiController::class, 'index'])->name('mahasiswa.hasil-studi');
         Route::get('hasil-studi/download', [HasilStudiController::class, 'downloadKhs'])->name('mahasiswa.hasil-studi.download');
         Route::get('transkrip', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.transkrip');
+        Route::get('transkrip/download', [HasilStudiController::class, 'downloadTranskrip'])->name('mahasiswa.transkrip.download');
         Route::get('khs/transkrip-nilai', [HasilStudiController::class, 'transkrip'])->name('mahasiswa.khs.transkrip-nilai');
         Route::get('khs', [HasilStudiController::class, 'index'])->name('mahasiswa.khs');
     });

@@ -1,94 +1,55 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <title>Daftar Hadir {{ ['remidi' => 'Remidi', 'uts_susulan' => 'UTS Susulan', 'uas_susulan' => 'UAS Susulan'][$jenis] ?? strtoupper($jenis) }} {{ $kelas->kode_kelas }}</title>
-    <style>
-        * { box-sizing: border-box; }
-        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #1a1a1a; margin: 0; }
-        .header { border-bottom: 2px solid #0075de; padding-bottom: 8px; margin-bottom: 12px; }
-        .kop { width: 100%; }
-        .kop td { vertical-align: middle; }
-        .kop-logo { width: 66px; }
-        .kop-logo img { max-height: 58px; max-width: 58px; }
-        .kop-teks h1 { font-size: 14px; margin: 0; text-transform: uppercase; }
-        .header p { margin: 2px 0 0; font-size: 9px; color: #555; }
-        .title { text-align: center; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px; }
-        table { width: 100%; border-collapse: collapse; }
-        .identitas { margin-bottom: 12px; }
-        .identitas td { padding: 2px 0; }
-        .identitas .label { width: 110px; color: #555; }
-        .grid th, .grid td { border: 1px solid #cccccc; padding: 6px; }
-        .grid th { background: #f2f2f2; font-size: 9px; text-transform: uppercase; }
-        .center { text-align: center; }
-        .tidak { color: #b42318; font-weight: bold; }
-        .ttd-kolom { width: 110px; }
-        .keterangan { margin-top: 6px; font-size: 8px; color: #555; }
-        .ttd { margin-top: 28px; width: 40%; margin-left: 60%; text-align: center; }
-        .ttd .ruang { height: 55px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <table class="kop">
-            <tr>
-                @if ($logoSrc)
-                    <td class="kop-logo"><img src="{{ $logoSrc }}" alt="Logo {{ $institusi->nama_pt }}"></td>
-                @endif
-                <td class="kop-teks">
-                    <h1>{{ $institusi->nama_pt }}</h1>
-                    @if ($kontak)
-                        <p>{{ implode(' | ', $kontak) }}</p>
-                    @endif
-                </td>
-            </tr>
-        </table>
-    </div>
+@extends('pdf.layout')
 
-    <p class="title">Daftar Hadir {{ ['uts' => 'Ujian Tengah Semester', 'uas' => 'Ujian Akhir Semester', 'remidi' => 'Ujian Remidi', 'uts_susulan' => 'Ujian Tengah Semester Susulan', 'uas_susulan' => 'Ujian Akhir Semester Susulan'][$jenis] }}</p>
+@php($namaJenis = ['uts' => 'Ujian Tengah Semester', 'uas' => 'Ujian Akhir Semester', 'remidi' => 'Ujian Remidi', 'uts_susulan' => 'Ujian Tengah Semester Susulan', 'uas_susulan' => 'Ujian Akhir Semester Susulan'][$jenis])
+
+@section('judul-berkas', 'Daftar Hadir '.$namaJenis.' '.$kelas->kode_kelas)
+
+@section('isi')
+    <p class="judul">Daftar Hadir {{ $namaJenis }}</p>
+    <p class="subjudul">Tahun Akademik {{ $kelas->tahunAkademik?->tahun }} Semester {{ $kelas->tahunAkademik?->semester }}</p>
 
     <table class="identitas">
         <tr>
-            <td class="label">Mata Kuliah</td><td>: {{ $kelas->mataKuliah?->kode_matkul }} — {{ $kelas->mataKuliah?->nama_matkul }}</td>
-            <td class="label">Tahun Akademik</td><td>: {{ $kelas->tahunAkademik?->tahun }} {{ $kelas->tahunAkademik?->semester }}</td>
+            <td class="label">Mata Kuliah</td><td class="titik">:</td><td>{{ $kelas->mataKuliah?->kode_matkul }} – {{ $kelas->mataKuliah?->nama_matkul }}</td>
+            <td class="label">Hari, Tanggal</td><td class="titik">:</td><td>{{ $jadwal->tanggal->translatedFormat('l, d F Y') }}</td>
         </tr>
         <tr>
-            <td class="label">Kelas</td><td>: {{ $kelas->kode_kelas }}</td>
-            <td class="label">Hari, Tanggal</td><td>: {{ $jadwal->tanggal->translatedFormat('l, d F Y') }}</td>
+            <td class="label">Kelas</td><td class="titik">:</td><td>{{ $kelas->kode_kelas }}</td>
+            <td class="label">Waktu</td><td class="titik">:</td><td>{{ substr($jadwal->jam_mulai, 0, 5) }}–{{ substr($jadwal->jam_akhir, 0, 5) }} WIB</td>
         </tr>
         <tr>
-            <td class="label">Dosen</td><td>: {{ $kelas->dosen?->user?->name ?? '-' }}</td>
-            <td class="label">Jam / Ruang</td><td>: {{ substr($jadwal->jam_mulai, 0, 5) }}–{{ substr($jadwal->jam_akhir, 0, 5) }} / {{ $jadwal->ruang?->kode_ruang ?? '-' }}</td>
+            <td class="label">Dosen Pengampu</td><td class="titik">:</td><td>{{ $kelas->dosen?->user?->name ?? '-' }}</td>
+            <td class="label">Ruang</td><td class="titik">:</td><td>{{ $jadwal->ruang?->kode_ruang ?? '-' }}</td>
         </tr>
     </table>
 
     <table class="grid">
         <thead>
             <tr>
-                <th style="width: 26px;">No</th>
-                <th style="width: 90px;">NIM</th>
-                <th>Nama</th>
+                <th style="width: 24px;">No</th>
+                <th style="width: 84px;">NIM</th>
+                <th>Nama Mahasiswa</th>
                 @if (in_array($jenis, ['uts', 'uas'], true))
-                    <th style="width: 70px;">Kehadiran</th>
+                    <th style="width: 58px;">Kehadiran</th>
                 @endif
                 @if ($aktif)
-                    <th style="width: 110px;">Syarat Ujian</th>
+                    <th style="width: 84px;">Syarat Ujian</th>
                 @endif
-                <th class="ttd-kolom">Tanda Tangan</th>
+                <th style="width: 110px;">Tanda Tangan</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($peserta as $i => $mhs)
                 @php($syarat = $mhs['syarat'])
                 <tr>
-                    <td class="center">{{ $i + 1 }}</td>
-                    <td>{{ $mhs['nim'] }}</td>
+                    <td class="tengah">{{ $i + 1 }}</td>
+                    <td class="tengah">{{ $mhs['nim'] }}</td>
                     <td>{{ $mhs['nama'] }}</td>
                     @if (in_array($jenis, ['uts', 'uas'], true))
-                        <td class="center">{{ isset($syarat['persen']) ? $syarat['persen'].'%' : '-' }}</td>
+                        <td class="tengah">{{ isset($syarat['persen']) ? $syarat['persen'].'%' : '-' }}</td>
                     @endif
                     @if ($aktif)
-                        <td class="center {{ ($syarat['memenuhi'] ?? true) ? '' : 'tidak' }}">
+                        <td class="tengah {{ ($syarat['memenuhi'] ?? true) ? '' : 'merah' }}">
                             @if ($syarat['dispensasi'] ?? null)
                                 Dispensasi
                             @elseif ($syarat['memenuhi'] ?? true)
@@ -98,26 +59,35 @@
                             @endif
                         </td>
                     @endif
-                    <td></td>
+                    <td style="height: 22px;"><span class="kecil">{{ $i + 1 }}.</span></td>
                 </tr>
             @endforeach
         </tbody>
     </table>
-    <p class="keterangan">
+    <p class="catatan">
         @if ($jenis === 'remidi')
             Peserta remidi yang tagihan remidinya sudah lunas.
         @elseif (! in_array($jenis, ['uts', 'uas'], true))
             Peserta ujian susulan yang pengajuannya disetujui dan tagihannya lunas.
         @else
-        Kehadiran dihitung dari pertemuan kuliah yang sudah selesai{{ $jenis === 'uts' ? ' sebelum UTS' : '' }}; izin dan sakit dihitung tidak hadir.
-        @if ($aktif) Batas minimal {{ $min }}%. @endif
+            Kehadiran dihitung dari pertemuan kuliah yang sudah selesai{{ $jenis === 'uts' ? ' sebelum UTS' : '' }}; izin dan sakit dihitung tidak hadir.
+            @if ($aktif) Batas minimal {{ $min }}%. @endif
         @endif
     </p>
 
-    <div class="ttd">
-        <p>Pengawas / Dosen,</p>
-        <div class="ruang"></div>
-        <p>(................................................)</p>
-    </div>
-</body>
-</html>
+    <table class="ttd">
+        <tr>
+            <td style="width: 50%;">Pengawas Ujian,</td>
+            <td style="width: 50%;">Dosen Pengampu,</td>
+        </tr>
+        <tr><td class="ruang"></td><td class="ruang"></td></tr>
+        <tr>
+            <td>(..................................................)</td>
+            <td><span class="nama">{{ $kelas->dosen?->user?->name ?? '-' }}</span></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td>NIDN. {{ $kelas->dosen?->nidn ?: '....................' }}</td>
+        </tr>
+    </table>
+@endsection

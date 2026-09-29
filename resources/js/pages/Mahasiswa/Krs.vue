@@ -3,6 +3,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
+import { Download } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 
 type KelasKuliah = {
@@ -186,11 +187,21 @@ const jadwal = (kelas: KelasKuliah) =>
     <AppLayout :breadcrumbs="[{ title: 'Rencana Studi (KRS)', href: route('mahasiswa.krs') }]">
         <div class="min-h-full bg-[#f6f5f4]">
             <div class="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div class="space-y-1">
-                    <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Rencana Studi (KRS)</h1>
-                    <p class="text-sm leading-5 text-[#615d59]">
-                        Kelas kuliah semester Anda di tahun akademik aktif, ditambah mata kuliah yang tertunda atau perlu diulang.
-                    </p>
+                <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                    <div class="space-y-1">
+                        <h1 class="text-[26px] font-bold leading-[1.23] tracking-[-0.625px] text-black">Rencana Studi (KRS)</h1>
+                        <p class="text-sm leading-5 text-[#615d59]">
+                            Kelas kuliah semester Anda di tahun akademik aktif, ditambah mata kuliah yang tertunda atau perlu diulang.
+                        </p>
+                    </div>
+                    <a
+                        v-if="krsTahunIni.length"
+                        :href="route('mahasiswa.krs.download')"
+                        class="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-[#0075de] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#005bab] sm:self-auto"
+                    >
+                        <Download class="h-4 w-4" />
+                        Download KRS
+                    </a>
                 </div>
 
                 <div class="rounded-xl border border-[#0075de] bg-[#0075de] p-5 text-white shadow-sm">

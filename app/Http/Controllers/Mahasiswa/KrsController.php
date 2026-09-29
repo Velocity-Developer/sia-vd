@@ -10,12 +10,16 @@ use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\PengaturanAkademik;
+use App\Models\PengaturanInstitusi;
 use App\Models\TahunAkademik;
 use App\TawaranKrs;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -213,6 +217,50 @@ class KrsController extends Controller
         ]);
 
         return back()->with('krs_success', 'KRS berhasil disimpan dan dikunci.');
+    }
+
+    /**
+     * KRS (PDF) untuk tahun akademik aktif, atau tahun akademik yang dipilih.
+     */
+    public function download(Request $request): HttpResponse
+    {
+        $mahasiswa = $this->mahasiswa($request)->muatPengesahan();
+        $tahunAkademik = $request->filled('tahun_akademik_id')
+            ? TahunAkademik::find($request->integer('tahun_akademik_id'))
+            : TahunAkademik::aktif();
+        abort_if($tahunAkademik === null, 404);
+
+        $krs = $mahasiswa->krs()
+            ->whereHas('kelasKuliah', fn ($query) => $query->where('tahun_akademik_id', $tahunAkademik->id))
+            ->with([
+                'kelasKuliah:id,matkul_id,dosen_id,kode_kelas',
+                'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul,sks,jenis',
+                'kelasKuliah.dosen:id,user_id',
+                'kelasKuliah.dosen.user:id,name',
+                'kelasKuliah.jadwals' => fn ($query) => $query->with('ruang:id,kode_ruang')->orderBy('jam_mulai'),
+            ])
+            ->get()
+            ->sortBy(fn (Krs $item): string => (string) $item->kelasKuliah?->mataKuliah?->kode_matkul)
+            ->values();
+        abort_if($krs->isEmpty(), 404, 'Belum ada kelas yang diambil pada tahun akademik ini.');
+
+        $ipsSebelumnya = $mahasiswa->ipsSemesterSebelum($tahunAkademik, $this->semuaKrs($mahasiswa));
+        $institusi = PengaturanInstitusi::current();
+
+        return Pdf::loadView('pdf.krs', [
+            'institusi' => $institusi,
+            'logoSrc' => $institusi->logoDataUri(),
+            'kontak' => $institusi->kontakKop(),
+            'mahasiswa' => $mahasiswa,
+            'tahunAkademik' => $tahunAkademik,
+            'krs' => $krs,
+            'ipsSebelumnya' => $ipsSebelumnya['ips'] ?? null,
+            'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null),
+            'disimpanPada' => KrsSemester::query()
+                ->where('mahasiswa_id', $mahasiswa->id)
+                ->where('tahun_akademik_id', $tahunAkademik->id)
+                ->first()?->disimpan_pada,
+        ])->download('krs-'.$mahasiswa->nim.'-'.Str::slug($tahunAkademik->tahun.'-'.$tahunAkademik->semester).'.pdf');
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile

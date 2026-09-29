@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head } from '@inertiajs/vue3';
+import { Download } from 'lucide-vue-next';
 
 type Item = { id: number; kode: string; nama: string; jenis: string; sks: number; nilai: string; diambil: number };
 defineProps<{
@@ -14,9 +15,19 @@ defineProps<{
     <AppLayout :breadcrumbs="[{ title: 'Transkrip Nilai', href: route('mahasiswa.transkrip') }]">
         <div class="min-h-full bg-[#f6f5f4] dark:bg-gray-950">
             <div class="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-                <div>
-                    <h1 class="text-[26px] font-bold tracking-[-0.625px] text-black dark:text-white">Transkrip Nilai</h1>
-                    <p class="mt-1 text-sm text-[#615d59] dark:text-gray-400">Rekapitulasi seluruh hasil studi yang telah dinilai.</p>
+                <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                    <div>
+                        <h1 class="text-[26px] font-bold tracking-[-0.625px] text-black dark:text-white">Transkrip Nilai</h1>
+                        <p class="mt-1 text-sm text-[#615d59] dark:text-gray-400">Rekapitulasi seluruh hasil studi yang telah dinilai.</p>
+                    </div>
+                    <a
+                        v-if="transkrip.length"
+                        :href="route('mahasiswa.transkrip.download')"
+                        class="inline-flex items-center gap-2 self-start rounded-lg bg-[#0075de] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#005bab] sm:self-auto"
+                    >
+                        <Download class="h-4 w-4" />
+                        Download Transkrip
+                    </a>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-3">
                     <div class="rounded-xl border border-[#0075de] bg-[#0075de] p-5 text-white shadow-sm">
