@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Pengajuan tugas akhir, pendadaran, dan wisuda. Isian form berbeda per jenis dan disimpan di `isian`.
+ * Pengajuan tugas akhir, pendadaran, wisuda, cuti, dan aktif kembali. Isian form berbeda per jenis dan disimpan di `isian`.
  *
  * Selama berstatus menunggu, mahasiswa tidak bisa membatalkan maupun mengisi form baru untuk jenis yang
  * sama. "Perlu perbaikan" membuka form yang sama untuk dikirim ulang; "ditolak" membuka form baru.
@@ -24,12 +24,24 @@ class PengajuanAkademik extends Model
 
     public const WISUDA = 'wisuda';
 
+    /** Cuti satu semester (isian tahun_akademik_id + alasan, lampiran bukti bayar); lihat App\PengajuanCuti. */
+    public const CUTI = 'cuti';
+
+    /** Mahasiswa Cuti meminta status Aktif kembali. */
+    public const AKTIF_KEMBALI = 'aktif_kembali';
+
+    /** Jenis milik halaman Tugas Akhir & Wisuda. */
     public const JENIS = [self::TUGAS_AKHIR, self::PENDADARAN, self::WISUDA];
+
+    /** Jenis milik halaman Pengajuan Cuti. */
+    public const JENIS_CUTI = [self::CUTI, self::AKTIF_KEMBALI];
 
     public const LABEL_JENIS = [
         self::TUGAS_AKHIR => 'Tugas Akhir',
         self::PENDADARAN => 'Pendadaran',
         self::WISUDA => 'Wisuda',
+        self::CUTI => 'Cuti',
+        self::AKTIF_KEMBALI => 'Aktif Kembali',
     ];
 
     /** Menunggu keputusan admin. */

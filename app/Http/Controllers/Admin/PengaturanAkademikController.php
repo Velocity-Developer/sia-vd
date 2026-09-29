@@ -29,6 +29,7 @@ class PengaturanAkademikController extends Controller
             'hurufMaksRemidi' => $pengaturan->huruf_maks_remidi,
             'susulan' => $pengaturan->only(['batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari']),
             'minSksPendadaran' => $pengaturan->min_sks_pendadaran,
+            'maksCuti' => $pengaturan->maks_cuti,
             'pindahKelasAktif' => PengaturanPindahKelas::current()->is_active,
             'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
@@ -236,6 +237,17 @@ class PengaturanAkademikController extends Controller
         PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
 
         return back()->with('success', 'Pengaturan tugas akhir disimpan.');
+    }
+
+    public function updateCuti(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'maks_cuti' => ['required', 'integer', 'min:0', 'max:14'],
+        ], attributes: ['maks_cuti' => 'Batas cuti']);
+
+        PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
+
+        return back()->with('success', 'Pengaturan cuti disimpan.');
     }
 
     public function updateRemidi(Request $request): RedirectResponse

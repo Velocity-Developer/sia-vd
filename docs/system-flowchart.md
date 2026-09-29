@@ -1,6 +1,6 @@
 # Flowchart Sistem SIA VD
 
-Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `693048f`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 18](system-flow.md#18-perlu-dikonfirmasi).
+Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `693048f`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 19](system-flow.md#19-perlu-dikonfirmasi).
 
 Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar dan diunduh): [system-flowchart.html](system-flowchart.html). Bangun ulang dengan `python3 docs/build-flowchart-html.py` setiap kali berkas ini berubah.
 
@@ -31,8 +31,9 @@ Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar
 23. [Tugas akhir sampai wisuda](#23-tugas-akhir-sampai-wisuda)
 24. [Status pengajuan TA, pendadaran, dan wisuda](#24-status-pengajuan-ta-pendadaran-dan-wisuda)
 25. [Status pendadaran](#25-status-pendadaran)
-26. [Pindah kelas](#26-pindah-kelas)
-27. [Hubungan data utama](#27-hubungan-data-utama)
+26. [Cuti dan aktif kembali](#26-cuti-dan-aktif-kembali)
+27. [Pindah kelas](#27-pindah-kelas)
+28. [Hubungan data utama](#28-hubungan-data-utama)
 
 ---
 
@@ -724,7 +725,31 @@ stateDiagram-v2
     tidak_lulus --> [*]: mahasiswa mendaftar ulang
 ```
 
-## 26. Pindah kelas
+## 26. Cuti dan aktif kembali
+
+```mermaid
+flowchart TD
+    A["Admin isi periode pengajuan cuti<br/>di Tahun Akademik (buka–tutup)"] --> B["Mahasiswa buka Pengajuan Cuti"]
+    B --> C{"Status Aktif, cuti disetujui di bawah maks_cuti,<br/>ada semester yang periodenya dibuka?"}
+    C -- Tidak --> C1["Form terkunci + alasan"]
+    C -- Ya --> D["Pilih semester, alasan,<br/>bukti bayar cuti (wajib), dokumen pendukung"]
+    D --> E["Pengajuan menunggu<br/>(form terkunci)"]
+    E --> F{"Admin memproses"}
+    F -- "Perbaikan" --> G["Catatan wajib; mahasiswa kirim ulang form yang sama"] --> E
+    F -- "Tolak" --> H["Catatan wajib; boleh mengajukan lagi"]
+    F -- "Setujui" --> I{"Cek ulang: masih Aktif,<br/>di bawah batas, semester belum berakhir?"}
+    I -- Tidak --> I1["Error: minta perbaikan atau tolak"]
+    I -- Ya --> J{"Semester tujuan sedang aktif?"}
+    J -- Ya --> K["Status mahasiswa = Cuti"]
+    J -- Tidak --> L["Menunggu; saat semester itu diaktifkan<br/>status Aktif menjadi Cuti"] --> K
+    K --> M["Tetap bisa masuk; tanpa tagihan dan KRS<br/>(KRS/tagihan yang sudah ada dibiarkan)"]
+    M --> N["Ajukan aktif kembali (keterangan opsional)"]
+    N --> O{"Admin memproses"}
+    O -- Setujui --> P(["Status kembali Aktif"])
+    O -- "Perbaikan / tolak" --> N
+```
+
+## 27. Pindah kelas
 
 ```mermaid
 flowchart TD
@@ -747,7 +772,7 @@ flowchart TD
     L --> M(["Status disetujui, pesan: jumlah dipindah dan tertinggal<br/>tanpa notifikasi ke mahasiswa"])
 ```
 
-## 27. Hubungan data utama
+## 28. Hubungan data utama
 
 ```mermaid
 erDiagram

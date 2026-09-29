@@ -170,7 +170,7 @@ class BerkasController extends Controller
         $user = $request->user();
         $dosenId = $user->dosenProfile?->id;
         $boleh = ($user->mahasiswaProfile !== null && $pengajuanAkademik->mahasiswa_id === $user->mahasiswaProfile->id)
-            || $user->hasPermission('admin.pengajuan-akademik')
+            || $user->hasPermission(in_array($pengajuanAkademik->jenis, PengajuanAkademik::JENIS_CUTI, true) ? 'admin.pengajuan-cuti' : 'admin.pengajuan-akademik')
             || ($dosenId !== null && $user->hasPermission('dosen.bimbingan')
                 && (TugasAkhir::milik($pengajuanAkademik->mahasiswa_id)?->dibimbingOleh($dosenId)
                     || Pendadaran::query()->where('pengajuan_id', $pengajuanAkademik->id)->diuji($dosenId)->exists()));

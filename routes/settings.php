@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function () {
             Route::put('akademik/remidi', [PengaturanAkademikController::class, 'updateRemidi'])->name('admin.pengaturan-akademik.remidi');
             Route::put('akademik/susulan', [PengaturanAkademikController::class, 'updateSusulan'])->name('admin.pengaturan-akademik.susulan');
             Route::put('akademik/tugas-akhir', [PengaturanAkademikController::class, 'updateTugasAkhir'])->name('admin.pengaturan-akademik.tugas-akhir');
+            Route::put('akademik/cuti', [PengaturanAkademikController::class, 'updateCuti'])->name('admin.pengaturan-akademik.cuti');
         });
 
         Route::middleware('can:admin.pengaturan-tampilan')->group(function (): void {

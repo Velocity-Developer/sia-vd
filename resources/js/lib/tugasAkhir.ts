@@ -64,4 +64,12 @@ export const LABEL_LAMPIRAN: Record<string, string> = {
     pas_foto: 'Pas foto',
     naskah_final: 'Naskah final',
     bebas_pinjam: 'Bebas pinjam perpustakaan',
+    dokumen_pendukung: 'Dokumen pendukung',
+};
+
+export type JenisPengajuanCuti = 'cuti' | 'aktif_kembali';
+
+export const JENIS_PENGAJUAN_CUTI: Record<JenisPengajuanCuti, string> = {
+    cuti: 'Cuti',
+    aktif_kembali: 'Aktif Kembali',
 };

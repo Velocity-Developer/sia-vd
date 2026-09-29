@@ -31,10 +31,13 @@ class JenisBiaya extends Model
     /** Informasi biaya wisuda: tidak ditagihkan, bukti bayar diunggah di form pendaftaran. */
     public const WISUDA = 'wisuda';
 
-    public const KATEGORI = [self::SEMESTER, self::REMIDI, self::SUSULAN, self::PENDADARAN, self::WISUDA];
+    /** Informasi biaya cuti: tidak ditagihkan, bukti bayar diunggah di form pengajuan cuti. */
+    public const CUTI = 'cuti';
+
+    public const KATEGORI = [self::SEMESTER, self::REMIDI, self::SUSULAN, self::PENDADARAN, self::WISUDA, self::CUTI];
 
     /** Kategori yang hanya ditampilkan sebagai informasi di Biaya Kuliah. */
-    public const INFO = [self::PENDADARAN, self::WISUDA];
+    public const INFO = [self::PENDADARAN, self::WISUDA, self::CUTI];
 
     protected $table = 'jenis_biaya';
 

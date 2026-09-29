@@ -48,6 +48,7 @@ class InfoBiayaKuliahController extends Controller
             'biayaTugasAkhir' => [
                 'pendadaran' => JenisBiaya::infoUntuk($mahasiswa, JenisBiaya::PENDADARAN),
                 'wisuda' => JenisBiaya::infoUntuk($mahasiswa, JenisBiaya::WISUDA),
+                'cuti' => JenisBiaya::infoUntuk($mahasiswa, JenisBiaya::CUTI),
             ],
         ]);
     }

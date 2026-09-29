@@ -39,6 +39,7 @@ class PermissionCatalog
             ['key' => 'admin.ujian', 'name' => 'Jadwal Ujian', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Menyusun, menerbitkan, dan mengatur mode jadwal UTS/UAS seluruh kelas.', 'defaults' => $admin],
             ['key' => 'admin.pindah-kelas', 'name' => 'Pindah Kelas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Memproses pengajuan dan pengaturan pindah kelas.', 'defaults' => $admin],
             ['key' => 'admin.pengajuan-akademik', 'name' => 'Pengajuan TA & Wisuda', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Memproses pengajuan tugas akhir, pendadaran, dan wisuda.', 'defaults' => $admin],
+            ['key' => 'admin.pengajuan-cuti', 'name' => 'Pengajuan Cuti', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Memproses pengajuan cuti dan aktif kembali mahasiswa.', 'defaults' => $admin],
             ['key' => 'admin.jenis-biaya', 'name' => 'Jenis Biaya', 'group' => 'Keuangan', 'user_type' => null, 'description' => 'Mengelola jenis biaya kuliah dan tarifnya per prodi/angkatan.', 'defaults' => $admin],
             ['key' => 'admin.tagihan', 'name' => 'Tagihan Mahasiswa', 'group' => 'Keuangan', 'user_type' => null, 'description' => 'Menerbitkan tagihan semester dan mengubah status pembayaran mahasiswa.', 'defaults' => $admin],
             ['key' => 'admin.users.dosen', 'name' => 'Manage User Dosen', 'group' => 'Manajemen Pengguna', 'user_type' => null, 'description' => 'Mengelola akun dan profil dosen.', 'defaults' => $admin],
@@ -70,6 +71,7 @@ class PermissionCatalog
             ['key' => 'mahasiswa.ujian', 'name' => 'Ujian Mahasiswa', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Melihat jadwal ujian, mencetak kartu ujian, dan mengerjakan ujian online.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.pindah-kelas', 'name' => 'Pengajuan Pindah Kelas', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Mengajukan pindah kelas.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.tugas-akhir', 'name' => 'Tugas Akhir & Wisuda', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Mengajukan tugas akhir, mendaftar pendadaran, dan mendaftar wisuda.', 'defaults' => [UserType::Mahasiswa]],
+            ['key' => 'mahasiswa.pengajuan-cuti', 'name' => 'Pengajuan Cuti', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Mengajukan cuti dan aktif kembali.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.info-biaya', 'name' => 'Info Biaya Kuliah', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Melihat tagihan dan status pembayaran kuliah.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.perpustakaan', 'name' => 'Perpustakaan', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Membuka menu perpustakaan dan riwayat pinjaman.', 'defaults' => [UserType::Mahasiswa]],
         ];

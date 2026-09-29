@@ -33,6 +33,7 @@ const props = defineProps<{
     hurufMaksRemidi: string | null;
     susulan: { batas_pengajuan_susulan_hari: number; batas_bayar_susulan_hari: number };
     minSksPendadaran: number;
+    maksCuti: number;
     pindahKelasAktif: boolean;
     presensi: Presensi;
     batasSks: BatasSks[];
@@ -64,6 +65,8 @@ const simpanSusulan = () => susulanForm.put(route('admin.pengaturan-akademik.sus
 
 const tugasAkhirForm = useForm({ min_sks_pendadaran: props.minSksPendadaran });
 const simpanTugasAkhir = () => tugasAkhirForm.put(route('admin.pengaturan-akademik.tugas-akhir'), { preserveScroll: true });
+const cutiForm = useForm({ maks_cuti: props.maksCuti });
+const simpanCuti = () => cutiForm.put(route('admin.pengaturan-akademik.cuti'), { preserveScroll: true });
 
 const remidiForm = useForm({ huruf_maks_remidi: props.hurufMaksRemidi ?? '' });
 const simpanRemidi = () =>
@@ -84,6 +87,7 @@ const daftarBagian = [
     { id: 'remidi', judul: 'Remidi' },
     { id: 'susulan', judul: 'Ujian Susulan' },
     { id: 'tugas-akhir', judul: 'Tugas Akhir' },
+    { id: 'cuti', judul: 'Cuti' },
     { id: 'presensi', judul: 'Presensi' },
 ];
 
@@ -419,6 +423,33 @@ const inp = 'h-9 rounded-lg border-[#dddddd]';
                         class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
                     >
                         Simpan Pengaturan Tugas Akhir
+                    </Button>
+                </div>
+            </form>
+        </section>
+
+        <section id="cuti" class="flex scroll-mt-4 flex-col gap-4">
+            <h2 class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">Cuti</h2>
+            <form class="rounded-xl border border-[#e6e6e6] bg-white p-6 shadow-sm" @submit.prevent="simpanCuti">
+                <h2 class="text-lg font-semibold text-black">Batas Cuti</h2>
+                <p class="mt-1 text-sm text-[#615d59]">
+                    Jumlah semester cuti yang boleh disetujui selama studi. Periode pengajuan cuti diatur per semester di Master Akademik → Tahun
+                    Akademik.
+                </p>
+                <div class="mt-4 grid content-start gap-4 sm:grid-cols-2">
+                    <div class="grid content-start gap-2">
+                        <Label for="maks_cuti">Maksimal semester cuti</Label>
+                        <Input id="maks_cuti" v-model="cutiForm.maks_cuti" type="number" min="0" max="14" :class="inp" />
+                        <InputError :message="cutiForm.errors.maks_cuti" />
+                    </div>
+                </div>
+                <div class="mt-5 flex justify-end">
+                    <Button
+                        type="submit"
+                        :disabled="cutiForm.processing"
+                        class="h-10 rounded-lg bg-[#0075de] px-5 text-sm font-medium text-white hover:bg-[#005bab]"
+                    >
+                        Simpan Pengaturan Cuti
                     </Button>
                 </div>
             </form>

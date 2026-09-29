@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\AllowedUpload;
+use App\Http\Controllers\Concerns\KirimPengajuanAkademik;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
 use App\Models\JenisBiaya;
@@ -16,12 +17,9 @@ use App\Models\Wisuda;
 use App\SyaratTugasAkhir;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,6 +28,8 @@ use Inertia\Response;
  */
 class TugasAkhirController extends Controller
 {
+    use KirimPengajuanAkademik;
+
     /** Keadaan form satu tahap. */
     public const TERKUNCI = 'terkunci';
 
@@ -113,7 +113,7 @@ class TugasAkhirController extends Controller
                     'predikat' => $wisuda->predikat,
                 ] : null,
             ],
-            'riwayat' => PengajuanAkademik::query()->where('mahasiswa_id', $mahasiswa->id)
+            'riwayat' => PengajuanAkademik::query()->where('mahasiswa_id', $mahasiswa->id)->whereIn('jenis', PengajuanAkademik::JENIS)
                 ->with('riwayat.pengguna:id,name')->latest('id')->get()
                 ->map(fn (PengajuanAkademik $p): array => [
                     'id' => $p->id,
@@ -253,64 +253,6 @@ class TugasAkhirController extends Controller
             self::MENUNGGU => 'Pendaftaran Anda masih menunggu diproses admin.',
             self::BELUM_MEMENUHI => 'Anda belum memenuhi syarat pendaftaran wisuda.',
         ], 'pendaftaran wisuda');
-    }
-
-    /**
-     * Alur kirim bersama: kunci baris mahasiswa, tentukan keadaan form, validasi, simpan berkas, lalu kirim.
-     *
-     * @param  callable(?PengajuanAkademik): string  $keadaan
-     * @param  callable(bool): array<string, list<string>>  $aturan  menerima "sedang perbaikan"
-     * @param  array<string, string>  $pesan
-     * @param  array<string, string>  $atribut
-     * @param  array<string, string>  $pesanKeadaan  keadaan yang menolak kiriman => pesan
-     */
-    private function simpan(Request $request, MahasiswaProfile $mahasiswa, string $jenis, callable $keadaan, callable $aturan, array $pesan, array $atribut, array $pesanKeadaan, string $nama): RedirectResponse
-    {
-        return DB::transaction(function () use ($request, $mahasiswa, $jenis, $keadaan, $aturan, $pesan, $atribut, $pesanKeadaan, $nama): RedirectResponse {
-            // Kunci baris mahasiswa agar dua kiriman bersamaan tidak membuat dua pengajuan.
-            MahasiswaProfile::query()->whereKey($mahasiswa->id)->lockForUpdate()->first();
-
-            $pengajuan = PengajuanAkademik::terakhir($mahasiswa->id, $jenis);
-            $status = $keadaan($pengajuan);
-            if (isset($pesanKeadaan[$status])) {
-                throw ValidationException::withMessages(['judul' => $pesanKeadaan[$status]]);
-            }
-            $perbaikan = $status === self::PERBAIKAN;
-
-            $aturanBerkas = $aturan($perbaikan);
-            $data = $request->validate($aturanBerkas, [...$pesan, '*.mimes' => 'Isi berkas :attribute tidak sesuai dengan formatnya.'], $atribut);
-
-            $kunciBerkas = collect($aturanBerkas)->filter(fn (array $r): bool => in_array('file', $r, true))->keys();
-            $lampiran = $perbaikan ? $pengajuan->lampiran : [];
-            foreach ($kunciBerkas as $kunci) {
-                $berkas = $request->file($kunci);
-                if (! $berkas instanceof UploadedFile) {
-                    continue;
-                }
-                if (isset($lampiran[$kunci])) {
-                    Storage::disk(AllowedUpload::DISK)->delete($lampiran[$kunci]);
-                }
-                $lampiran[$kunci] = $berkas->storeAs('pengajuan-akademik', Str::random(24).'.'.strtolower($berkas->getClientOriginalExtension()), AllowedUpload::DISK);
-            }
-
-            $isian = collect($data)->except($kunciBerkas->all())->all();
-            if ($perbaikan) {
-                $pengajuan->update(['isian' => $isian, 'lampiran' => $lampiran]);
-            } else {
-                $pengajuan = PengajuanAkademik::query()->create([
-                    'mahasiswa_id' => $mahasiswa->id,
-                    'jenis' => $jenis,
-                    'tugas_akhir_id' => $jenis === PengajuanAkademik::TUGAS_AKHIR ? null : TugasAkhir::milik($mahasiswa->id)?->id,
-                    'isian' => $isian,
-                    'lampiran' => $lampiran,
-                ]);
-            }
-            $pengajuan->kirim($request->user()->id);
-
-            $tujuan = $pengajuan->status === PengajuanAkademik::MENUNGGU_PEMBIMBING ? 'pembimbing' : 'admin';
-
-            return back()->with('success', ($perbaikan ? 'Perbaikan ' : 'Pengajuan ').$nama.' terkirim dan menunggu diproses '.$tujuan.'.');
-        });
     }
 
     /**

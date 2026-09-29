@@ -23,6 +23,7 @@ import {
     LayoutGrid,
     Library,
     NotebookPen,
+    PauseCircle,
     Receipt,
     Settings2,
     ShieldCheck,
@@ -90,6 +91,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                         permission: 'admin.pengajuan-akademik',
                     },
                     { title: 'Periode Wisuda', routeName: 'admin.periode-wisuda.index', icon: CalendarRange, permission: 'admin.pengajuan-akademik' },
+                    { title: 'Pengajuan Cuti', routeName: 'admin.pengajuan-cuti.index', icon: PauseCircle, permission: 'admin.pengajuan-cuti' },
                 ],
             },
             {
@@ -165,6 +167,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Info Kuliah', routeName: 'mahasiswa.info-kuliah', icon: FileText, permission: 'mahasiswa.info-kuliah' },
                     { title: 'Pindah Kelas', routeName: 'mahasiswa.pindah-kelas', icon: ArrowLeftRight, permission: 'mahasiswa.pindah-kelas' },
                     { title: 'Biaya Kuliah', routeName: 'mahasiswa.info-biaya-kuliah', icon: Wallet, permission: 'mahasiswa.info-biaya' },
+                    { title: 'Pengajuan Cuti', routeName: 'mahasiswa.pengajuan-cuti', icon: PauseCircle, permission: 'mahasiswa.pengajuan-cuti' },
                 ],
             },
             {

@@ -323,7 +323,7 @@ it('seeds tugas akhir examples that follow the TA rules', function () {
         ->and($ta->pembimbing_1_id)->not->toBeNull();
 
     // Biaya pendadaran/wisuda hanya informasi: tidak masuk tagihan semester.
-    expect(JenisBiaya::whereIn('kategori', JenisBiaya::INFO)->count())->toBe(2)
+    expect(JenisBiaya::whereIn('kategori', JenisBiaya::INFO)->count())->toBe(3)
         ->and(TagihanItem::whereIn('jenis_biaya_id', JenisBiaya::whereIn('kategori', JenisBiaya::INFO)->select('id'))->exists())->toBeFalse()
         ->and(PeriodeWisuda::sole()->bisaDidaftar())->toBeTrue();
 });

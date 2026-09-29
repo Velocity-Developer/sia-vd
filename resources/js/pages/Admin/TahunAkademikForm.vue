@@ -15,6 +15,8 @@ const form = useForm({
     tanggal_akhir: props.tahunAkademik?.tanggal_akhir?.slice(0, 10) ?? '',
     tanggal_krs_awal: props.tahunAkademik?.tanggal_krs_awal?.slice(0, 10) ?? '',
     tanggal_krs_akhir: props.tahunAkademik?.tanggal_krs_akhir?.slice(0, 10) ?? '',
+    tanggal_cuti_awal: props.tahunAkademik?.tanggal_cuti_awal?.slice(0, 10) ?? '',
+    tanggal_cuti_akhir: props.tahunAkademik?.tanggal_cuti_akhir?.slice(0, 10) ?? '',
     batas_input_nilai: props.tahunAkademik?.batas_input_nilai?.slice(0, 10) ?? '',
     batas_bayar_remidi: props.tahunAkademik?.batas_bayar_remidi?.slice(0, 10) ?? '',
     batas_input_nilai_remidi: props.tahunAkademik?.batas_input_nilai_remidi?.slice(0, 10) ?? '',
@@ -75,6 +77,19 @@ const sel =
                             <Label for="tanggal_krs_akhir">Tanggal KRS Akhir</Label>
                             <DatePicker id="tanggal_krs_akhir" v-model="form.tanggal_krs_akhir" placeholder="Pilih tanggal KRS akhir" />
                             <InputError :message="form.errors.tanggal_krs_akhir" />
+                        </div>
+                        <div class="grid content-start gap-2">
+                            <Label for="tanggal_cuti_awal">Buka Pengajuan Cuti</Label>
+                            <DatePicker id="tanggal_cuti_awal" v-model="form.tanggal_cuti_awal" placeholder="Pilih tanggal buka" />
+                            <p class="text-xs text-[#a39e98]">
+                                Mahasiswa bisa mengajukan cuti untuk semester ini selama periode ini. Kosongkan bila tidak dibuka.
+                            </p>
+                            <InputError :message="form.errors.tanggal_cuti_awal" />
+                        </div>
+                        <div class="grid content-start gap-2">
+                            <Label for="tanggal_cuti_akhir">Tutup Pengajuan Cuti</Label>
+                            <DatePicker id="tanggal_cuti_akhir" v-model="form.tanggal_cuti_akhir" placeholder="Pilih tanggal tutup" />
+                            <InputError :message="form.errors.tanggal_cuti_akhir" />
                         </div>
                         <div class="grid content-start gap-2">
                             <Label for="batas_input_nilai">Batas Input Nilai</Label>

@@ -1176,6 +1176,10 @@ class DemoSeeder extends Seeder
             JenisBiaya::query()->create(['kode' => $kode, 'nama' => $nama, 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => $kategori, 'keterangan' => 'Dibayar sebelum mendaftar; bukti bayar diunggah di form pendaftaran.', 'aktif' => true, 'urutan' => 5 + $urut])
                 ->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => $nominal]);
         }
+        // Cuti: biaya informasi + periode pengajuan cuti semester aktif dibuka sebulan sejak hari ini.
+        JenisBiaya::query()->create(['kode' => 'CUTI', 'nama' => 'Biaya Cuti', 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => JenisBiaya::CUTI, 'keterangan' => 'Dibayar sebelum mengajukan; bukti bayar diunggah di form pengajuan cuti.', 'aktif' => true, 'urutan' => 7])
+            ->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => 500_000]);
+        $tahunAktif->update(['tanggal_cuti_awal' => today(), 'tanggal_cuti_akhir' => min(today()->addMonth(), $tahunAktif->tanggal_akhir)]);
         PeriodeWisuda::query()->create([
             'nama' => 'Wisuda Periode I '.today()->addMonths(3)->year,
             'tanggal_acara' => today()->addMonths(3),

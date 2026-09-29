@@ -53,11 +53,12 @@ const props = defineProps<{
     dasar: Dasar | null;
     tagihanRemidi: TagihanRemidi[];
     tagihanSusulan: TagihanBerbukti[];
-    biayaTugasAkhir: Record<'pendadaran' | 'wisuda', { nama: string; nominal: number; keterangan: string | null }[]>;
+    biayaTugasAkhir: Record<'pendadaran' | 'wisuda' | 'cuti', { nama: string; nominal: number; keterangan: string | null }[]>;
 }>();
 const biayaInfo = [
     { kunci: 'pendadaran', judul: 'Pendadaran' },
     { kunci: 'wisuda', judul: 'Wisuda' },
+    { kunci: 'cuti', judul: 'Cuti' },
 ] as const;
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
@@ -244,13 +245,15 @@ const statusTagihan = (tagihan: Tagihan | null) => STATUS_TAGIHAN_REMIDI[tagihan
                 />
 
                 <section class="rounded-xl border border-[#e6e6e6] bg-white p-5 shadow-sm">
-                    <h2 class="text-lg font-semibold text-black">Biaya Pendadaran & Wisuda</h2>
+                    <h2 class="text-lg font-semibold text-black">Biaya Pendadaran, Wisuda & Cuti</h2>
                     <p class="mt-1 text-sm text-[#615d59]">
                         Informasi saja, tidak ditagihkan di sini. Bayar sesuai nominal, lalu unggah bukti bayarnya di form pendaftaran pendadaran atau
                         wisuda (menu
-                        <Link :href="route('mahasiswa.tugas-akhir')" class="font-medium text-[#0075de] hover:underline">Tugas Akhir & Wisuda</Link>).
+                        <Link :href="route('mahasiswa.tugas-akhir')" class="font-medium text-[#0075de] hover:underline">Tugas Akhir & Wisuda</Link>)
+                        atau form
+                        <Link :href="route('mahasiswa.pengajuan-cuti')" class="font-medium text-[#0075de] hover:underline">Pengajuan Cuti</Link>.
                     </p>
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div class="mt-4 grid gap-3 sm:grid-cols-3">
                         <div v-for="b in biayaInfo" :key="b.kunci" class="rounded-lg border border-[#e6e6e6] p-4">
                             <p class="text-xs font-semibold uppercase tracking-[0.08em] text-[#a39e98]">{{ b.judul }}</p>
                             <template v-if="props.biayaTugasAkhir[b.kunci].length">

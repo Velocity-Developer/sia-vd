@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use App\PengajuanCuti;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
@@ -15,18 +17,30 @@ class TahunAkademik extends Model
 
     public const SEMESTER = ['Ganjil', 'Genap'];
 
-    protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'batas_input_nilai', 'batas_bayar_remidi', 'batas_input_nilai_remidi', 'status'];
+    protected $fillable = ['tahun', 'semester', 'tanggal_mulai', 'tanggal_akhir', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'tanggal_cuti_awal', 'tanggal_cuti_akhir', 'batas_input_nilai', 'batas_bayar_remidi', 'batas_input_nilai_remidi', 'status'];
 
     protected function casts(): array
     {
         return [
             'tanggal_mulai' => 'date',
             'tanggal_akhir' => 'date',
+            'tanggal_cuti_awal' => 'date:Y-m-d',
+            'tanggal_cuti_akhir' => 'date:Y-m-d',
             'batas_input_nilai' => 'date:Y-m-d',
             'batas_bayar_remidi' => 'date:Y-m-d',
             'batas_input_nilai_remidi' => 'date:Y-m-d',
             'status' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Cuti yang disetujui untuk semester ini baru mengubah status mahasiswa saat semesternya aktif.
+        static::saved(function (self $tahun): void {
+            if ($tahun->status && ($tahun->wasRecentlyCreated || $tahun->wasChanged('status'))) {
+                PengajuanCuti::terapkan($tahun);
+            }
+        });
     }
 
     public static function aktif(): ?self
@@ -60,6 +74,21 @@ class TahunAkademik extends Model
             Carbon::parse($this->tanggal_krs_awal)->startOfDay(),
             Carbon::parse($this->tanggal_krs_akhir)->endOfDay(),
         );
+    }
+
+    /**
+     * Periode pengajuan cuti untuk semester ini sedang dibuka (tanggal kosong = tertutup).
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeCutiDibuka(Builder $query): void
+    {
+        $query->whereDate('tanggal_cuti_awal', '<=', Carbon::today())->whereDate('tanggal_cuti_akhir', '>=', Carbon::today());
+    }
+
+    public function label(): string
+    {
+        return $this->tahun.' '.$this->semester;
     }
 
     /**

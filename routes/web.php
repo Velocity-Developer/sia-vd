@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JenisBiayaController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\PengajuanAkademikController as AdminPengajuanAkademikController;
+use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
 use App\Http\Controllers\Admin\PeriodeWisudaController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
 use App\Http\Controllers\Admin\ProgramStudiController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\Mahasiswa\HasilStudiController;
 use App\Http\Controllers\Mahasiswa\InfoBiayaKuliahController;
 use App\Http\Controllers\Mahasiswa\InfoKuliahController as MahasiswaInfoKuliahController;
 use App\Http\Controllers\Mahasiswa\KrsController;
+use App\Http\Controllers\Mahasiswa\PengajuanCutiController as MahasiswaPengajuanCutiController;
 use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
 use App\Http\Controllers\Mahasiswa\PindahKelasController as MahasiswaPindahKelasController;
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
@@ -235,6 +237,13 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('periode-wisuda/{periodeWisuda}/cetak', [PeriodeWisudaController::class, 'cetak'])->name('admin.periode-wisuda.cetak');
         Route::post('periode-wisuda/{periodeWisuda}/skl', [PeriodeWisudaController::class, 'sklMassal'])->name('admin.periode-wisuda.skl-massal');
         Route::post('wisuda/{wisuda}/skl', [PeriodeWisudaController::class, 'skl'])->name('admin.wisuda.skl');
+    });
+
+    Route::middleware('can:admin.pengajuan-cuti')->group(function (): void {
+        Route::get('pengajuan-cuti', [AdminPengajuanCutiController::class, 'index'])->name('admin.pengajuan-cuti.index');
+        Route::post('pengajuan-cuti/{pengajuanAkademik}/setujui', [AdminPengajuanCutiController::class, 'setujui'])->name('admin.pengajuan-cuti.setujui');
+        Route::post('pengajuan-cuti/{pengajuanAkademik}/perbaikan', [AdminPengajuanCutiController::class, 'perbaikan'])->name('admin.pengajuan-cuti.perbaikan');
+        Route::post('pengajuan-cuti/{pengajuanAkademik}/tolak', [AdminPengajuanCutiController::class, 'tolak'])->name('admin.pengajuan-cuti.tolak');
     });
 
     Route::middleware('can:admin.fakultas')->group(function (): void {
@@ -464,6 +473,11 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::post('ujian/{ujian}/jawaban', [MahasiswaUjianController::class, 'kumpulkan'])->middleware('throttle:20,1')->name('mahasiswa.ujian.kumpulkan');
     });
 
+    Route::middleware('can:mahasiswa.pengajuan-cuti')->group(function (): void {
+        Route::get('pengajuan-cuti', [MahasiswaPengajuanCutiController::class, 'index'])->name('mahasiswa.pengajuan-cuti');
+        Route::post('pengajuan-cuti', [MahasiswaPengajuanCutiController::class, 'ajukan'])->middleware('throttle:10,1')->name('mahasiswa.pengajuan-cuti.ajukan');
+        Route::post('pengajuan-cuti/aktif-kembali', [MahasiswaPengajuanCutiController::class, 'ajukanAktifKembali'])->middleware('throttle:10,1')->name('mahasiswa.pengajuan-cuti.aktif-kembali');
+    });
     Route::middleware('can:mahasiswa.tugas-akhir')->group(function (): void {
         Route::get('tugas-akhir', [MahasiswaTugasAkhirController::class, 'index'])->name('mahasiswa.tugas-akhir');
         Route::post('tugas-akhir/pengajuan-ta', [MahasiswaTugasAkhirController::class, 'ajukanTa'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-ta');

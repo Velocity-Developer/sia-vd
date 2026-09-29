@@ -4,7 +4,7 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 
 - Disusun dari kode di cabang `main` pada commit `693048f` (27 September 2026).
 - Rujukan kode ditulis sebagai `Kelas::metode` atau path berkas. Nomor baris sengaja tidak dicantumkan karena cepat berubah.
-- Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 18](#18-perlu-dikonfirmasi).
+- Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 19](#19-perlu-dikonfirmasi).
 
 ## Daftar isi
 
@@ -22,10 +22,11 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 12. [Remidi](#12-remidi)
 13. [Ujian susulan](#13-ujian-susulan)
 14. [Tugas akhir, pendadaran, dan wisuda](#14-tugas-akhir-pendadaran-dan-wisuda)
-15. [Pindah kelas](#15-pindah-kelas)
-16. [Fitur pendukung](#16-fitur-pendukung)
-17. [Keterkaitan antarfitur dan daftar status](#17-keterkaitan-antarfitur-dan-daftar-status)
-18. [Perlu dikonfirmasi](#18-perlu-dikonfirmasi)
+15. [Cuti dan aktif kembali](#15-cuti-dan-aktif-kembali)
+16. [Pindah kelas](#16-pindah-kelas)
+17. [Fitur pendukung](#17-fitur-pendukung)
+18. [Keterkaitan antarfitur dan daftar status](#18-keterkaitan-antarfitur-dan-daftar-status)
+19. [Perlu dikonfirmasi](#19-perlu-dikonfirmasi)
 
 ---
 
@@ -151,6 +152,7 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 - `tahun` (format `2026/2027`), `semester` (`Ganjil`/`Genap`);
 - `tanggal_mulai`, `tanggal_akhir`;
 - `tanggal_krs_awal`, `tanggal_krs_akhir`;
+- `tanggal_cuti_awal`, `tanggal_cuti_akhir` (periode pengajuan cuti **untuk** semester ini, lihat [bagian 15](#15-cuti-dan-aktif-kembali));
 - `batas_input_nilai`, `batas_bayar_remidi`, `batas_input_nilai_remidi`;
 - `status` (aktif atau tidak).
 
@@ -160,6 +162,7 @@ Semua menu di bagian ini milik admin dan memakai pencarian serta paginasi 10 bar
 - `tahun` wajib berformat `YYYY/YYYY` dengan tahun kedua = tahun pertama + 1, dan `semester` hanya `Ganjil` atau `Genap`. Keduanya dipakai menghitung semester mahasiswa ([3.3](#33-pengguna-manage-user)).
 - Tanggal akhir ≥ tanggal mulai. Tanggal KRS akhir ≥ tanggal KRS awal.
 - Tanggal KRS akhir ≤ tanggal akhir semester. Tanggal KRS awal boleh sebelum tanggal mulai kuliah.
+- Tanggal buka dan tutup pengajuan cuti diisi berdua atau dikosongkan berdua (kosong = tidak dibuka); tutup ≥ buka dan ≤ tanggal akhir semester. Buka boleh sebelum semester dimulai.
 - `batas_input_nilai` ≥ `tanggal_akhir`, karena UAS paling lambat di tanggal akhir.
 - `batas_bayar_remidi` harus **setelah** `tanggal_akhir`, dan setelah `batas_input_nilai` bila diisi.
 - `batas_input_nilai_remidi` harus **setelah** `batas_bayar_remidi` (bila keduanya diisi).
@@ -259,6 +262,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
    - `batas_pengajuan_susulan_hari` (bawaan 3): pengajuan dibuka sampai N hari setelah tanggal ujian;
    - `batas_bayar_susulan_hari` (bawaan 3): batas bayar tiap tagihan susulan = tanggal terbit + N hari.
 7. **Tugas akhir**: `min_sks_pendadaran` (bawaan 138), SKS bernilai minimal di luar TA untuk mendaftar pendadaran dan wisuda.
+   **Cuti**: `maks_cuti` (bawaan 2, 0–14), jumlah semester cuti yang boleh disetujui selama studi ([bagian 15](#15-cuti-dan-aktif-kembali)).
 8. **Presensi**:
    - `jumlah_pertemuan` (bawaan 16, hanya untuk kelas baru);
    - `min_kehadiran_ujian` (75%);
@@ -314,10 +318,10 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 - **Field jenis biaya:**
   - `kode` (unik), `nama`;
   - `cara_hitung`: `tetap` atau `per_sks`;
-  - `kategori`: `semester`, `remidi`, `susulan`, `pendadaran`, atau `wisuda` (bawaan `semester`);
+  - `kategori`: `semester`, `remidi`, `susulan`, `pendadaran`, `wisuda`, atau `cuti` (bawaan `semester`);
   - `aktif`, `urutan`.
 - Kategori `semester` dipakai tagihan semester. Kategori `remidi` hanya dipakai tagihan remidi ([bagian 12](#12-remidi)), dan `susulan` hanya dipakai tagihan ujian susulan ([bagian 13](#13-ujian-susulan)).
-- Kategori `pendadaran` dan `wisuda` **tidak pernah ditagihkan**: hanya ditampilkan sebagai informasi di Biaya Kuliah, dengan cara hitung selalu `tetap` ([14.6](#146-biaya-dan-pengingat)).
+- Kategori `pendadaran`, `wisuda`, dan `cuti` **tidak pernah ditagihkan**: hanya ditampilkan sebagai informasi di Biaya Kuliah, dengan cara hitung selalu `tetap` ([14.6](#146-biaya-dan-pengingat), [bagian 15](#15-cuti-dan-aktif-kembali)).
 - **Tarif** dicatat per jenis biaya, per prodi, dan per angkatan (keduanya boleh kosong, artinya berlaku untuk semua).
 - Tarif yang dipakai adalah **yang paling khusus**: prodi+angkatan, lalu prodi saja, lalu angkatan saja, lalu umum (`JenisBiaya::tarifUntuk`).
 - Menghapus jenis biaya tidak mengubah tagihan lama, karena nama dan nominalnya sudah disalin ke rincian.
@@ -420,7 +424,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 2. Bila SKS yang diambil masih di bawah batas, sistem meminta konfirmasi (`krs_konfirmasi`).
 3. Sistem mencatat baris `krs_semester` (waktu simpan). Sejak itu mahasiswa tidak bisa lagi menambah atau membatalkan kelas sendiri.
 4. Jalan keluar setelah KRS terkunci:
-   - **pindah kelas** ([bagian 15](#15-pindah-kelas));
+   - **pindah kelas** ([bagian 16](#16-pindah-kelas));
    - **admin membuka kunci KRS** dari menu Tagihan Mahasiswa, yang menghapus baris `krs_semester`. Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
 
 ---
@@ -880,7 +884,7 @@ Status `dibatalkan`/`gugur` ini **dihitung saat ditampilkan**, bukan disimpan.
 
 - **Finalisasi nilai** tertahan selama UAS susulan masih berjalan ([11.2](#112-kunci-nilai)).
 - **Usulan remidi** menganggap mengerjakan UAS susulan sebagai ikut UAS ([12.1](#121-daftar-peserta)).
-- **Beranda** mahasiswa dan dosen menampilkan pengingat susulan ([16.3](#163-beranda)).
+- **Beranda** mahasiswa dan dosen menampilkan pengingat susulan ([17.3](#173-beranda)).
 
 ---
 
@@ -950,11 +954,33 @@ Tiga pengajuan berurutan di menu **Tugas Akhir & Wisuda** (mahasiswa, izin `maha
 ### 14.6 Biaya dan pengingat
 
 - Biaya pendadaran dan wisuda **tidak ditagihkan**. Admin mengisinya sebagai jenis biaya kategori `pendadaran`/`wisuda` (nominal tetap, tarif per prodi/angkatan). Kartu **Biaya Pendadaran & Wisuda** selalu tampil di Biaya Kuliah, dan nominalnya ikut tampil di label bukti bayar form pendaftaran.
-- **Beranda** menampilkan kartu "Tugas akhir & wisuda" ([16.3](#163-beranda)).
+- **Beranda** menampilkan kartu "Tugas akhir & wisuda" ([17.3](#173-beranda)).
 
 ---
 
-## 15. Pindah kelas
+## 15. Cuti dan aktif kembali
+
+Mahasiswa mengajukan di menu **Administrasi → Pengajuan Cuti** (izin `mahasiswa.pengajuan-cuti`); admin memproses di **Administrasi → Pengajuan Cuti** (izin `admin.pengajuan-cuti`, tab **Cuti** dan **Aktif Kembali**). Keduanya disimpan di `pengajuan_akademik` (`jenis` `cuti`/`aktif_kembali`) dengan aturan bersama yang sama seperti [14.1](#141-aturan-bersama-pengajuan): menunggu → disetujui/perlu perbaikan/ditolak, form terkunci selama menunggu, perbaikan memakai form yang sama, penolakan membuka form baru, catatan wajib, riwayat tercatat. Aturan ada di `App\PengajuanCuti`.
+
+**Pengajuan cuti:**
+
+- **Periode** diatur per semester di Tahun Akademik (`tanggal_cuti_awal`–`tanggal_cuti_akhir`). Mahasiswa memilih **semester yang ingin dicutikan** di antara tahun akademik yang periodenya sedang dibuka dan belum berakhir (bisa semester berjalan atau semester depan). Semester yang cutinya sudah disetujui tidak ditawarkan lagi.
+- **Syarat:** status `Aktif`, jumlah cuti yang disetujui < `maks_cuti` (Pengaturan Akademik, bawaan 2), dan ada semester yang periodenya dibuka. Bila tidak terpenuhi, form terkunci dengan alasannya.
+- **Form:** semester, alasan (wajib, maks 2000 karakter), **bukti bayar cuti** (wajib; PDF/JPG/PNG maks 5 MB), dokumen pendukung (opsional). Nominal biaya dari jenis biaya kategori `cuti` (informasi, tidak ditagihkan) tampil di form dan di Biaya Kuliah.
+- **Admin menyetujui** setelah memeriksa ulang: status masih `Aktif`, belum mencapai batas cuti, semester tujuan belum berakhir. Akibatnya:
+  - semester tujuan **sedang aktif** → status mahasiswa langsung `Cuti`;
+  - semester tujuan **belum aktif** → status menjadi `Cuti` saat semester itu diaktifkan (hook `TahunAkademik::saved` → `PengajuanCuti::terapkan`), hanya bila statusnya masih `Aktif`.
+- KRS dan tagihan yang sudah ada di semester itu **dibiarkan** (keputusan user); admin yang membereskan bila perlu.
+- Mahasiswa `Cuti` tetap bisa masuk, tetapi tidak ditagih dan tidak bisa mengambil KRS ([2.1](#21-login), [3.3](#33-pengguna-manage-user)).
+
+**Aktif kembali:**
+
+- Hanya untuk mahasiswa berstatus `Cuti`, kapan saja (tanpa periode). Isian: keterangan (opsional).
+- Admin menyetujui → status kembali `Aktif`. Status tidak kembali Aktif secara otomatis.
+
+---
+
+## 16. Pindah kelas
 
 1. **Formulir pengajuan** hanya bisa dikirim bila admin membukanya di Pengaturan Akademik. Bila formulir tertutup, pengiriman ditolak 403; halaman riwayat tetap bisa dibuka.
 2. **Mahasiswa mengajukan** (`Mahasiswa\PindahKelasController::store`):
@@ -979,15 +1005,15 @@ Tiga pengajuan berurutan di menu **Tugas Akhir & Wisuda** (mahasiswa, izin `maha
 
 ---
 
-## 16. Fitur pendukung
+## 17. Fitur pendukung
 
-### 16.1 Info kuliah
+### 17.1 Info kuliah
 
 - Admin membuat, mengubah, dan menghapus pengumuman: teks dan **satu lampiran wajib**.
 - Semua mahasiswa melihat semua pengumuman. Tidak ada target prodi atau kelas.
 - Dosen tidak punya menu info kuliah.
 
-### 16.2 Akses berkas privat
+### 17.2 Akses berkas privat
 
 Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diunduh lewat `BerkasController`.
 
@@ -1007,18 +1033,18 @@ Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diund
 - Jenis konten ditentukan dari ekstensi. Pdf dan gambar dibuka *inline*, selain itu diunduh.
 - Setiap respons berkas diberi header `nosniff` dan CSP `sandbox`.
 
-### 16.3 Beranda
+### 17.3 Beranda
 
 - **Admin:** pengingat tugas akhir (jumlah pengajuan TA/pendadaran/wisuda yang menunggu keputusan dan peserta wisuda yang belum ber-SKL). Selebihnya masih pola placeholder.
 - **Dosen:** presensi hari ini, pengingat remidi, ujian susulan yang perlu disiapkan soalnya atau dinilai, serta pengingat tugas akhir (pendaftaran pendadaran menunggu persetujuan, jadwal menguji, nilai yang perlu diisi, hasil yang perlu ditetapkan ketua, revisi yang perlu disahkan).
 - **Mahasiswa:** peringatan kehadiran, pengingat remidi, pengajuan susulan yang menunggu, tagihan susulan yang belum lunas, jadwal susulan mendatang, serta pengingat tugas akhir (pengajuan yang diminta perbaikan, jadwal pendadaran, revisi yang perlu diunggah, periode wisuda, SKL terbit).
 
-### 16.4 Fitur lain
+### 17.4 Fitur lain
 
 - **Jadwal Kuliah (mahasiswa):** kelas-kelas di tahun akademik aktif beserta jadwal dan ruang.
 - **Mahasiswa Kelas (dosen):** daftar mahasiswa di kelas yang diampu, dengan pencarian.
 
-### 16.5 Placeholder
+### 17.5 Placeholder
 
 Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
@@ -1028,9 +1054,9 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
 ---
 
-## 17. Keterkaitan antarfitur dan daftar status
+## 18. Keterkaitan antarfitur dan daftar status
 
-### 17.1 Keterkaitan utama
+### 18.1 Keterkaitan utama
 
 | Dari | Ke | Hubungan |
 |---|---|---|
@@ -1060,8 +1086,10 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Pendadaran lulus | KRS mata kuliah TA, TA selesai | Huruf pendadaran menjadi nilai akhir TA; TA selesai membuka pendaftaran wisuda |
 | Jadwal kuliah, pertemuan, ujian | Jadwal pendadaran | Ruang yang terpakai menolak jadwal; penguji yang sedang mengajar hanya diberi peringatan |
 | SKL terbit | Status mahasiswa | Status berubah menjadi `Lulus` |
+| Cuti disetujui | Status mahasiswa | `Cuti` (langsung bila semesternya aktif, atau saat semester itu diaktifkan); tanpa tagihan dan KRS |
+| Aktif kembali disetujui | Status mahasiswa | Kembali `Aktif` |
 
-### 17.2 Daftar status
+### 18.2 Daftar status
 
 | Entitas | Nilai |
 |---|---|
@@ -1076,8 +1104,8 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 | Pengajuan izin | `menunggu`, `disetujui`, `ditolak` |
 | Ujian | jenis: `uts`, `uas`, `remidi`, `uts_susulan`, `uas_susulan`. Mode: `tatap_muka`, `online_berkas`, `online_soal`. Status: `draf`, `terbit` |
 | Pengajuan pindah kelas | `pending`, `disetujui`, `ditolak` |
-| Jenis biaya | cara hitung: `tetap`, `per_sks`. Kategori: `semester`, `remidi`, `susulan`, `pendadaran` (info), `wisuda` (info) |
-| Pengajuan TA/pendadaran/wisuda | `menunggu_pembimbing` (pendadaran), `menunggu`, `perlu_perbaikan`, `disetujui`, `ditolak`. Riwayat: `dikirim`, `disetujui_pembimbing`, dan status keputusan |
+| Jenis biaya | cara hitung: `tetap`, `per_sks`. Kategori: `semester`, `remidi`, `susulan`, `pendadaran` (info), `wisuda` (info), `cuti` (info) |
+| Pengajuan TA/pendadaran/wisuda/cuti/aktif kembali | `menunggu_pembimbing` (pendadaran), `menunggu`, `perlu_perbaikan`, `disetujui`, `ditolak`. Riwayat: `dikirim`, `disetujui_pembimbing`, dan status keputusan |
 | Tugas akhir | `berjalan`, `selesai` |
 | Pendadaran | `dijadwalkan`, `revisi`, `selesai`, `tidak_lulus`. Hasil: `lulus`, `lulus_revisi`, `tidak_lulus` |
 | Peserta wisuda | tanpa status; SKL terbit bila `nomor_skl` terisi |
@@ -1085,7 +1113,7 @@ Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
 ---
 
-## 18. Perlu dikonfirmasi
+## 19. Perlu dikonfirmasi
 
 Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau belum bisa dipastikan maksudnya. Tidak ada kode yang diubah untuk dokumen ini.
 
@@ -1175,3 +1203,6 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 61. **Cek bentrok pendadaran** tidak mencakup pembimbing yang bukan penguji maupun jadwal kuliah mahasiswanya sendiri.
 62. **Tidak lulus pendadaran tidak mengisi nilai KRS Skripsi.** Bila semester berakhir, KRS itu tetap tanpa nilai dan mahasiswa harus mengambil Skripsi lagi di tahun aktif untuk mendaftar ulang.
 63. **Kelas Skripsi** diperlakukan seperti kelas lain (KRS, tagihan per SKS), tetapi tidak punya jadwal, pertemuan, atau ujian; data demo membuatnya tanpa jadwal.
+64. **Beranda belum menampilkan pengingat cuti**, baik untuk mahasiswa (perbaikan diminta, cuti disetujui) maupun admin (pengajuan menunggu). Admin melihat jumlah menunggu hanya di tab halaman Pengajuan Cuti.
+65. **Status Cuti tidak berakhir sendiri.** Mahasiswa tetap `Cuti` di semester-semester berikutnya sampai pengajuan aktif kembali disetujui; tidak ada pengingat saat semester cutinya selesai.
+66. **Status yang diubah manual di Manage User** (mis. Aktif → Cuti) tidak tercatat sebagai pengajuan, sehingga tidak dihitung dalam `maks_cuti`.

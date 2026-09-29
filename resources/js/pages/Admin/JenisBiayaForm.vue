@@ -47,8 +47,8 @@ const form = useForm({
 const perSks = computed(() => form.cara_hitung === 'per_sks');
 // Remidi dan susulan ditagih per mata kuliah/ujian, bukan per semester.
 const perMatkul = computed(() => form.kategori === 'remidi' || form.kategori === 'susulan');
-// Biaya pendadaran/wisuda hanya informasi di Biaya Kuliah, nominalnya tetap.
-const info = computed(() => form.kategori === 'pendadaran' || form.kategori === 'wisuda');
+// Biaya pendadaran/wisuda/cuti hanya informasi di Biaya Kuliah, nominalnya tetap.
+const info = computed(() => ['pendadaran', 'wisuda', 'cuti'].includes(form.kategori));
 const keteranganKategori = computed(
     () =>
         ({
@@ -58,6 +58,7 @@ const keteranganKategori = computed(
             pendadaran:
                 'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pendaftaran pendadaran.',
             wisuda: 'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pendaftaran wisuda.',
+            cuti: 'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pengajuan cuti.',
         })[form.kategori as string] ?? '',
 );
 const keteranganHitung = computed(() => {
@@ -137,6 +138,7 @@ const inp =
                                     <option value="susulan">Ujian susulan (per ujian)</option>
                                     <option value="pendadaran">Pendadaran (informasi)</option>
                                     <option value="wisuda">Wisuda (informasi)</option>
+                                    <option value="cuti">Cuti (informasi)</option>
                                 </SelectFilter>
                                 <p class="text-xs text-[#615d59]">
                                     {{ keteranganKategori }}

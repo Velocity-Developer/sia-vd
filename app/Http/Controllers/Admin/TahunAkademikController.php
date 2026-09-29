@@ -93,6 +93,9 @@ class TahunAkademikController extends Controller
                 'tanggal_krs_awal' => ['required', 'date'],
                 // KRS boleh dibuka sebelum kuliah dimulai, tetapi harus ditutup sebelum semester berakhir.
                 'tanggal_krs_akhir' => ['required', 'date', 'after_or_equal:tanggal_krs_awal', 'before_or_equal:tanggal_akhir'],
+                // Periode pengajuan cuti untuk semester ini: keduanya diisi atau keduanya kosong (tertutup).
+                'tanggal_cuti_awal' => ['nullable', 'date', 'required_with:tanggal_cuti_akhir'],
+                'tanggal_cuti_akhir' => ['nullable', 'date', 'required_with:tanggal_cuti_awal', 'after_or_equal:tanggal_cuti_awal', 'before_or_equal:tanggal_akhir'],
                 // UAS paling lambat di tanggal akhir, jadi batas input nilai tidak boleh sebelum itu.
                 'batas_input_nilai' => ['nullable', 'date', 'after_or_equal:tanggal_akhir'],
                 // Tagihan remidi terbit setelah nilai final, jadi batas bayarnya harus sesudah batas input nilai.
@@ -103,6 +106,8 @@ class TahunAkademikController extends Controller
             [
                 'after_or_equal' => ':attribute harus sama atau setelah :date.',
                 'tanggal_krs_akhir.before_or_equal' => 'Tanggal KRS akhir tidak boleh setelah tanggal akhir semester.',
+                'tanggal_cuti_akhir.before_or_equal' => 'Pengajuan cuti harus ditutup paling lambat di tanggal akhir semester.',
+                'required_with' => 'Isi tanggal buka dan tutup pengajuan cuti, atau kosongkan keduanya.',
                 'batas_input_nilai_remidi.after' => 'Batas input nilai remidi harus setelah batas bayar remidi.',
                 'batas_bayar_remidi.after' => 'Batas bayar remidi harus setelah tanggal akhir semester dan batas input nilai.',
                 'tahun.unique' => 'Tahun akademik dengan tahun dan semester ini sudah ada.',
@@ -116,6 +121,8 @@ class TahunAkademikController extends Controller
                 'tanggal_akhir' => 'tanggal akhir',
                 'tanggal_krs_awal' => 'tanggal KRS awal',
                 'tanggal_krs_akhir' => 'tanggal KRS akhir',
+                'tanggal_cuti_awal' => 'tanggal buka pengajuan cuti',
+                'tanggal_cuti_akhir' => 'tanggal tutup pengajuan cuti',
                 'batas_input_nilai' => 'batas input nilai',
                 'batas_bayar_remidi' => 'batas bayar remidi',
                 'batas_input_nilai_remidi' => 'batas input nilai remidi',
