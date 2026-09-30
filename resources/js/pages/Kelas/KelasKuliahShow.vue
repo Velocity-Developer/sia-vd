@@ -1138,7 +1138,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                 >Buka Finalisasi Remidi</Button
                             >
                             <Button
-                                v-if="isAdmin && remidiDikunci && !remidiTampil.some((m) => m.tagihan)"
+                                v-if="isAdmin && remidiDikunci && !(keuangan && remidiTampil.some((m) => m.tagihan))"
                                 size="sm"
                                 variant="outline"
                                 @click="bukaRemidi"

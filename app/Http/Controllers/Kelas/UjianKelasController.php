@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Kelas;
 
 use App\AllowedUpload;
+use App\Feature;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
@@ -134,6 +135,7 @@ class UjianKelasController extends Controller
             'jadwal' => $ujian,
             'aktif' => false,
             'min' => null,
+            'keuangan' => Feature::aktif('keuangan'),
             'peserta' => $this->kueriPeserta($ujian)
                 ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name'])
                 ->get()

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Kelas;
 
+use App\Feature;
 use App\Http\Controllers\Concerns\KontenKelas;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
@@ -52,10 +53,11 @@ class RemidiController extends Controller
 
     /**
      * Admin membuka kunci daftar agar dosen bisa mengubahnya lagi. Pilihan yang tersimpan tetap dipakai.
+     * Tagihan remidi hanya mengunci daftar selama fitur keuangan aktif; tanpanya remidi tidak bersyarat bayar.
      */
     public function buka(KelasKuliah $kelasKuliah): RedirectResponse
     {
-        if (TagihanRemidi::query()->where('kelas_id', $kelasKuliah->id)->exists()) {
+        if (Feature::aktif('keuangan') && TagihanRemidi::query()->where('kelas_id', $kelasKuliah->id)->exists()) {
             return back()->with('error', 'Tagihan remidi kelas ini sudah terbit, daftar tidak bisa dibuka lagi.');
         }
 

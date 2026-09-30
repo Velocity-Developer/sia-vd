@@ -16,6 +16,7 @@ use App\Models\Ujian;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 
 beforeEach(function () {
     config(['client.fitur.keuangan.default' => false]);
@@ -155,6 +156,36 @@ it('runs remidi without bills: scheduled after the grade deadline and open to ev
     expect($ujian->fresh()->bolehIkut($mhs[0]->mahasiswaProfile->id))->toBeTrue();
     $this->actingAs($admin)->get(route('admin.kelas-kuliah.show', $kelas))
         ->assertInertia(fn ($page) => $page->where('remidi.mahasiswa', fn ($m) => collect($m)->firstWhere('mahasiswa_id', $mhs[0]->mahasiswaProfile->id)['tagihan'] === null));
+});
+
+it('lets the admin reopen the remidi list despite old bills, and drops the paid note from the attendance PDF', function () {
+    [$kelas, $mhs] = kelasRemidiTanpaTagihan();
+    $admin = User::factory()->admin()->create();
+    TagihanRemidi::create([
+        'remidi_peserta_id' => RemidiPeserta::first()->id, 'mahasiswa_id' => $mhs[0]->mahasiswaProfile->id, 'kelas_id' => $kelas->id,
+        'rincian' => [], 'total' => 100_000, 'status' => TagihanRemidi::BELUM_BAYAR,
+    ]);
+
+    $this->travelTo('2026-01-09 10:00:00');
+    $this->actingAs($admin)->post(route('admin.ujian.store'), isianRemidiTanpaTagihan($kelas))->assertSessionHasNoErrors();
+    $ujian = Ujian::where('kelas_id', $kelas->id)->where('jenis', 'remidi')->sole();
+
+    $data = null;
+    View::composer('pdf.peserta-ujian', function ($view) use (&$data) {
+        $data = $view->getData();
+    });
+    $this->actingAs($admin)->get(route('admin.ujian.daftar-hadir', $ujian))->assertOk();
+    expect(view('pdf.peserta-ujian', $data)->render())->toContain('Peserta remidi.')->not->toContain('lunas');
+
+    config(['client.fitur.keuangan.default' => true]);
+    $this->actingAs($admin)->get(route('admin.ujian.daftar-hadir', $ujian))->assertOk();
+    expect(view('pdf.peserta-ujian', $data)->render())->toContain('Peserta remidi yang tagihan remidinya sudah lunas.');
+    $this->actingAs($admin)->post(route('admin.kelas-kuliah.remidi.buka', $kelas))->assertSessionHas('error');
+    expect($kelas->fresh()->remidi_dikunci_at)->not->toBeNull();
+
+    config(['client.fitur.keuangan.default' => false]);
+    $this->actingAs($admin)->post(route('admin.kelas-kuliah.remidi.buka', $kelas))->assertSessionHas('success');
+    expect($kelas->fresh()->remidi_dikunci_at)->toBeNull();
 });
 
 it('only needs the remidi grade deadline in Tahun Akademik and keeps the old payment deadline', function () {

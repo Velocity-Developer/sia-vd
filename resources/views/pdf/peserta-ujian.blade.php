@@ -66,9 +66,9 @@
     </table>
     <p class="catatan">
         @if ($jenis === 'remidi')
-            Peserta remidi yang tagihan remidinya sudah lunas.
+            Peserta remidi{{ ($keuangan ?? false) ? ' yang tagihan remidinya sudah lunas' : '' }}.
         @elseif (! in_array($jenis, ['uts', 'uas'], true))
-            Peserta ujian susulan yang pengajuannya disetujui dan tagihannya lunas.
+            Peserta ujian susulan yang pengajuannya disetujui{{ ($keuangan ?? false) ? ' dan tagihannya lunas' : '' }}.
         @else
             Kehadiran dihitung dari pertemuan kuliah yang sudah selesai{{ $jenis === 'uts' ? ' sebelum UTS' : '' }}; izin dan sakit dihitung tidak hadir.
             @if ($aktif) Batas minimal {{ $min }}%. @endif
