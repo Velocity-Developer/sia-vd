@@ -22,7 +22,7 @@ return [
         'staf' => [
             'home', 'login', 'logout', 'dashboard',
             'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'berkas.*',
-            'admin.*', 'dosen.*', 'mahasiswa.*',
+            'admin.*', 'dosen.*', 'mahasiswa.*', 'dev.*',
         ],
 
         'mahasiswa' => [

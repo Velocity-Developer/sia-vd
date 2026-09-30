@@ -28,6 +28,7 @@ import {
     Receipt,
     Settings2,
     ShieldCheck,
+    SlidersHorizontal,
     UserCheck,
     UserCog,
     Users,
@@ -44,7 +45,7 @@ const tampil = (item: MenuItem): boolean => can(item.permission) && (!item.fitur
 // route milik peran pengguna (lihat config/ziggy.php), jadi route('admin…') tidak boleh dipanggil
 // untuk pengguna yang tidak punya izin itu.
 // `fitur`: menu hanya tampil selama fitur per klien itu aktif (config/client.php), selain izinnya.
-type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: 'kelola_role' | 'keuangan' | 'ujian_susulan' };
+type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: 'kelola_role' | 'keuangan' };
 type MenuSeksi = { title: string; icon?: NavItem['icon']; items: MenuItem[] };
 type MenuEntry = MenuItem | MenuSeksi;
 
@@ -241,6 +242,13 @@ const bisaPengaturanSistem = computed(() =>
     ['admin.institusi', 'admin.pengaturan-email', 'admin.pengaturan-akademik', 'admin.pengaturan-tampilan'].some((izin) => can(izin)),
 );
 const pengaturanSistemAktif = computed(() => page.url.startsWith('/pengaturan-sistem'));
+
+// Panel developer (/dev) di luar sistem izin: hanya role developer, dan hanya bila DEV_PANEL=true.
+const developer = computed(() => (page.props.auth as { developer?: boolean } | undefined)?.developer ?? false);
+const menuDeveloper = [
+    { title: 'Fitur Klien', routeName: 'dev.fitur.index', awalan: '/dev/fitur', icon: SlidersHorizontal },
+    { title: 'Kelola Role', routeName: 'dev.roles.index', awalan: '/dev/roles', icon: ShieldCheck },
+];
 </script>
 
 <template>
@@ -267,6 +275,19 @@ const pengaturanSistemAktif = computed(() => page.url.startsWith('/pengaturan-si
         </SidebarContent>
 
         <SidebarFooter class="border-t border-[#e6e6e6] bg-white">
+            <SidebarMenu v-if="developer">
+                <SidebarMenuItem v-for="menu in menuDeveloper" :key="menu.awalan">
+                    <SidebarMenuButton as-child :is-active="page.url.startsWith(menu.awalan)" :tooltip="menu.title">
+                        <Link :href="route(menu.routeName)">
+                            <component
+                                :is="menu.icon"
+                                class="text-muted-foreground transition-colors group-data-[active=true]/menu-button:text-sidebar-primary"
+                            />
+                            <span>{{ menu.title }}</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
             <SidebarMenu v-if="bisaPengaturanSistem">
                 <SidebarMenuItem>
                     <SidebarMenuButton as-child :is-active="pengaturanSistemAktif" tooltip="Pengaturan Sistem">

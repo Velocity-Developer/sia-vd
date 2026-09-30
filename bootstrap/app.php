@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PastikanAkunAktif;
+use App\Http\Middleware\PastikanDeveloper;
 use App\Http\Middleware\PastikanFiturAktif;
 use App\Http\Middleware\PastikanTagihanLunas;
 use App\Http\Middleware\TerapkanZonaWaktu;
@@ -16,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function (): void {
+            if (config('app.dev_panel')) {
+                require base_path('routes/dev.php');
+            }
+        },
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Zona waktu institusi dipasang paling awal agar semua middleware sesudahnya memakai jam yang sama.
@@ -30,7 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->alias(['tagihan.lunas' => PastikanTagihanLunas::class, 'fitur' => PastikanFiturAktif::class]);
+        $middleware->alias(['tagihan.lunas' => PastikanTagihanLunas::class, 'fitur' => PastikanFiturAktif::class, 'developer' => PastikanDeveloper::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

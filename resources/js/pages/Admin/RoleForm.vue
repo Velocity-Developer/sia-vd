@@ -28,6 +28,8 @@ const props = defineProps<{
     userTypes: { value: UserType; label: string }[];
     permissionGroups: PermissionGroup[];
     typeLocked: boolean;
+    /** admin.roles (menu admin) atau dev.roles (panel developer). */
+    rute: 'admin.roles' | 'dev.roles';
     lockedPermissions: number[];
 }>();
 
@@ -81,14 +83,14 @@ watch(
 
 const selectedCount = computed(() => form.permissions.length);
 
-const submit = () => (props.role ? form.put(route('admin.roles.update', props.role.id)) : form.post(route('admin.roles.store')));
+const submit = () => (props.role ? form.put(route(`${props.rute}.update`, props.role.id)) : form.post(route(`${props.rute}.store`)));
 </script>
 
 <template>
     <Head :title="title" />
     <AppLayout
         :breadcrumbs="[
-            { title: 'Kelola Role', href: route('admin.roles.index') },
+            { title: 'Kelola Role', href: route(`${props.rute}.index`) },
             { title, href: '#' },
         ]"
     >
@@ -99,7 +101,7 @@ const submit = () => (props.role ? form.put(route('admin.roles.update', props.ro
                         <h1 class="judul-halaman">{{ title }}</h1>
                         <p class="deskripsi-halaman">Tentukan identitas role dan menu atau fitur yang boleh diakses penggunanya.</p>
                     </div>
-                    <Button as-child variant="outline"><Link :href="route('admin.roles.index')">Kembali</Link></Button>
+                    <Button as-child variant="outline"><Link :href="route(`${props.rute}.index`)">Kembali</Link></Button>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">

@@ -19,6 +19,9 @@ class Role extends Model
 
     public const SUPER_PERMISSION = 'admin.roles';
 
+    /** Role khusus developer: membuka panel /dev, tidak tampil di Kelola Role dan hanya diberikan lewat `sia:developer`. */
+    public const DEVELOPER = 'developer';
+
     protected $fillable = ['name', 'slug', 'user_type', 'description', 'is_system'];
 
     public function users(): HasMany
@@ -64,6 +67,19 @@ class Role extends Model
     public function hasPermission(string $key): bool
     {
         return in_array($key, $this->permissionKeys(), true);
+    }
+
+    public function isDeveloper(): bool
+    {
+        return $this->slug === self::DEVELOPER;
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public function scopeTanpaDeveloper(Builder $query): void
+    {
+        $query->where('slug', '!=', self::DEVELOPER);
     }
 
     public function isInUse(): bool

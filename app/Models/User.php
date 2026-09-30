@@ -108,6 +108,11 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canAssignRole(Role $role): bool
     {
+        // Role developer tidak pernah diberikan lewat aplikasi, dan akunnya tidak bisa diubah pengguna lain.
+        if ($role->isDeveloper()) {
+            return false;
+        }
+
         return $this->hasPermission(Role::SUPER_PERMISSION)
             || array_diff($role->permissionKeys(), $this->permissionKeys()) === [];
     }
@@ -120,12 +125,21 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->canAssignRole($target->role);
     }
 
+    public function isDeveloper(): bool
+    {
+        return (bool) $this->role?->isDeveloper();
+    }
+
     /**
      * Kelompok route Ziggy yang dikirim ke browser untuk user ini (lihat config/ziggy.php).
-     * Pemegang izin admin/dosen mendapat daftar lengkap; selain itu cukup route mahasiswa.
+     * Pemegang izin admin/dosen dan developer mendapat daftar lengkap; selain itu cukup route mahasiswa.
      */
     public function grupRute(): string
     {
+        if ($this->isDeveloper()) {
+            return 'staf';
+        }
+
         foreach ($this->permissionKeys() as $key) {
             if (str_starts_with($key, 'admin.') || str_starts_with($key, 'dosen.')) {
                 return 'staf';
@@ -184,6 +198,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function homeRoute(): string
     {
+        if ($this->isDeveloper() && config('app.dev_panel')) {
+            return 'dev.fitur.index';
+        }
+
         $preferred = $this->type() ? $this->type()->value.'.dashboard' : null;
         $candidates = array_unique(array_filter([$preferred, ...self::HOME_ROUTES]));
 

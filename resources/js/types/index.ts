@@ -11,6 +11,8 @@ export interface Auth {
     user: User;
     role: AuthRole | null;
     permissions: string[];
+    /** Akun ber-role developer dan panel /dev aktif (DEV_PANEL=true). */
+    developer: boolean;
 }
 
 export interface BreadcrumbItem {
@@ -64,7 +66,7 @@ export interface SharedData {
     institusi: Institusi;
     tampilan: Tampilan;
     /** Fitur per klien dari config/client.php (lihat App\\Feature). */
-    fitur: Record<'kelola_role' | 'keuangan' | 'ujian_susulan', boolean>;
+    fitur: Record<'kelola_role' | 'keuangan', boolean>;
     auth: Auth;
     ziggy: {
         location: string;

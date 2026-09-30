@@ -69,6 +69,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Panel Developer
+    |--------------------------------------------------------------------------
+    |
+    | Rute /dev/* (routes/dev.php) hanya didaftarkan bila DEV_PANEL=true, dan hanya bisa
+    | dibuka akun ber-role developer (lihat perintah `php artisan sia:developer`).
+    |
+    */
+
+    'dev_panel' => (bool) env('DEV_PANEL', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

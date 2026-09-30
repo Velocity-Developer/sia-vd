@@ -4,10 +4,10 @@ use App\Feature;
 use Illuminate\Support\Env;
 
 it('registers the client features and lists their env keys in .env.example', function () {
-    expect(array_keys(config('client.fitur')))->toBe(['kelola_role', 'keuangan', 'ujian_susulan']);
+    expect(array_keys(config('client.fitur')))->toBe(['kelola_role', 'keuangan']);
 
     $contoh = file_get_contents(base_path('.env.example'));
-    foreach (['KELOLA_ROLE', 'KEUANGAN', 'UJIAN_SUSULAN'] as $kunci) {
+    foreach (['KELOLA_ROLE', 'KEUANGAN'] as $kunci) {
         expect($contoh)->toContain("FEATURE_{$kunci}=false")->toContain("LOCK_{$kunci}=false");
     }
 });
@@ -16,7 +16,7 @@ it('keeps every feature off and unlocked when the env keys are not set', functio
     // Kosongkan sementara FEATURE_*/LOCK_* yang mungkin diisi .env mesin ini, lalu baca config dari berkasnya
     // (TestCase menyalakan sebagian fitur untuk tes lama).
     $repo = Env::getRepository();
-    $kunci = collect(['KELOLA_ROLE', 'KEUANGAN', 'UJIAN_SUSULAN'])->flatMap(fn (string $k): array => ["FEATURE_{$k}", "LOCK_{$k}"]);
+    $kunci = collect(['KELOLA_ROLE', 'KEUANGAN'])->flatMap(fn (string $k): array => ["FEATURE_{$k}", "LOCK_{$k}"]);
     $asli = $kunci->mapWithKeys(fn (string $k): array => [$k => $repo->get($k)]);
     $kunci->each(fn (string $k) => $repo->clear($k));
 
@@ -41,17 +41,17 @@ it('treats unregistered features as off', function () {
 });
 
 it('turns a feature on from its default value', function () {
-    config(['client.fitur.keuangan.default' => true, 'client.fitur.ujian_susulan.default' => false]);
+    config(['client.fitur.keuangan.default' => true, 'client.fitur.kelola_role.default' => false]);
 
     expect(Feature::aktif('keuangan'))->toBeTrue()
-        ->and(Feature::aktif('ujian_susulan'))->toBeFalse();
+        ->and(Feature::aktif('kelola_role'))->toBeFalse();
 });
 
 it('reads string env values as booleans', function () {
-    config(['client.fitur.keuangan.default' => 'false', 'client.fitur.ujian_susulan.default' => 'true']);
+    config(['client.fitur.keuangan.default' => 'false', 'client.fitur.kelola_role.default' => 'true']);
 
     expect(Feature::aktif('keuangan'))->toBeFalse()
-        ->and(Feature::aktif('ujian_susulan'))->toBeTrue();
+        ->and(Feature::aktif('kelola_role'))->toBeTrue();
 });
 
 it('does not use locked to decide the status', function () {

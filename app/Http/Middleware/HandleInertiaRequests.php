@@ -48,6 +48,8 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->withoutRelations(),
                 'role' => fn (): ?array => $request->user()?->role?->only(['id', 'name', 'slug', 'user_type']),
                 'permissions' => fn (): array => $request->user()?->permissionKeys() ?? [],
+                // Menu panel developer (/dev) di sidebar.
+                'developer' => fn (): bool => config('app.dev_panel') && (bool) $request->user()?->isDeveloper(),
             ],
             'flash' => [
                 'success' => fn (): ?string => $request->session()->get('success'),

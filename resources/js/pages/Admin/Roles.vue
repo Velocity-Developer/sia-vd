@@ -23,10 +23,11 @@ type Role = {
 };
 type Pagination = { data: Role[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
 
-const props = defineProps<{ roles: Pagination; search?: string }>();
+// rute: admin.roles (menu admin) atau dev.roles (panel developer).
+const props = defineProps<{ roles: Pagination; search?: string; rute: 'admin.roles' | 'dev.roles' }>();
 
 const search = ref(props.search ?? '');
-watch(search, (value) => router.get(route('admin.roles.index'), { search: value }, { preserveState: true, preserveScroll: true, replace: true }));
+watch(search, (value) => router.get(route(`${props.rute}.index`), { search: value }, { preserveState: true, preserveScroll: true, replace: true }));
 
 const confirmOpen = ref(false);
 const pendingItem = ref<Role | null>(null);
@@ -46,7 +47,7 @@ const remove = (item: Role) => {
 
 const confirmDelete = () => {
     if (!pendingItem.value) return;
-    router.delete(route('admin.roles.destroy', pendingItem.value.id), {
+    router.delete(route(`${props.rute}.destroy`, pendingItem.value.id), {
         preserveScroll: true,
         onFinish: () => {
             confirmOpen.value = false;
@@ -58,7 +59,7 @@ const confirmDelete = () => {
 
 <template>
     <Head title="Kelola Role" />
-    <AppLayout :breadcrumbs="[{ title: 'Kelola Role', href: route('admin.roles.index') }]">
+    <AppLayout :breadcrumbs="[{ title: 'Kelola Role', href: route(`${props.rute}.index`) }]">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
@@ -66,7 +67,7 @@ const confirmDelete = () => {
                         <h1 class="judul-halaman">Kelola Role</h1>
                         <p class="deskripsi-halaman">Atur role pengguna beserta menu dan fitur yang boleh diakses.</p>
                     </div>
-                    <Button as-child><Link :href="route('admin.roles.create')">Tambah Role</Link></Button>
+                    <Button as-child><Link :href="route(`${props.rute}.create`)">Tambah Role</Link></Button>
                 </div>
 
                 <div class="bilah-filter">
@@ -133,7 +134,7 @@ const confirmDelete = () => {
                                     <td class="kolom-aksi align-top">
                                         <div class="aksi-tabel">
                                             <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]"
-                                                ><Link :href="route('admin.roles.edit', item.id)" title="Edit & atur hak akses" aria-label="Edit"
+                                                ><Link :href="route(`${props.rute}.edit`, item.id)" title="Edit & atur hak akses" aria-label="Edit"
                                                     ><Pencil /></Link
                                             ></Button>
                                             <span class="inline-flex" :title="deleteBlockedReason(item) ?? 'Hapus'">

@@ -18,12 +18,25 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
 
+/**
+ * Kelola Role, dipakai dua pintu: menu admin (selama fitur kelola_role aktif) dan panel developer /dev
+ * (selalu, tanpa bergantung fitur itu). Role yang disusun developer langsung bisa dipakai admin saat menambah user.
+ */
 class RoleController extends Controller
 {
+    /**
+     * Awalan nama route pintu yang sedang dipakai: admin.roles atau dev.roles.
+     */
+    private function rute(): string
+    {
+        return request()->routeIs('dev.*') ? 'dev.roles' : 'admin.roles';
+    }
+
     public function index(Request $request): Response
     {
         $search = $request->string('search')->trim()->toString();
         $roles = Role::query()
+            ->tanpaDeveloper()
             ->withCount(['users', 'permissions'])
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%")))
             ->orderByDesc('is_system')
@@ -42,7 +55,7 @@ class RoleController extends Controller
                 'permissions_count' => $role->permissions_count,
             ]);
 
-        return Inertia::render('Admin/Roles', ['roles' => $roles, 'search' => $search]);
+        return Inertia::render('Admin/Roles', ['roles' => $roles, 'search' => $search, 'rute' => $this->rute()]);
     }
 
     public function create(): Response
@@ -52,6 +65,8 @@ class RoleController extends Controller
 
     public function edit(Role $role): Response
     {
+        abort_if($role->isDeveloper(), 404);
+
         return Inertia::render('Admin/RoleForm', $this->formProps($role));
     }
 
@@ -71,14 +86,16 @@ class RoleController extends Controller
                 $role->permissions()->sync($data['permissions']);
             });
         } catch (Throwable) {
-            return to_route('admin.roles.index')->with('error', 'Role gagal ditambahkan.');
+            return to_route($this->rute().'.index')->with('error', 'Role gagal ditambahkan.');
         }
 
-        return to_route('admin.roles.index')->with('success', 'Role berhasil ditambahkan.');
+        return to_route($this->rute().'.index')->with('success', 'Role berhasil ditambahkan.');
     }
 
     public function update(Request $request, Role $role): RedirectResponse
     {
+        abort_if($role->isDeveloper(), 404);
+
         $data = $this->validated($request, $role);
 
         try {
@@ -91,30 +108,32 @@ class RoleController extends Controller
                 $role->permissions()->sync($data['permissions']);
             });
         } catch (Throwable) {
-            return to_route('admin.roles.index')->with('error', 'Role gagal diperbarui.');
+            return to_route($this->rute().'.index')->with('error', 'Role gagal diperbarui.');
         }
 
-        return to_route('admin.roles.index')->with('success', 'Role berhasil diperbarui.');
+        return to_route($this->rute().'.index')->with('success', 'Role berhasil diperbarui.');
     }
 
     public function destroy(Role $role): RedirectResponse
     {
+        abort_if($role->isDeveloper(), 404);
+
         if ($role->is_system) {
-            return to_route('admin.roles.index')->with('error', "Role {$role->name} adalah role bawaan sistem dan tidak dapat dihapus.");
+            return to_route($this->rute().'.index')->with('error', "Role {$role->name} adalah role bawaan sistem dan tidak dapat dihapus.");
         }
 
         $usersCount = $role->users()->count();
         if ($usersCount > 0) {
-            return to_route('admin.roles.index')->with('error', "Role {$role->name} masih digunakan oleh {$usersCount} pengguna. Pindahkan pengguna ke role lain sebelum menghapus.");
+            return to_route($this->rute().'.index')->with('error', "Role {$role->name} masih digunakan oleh {$usersCount} pengguna. Pindahkan pengguna ke role lain sebelum menghapus.");
         }
 
         try {
             DB::transaction(fn (): ?bool => $role->delete());
         } catch (Throwable) {
-            return to_route('admin.roles.index')->with('error', 'Role gagal dihapus.');
+            return to_route($this->rute().'.index')->with('error', 'Role gagal dihapus.');
         }
 
-        return to_route('admin.roles.index')->with('success', 'Role berhasil dihapus.');
+        return to_route($this->rute().'.index')->with('success', 'Role berhasil dihapus.');
     }
 
     /**
@@ -139,6 +158,7 @@ class RoleController extends Controller
             'permissionGroups' => $this->permissionGroups(),
             'typeLocked' => $role !== null && ($role->is_system || $role->users_count > 0),
             'lockedPermissions' => $role ? $this->lockedPermissionIds($role) : [],
+            'rute' => $this->rute(),
         ];
     }
 
