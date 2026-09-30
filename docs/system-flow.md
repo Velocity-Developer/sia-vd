@@ -64,7 +64,7 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 | Manajemen pengguna | `admin.users.dosen`, `admin.users.mahasiswa`, `admin.users.karyawan`, `admin.roles` |
 | Pengaturan sistem | `admin.institusi`, `admin.pengaturan-email`, `admin.pengaturan-akademik`, `admin.pengaturan-tampilan` |
 | Dosen | `dosen.dashboard`, `dosen.kelas-kuliah`, `dosen.jadwal`, `dosen.materi`, `dosen.tugas`, `dosen.quiz`, `dosen.presensi`, `dosen.ujian`, `dosen.mahasiswa-kelas`, `dosen.bimbingan` (Bimbingan TA) |
-| Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.tugas-akhir`, `mahasiswa.info-biaya`, `mahasiswa.perpustakaan` |
+| Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.tugas-akhir`, `mahasiswa.info-biaya` |
 
 - Permission berawalan `admin.` (kolom `user_type` NULL) hanya bisa diberikan ke role **Admin / Karyawan** dan **Dosen** (dosen boleh merangkap staf, mis. kaprodi). Role Mahasiswa tidak pernah mendapatkannya (`Permission::isAvailableFor`); sambungan lama dilepas migrasi `2026_09_28_100000`, dan yang tetap tersambung diabaikan `Role::permissionKeys()`.
 - Permission `dosen.*` dan `mahasiswa.*` hanya berlaku untuk role dengan jenis yang sama.
@@ -1092,8 +1092,9 @@ Semua berkas unggahan (kecuali logo institusi) disimpan di disk privat dan diund
 Halaman berikut menampilkan "Halaman … sedang disiapkan.":
 
 - profil dosen dan profil mahasiswa;
-- Info Perkuliahan;
-- seluruh menu **Perpustakaan** (Katalog, Pinjaman Aktif, Riwayat Pinjaman).
+- Info Perkuliahan.
+
+Menu **Perpustakaan** (Katalog, Pinjaman Aktif, Riwayat Pinjaman) dihapus sejak 30 Sep 2026.
 
 ### 17.6 Dokumen PDF
 
@@ -1227,7 +1228,7 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 42. **Flash `pindah_kelas_error` dibaca di halaman mahasiswa** tetapi tidak pernah diisi controller.
 43. **Tidak ada notifikasi** (email atau lainnya) untuk hasil pindah kelas, tagihan, remidi, atau ujian susulan. Semuanya hanya lewat halaman dan pesan flash.
 44. **Info kuliah tanpa target** (prodi/kelas), dan dosen tidak punya akses.
-45. **Profil dosen dan mahasiswa, Info Perkuliahan, dan Perpustakaan masih placeholder.** (Beranda admin, dosen, dan mahasiswa lengkap sejak 29 Sep 2026; halaman umum `/dashboard` hanya sapaan untuk akun tanpa izin dashboard.)
+45. **Profil dosen dan mahasiswa, dan Info Perkuliahan masih placeholder.** (Menu Perpustakaan dihapus 30 Sep 2026.) (Beranda admin, dosen, dan mahasiswa lengkap sejak 29 Sep 2026; halaman umum `/dashboard` hanya sapaan untuk akun tanpa izin dashboard.)
 
 ### Ujian susulan
 

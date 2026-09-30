@@ -55,7 +55,8 @@ it('exposes role menu placeholder routes only to matching role', function () {
     $this->actingAs($dosen)->get(route('mahasiswa.khs'))->assertForbidden();
     $this->actingAs($mahasiswa)->get(route('mahasiswa.khs'))->assertOk();
     $this->actingAs($mahasiswa)->get(route('mahasiswa.khs.transkrip-nilai'))->assertOk();
-    $this->actingAs($mahasiswa)->get(route('mahasiswa.perpustakaan.pinjaman-aktif'))->assertOk();
+    $this->actingAs($mahasiswa)->get('/mahasiswa/perpustakaan')->assertNotFound();
+    expect(Permission::query()->where('key', 'mahasiswa.perpustakaan')->exists())->toBeFalse();
     $this->actingAs($mahasiswa)->get(route('dosen.jadwal-kuliah'))->assertForbidden();
 });
 

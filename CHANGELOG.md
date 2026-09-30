@@ -5,6 +5,10 @@ Repo belum memakai nomor versi, jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### Dihapus
+- Menu Perpustakaan beserta sub-menu Katalog Buku, Pinjaman Aktif, dan Riwayat Pinjaman (masih placeholder), rute
+  `/mahasiswa/perpustakaan*`, dan izin `mahasiswa.perpustakaan` (dibuang dari semua role lewat migrasi).
+
 ## 2026-09-30
 
 ### Ditambahkan

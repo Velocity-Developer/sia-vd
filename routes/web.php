@@ -476,12 +476,6 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
             ->name('mahasiswa.jadwal-kuliah.show');
     });
 
-    Route::middleware('can:mahasiswa.perpustakaan')->group(function (): void {
-        foreach (['perpustakaan' => 'Perpustakaan', 'perpustakaan/pinjaman-aktif' => 'Pinjaman Aktif', 'perpustakaan/riwayat-pinjaman' => 'Riwayat Pinjaman'] as $path => $title) {
-            Route::get($path, fn () => Inertia::render('MahasiswaPlaceholder', ['title' => $title]))
-                ->name('mahasiswa.'.str_replace('/', '.', $path));
-        }
-    });
 });
 
 require __DIR__.'/settings.php';

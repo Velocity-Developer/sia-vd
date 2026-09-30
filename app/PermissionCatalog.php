@@ -98,7 +98,6 @@ class PermissionCatalog
             ['key' => 'mahasiswa.tugas-akhir', 'name' => 'Tugas Akhir & Wisuda', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Mengajukan tugas akhir, mendaftar pendadaran, dan mendaftar wisuda.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.pengajuan-cuti', 'name' => 'Pengajuan Cuti', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Mengajukan cuti dan aktif kembali.', 'defaults' => [UserType::Mahasiswa]],
             ['key' => 'mahasiswa.info-biaya', 'name' => 'Info Biaya Kuliah', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Melihat tagihan dan status pembayaran kuliah.', 'defaults' => [UserType::Mahasiswa]],
-            ['key' => 'mahasiswa.perpustakaan', 'name' => 'Perpustakaan', 'group' => 'Mahasiswa', 'user_type' => UserType::Mahasiswa, 'description' => 'Membuka menu perpustakaan dan riwayat pinjaman.', 'defaults' => [UserType::Mahasiswa]],
         ];
     }
 

@@ -30,7 +30,6 @@ import {
     ShieldCheck,
     SlidersHorizontal,
     UserCheck,
-    UserCog,
     Users,
     Wallet,
 } from 'lucide-vue-next';
@@ -173,25 +172,6 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Pindah Kelas', routeName: 'mahasiswa.pindah-kelas', icon: ArrowLeftRight, permission: 'mahasiswa.pindah-kelas' },
                     { title: 'Biaya Kuliah', routeName: 'mahasiswa.info-biaya-kuliah', icon: Wallet, permission: 'mahasiswa.info-biaya' },
                     { title: 'Pengajuan Cuti', routeName: 'mahasiswa.pengajuan-cuti', icon: PauseCircle, permission: 'mahasiswa.pengajuan-cuti' },
-                ],
-            },
-            {
-                title: 'Perpustakaan',
-                icon: Library,
-                items: [
-                    { title: 'Katalog Buku', href: '/mahasiswa/perpustakaan', icon: Library, permission: 'mahasiswa.perpustakaan' },
-                    {
-                        title: 'Pinjaman Aktif',
-                        href: '/mahasiswa/perpustakaan/pinjaman-aktif',
-                        icon: BookMarked,
-                        permission: 'mahasiswa.perpustakaan',
-                    },
-                    {
-                        title: 'Riwayat Pinjaman',
-                        href: '/mahasiswa/perpustakaan/riwayat-pinjaman',
-                        icon: UserCog,
-                        permission: 'mahasiswa.perpustakaan',
-                    },
                 ],
             },
         ],
