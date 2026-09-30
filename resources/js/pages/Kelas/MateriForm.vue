@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
+import SearchSelect from '@/components/SearchSelect.vue';
 import {
     Attachment,
     AttachmentAction,
@@ -20,7 +21,14 @@ import { computed, ref } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
-const props = defineProps<{ peran: Peran; kelasKuliah: Record<string, any>; materi: Record<string, any> | null }>();
+const props = defineProps<{
+    peran: Peran;
+    /** Kosong saat menambah dari menu Materi; kelas dipilih lewat isian Kelas Kuliah. */
+    kelasKuliah: Record<string, any> | null;
+    materi: Record<string, any> | null;
+    kelasOptions?: { id: number; name: string; jumlah_pertemuan: number }[];
+    dariMenu?: boolean;
+}>();
 const rute = rutePeran(props.peran);
 
 const title = `${props.materi ? 'Edit' : 'Tambah'} Materi`;
@@ -43,6 +51,8 @@ const existingFiles = computed<string[]>(() => {
 const fileLabel = (path: string) => path.split('/').pop() ?? path;
 
 const form = useForm({
+    kelas_kuliah_id: '' as number | '',
+    dari: props.dariMenu ? 'menu' : '',
     judul_materi: props.materi?.judul_materi ?? '',
     pertemuan_ke: props.materi?.pertemuan_ke ?? '',
     jenis: props.materi?.jenis ?? 'Materi',
@@ -100,10 +110,20 @@ const onDrop = (e: DragEvent) => {
     }
 };
 
+const maksPertemuan = computed(() => {
+    const kelas = props.kelasKuliah ?? props.kelasOptions?.find((opsi) => opsi.id === Number(form.kelas_kuliah_id));
+
+    return Math.max(kelas?.jumlah_pertemuan ?? 32, props.materi?.pertemuan_ke ?? 0);
+});
+
 const fileCount = computed(() => form.kept_files.length + form.file.length);
 
+const kembaliKe = props.dariMenu || !props.kelasKuliah ? rute('materi.index') : rute('kelas-kuliah.show', props.kelasKuliah.id);
+
 const submit = () => {
-    if (props.materi) {
+    if (!props.kelasKuliah) {
+        form.post(rute('materi.store'), { forceFormData: true });
+    } else if (props.materi) {
         form.transform((data) => ({ ...data, _method: 'PUT' })).post(rute('kelas-kuliah.materi.update', [props.kelasKuliah.id, props.materi.id]), {
             forceFormData: true,
         });
@@ -115,15 +135,22 @@ const submit = () => {
 
 <template>
     <Head :title="title" />
-    <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') }]">
+    <AppLayout
+        :breadcrumbs="[
+            props.dariMenu ? { title: 'Materi', href: rute('materi.index') } : { title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') },
+        ]"
+    >
         <div class="halaman">
             <div class="konten-form">
                 <div class="kepala-halaman">
                     <div>
                         <h1 class="judul-halaman">{{ title }}</h1>
-                        <p class="deskripsi-halaman">Kelas {{ props.kelasKuliah?.kode_kelas }} — lengkapi judul, pertemuan, berkas, dan catatan.</p>
+                        <p class="deskripsi-halaman">
+                            <template v-if="props.kelasKuliah">Kelas {{ props.kelasKuliah.kode_kelas }} — </template>lengkapi
+                            <template v-if="!props.kelasKuliah">kelas kuliah, </template>judul, pertemuan, berkas, dan catatan.
+                        </p>
                     </div>
-                    <Button as-child variant="outline"><Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)">Kembali</Link></Button>
+                    <Button as-child variant="outline"><Link :href="kembaliKe">Kembali</Link></Button>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
@@ -131,6 +158,19 @@ const submit = () => {
 
                 <form class="kartu p-6" @submit.prevent="submit">
                     <h2 class="judul-bagian">Data Materi</h2>
+                    <div v-if="!props.kelasKuliah" class="mt-4 grid gap-2">
+                        <Label for="kelas_kuliah_id" class="label-isian">Kelas Kuliah</Label>
+                        <SearchSelect
+                            id="kelas_kuliah_id"
+                            v-model="form.kelas_kuliah_id"
+                            :options="props.kelasOptions ?? []"
+                            placeholder="Pilih kelas kuliah"
+                            search-placeholder="Cari kode kelas atau mata kuliah"
+                            required
+                        />
+                        <p v-if="!(props.kelasOptions ?? []).length" class="teks-bantu">Belum ada kelas di tahun akademik aktif yang bisa dipilih.</p>
+                        <InputError :message="form.errors.kelas_kuliah_id" />
+                    </div>
                     <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                         <div class="grid gap-2">
                             <Label for="judul_materi" class="label-isian">Judul Materi</Label>
@@ -144,7 +184,7 @@ const submit = () => {
                                 v-model="form.pertemuan_ke"
                                 type="number"
                                 min="1"
-                                :max="Math.max(props.kelasKuliah.jumlah_pertemuan ?? 32, props.materi?.pertemuan_ke ?? 0)"
+                                :max="maksPertemuan"
                                 placeholder="cth. 1"
                                 required
                             />

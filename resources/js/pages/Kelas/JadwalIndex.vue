@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Pencil, Trash2 } from 'lucide-vue-next';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type KelasRingkas = {
@@ -14,7 +14,7 @@ type KelasRingkas = {
     kode_kelas: string;
     mata_kuliah?: { kode_matkul: string; nama_matkul: string } | null;
     dosen?: { user?: { name: string } | null } | null;
-    tahun_akademik?: { tahun: string; semester: string } | null;
+    tahun_akademik?: { tahun: string; semester: string; status?: boolean } | null;
 };
 type Jadwal = {
     id: number;
@@ -40,13 +40,15 @@ const page = usePage<{ flash?: { jadwal_success?: string; jadwal_error?: string 
 const rute = rutePeran(props.peran);
 const isAdmin = computed(() => props.peran === 'admin');
 const jam = (value: string) => value.slice(0, 5);
+// Dosen hanya bisa mengubah jadwal kelas di tahun akademik aktif; admin selalu bisa.
+const bolehUbah = (jadwal: Jadwal) => isAdmin.value || jadwal.kelas_kuliah?.tahun_akademik?.status === true;
 
 const pendingHapus = ref<Jadwal | null>(null);
 const hapus = () => {
     const jadwal = pendingHapus.value;
     if (!jadwal?.kelas_kuliah) return;
 
-    router.delete(rute('kelas-kuliah.jadwal.destroy', [jadwal.kelas_kuliah.id, jadwal.id]), {
+    router.delete(rute('kelas-kuliah.jadwal.destroy', [jadwal.kelas_kuliah.id, jadwal.id]) + '?dari=menu', {
         preserveScroll: true,
         onFinish: () => (pendingHapus.value = null),
     });
@@ -64,11 +66,14 @@ const hapus = () => {
                         <p class="deskripsi-halaman">
                             {{
                                 isAdmin
-                                    ? 'Seluruh jadwal kelas kuliah. Jadwal ditambah dari halaman kelas.'
-                                    : 'Jadwal mengajar dari kelas yang Anda ampu.'
+                                    ? 'Seluruh jadwal mingguan kelas kuliah.'
+                                    : 'Jadwal mengajar dari kelas yang Anda ampu. Jadwal di tahun akademik aktif bisa Anda ubah.'
                             }}
                         </p>
                     </div>
+                    <Button as-child>
+                        <Link :href="rute('jadwal.create')"><Plus />Tambah Jadwal</Link>
+                    </Button>
                 </div>
 
                 <div v-if="page.props.flash?.jadwal_success" class="alert-sukses" role="alert">{{ page.props.flash.jadwal_success }}</div>
@@ -130,10 +135,10 @@ const hapus = () => {
                                             >
                                                 Buka kelas
                                             </Link>
-                                            <template v-if="isAdmin && item.kelas_kuliah">
+                                            <template v-if="item.kelas_kuliah && bolehUbah(item)">
                                                 <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
                                                     <Link
-                                                        :href="rute('kelas-kuliah.jadwal.edit', [item.kelas_kuliah.id, item.id])"
+                                                        :href="rute('kelas-kuliah.jadwal.edit', [item.kelas_kuliah.id, item.id]) + '?dari=menu'"
                                                         title="Edit"
                                                         aria-label="Edit jadwal"
                                                         ><Pencil

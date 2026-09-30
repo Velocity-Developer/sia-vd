@@ -21,14 +21,14 @@ class JadwalController extends Controller
     use FilterKelasKuliah, KontenKelas;
 
     /**
-     * Daftar jadwal lintas kelas dengan filter; admin bisa mengelola, dosen melihat jadwal mengajarnya.
+     * Daftar jadwal lintas kelas dengan filter; dosen hanya melihat dan mengelola jadwal kelas yang diampunya.
      */
     public function index(Request $request): Response
     {
         $filter = $this->filterKelas($request);
 
         $jadwals = Jadwal::query()
-            ->with(['kelasKuliah:id,kode_kelas,matkul_id,dosen_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul', 'kelasKuliah.dosen:id,user_id', 'kelasKuliah.dosen.user:id,name', 'kelasKuliah.tahunAkademik:id,tahun,semester', 'ruang:id,kode_ruang,nama_ruang'])
+            ->with(['kelasKuliah:id,kode_kelas,matkul_id,dosen_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul', 'kelasKuliah.dosen:id,user_id', 'kelasKuliah.dosen.user:id,name', 'kelasKuliah.tahunAkademik:id,tahun,semester,status', 'ruang:id,kode_ruang,nama_ruang'])
             ->tap(fn ($query) => $this->terapkanFilterKelas($query, $filter))
             ->when($filter['search'] !== '', fn ($query) => $query->where(fn ($q) => $q
                 ->where('hari', 'like', "%{$filter['search']}%")
@@ -51,7 +51,8 @@ class JadwalController extends Controller
         $kelasKuliah->pastikanBukanTugasAkhir('jadwal mingguan');
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Admin/JadwalForm', [
+        return Inertia::render('Kelas/JadwalForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'jadwal' => null,
             'ruangs' => $this->ruangs(),
@@ -59,27 +60,60 @@ class JadwalController extends Controller
         ]);
     }
 
+    /**
+     * Tambah jadwal dari menu Jadwal Kelas: kelas dipilih lewat isian Kelas Kuliah (dosen hanya kelas yang diampunya).
+     */
+    public function createDariMenu(): Response
+    {
+        return Inertia::render('Kelas/JadwalForm', [
+            'peran' => $this->peran(),
+            'kelasKuliah' => null,
+            'jadwal' => null,
+            'ruangs' => $this->ruangs(),
+            'jumlahPertemuan' => 0,
+            'kelasOptions' => $this->opsiKelasMenu(),
+            'dariMenu' => true,
+        ]);
+    }
+
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
-        $kelasKuliah->pastikanBukanTugasAkhir('jadwal mingguan');
-        $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
-        $this->ensureNoConflict($kelasKuliah, $data, null);
-        $data['kelas_id'] = $kelasKuliah->id;
-        Jadwal::create($data);
+        $this->simpan($request, $kelasKuliah);
 
         return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil ditambahkan.'.$this->catatanPertemuan($kelasKuliah));
     }
 
-    public function edit(KelasKuliah $kelasKuliah, Jadwal $jadwal): Response
+    public function storeDariMenu(Request $request): RedirectResponse
+    {
+        $kelasKuliah = $this->kelasDariIsian($request);
+        $this->simpan($request, $kelasKuliah);
+
+        return to_route($this->rute('jadwal.index'))
+            ->with('jadwal_success', "Jadwal kelas {$kelasKuliah->kode_kelas} berhasil ditambahkan.".$this->catatanPertemuan($kelasKuliah));
+    }
+
+    private function simpan(Request $request, KelasKuliah $kelasKuliah): void
+    {
+        $kelasKuliah->pastikanBukanTugasAkhir('jadwal mingguan');
+        $this->pastikanBolehUbahJadwal($kelasKuliah);
+        $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
+        $this->ensureNoConflict($kelasKuliah, $data, null);
+        $data['kelas_id'] = $kelasKuliah->id;
+        Jadwal::create($data);
+    }
+
+    public function edit(Request $request, KelasKuliah $kelasKuliah, Jadwal $jadwal): Response
     {
         $this->ensureScoped($kelasKuliah, $jadwal);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
-        return Inertia::render('Admin/JadwalForm', [
+        return Inertia::render('Kelas/JadwalForm', [
+            'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'jadwal' => $jadwal,
             'ruangs' => $this->ruangs(),
             'jumlahPertemuan' => $kelasKuliah->pertemuans()->count(),
+            'dariMenu' => $request->query('dari') === 'menu',
         ]);
     }
 
@@ -90,7 +124,7 @@ class JadwalController extends Controller
         $this->ensureNoConflict($kelasKuliah, $data, $jadwal);
         $jadwal->update($data);
 
-        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil diperbarui.'.$this->catatanPertemuan($kelasKuliah));
+        return $this->kembali($kelasKuliah, 'jadwal')->with('jadwal_success', 'Jadwal berhasil diperbarui.'.$this->catatanPertemuan($kelasKuliah));
     }
 
     public function destroy(KelasKuliah $kelasKuliah, Jadwal $jadwal): RedirectResponse
@@ -99,10 +133,10 @@ class JadwalController extends Controller
         try {
             $jadwal->delete();
         } catch (Throwable) {
-            return $this->keKelas($kelasKuliah)->with('jadwal_error', 'Jadwal gagal dihapus.');
+            return $this->kembali($kelasKuliah, 'jadwal')->with('jadwal_error', 'Jadwal gagal dihapus.');
         }
 
-        return $this->keKelas($kelasKuliah)->with('jadwal_success', 'Jadwal berhasil dihapus.'.$this->catatanPertemuan($kelasKuliah));
+        return $this->kembali($kelasKuliah, 'jadwal')->with('jadwal_success', 'Jadwal berhasil dihapus.'.$this->catatanPertemuan($kelasKuliah));
     }
 
     /**
@@ -128,7 +162,17 @@ class JadwalController extends Controller
 
     private function ensureScoped(KelasKuliah $kelasKuliah, Jadwal $jadwal): void
     {
+        $this->pastikanBolehUbahJadwal($kelasKuliah);
         abort_unless($jadwal->kelas_id === $kelasKuliah->id, 404);
+    }
+
+    /**
+     * Dosen hanya mengelola jadwal kelas yang diampunya selama tahun akademiknya aktif; admin tanpa batas.
+     */
+    private function pastikanBolehUbahJadwal(KelasKuliah $kelasKuliah): void
+    {
+        $this->pastikanAksesKelas($kelasKuliah);
+        abort_if($this->tahunAkademikTerkunci($kelasKuliah), 403, 'Jadwal kelas di tahun akademik yang tidak aktif hanya bisa diubah admin.');
     }
 
     /**

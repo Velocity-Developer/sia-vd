@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import AlertModal from '@/components/AlertModal.vue';
 import FilterKonten, { type NilaiFilter, type Opsi } from '@/components/FilterKonten.vue';
 import Pagination from '@/components/Pagination.vue';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 type KelasRingkas = {
     id: number;
@@ -38,6 +42,17 @@ const rute = rutePeran(props.peran);
 const tenggat = (value: string | null) =>
     value ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Tanpa tenggat';
 const lewat = (value: string | null) => value !== null && new Date(value).getTime() < Date.now();
+
+const pendingHapus = ref<Tugas | null>(null);
+const hapus = () => {
+    const item = pendingHapus.value;
+    if (!item?.kelas_kuliah) return;
+
+    router.delete(rute('kelas-kuliah.tugas.destroy', [item.kelas_kuliah.id, item.id]) + '?dari=menu', {
+        preserveScroll: true,
+        onFinish: () => (pendingHapus.value = null),
+    });
+};
 </script>
 
 <template>
@@ -50,9 +65,13 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                         <h1 class="judul-halaman">Tugas</h1>
                         <p class="deskripsi-halaman">Tugas dari seluruh kelas beserta jumlah jawaban yang sudah masuk.</p>
                     </div>
+                    <Button as-child>
+                        <Link :href="rute('tugas.create')"><Plus />Tambah Tugas</Link>
+                    </Button>
                 </div>
 
                 <div v-if="page.props.flash?.tugas_success" class="alert-sukses" role="alert">{{ page.props.flash.tugas_success }}</div>
+                <div v-if="page.props.flash?.tugas_error" class="alert-gagal" role="alert">{{ page.props.flash.tugas_error }}</div>
 
                 <FilterKonten
                     :url="rute('tugas.index')"
@@ -101,13 +120,31 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                                         {{ item.pengumpulan_tugas_count }}
                                     </td>
                                     <td class="kolom-aksi">
-                                        <Link
-                                            v-if="item.kelas_kuliah"
-                                            :href="rute('kelas-kuliah.tugas.show', [item.kelas_kuliah.id, item.id])"
-                                            class="whitespace-nowrap text-sm font-medium text-[#0075de] hover:underline"
-                                        >
-                                            Detail &amp; nilai
-                                        </Link>
+                                        <div v-if="item.kelas_kuliah" class="aksi-tabel">
+                                            <Link
+                                                :href="rute('kelas-kuliah.tugas.show', [item.kelas_kuliah.id, item.id])"
+                                                class="whitespace-nowrap text-sm font-medium text-[#0075de] hover:underline"
+                                            >
+                                                Detail &amp; nilai
+                                            </Link>
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                <Link
+                                                    :href="rute('kelas-kuliah.tugas.edit', [item.kelas_kuliah.id, item.id]) + '?dari=menu'"
+                                                    title="Edit"
+                                                    aria-label="Edit tugas"
+                                                    ><Pencil
+                                                /></Link>
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon-sm"
+                                                class="text-[#dd5b00]"
+                                                title="Hapus"
+                                                aria-label="Hapus tugas"
+                                                @click="pendingHapus = item"
+                                                ><Trash2
+                                            /></Button>
+                                        </div>
                                     </td>
                                 </tr>
                                 <tr v-if="!props.tugas.data.length" class="baris-kosong">
@@ -119,6 +156,16 @@ const lewat = (value: string | null) => value !== null && new Date(value).getTim
                 </div>
 
                 <Pagination :links="props.tugas.links" :total="props.tugas.total" />
+
+                <AlertModal
+                    :open="pendingHapus !== null"
+                    :description="`Hapus tugas “${pendingHapus?.judul_tugas ?? ''}” beserta seluruh jawaban mahasiswa?`"
+                    confirm-text="Hapus"
+                    cancel-text="Batal"
+                    @update:open="!$event && (pendingHapus = null)"
+                    @confirm="hapus"
+                    @cancel="pendingHapus = null"
+                />
             </div>
         </div>
     </AppLayout>

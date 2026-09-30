@@ -5,6 +5,15 @@ Repo belum memakai nomor versi, jadi entri dikelompokkan per tanggal.
 
 ## [Belum dirilis]
 
+### Ditambahkan
+- Tombol **Tambah** di menu Jadwal Kelas, Materi, Tugas, dan Quiz (admin dan dosen) dengan isian **Kelas Kuliah**
+  (kelas tahun akademik aktif, bukan TA/Skripsi; dosen hanya kelas yang diampunya). Rute `{admin,dosen}.{jadwal,materi,tugas,quiz}.{create,store}`.
+- Edit dan Hapus langsung dari daftar menu: Hapus materi; Edit dan Hapus tugas serta quiz. Sesudahnya kembali ke menu.
+- Dosen bisa menambah, mengubah, dan menghapus jadwal mingguan kelas yang diampunya (tahun akademik aktif, cek bentrok tetap).
+
+### Diubah
+- Form jadwal pindah ke `Kelas/JadwalForm` dan dipakai bersama admin dan dosen.
+
 ### Dihapus
 - Menu Perpustakaan beserta sub-menu Katalog Buku, Pinjaman Aktif, dan Riwayat Pinjaman (masih placeholder), rute
   `/mahasiswa/perpustakaan*`, dan izin `mahasiswa.perpustakaan` (dibuang dari semua role lewat migrasi).

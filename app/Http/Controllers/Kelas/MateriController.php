@@ -59,7 +59,36 @@ class MateriController extends Controller
         ]);
     }
 
+    /**
+     * Tambah materi dari menu Materi: kelas dipilih lewat isian Kelas Kuliah.
+     */
+    public function createDariMenu(): Response
+    {
+        return Inertia::render('Kelas/MateriForm', [
+            'peran' => $this->peran(),
+            'kelasKuliah' => null,
+            'materi' => null,
+            'kelasOptions' => $this->opsiKelasMenu(),
+            'dariMenu' => true,
+        ]);
+    }
+
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $this->simpan($request, $kelasKuliah);
+
+        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil ditambahkan.');
+    }
+
+    public function storeDariMenu(Request $request): RedirectResponse
+    {
+        $kelasKuliah = $this->kelasDariIsian($request);
+        $this->simpan($request, $kelasKuliah);
+
+        return to_route($this->rute('materi.index'))->with('materi_success', "Materi berhasil ditambahkan ke kelas {$kelasKuliah->kode_kelas}.");
+    }
+
+    private function simpan(Request $request, KelasKuliah $kelasKuliah): void
     {
         $kelasKuliah->pastikanBukanTugasAkhir('materi');
         $this->pastikanAksesKelas($kelasKuliah);
@@ -69,11 +98,9 @@ class MateriController extends Controller
         $data['kelas_id'] = $kelasKuliah->id;
         $data['uploaded_by'] = $request->user()->id;
         Materi::create($data);
-
-        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil ditambahkan.');
     }
 
-    public function edit(KelasKuliah $kelasKuliah, Materi $materi): Response
+    public function edit(Request $request, KelasKuliah $kelasKuliah, Materi $materi): Response
     {
         $this->ensureScoped($kelasKuliah, $materi);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
@@ -82,6 +109,7 @@ class MateriController extends Controller
             'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'materi' => $materi,
+            'dariMenu' => $request->query('dari') === 'menu',
         ]);
     }
 
@@ -105,7 +133,7 @@ class MateriController extends Controller
 
         $materi->update($data);
 
-        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil diperbarui.');
+        return $this->kembali($kelasKuliah, 'materi')->with('materi_success', 'Materi berhasil diperbarui.');
     }
 
     public function duplicate(Request $request, KelasKuliah $kelasKuliah, Materi $materi): RedirectResponse
@@ -131,10 +159,10 @@ class MateriController extends Controller
             $this->deleteFiles($this->fileList($materi));
             $materi->delete();
         } catch (Throwable) {
-            return $this->keKelas($kelasKuliah)->with('materi_error', 'Materi gagal dihapus.');
+            return $this->kembali($kelasKuliah, 'materi')->with('materi_error', 'Materi gagal dihapus.');
         }
 
-        return $this->keKelas($kelasKuliah)->with('materi_success', 'Materi berhasil dihapus.');
+        return $this->kembali($kelasKuliah, 'materi')->with('materi_success', 'Materi berhasil dihapus.');
     }
 
     private function ensureScoped(KelasKuliah $kelasKuliah, Materi $materi): void

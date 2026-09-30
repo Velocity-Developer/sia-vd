@@ -77,6 +77,17 @@ $ruteUjianKelas = function (string $peran): void {
     Route::get('ujian/{ujian}/daftar-hadir', [UjianKelasController::class, 'daftarHadir'])->name($peran.'.ujian.daftar-hadir');
 };
 
+// Menu Jadwal Kelas/Materi/Tugas/Quiz sama untuk admin dan dosen: daftar lintas kelas + tambah dengan isian Kelas Kuliah.
+$ruteMenuKonten = function (string $peran): void {
+    foreach (['jadwal' => JadwalController::class, 'materi' => MateriController::class, 'tugas' => TugasController::class, 'quiz' => QuizController::class] as $menu => $controller) {
+        Route::middleware("can:{$peran}.{$menu}")->group(function () use ($peran, $menu, $controller): void {
+            Route::get($menu, [$controller, 'index'])->name("{$peran}.{$menu}.index");
+            Route::get("{$menu}/create", [$controller, 'createDariMenu'])->name("{$peran}.{$menu}.create");
+            Route::post($menu, [$controller, 'storeDariMenu'])->name("{$peran}.{$menu}.store");
+        });
+    }
+};
+
 // Rute presensi sama untuk admin dan dosen; bedanya hanya prefix nama dan izin grup.
 $rutePresensi = function (string $peran): void {
     Route::get('presensi', [PresensiController::class, 'index'])->name($peran.'.presensi.index');
@@ -159,7 +170,7 @@ Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function (
     }
 });
 
-Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas): void {
+Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas, $ruteMenuKonten): void {
     // Kelola Role hanya dibuka selama fitur kelola_role aktif; izin admin.roles tetap berlaku untuk mengelola akun.
     Route::middleware(['fitur:kelola_role', 'can:admin.roles', 'password.confirm'])->group(function (): void {
         Route::resource('roles', RoleController::class)->except('show')->names('admin.roles');
@@ -264,11 +275,8 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::resource('tahun-akademik', TahunAkademikController::class)->except('show')->parameters(['tahun-akademik' => 'tahunAkademik'])->names('admin.tahun-akademik');
     });
 
-    // Menu tersendiri untuk konten kelas, dengan filter lintas kelas.
-    Route::middleware('can:admin.jadwal')->group(fn () => Route::get('jadwal', [JadwalController::class, 'index'])->name('admin.jadwal.index'));
-    Route::middleware('can:admin.materi')->group(fn () => Route::get('materi', [MateriController::class, 'index'])->name('admin.materi.index'));
-    Route::middleware('can:admin.tugas')->group(fn () => Route::get('tugas', [TugasController::class, 'index'])->name('admin.tugas.index'));
-    Route::middleware('can:admin.quiz')->group(fn () => Route::get('quiz', [QuizController::class, 'index'])->name('admin.quiz.index'));
+    // Menu tersendiri untuk konten kelas, dengan filter lintas kelas; tambah dari menu memilih kelas lewat isian Kelas Kuliah.
+    $ruteMenuKonten('admin');
     Route::middleware('can:admin.presensi')->group(function () use ($rutePresensi): void {
         $rutePresensi('admin');
         Route::put('presensi/kelas/{kelasKuliah}/jumlah', [PresensiController::class, 'ubahJumlah'])->name('admin.presensi.jumlah');
@@ -319,16 +327,19 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
     });
 });
 
-Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas) {
+Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas, $ruteMenuKonten) {
     Route::middleware('can:dosen.dashboard')->group(function (): void {
         Route::get('/', DosenDashboardController::class)->name('dosen.dashboard');
         Route::get('profile', fn () => Inertia::render('DosenPlaceholder', ['title' => 'Profile']))->name('dosen.profile');
     });
 
-    Route::middleware('can:dosen.jadwal')->group(fn () => Route::get('jadwal', [JadwalController::class, 'index'])->name('dosen.jadwal.index'));
-    Route::middleware('can:dosen.materi')->group(fn () => Route::get('materi', [MateriController::class, 'index'])->name('dosen.materi.index'));
-    Route::middleware('can:dosen.tugas')->group(fn () => Route::get('tugas', [TugasController::class, 'index'])->name('dosen.tugas.index'));
-    Route::middleware('can:dosen.quiz')->group(fn () => Route::get('quiz', [QuizController::class, 'index'])->name('dosen.quiz.index'));
+    $ruteMenuKonten('dosen');
+    // Dosen mengelola jadwal mingguan kelas yang diampunya dari menu Jadwal Kelas (halaman kelas dosen hanya menampilkannya).
+    Route::middleware('can:dosen.jadwal')->group(function (): void {
+        Route::get('kelas-kuliah/{kelasKuliah}/jadwal/{jadwal}/edit', [JadwalController::class, 'edit'])->name('dosen.kelas-kuliah.jadwal.edit');
+        Route::put('kelas-kuliah/{kelasKuliah}/jadwal/{jadwal}', [JadwalController::class, 'update'])->name('dosen.kelas-kuliah.jadwal.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/jadwal/{jadwal}', [JadwalController::class, 'destroy'])->name('dosen.kelas-kuliah.jadwal.destroy');
+    });
     Route::middleware('can:dosen.presensi')->group(fn () => $rutePresensi('dosen'));
 
     Route::middleware('can:dosen.kelas-kuliah')->group(function (): void {

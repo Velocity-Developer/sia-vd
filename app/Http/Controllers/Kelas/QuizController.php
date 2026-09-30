@@ -60,16 +60,48 @@ class QuizController extends Controller
         ]);
     }
 
+    /**
+     * Tambah quiz dari menu Quiz: kelas dipilih lewat isian Kelas Kuliah. Soal diisi di halaman quiz sesudahnya.
+     */
+    public function createDariMenu(): Response
+    {
+        return Inertia::render('Kelas/QuizForm', [
+            'peran' => $this->peran(),
+            'kelasKuliah' => null,
+            'quiz' => null,
+            'kelasOptions' => $this->opsiKelasMenu(),
+            'dariMenu' => true,
+        ]);
+    }
+
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $this->simpan($request, $kelasKuliah);
+
+        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil ditambahkan.');
+    }
+
+    /**
+     * Dari menu langsung ke halaman quiz agar soal bisa segera ditambahkan.
+     */
+    public function storeDariMenu(Request $request): RedirectResponse
+    {
+        $kelasKuliah = $this->kelasDariIsian($request);
+        $quiz = $this->simpan($request, $kelasKuliah);
+
+        return to_route($this->rute('kelas-kuliah.quiz.show'), [$kelasKuliah, $quiz])
+            ->with('question_success', "Quiz berhasil ditambahkan ke kelas {$kelasKuliah->kode_kelas}. Tambahkan soalnya di bawah.");
+    }
+
+    private function simpan(Request $request, KelasKuliah $kelasKuliah): Quiz
     {
         $kelasKuliah->pastikanBukanTugasAkhir('quiz');
         $this->pastikanAksesKelas($kelasKuliah);
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
         $data['kelas_id'] = $kelasKuliah->id;
         $data['uploaded_by'] = $request->user()->id;
-        Quiz::create($data);
 
-        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil ditambahkan.');
+        return Quiz::create($data);
     }
 
     public function show(KelasKuliah $kelasKuliah, Quiz $quiz): Response
@@ -95,7 +127,7 @@ class QuizController extends Controller
         ]);
     }
 
-    public function edit(KelasKuliah $kelasKuliah, Quiz $quiz): Response
+    public function edit(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz): Response
     {
         $this->ensureScoped($kelasKuliah, $quiz);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
@@ -104,6 +136,7 @@ class QuizController extends Controller
             'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'quiz' => $quiz,
+            'dariMenu' => $request->query('dari') === 'menu',
         ]);
     }
 
@@ -123,7 +156,7 @@ class QuizController extends Controller
             return to_route($this->peran().'.ujian.show', $quiz->ujian)->with('success', 'Pengaturan lembar soal diperbarui.');
         }
 
-        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil diperbarui.');
+        return $this->kembali($kelasKuliah, 'quiz')->with('quiz_success', 'Quiz berhasil diperbarui.');
     }
 
     public function storeQuestions(Request $request, KelasKuliah $kelasKuliah, Quiz $quiz): RedirectResponse
@@ -312,10 +345,10 @@ class QuizController extends Controller
         try {
             $quiz->delete();
         } catch (Throwable) {
-            return $this->keKelas($kelasKuliah)->with('quiz_error', 'Quiz gagal dihapus.');
+            return $this->kembali($kelasKuliah, 'quiz')->with('quiz_error', 'Quiz gagal dihapus.');
         }
 
-        return $this->keKelas($kelasKuliah)->with('quiz_success', 'Quiz berhasil dihapus.');
+        return $this->kembali($kelasKuliah, 'quiz')->with('quiz_success', 'Quiz berhasil dihapus.');
     }
 
     /**

@@ -1,12 +1,13 @@
 <script setup lang="ts">
+import AlertModal from '@/components/AlertModal.vue';
 import FilterKonten, { type NilaiFilter, type Opsi } from '@/components/FilterKonten.vue';
 import Pagination from '@/components/Pagination.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { Pencil } from 'lucide-vue-next';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 type KelasRingkas = {
@@ -55,6 +56,17 @@ const jumlahBerkas = (file: Materi['file']): number => {
     return file ? 1 : 0;
 };
 
+const pendingHapus = ref<Materi | null>(null);
+const hapus = () => {
+    const materi = pendingHapus.value;
+    if (!materi?.kelas_kuliah) return;
+
+    router.delete(rute('kelas-kuliah.materi.destroy', [materi.kelas_kuliah.id, materi.id]) + '?dari=menu', {
+        preserveScroll: true,
+        onFinish: () => (pendingHapus.value = null),
+    });
+};
+
 const tanggal = (value: string) => new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(value));
 </script>
 
@@ -66,11 +78,15 @@ const tanggal = (value: string) => new Intl.DateTimeFormat('id-ID', { dateStyle:
                 <div class="kepala-halaman">
                     <div>
                         <h1 class="judul-halaman">Materi</h1>
-                        <p class="deskripsi-halaman">Materi dan pengumuman dari seluruh kelas. Materi baru ditambahkan dari halaman kelas.</p>
+                        <p class="deskripsi-halaman">Materi dan pengumuman dari seluruh kelas.</p>
                     </div>
+                    <Button as-child>
+                        <Link :href="rute('materi.create')"><Plus />Tambah Materi</Link>
+                    </Button>
                 </div>
 
                 <div v-if="page.props.flash?.materi_success" class="alert-sukses" role="alert">{{ page.props.flash.materi_success }}</div>
+                <div v-if="page.props.flash?.materi_error" class="alert-gagal" role="alert">{{ page.props.flash.materi_error }}</div>
 
                 <FilterKonten
                     ref="filterRef"
@@ -138,14 +154,25 @@ const tanggal = (value: string) => new Intl.DateTimeFormat('id-ID', { dateStyle:
                                             >
                                                 Buka kelas
                                             </Link>
-                                            <Button v-if="item.kelas_kuliah" as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
-                                                <Link
-                                                    :href="rute('kelas-kuliah.materi.edit', [item.kelas_kuliah.id, item.id])"
-                                                    title="Edit"
-                                                    aria-label="Edit materi"
-                                                    ><Pencil
-                                                /></Link>
-                                            </Button>
+                                            <template v-if="item.kelas_kuliah">
+                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                    <Link
+                                                        :href="rute('kelas-kuliah.materi.edit', [item.kelas_kuliah.id, item.id]) + '?dari=menu'"
+                                                        title="Edit"
+                                                        aria-label="Edit materi"
+                                                        ><Pencil
+                                                    /></Link>
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon-sm"
+                                                    class="text-[#dd5b00]"
+                                                    title="Hapus"
+                                                    aria-label="Hapus materi"
+                                                    @click="pendingHapus = item"
+                                                    ><Trash2
+                                                /></Button>
+                                            </template>
                                         </div>
                                     </td>
                                 </tr>
@@ -158,6 +185,16 @@ const tanggal = (value: string) => new Intl.DateTimeFormat('id-ID', { dateStyle:
                 </div>
 
                 <Pagination :links="props.materis.links" :total="props.materis.total" />
+
+                <AlertModal
+                    :open="pendingHapus !== null"
+                    :description="`Hapus materi “${pendingHapus?.judul_materi ?? ''}” beserta berkasnya?`"
+                    confirm-text="Hapus"
+                    cancel-text="Batal"
+                    @update:open="!$event && (pendingHapus = null)"
+                    @confirm="hapus"
+                    @cancel="pendingHapus = null"
+                />
             </div>
         </div>
     </AppLayout>

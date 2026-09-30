@@ -60,7 +60,36 @@ class TugasController extends Controller
         ]);
     }
 
+    /**
+     * Tambah tugas dari menu Tugas: kelas dipilih lewat isian Kelas Kuliah.
+     */
+    public function createDariMenu(): Response
+    {
+        return Inertia::render('Kelas/TugasForm', [
+            'peran' => $this->peran(),
+            'kelasKuliah' => null,
+            'tugas' => null,
+            'kelasOptions' => $this->opsiKelasMenu(),
+            'dariMenu' => true,
+        ]);
+    }
+
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $this->simpan($request, $kelasKuliah);
+
+        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil ditambahkan.');
+    }
+
+    public function storeDariMenu(Request $request): RedirectResponse
+    {
+        $kelasKuliah = $this->kelasDariIsian($request);
+        $this->simpan($request, $kelasKuliah);
+
+        return to_route($this->rute('tugas.index'))->with('tugas_success', "Tugas berhasil ditambahkan ke kelas {$kelasKuliah->kode_kelas}.");
+    }
+
+    private function simpan(Request $request, KelasKuliah $kelasKuliah): void
     {
         $kelasKuliah->pastikanBukanTugasAkhir('tugas');
         $this->pastikanAksesKelas($kelasKuliah);
@@ -70,8 +99,6 @@ class TugasController extends Controller
         $data['kelas_id'] = $kelasKuliah->id;
         $data['uploaded_by'] = $request->user()->id;
         Tugas::create($data);
-
-        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil ditambahkan.');
     }
 
     public function show(KelasKuliah $kelasKuliah, Tugas $tugas): Response
@@ -98,7 +125,7 @@ class TugasController extends Controller
         return back()->with('success', 'Nilai berhasil diperbarui.');
     }
 
-    public function edit(KelasKuliah $kelasKuliah, Tugas $tugas): Response
+    public function edit(Request $request, KelasKuliah $kelasKuliah, Tugas $tugas): Response
     {
         $this->ensureScoped($kelasKuliah, $tugas);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
@@ -107,6 +134,7 @@ class TugasController extends Controller
             'peran' => $this->peran(),
             'kelasKuliah' => $kelasKuliah,
             'tugas' => $tugas,
+            'dariMenu' => $request->query('dari') === 'menu',
         ]);
     }
 
@@ -130,7 +158,7 @@ class TugasController extends Controller
 
         $tugas->update($data);
 
-        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil diperbarui.');
+        return $this->kembali($kelasKuliah, 'tugas')->with('tugas_success', 'Tugas berhasil diperbarui.');
     }
 
     public function duplicate(Request $request, KelasKuliah $kelasKuliah, Tugas $tugas): RedirectResponse
@@ -156,10 +184,10 @@ class TugasController extends Controller
             $this->deleteFiles($this->fileList($tugas));
             $tugas->delete();
         } catch (Throwable) {
-            return $this->keKelas($kelasKuliah)->with('tugas_error', 'Tugas gagal dihapus.');
+            return $this->kembali($kelasKuliah, 'tugas')->with('tugas_error', 'Tugas gagal dihapus.');
         }
 
-        return $this->keKelas($kelasKuliah)->with('tugas_success', 'Tugas berhasil dihapus.');
+        return $this->kembali($kelasKuliah, 'tugas')->with('tugas_success', 'Tugas berhasil dihapus.');
     }
 
     private function ensureScoped(KelasKuliah $kelasKuliah, Tugas $tugas): void

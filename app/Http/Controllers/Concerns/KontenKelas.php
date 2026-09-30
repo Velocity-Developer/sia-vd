@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Models\KelasKuliah;
 use App\Models\Ujian;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Dipakai controller konten kelas (materi, tugas, quiz, koreksi quiz) yang melayani rute admin.* dan dosen.*.
@@ -87,6 +89,65 @@ trait KontenKelas
     protected function keKelas(KelasKuliah $kelasKuliah): RedirectResponse
     {
         return to_route($this->peran().'.kelas-kuliah.show', $kelasKuliah);
+    }
+
+    /**
+     * Tujuan sesudah simpan/hapus: kembali ke menu (Jadwal Kelas/Materi/Tugas/Quiz) bila aksi dimulai dari menu,
+     * selain itu ke halaman kelas seperti biasa.
+     */
+    protected function kembali(KelasKuliah $kelasKuliah, string $menu): RedirectResponse
+    {
+        if (request()->input('dari') !== 'menu') {
+            return $this->keKelas($kelasKuliah);
+        }
+
+        return request()->isMethod('delete') ? back() : to_route($this->rute($menu.'.index'));
+    }
+
+    /**
+     * Kelas yang bisa dipilih di isian Kelas Kuliah saat menambah dari menu: tahun akademik aktif, bukan
+     * matkul tugas akhir, dan untuk dosen hanya kelas yang diampunya.
+     *
+     * @return Builder<KelasKuliah>
+     */
+    protected function kelasPilihanMenu(): Builder
+    {
+        return KelasKuliah::query()
+            ->whereHas('tahunAkademik', fn ($query) => $query->where('status', true))
+            ->whereHas('mataKuliah', fn ($query) => $query->where('tugas_akhir', false))
+            ->when($this->peran() === 'dosen', fn ($query) => $query->where('dosen_id', request()->user()?->dosenProfile?->id));
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, jumlah_pertemuan: int}>
+     */
+    protected function opsiKelasMenu(): array
+    {
+        return $this->kelasPilihanMenu()
+            ->with(['mataKuliah:id,kode_matkul,nama_matkul', 'dosen:id,user_id', 'dosen.user:id,name'])
+            ->orderBy('kode_kelas')
+            ->get(['id', 'kode_kelas', 'matkul_id', 'dosen_id', 'jumlah_pertemuan'])
+            ->map(fn (KelasKuliah $kelas): array => [
+                'id' => $kelas->id,
+                'name' => $kelas->kode_kelas.' — '.($kelas->mataKuliah?->nama_matkul ?? '-')
+                    .($this->peran() === 'admin' ? ' ('.($kelas->dosen?->user?->name ?? 'tanpa dosen').')' : ''),
+                'jumlah_pertemuan' => (int) $kelas->jumlah_pertemuan,
+            ])->all();
+    }
+
+    /**
+     * Kelas dari isian Kelas Kuliah pada form tambah di menu; kelas di luar pilihan ditolak.
+     */
+    protected function kelasDariIsian(Request $request): KelasKuliah
+    {
+        $request->validate(['kelas_kuliah_id' => ['required', 'integer']], [], ['kelas_kuliah_id' => 'Kelas Kuliah']);
+        $kelas = $this->kelasPilihanMenu()->find($request->integer('kelas_kuliah_id'));
+
+        if ($kelas === null) {
+            throw ValidationException::withMessages(['kelas_kuliah_id' => 'Kelas Kuliah tidak valid atau tidak bisa dipilih.']);
+        }
+
+        return $kelas;
     }
 
     protected function rute(string $nama): string

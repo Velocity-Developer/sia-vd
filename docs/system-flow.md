@@ -298,7 +298,8 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 
 ### 5.2 Jadwal mingguan
 
-- Dibuat admin per kelas. Field: `hari` (Senin–Sabtu), `jam_mulai`, `jam_akhir` (harus setelah jam mulai), `ruang_id`.
+- Dibuat admin dari halaman kelas atau dari menu **Jadwal Kelas**. Field: `hari` (Senin–Sabtu), `jam_mulai`, `jam_akhir` (harus setelah jam mulai), `ruang_id`.
+- **Dosen** menambah, mengubah, dan menghapus jadwal kelas yang diampunya dari menu **Jadwal Mengajar**, hanya selama tahun akademik kelas itu aktif (sesudahnya 403, hanya admin). Pengecekan bentrok tetap sama.
 - **Pengecekan bentrok** dalam tahun akademik yang sama:
   - dengan jadwal lain kelas itu sendiri;
   - dengan ruang yang sama;
@@ -311,6 +312,8 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 - **Admin dan dosen** (`Kelas/KelasKuliahShow`) melihat: identitas kelas, jadwal, materi, tugas, quiz, tabel **Nilai Mahasiswa** (huruf akhir), dan bagian **Daftar Remidi** (muncul setelah nilai kelas final).
 - **Mahasiswa** melihat kelas hanya bila punya KRS di kelas itu. Isinya: jadwal, materi, tugas, dan quiz biasa (lembar soal ujian tidak termasuk).
 - Menu tersendiri **Jadwal**, **Materi**, **Tugas**, dan **Quiz** menampilkan data lintas kelas dengan filter tahun akademik (bawaan: tahun aktif), prodi, mata kuliah, kelas, dan dosen (khusus admin).
+- Di tiap menu itu ada tombol **Tambah** (admin dan dosen). Form tambahnya punya isian **Kelas Kuliah**: pilihannya hanya kelas di tahun akademik **aktif**, bukan kelas TA/Skripsi, dan untuk dosen hanya kelas yang diampunya; kelas di luar pilihan ditolak server (`KontenKelas::kelasDariIsian`). Sesudah simpan kembali ke menu, kecuali quiz yang langsung dibuka agar soalnya bisa ditambahkan.
+- Tiap baris punya **Edit** dan **Hapus** (materi, tugas, quiz; jadwal: admin selalu, dosen selama tahun akademik aktif). Aksi dari menu membawa penanda `dari=menu` sehingga kembali ke menu, bukan ke halaman kelas. Kelas konten tidak bisa dipindah lewat Edit.
 
 ---
 
