@@ -1,9 +1,13 @@
 # Changelog
 
 Semua perubahan penting dicatat di sini. Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.1.0/).
-Repo belum memakai nomor versi, jadi entri dikelompokkan per tanggal.
+Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riwayat sebelum 1.0.0 dikelompokkan per tanggal.
 
 ## [Belum dirilis]
+
+## [1.0.0] - 2026-09-30
+
+Rilis pertama bernomor versi. Isinya seluruh riwayat di bawah (per tanggal sejak 2026-08-31) ditambah perubahan berikut.
 
 ### Ditambahkan
 - Tombol **Tambah** di menu Jadwal Kelas, Materi, Tugas, dan Quiz (admin dan dosen) dengan isian **Kelas Kuliah**
@@ -128,3 +132,6 @@ Repo belum memakai nomor versi, jadi entri dikelompokkan per tanggal.
 - Kelas kuliah, jadwal, materi, tugas, quiz dan soal; penilaian tugas dan quiz.
 - KRS mahasiswa dan persetujuan dosen, jadwal kuliah mahasiswa, info kuliah, pindah kelas.
 - KHS, ekspor KHS, dan transkrip nilai.
+
+[Belum dirilis]: https://github.com/Velocity-Developer/sia-vd/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/Velocity-Developer/sia-vd/releases/tag/v1.0.0
