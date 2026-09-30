@@ -12,6 +12,16 @@ Dokumentasi lain:
 - [docs/standar-ui.md](docs/standar-ui.md) — standar tampilan yang wajib diikuti halaman baru.
 - [CHANGELOG.md](CHANGELOG.md) — riwayat perubahan.
 
+Isi README:
+
+1. [Kebutuhan](#kebutuhan)
+2. [Feature flag per klien](#feature-flag-per-klien)
+3. [Panel developer](#panel-developer)
+4. [Contoh `.env` dua klien](#contoh-env-dua-klien)
+5. [Onboarding klien baru](#onboarding-klien-baru)
+6. [Alur pemakaian dari awal](#alur-pemakaian-dari-awal)
+7. [Pengembangan](#pengembangan)
+
 ## Kebutuhan
 
 - PHP 8.2+ dengan ekstensi `pdo_mysql`, `mbstring`, `dom`, `gd`, `intl`, `fileinfo`.
@@ -174,6 +184,23 @@ Zona waktu yang tampil ke pengguna diatur lagi per institusi di **Pengaturan Sis
    $u->adminProfile()->create(['nomor_induk' => 'ADM-001']);
    ```
 
+   **Dosen pertama.** Fakultas wajib punya dekan dan program studi wajib punya kaprodi (keduanya dosen),
+   sedangkan form dosen di aplikasi mewajibkan program studi. Pada database kosong, buat satu dosen tanpa
+   program studi lewat tinker, lalu lengkapi program studinya dari menu **Dosen** setelah prodi dibuat
+   (lihat [langkah A2](#a-persiapan-sekali-di-awal)):
+
+   ```php
+   $d = App\Models\User::create([
+       'name' => 'Nama Dekan', 'username' => '0011223344', 'email' => 'dekan@kampus.ac.id',
+       'password' => 'ganti-sandi-awal', 'role_id' => App\Models\Role::system(App\UserType::Dosen)->id,
+   ]);
+   $d->forceFill(['email_verified_at' => now()])->save();
+   $d->dosenProfile()->create([
+       'nidn' => '0011223344', 'jabatan_fungsional' => 'Lektor', 'pendidikan_terakhir' => 'S3',
+       'status_kepegawaian' => 'Tetap', 'status' => 'Aktif',
+   ]);
+   ```
+
 5. **Akun developer** (bila panel dipakai): buat akun admin/karyawan dengan cara yang sama, lalu
    `php artisan sia:developer <username>` dan pastikan `DEV_PANEL=true`.
 
@@ -194,8 +221,81 @@ Zona waktu yang tampil ke pengguna diatur lagi per institusi di **Pengaturan Sis
    - Periksa status tiap flag di **Fitur Klien**, lalu kunci (`LOCK_*=true`) flag yang sudah final.
    - Setelah selesai, pertimbangkan `DEV_PANEL=false` lalu `config:cache && route:cache`.
 
-9. **Data awal**: admin mengisi tahun akademik, fakultas, program studi, ruang, mata kuliah, akun dosen dan
-   mahasiswa, lalu kelas kuliah.
+9. **Data awal dan semester pertama**: ikuti [Alur pemakaian dari awal](#alur-pemakaian-dari-awal).
+
+## Alur pemakaian dari awal
+
+Urutan kerja sejak aplikasi terpasang sampai mahasiswa lulus. Aturan rinci tiap langkah ada di
+[docs/system-flow.md](docs/system-flow.md) (nomor bagian ditulis di kolom **Rujukan**).
+
+```mermaid
+flowchart TD
+    A[A. Persiapan sekali di awal<br/>pengaturan, data master, akun] --> B1
+    subgraph B[B. Setiap semester]
+        B1[Tahun akademik aktif] --> B2[Kelas kuliah + jadwal mingguan]
+        B2 --> B3[Generate pertemuan]
+        B3 --> B4[Tagihan semester*]
+        B4 --> B5[KRS mahasiswa]
+        B5 --> B6[Perkuliahan: materi, tugas, quiz, presensi]
+        B6 --> B7[UTS / UAS + susulan]
+        B7 --> B8[Nilai akhir + finalisasi]
+        B8 --> B9[Remidi]
+        B9 --> B10[KHS & transkrip]
+    end
+    B10 -->|semester berikutnya| B1
+    B10 --> C[C. Akhir studi<br/>TA → pendadaran → wisuda → SKL → Lulus]
+```
+
+\* Hanya bila fitur `keuangan` aktif.
+
+### A. Persiapan (sekali di awal)
+
+| # | Langkah | Oleh | Menu | Rujukan |
+|---|---|---|---|---|
+| A1 | Isi identitas institusi (nama, logo, **zona waktu**), SMTP, aturan akademik (skala nilai, batas SKS, jumlah pertemuan, syarat ujian, remidi, susulan, TA, cuti), tampilan halaman masuk. Zona waktu ditetapkan sekali di awal karena mengubahnya tidak menggeser data lama. | Admin | Pengaturan Sistem | 4 |
+| A2 | Data master berurutan: **dosen pertama** (lihat Onboarding) → **Fakultas** (dekan) → **Program Studi** (kaprodi) → lengkapi prodi dosen pertama → **Ruang** → **Mata Kuliah** (SKS, semester, prasyarat, tanda **TA/Skripsi** untuk mata kuliah skripsi). | Admin | Master Akademik | 3.2 |
+| A3 | Akun **Dosen** (NIDN, prodi), **Mahasiswa** (NIM, angkatan, prodi, dosen wali; semester dihitung otomatis dari angkatan), dan **Karyawan**. Role tambahan (mis. Staf Keuangan) disusun developer di `/dev/roles` atau admin bila `kelola_role` aktif. | Admin / developer | Pengguna & Akses | 3.3, 3.4 |
+| A4 | *Keuangan aktif:* **Jenis Biaya** (semester, remidi, susulan, serta info pendadaran/wisuda/cuti) dan **tarif** per prodi/angkatan. | Admin | Keuangan | 6.1 |
+
+Dosen dan mahasiswa masuk memakai NIDN/NIM/username. Akun buatan admin belum terverifikasi emailnya, jadi saat
+pertama masuk pengguna diminta memverifikasi email: pastikan SMTP (A1) sudah benar sebelum membagikan akun.
+
+### B. Setiap semester
+
+| # | Langkah | Oleh | Menu | Rujukan |
+|---|---|---|---|---|
+| B1 | Buat **Tahun Akademik** (`2026/2027` Ganjil/Genap) dengan tanggal kuliah, periode KRS, periode cuti, batas input nilai, batas bayar remidi, dan batas input nilai remidi, lalu aktifkan. Hanya satu yang boleh aktif: **nonaktifkan tahun lama dulu**. | Admin | Master Akademik → Tahun Akademik | 3.1 |
+| B2 | Buat **Kelas Kuliah** per mata kuliah (dosen pengampu, kapasitas, jumlah pertemuan). Kelas TA/Skripsi boleh tanpa dosen dan tanpa jadwal. | Admin | Perkuliahan → Kelas Kuliah | 5.1 |
+| B3 | Isi **jadwal mingguan** (hari, jam, ruang; bentrok kelas/ruang/dosen ditolak). Admin dari halaman kelas atau menu **Jadwal Kelas**; dosen dari menu **Jadwal Mengajar** untuk kelasnya sendiri. | Admin, dosen | Jadwal Kelas | 5.2 |
+| B4 | **Generate pertemuan** per kelas dari jadwal mingguan (UTS di pertemuan n/2, UAS di pertemuan n). Lakukan sesudah jadwal final; sejak ada pertemuan, tanggal mulai tahun akademik terkunci dan perubahan berikutnya dilakukan per pertemuan dengan alasan. | Admin, dosen | Presensi | 9.1 |
+| B5 | *Keuangan aktif:* **terbitkan tagihan semester** sebelum periode KRS; mahasiswa mengunggah bukti di **Biaya Kuliah**, admin memverifikasi. Bila sakelar **Kunci KRS** menyala, KRS terkunci sampai lunas. | Admin, mahasiswa | Keuangan → Tagihan Mahasiswa | 6.2–6.4 |
+| B6 | **KRS** selama periode: mahasiswa mengambil kelas yang ditawarkan (semester ini, tertunda, mengulang, prasyarat, batas SKS dari IPS, bentrok, kapasitas), lalu **Simpan KRS** untuk mengunci. Sesudahnya perubahan lewat **pindah kelas** (bila dibuka) atau admin membuka kunci KRS. | Mahasiswa | Rencana Studi (KRS) | 7, 16 |
+| B7 | **Perkuliahan**: materi, tugas, dan quiz dari halaman kelas atau menu **Materi/Tugas/Quiz** (tombol Tambah + isian Kelas Kuliah); dosen membuka pertemuan, mencatat presensi manual atau QR/PIN, menyetujui izin/sakit, mengisi jurnal. | Dosen, admin, mahasiswa | Konten Kelas, Presensi | 8, 9 |
+| B8 | **UTS**: admin membuat jadwal ujian (massal dari pertemuan UTS atau satu per satu, mode tatap muka / unggah berkas / soal online) lalu **menerbitkan**; dosen menyiapkan soal; mahasiswa mengerjakan dan mengunduh kartu ujian; dosen menilai 0–100 lalu merilis nilai. Mahasiswa yang berhalangan mengajukan **ujian susulan**. | Admin, dosen, mahasiswa | Jadwal Ujian, Ujian Susulan | 10, 13 |
+| B9 | **UAS** dengan alur yang sama. Syarat kehadiran ujian dan dispensasi berlaku bila diaktifkan. | Admin, dosen, mahasiswa | Jadwal Ujian | 9.4, 10 |
+| B10 | **Nilai akhir** (huruf) diisi manual di tabel Nilai Mahasiswa, lalu **Finalisasi** sebelum batas input nilai. Nilai tugas/quiz/ujian tidak dihitung otomatis menjadi huruf. | Dosen (admin) | Kelas Kuliah → Nilai | 11 |
+| B11 | **Remidi**: kunci daftar peserta (usulan otomatis D/E yang ikut UAS) → *keuangan aktif:* tagihan remidi & bukti bayar → admin menjadwalkan ujian remidi → dosen menilai dan menetapkan huruf baru → finalisasi remidi sebelum batas input nilai remidi. | Dosen, admin, mahasiswa | Kelas Kuliah, Tagihan Remidi, Jadwal Ujian | 12 |
+| B12 | **Hasil studi**: mahasiswa melihat dan mengunduh KHS dan transkrip. IPS semester ini menentukan batas SKS dan kuota tagihan semester berikutnya; kembali ke **B1**. | Mahasiswa | Kartu Hasil Studi, Transkrip Nilai | 11.3 |
+
+### C. Akhir studi
+
+| # | Langkah | Oleh | Menu | Rujukan |
+|---|---|---|---|---|
+| C1 | Mahasiswa mengambil mata kuliah **TA/Skripsi** di KRS (minimal SKS lulus sesuai Pengaturan Akademik) dan mengambilnya lagi tiap semester sampai dinilai. | Mahasiswa | KRS | 14.7 |
+| C2 | **Pengajuan TA/Skripsi**; admin mengesahkan judul dan menetapkan pembimbing (maks 2). | Mahasiswa, admin | Tugas Akhir & Wisuda; Administrasi → TA & Wisuda | 14.2 |
+| C3 | **Pendaftaran pendadaran** (syarat SKS, tanpa E, semua nilai lengkap, bukti bayar) → disetujui salah satu pembimbing → admin menjadwalkan dengan 3 penguji dan surat PDF. | Mahasiswa, dosen, admin | Bimbingan TA; TA & Wisuda | 14.3 |
+| C4 | Tiga penguji menilai 0–100; ketua menetapkan **lulus / lulus revisi / tidak lulus**. Huruf lulus otomatis masuk ke KRS mata kuliah TA. | Dosen penguji | Bimbingan TA | 14.4 |
+| C5 | Admin membuka **Periode Wisuda**; mahasiswa mendaftar (data ijazah, toga, foto, bukti bayar); admin menyetujui → **Generate SKL** → status mahasiswa menjadi **Lulus**. | Admin, mahasiswa | Administrasi → Periode Wisuda | 14.5 |
+
+### D. Kapan saja
+
+- **Cuti dan aktif kembali**: pengajuan cuti di periode cuti tahun akademik, bukti bayar wajib, disetujui admin
+  ([15](docs/system-flow.md#15-cuti-dan-aktif-kembali)).
+- **Pindah kelas**: bila formulirnya dibuka di Pengaturan Akademik, disetujui admin ([16](docs/system-flow.md#16-pindah-kelas)).
+- **Info kuliah**, **Beranda** per peran (pengingat tagihan, jadwal, izin, remidi, TA), dan dokumen PDF
+  ([17](docs/system-flow.md#17-fitur-pendukung)).
+- **Status dosen/mahasiswa**: dosen Nonaktif dan mahasiswa selain Aktif/Cuti/Lulus tidak bisa masuk
+  ([3.3](docs/system-flow.md#33-pengguna-manage-user)).
 
 ## Pengembangan
 
