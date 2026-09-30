@@ -2,7 +2,7 @@
 
 Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **sesuai kode yang ada**, bukan rencana. Gambaran visualnya ada di [system-flowchart.md](system-flowchart.md).
 
-- Disusun dari kode di cabang `main` pada commit `693048f` (27 September 2026).
+- Disusun dari kode di cabang `main` pada commit `693048f` (27 September 2026), dengan pembaruan sesudahnya (terakhir: aturan SKS TA/Skripsi, 30 September 2026).
 - Rujukan kode ditulis sebagai `Kelas::metode` atau path berkas. Nomor baris sengaja tidak dicantumkan karena cepat berubah.
 - Hal yang tidak bisa dipastikan dari kode, tampak tidak konsisten, atau masih placeholder ditandai **Perlu dikonfirmasi** dan dikumpulkan di [bagian 19](#19-perlu-dikonfirmasi).
 
@@ -261,7 +261,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 6. **Ujian susulan**:
    - `batas_pengajuan_susulan_hari` (bawaan 3): pengajuan dibuka sampai N hari setelah tanggal ujian;
    - `batas_bayar_susulan_hari` (bawaan 3): batas bayar tiap tagihan susulan = tanggal terbit + N hari.
-7. **Tugas akhir**: `min_sks_pendadaran` (bawaan 138), SKS bernilai minimal di luar TA untuk mendaftar pendadaran dan wisuda.
+7. **Tugas akhir**: `min_sks_ambil_ta` (bawaan 120), SKS lulus minimal di luar TA untuk mengambil mata kuliah TA/Skripsi di KRS; `min_sks_pendadaran` (bawaan 138), SKS bernilai minimal di luar TA untuk mendaftar pendadaran dan wisuda.
    **Cuti**: `maks_cuti` (bawaan 2, 0–14), jumlah semester cuti yang boleh disetujui selama studi ([bagian 15](#15-cuti-dan-aktif-kembali)).
 8. **Presensi**:
    - `jumlah_pertemuan` (bawaan 16, hanya untuk kelas baru);
@@ -281,7 +281,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 - **Field:**
   - `kode_kelas` (unik per tahun akademik);
   - `tahun_akademik_id`;
-  - `dosen_id` (satu dosen pengampu);
+  - `dosen_id` (satu dosen pengampu; **boleh kosong untuk kelas TA/Skripsi**, lihat [14.7](#147-sks-dan-kelas-taskripsi));
   - `matkul_id`;
   - `kapasitas` 1–500;
   - `jumlah_pertemuan` 1–32. Kelas baru tanpa isian ini memakai nilai bawaan dari Pengaturan Akademik.
@@ -292,6 +292,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
   - pertemuan baru dibuat otomatis.
 - **Hapus kelas** ditolak bila sudah ada KRS, pertemuan yang berjalan, presensi, izin, atau dispensasi. Bila boleh, pertemuan dan jadwal ujiannya ikut terhapus.
 - **Admin membatalkan KRS** mahasiswa dari halaman kelas hanya bila nilainya masih kosong.
+- **Kelas TA/Skripsi** tidak memakai jadwal, pertemuan, konten, ujian, maupun remidi ([14.7](#147-sks-dan-kelas-taskripsi)).
 
 ### 5.2 Jadwal mingguan
 
@@ -331,7 +332,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 Admin membuka menu **Keuangan → Tagihan Mahasiswa**, lalu **Terbitkan Tagihan Semester Ini** (`TagihanController::terbitkan`):
 
 1. Harus ada jenis biaya aktif berkategori `semester`. Bila tidak ada, penerbitan ditolak.
-2. Bila masih ada KRS tanpa nilai di tahun akademik sebelumnya, sistem meminta konfirmasi (`tagihan_konfirmasi`). Alasannya, kuota SKS sebagian mahasiswa akan memakai angka "tanpa IPS". Admin bisa lanjut (`paksa`) atau batal.
+2. Bila masih ada KRS tanpa nilai di tahun akademik sebelumnya (di luar TA/Skripsi yang berlanjut), sistem meminta konfirmasi (`tagihan_konfirmasi`). Alasannya, kuota SKS sebagian mahasiswa akan memakai angka "tanpa IPS". Admin bisa lanjut (`paksa`) atau batal.
 3. Untuk setiap mahasiswa berstatus **`Aktif`**:
    - tagihan yang sudah ada **hanya dihitung ulang** bila `belum_bayar`, belum ada bukti, dan rinciannya tidak diketik manual (`TagihanSemester::bolehDihitungUlang`). Tagihan `lunas`, `menunggu_verifikasi`, `ditolak` (sudah ada bukti), atau berincian manual tidak disentuh;
    - rincian dihitung dengan `TagihanSemester::hitungRincian` lalu disimpan dengan `gantiRincian`;
@@ -339,7 +340,7 @@ Admin membuka menu **Keuangan → Tagihan Mahasiswa**, lalu **Terbitkan Tagihan 
    - pesan hasil menyebut jumlah tagihan baru, yang dihitung ulang, yang tidak disentuh, dan mahasiswa tanpa tarif.
 4. **Rumus rincian:**
    - komponen `tetap` = nominal tarif × 1;
-   - komponen `per_sks` = nominal tarif × **kuota SKS**, yaitu batas SKS dari IPS semester sebelumnya, **bukan** SKS yang sudah diambil;
+   - komponen `per_sks` = nominal tarif × **kuota SKS**, yaitu batas SKS dari IPS semester sebelumnya, **bukan** SKS yang sudah diambil. Pengecualian: mahasiswa yang **tinggal mengerjakan TA/Skripsi** hanya dikenai SKS mata kuliah TA/Skripsi (`TagihanSemester::sksTinggalTa`, lihat [14.7](#147-sks-dan-kelas-taskripsi));
    - komponen tanpa tarif atau bernominal 0 dilewati.
    - Artinya tagihan terbit **sebelum** KRS diisi.
 5. Nama dan nominal setiap komponen dibekukan di `tagihan_item`, jadi perubahan tarif berikutnya tidak mengubah tagihan yang sudah terbit.
@@ -384,13 +385,16 @@ Mahasiswa mengisi KRS di menu **Rencana Studi (KRS)**. Semua rute KRS dijaga `ca
 - Harus ada tahun akademik aktif dan periode KRS sedang berjalan. Di luar periode, daftar kelas tampil kosong.
 - **Batas SKS** (`PengaturanAkademik::maksSksUntuk`) diambil dari IPS semester sebelumnya (`MahasiswaProfile::ipsSemesterSebelum`):
   - "semester sebelumnya" adalah tahun akademik **terakhir yang pernah diambil mahasiswa**;
-  - IPS bernilai kosong bila belum pernah kuliah, atau bila ada nilai semester itu yang belum lengkap. Batasnya lalu memakai `maks_sks_tanpa_ips`.
+  - IPS bernilai kosong bila belum pernah kuliah, atau bila ada nilai semester itu yang belum lengkap. Batasnya lalu memakai `maks_sks_tanpa_ips`;
+  - KRS TA/Skripsi yang belum dinilai **tidak dihitung**: tidak membuat IPS kosong, dan semester yang isinya hanya TA berlanjut dilewati (dipakai IPS semester sebelumnya).
 - **Kelas yang ditawarkan** (`App\TawaranKrs`): kelas di tahun akademik aktif dari prodi mahasiswa, dengan mata kuliah yang termasuk salah satu dari:
   1. **semester ini:** semester mata kuliah sama dengan semester mahasiswa ([3.3](#33-pengguna-manage-user));
   2. **tertunda:** semester lebih kecil dengan paritas sama (Ganjil/Genap) dan **belum pernah diambil**, misalnya karena cuti. Mata kuliah semester 3 yang terlewat muncul di semester 5, lalu 7, dan seterusnya sampai diambil. Berlaku juga untuk mata kuliah Pilihan;
   3. **mengulang:** pernah diambil, nilainya sudah keluar, dan semua nilainya `boleh_diulang`.
 
   Mata kuliah yang sudah lulus (nilai tidak `boleh_diulang`) atau pengambilan lamanya belum bernilai tidak ditawarkan. Kelas yang sudah diambil tahun ini selalu tampil agar bisa dibatalkan. Halaman KRS memberi label **"Tertunda smt N"** atau **"Mengulang"**.
+
+  **Mata kuliah TA/Skripsi** punya aturan sendiri ([14.7](#147-sks-dan-kelas-taskripsi)): ditawarkan mulai semesternya tanpa melihat paritas, diambil lagi selama belum dinilai (label **"Lanjutan TA"**), dan terkunci sampai SKS lulus mencapai `min_sks_ambil_ta`.
 - **Prasyarat:** mata kuliah yang prasyaratnya belum lulus **tetap tampil tetapi terkunci** dengan alasan "Prasyarat: … belum lulus". Prasyarat dianggap lulus bila nilainya sudah keluar dan `lulus`, termasuk nilai yang masih `boleh_diulang` (bawaan: D). Prasyarat yang sedang diambil semester ini belum bernilai, jadi mata kuliah lanjutannya baru bisa diambil di periode berikutnya yang menawarkannya.
 
 ### 7.2 Mengambil kelas (`KrsController::store`)
@@ -404,11 +408,11 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 5. Dalam transaksi, baris mahasiswa dan kelas dikunci (`lockForUpdate`).
 6. Riwayat mata kuliah yang sama (`TawaranKrs::alasanTidakBolehAmbil`):
    - sudah diambil di tahun ini, termasuk di kelas paralel → ditolak;
-   - pengambilan lama belum bernilai → ditolak;
+   - pengambilan lama belum bernilai → ditolak, **kecuali TA/Skripsi** (lanjutan);
    - nilai lama tidak `boleh_diulang` → ditolak ("sudah lulus").
 7. Mata kuliah harus termasuk tawaran (semester ini, tertunda, atau mengulang; lihat 7.1), bila tidak ditolak ("tidak ditawarkan untuk semester Anda"). Lalu semua prasyarat harus sudah lulus, bila tidak ditolak ("Prasyarat: … belum lulus").
 8. Tidak bentrok jadwal dengan kelas lain yang sudah diambil tahun ini (`Jadwal::bentrokUntukMahasiswa`).
-9. Kelas belum penuh (jumlah KRS < `kapasitas`).
+9. Kelas belum penuh (jumlah KRS < `kapasitas`). Kelas TA/Skripsi tidak dibatasi kapasitas.
 10. Total SKS tahun ini ditambah SKS kelas ini tidak melebihi batas SKS.
 11. Baris KRS dibuat dengan status `Aktif`. Pasangan mahasiswa–kelas unik.
 
@@ -692,6 +696,7 @@ Yang **tidak** terkunci: presensi (hanya terkunci bila tahun akademik nonaktif),
 
 - **KHS:** semua KRS di satu tahun akademik.
   - IP = Σ(SKS × bobot) / ΣSKS, hanya atas mata kuliah yang sudah bernilai.
+  - TA/Skripsi yang belum dinilai di tahun akademik yang sudah tidak aktif tampil **"Berlanjut"**.
   - Tersedia unduhan PDF (kolom bobot dan mutu, IPS) dengan blok tanda tangan dokumen mahasiswa ([17.6](#176-dokumen-pdf)).
 - **Transkrip:** nilai **terbaik** per mata kuliah, jumlah pengambilan, IPK, dan total SKS lulus (huruf bertanda `lulus`).
   - Tombol **Download Transkrip** (`mahasiswa.transkrip.download`) mengunduh PDF: identitas (termasuk tempat/tanggal lahir dan fakultas), tabel kode–SKS–nilai–bobot–mutu dengan baris jumlah, IPK, dan blok tanda tangan ([17.6](#176-dokumen-pdf)). Tombol tampil bila sudah ada nilai.
@@ -961,7 +966,24 @@ Tiga pengajuan berurutan di menu **Tugas Akhir & Wisuda** (mahasiswa, izin `maha
 ### 14.6 Biaya dan pengingat
 
 - Biaya pendadaran dan wisuda **tidak ditagihkan**. Admin mengisinya sebagai jenis biaya kategori `pendadaran`/`wisuda` (nominal tetap, tarif per prodi/angkatan). Kartu **Biaya Pendadaran & Wisuda** selalu tampil di Biaya Kuliah, dan nominalnya ikut tampil di label bukti bayar form pendaftaran.
-- **Beranda** menampilkan kartu "Tugas akhir & wisuda" ([17.3](#173-beranda)).
+- **Beranda** menampilkan kartu "Tugas akhir & wisuda" ([17.3](#173-beranda)), termasuk pengingat **"Tugas akhir Anda berlanjut: ambil lagi mata kuliah TA/Skripsi di KRS semester ini"** bagi mahasiswa berstatus Aktif yang TA/Skripsi semester lalunya belum dinilai dan belum diambil lagi di tahun aktif.
+
+### 14.7 SKS dan kelas TA/Skripsi
+
+Mata kuliah bertanda TA/Skripsi berbeda dari mata kuliah biasa karena nilainya baru keluar dari pendadaran, yang bisa lewat beberapa semester.
+
+- **Mengambil di KRS** (`App\TawaranKrs`):
+  - ditawarkan bila semester mahasiswa **≥ semester mata kuliah**, tanpa aturan paritas Ganjil/Genap;
+  - **terkunci** sampai SKS **lulus** di luar TA/Skripsi (nilai terbaik per mata kuliah, huruf bertanda `lulus`) mencapai `min_sks_ambil_ta` (Pengaturan Akademik → Tugas Akhir, bawaan **120**), dengan alasan "Minimal 120 SKS lulus di luar TA/Skripsi (Anda baru N SKS)";
+  - diambil **lagi setiap semester** selama belum dinilai (label **"Lanjutan TA"**). Tidak ada batas jumlah semester;
+  - sesudah dinilai, ikut aturan mengulang biasa (nilai lulus = tidak ditawarkan lagi);
+  - SKS-nya tetap dihitung dalam batas SKS semester itu; kapasitas kelas tidak dibatasi.
+- **Status "Berlanjut"** (`Krs::taBerlanjut`): KRS TA/Skripsi tanpa nilai di tahun akademik yang sudah tidak aktif. KRS ini tidak dihitung dalam IPS ([7.1](#71-syarat-dasar)), tidak dianggap nilai tertinggal saat menerbitkan tagihan ([6.2](#62-menerbitkan-tagihan-semester)), dan tampil "Berlanjut" di KHS. Saat lulus pendadaran, huruf masuk ke KRS TA yang belum dinilai paling baru ([14.4](#144-penilaian-dan-hasil-pendadaran)); KRS semester sebelumnya tetap "Berlanjut".
+- **Kelas TA/Skripsi** (`KelasKuliah::tugasAkhir`):
+  - dosen pengampu **boleh kosong**; pembimbing ditetapkan per mahasiswa saat pengajuan TA disetujui;
+  - **tidak memakai** jadwal mingguan, pertemuan/presensi, materi, tugas, quiz, UTS/UAS, remidi, maupun pindah kelas. Rutenya menolak (403 atau pesan galat), tombolnya disembunyikan, dan kelas TA tidak ikut dalam pembuatan UTS/UAS massal, pilihan kelas ujian, maupun tujuan duplikasi konten;
+  - nilai **hanya dari pendadaran**: ubah nilai manual dan finalisasi nilai ditolak, baik untuk dosen maupun admin.
+- **Tagihan per SKS:** mahasiswa yang **tinggal mengerjakan TA/Skripsi**, yaitu syarat nilai pendadaran sudah terpenuhi (SKS minimal, tanpa E, semua mata kuliah lain dinilai) dan TA/Skripsi belum dinilai, dikenai komponen `per_sks` sebesar **SKS mata kuliah TA/Skripsi prodinya**, bukan kuota dari IPS. Panel "Dari Mana Angka Ini?" di Biaya Kuliah menjelaskannya (PD-67).
 
 ---
 
@@ -1210,13 +1232,16 @@ Daftar ini berisi perilaku di kode yang ambigu, tampak tidak konsisten, atau bel
 54. **SKS minimal wisuda memakai angka yang sama dengan pendadaran** (`min_sks_pendadaran`); tidak ada pengaturan terpisah.
 55. **"Semua mata kuliah sudah dinilai" mencakup semester berjalan**, sehingga mahasiswa yang masih mengambil mata kuliah lain bersamaan dengan Skripsi baru bisa mendaftar pendadaran setelah nilainya keluar.
 56. **Nilai E dicek sebagai huruf `E`**, bukan huruf bertanda tidak lulus di skala nilai.
-57. **Nilai pendadaran ditulis ke KRS tanpa melihat kunci nilai kelas Skripsi.** Dosen pengampu kelas Skripsi juga masih bisa mengubah huruf itu lewat tabel nilai kelas.
+57. **Nilai pendadaran ditulis ke KRS tanpa melihat kunci nilai kelas Skripsi.** ~~Dosen pengampu kelas Skripsi juga masih bisa mengubah huruf itu lewat tabel nilai kelas.~~ **Sejak 30 Sep 2026** nilai kelas TA/Skripsi tidak bisa diubah manual oleh dosen maupun admin ([14.7](#147-sks-dan-kelas-taskripsi)); koreksi huruf yang salah input belum ada jalannya.
 58. **Nomor surat pendadaran dan SKL** dihitung dari jumlah nomor tahun itu + 1. Dua persetujuan yang benar-benar bersamaan bisa mendapat nomor surat yang sama (nomor SKL unik di database, sehingga yang kedua gagal).
 59. **Koreksi data ijazah tidak memperbarui profil.** SKL memakai data dari form wisuda, sedangkan profil mahasiswa tetap data lama.
 60. **Belum ada fitur mengubah** pembimbing setelah TA disahkan, jadwal/penguji pendadaran setelah terbit, peserta wisuda, atau membatalkan SKL (status Lulus).
 61. **Cek bentrok pendadaran** tidak mencakup pembimbing yang bukan penguji maupun jadwal kuliah mahasiswanya sendiri.
-62. **Tidak lulus pendadaran tidak mengisi nilai KRS Skripsi.** Bila semester berakhir, KRS itu tetap tanpa nilai dan mahasiswa harus mengambil Skripsi lagi di tahun aktif untuk mendaftar ulang.
-63. **Kelas Skripsi** diperlakukan seperti kelas lain (KRS, tagihan per SKS), tetapi tidak punya jadwal, pertemuan, atau ujian; data demo membuatnya tanpa jadwal.
+62. **Tidak lulus pendadaran tidak mengisi nilai KRS Skripsi.** Bila semester berakhir, KRS itu menjadi "Berlanjut" dan mahasiswa mengambil Skripsi lagi di tahun aktif (sesuai alur 14.7) untuk mendaftar ulang.
+63. ~~**Kelas Skripsi** diperlakukan seperti kelas lain.~~ **Selesai 30 Sep 2026:** aturan khusus kelas dan SKS TA/Skripsi ([14.7](#147-sks-dan-kelas-taskripsi)).
 64. ~~Beranda belum menampilkan pengingat cuti.~~ **Selesai 29 Sep 2026:** Beranda mahasiswa dan dashboard admin menampilkan pengingat cuti/aktif kembali ([15](#15-cuti-dan-aktif-kembali)).
 65. **Status Cuti tidak berakhir sendiri.** Mahasiswa tetap `Cuti` di semester-semester berikutnya sampai pengajuan aktif kembali disetujui. Sejak 29 Sep 2026 mahasiswa dan admin **diingatkan** begitu semester cutinya selesai; statusnya tetap tidak diubah otomatis (perlu dikonfirmasi apakah perlu).
 66. **Status yang diubah manual di Manage User** (mis. Aktif → Cuti) tidak tercatat sebagai pengajuan, sehingga tidak dihitung dalam `maks_cuti`.
+67. **Kuota tagihan "tinggal TA" tidak membatasi KRS.** Mahasiswa yang ditagih sebesar SKS TA/Skripsi saja tetap boleh mengambil kelas lain sampai batas SKS dari IPS (mis. mengulang). Bila itu terjadi, rincian tagihannya perlu dikoreksi admin secara manual.
+68. **Syarat SKS mengambil TA dan mendaftar pendadaran dihitung berbeda:** `min_sks_ambil_ta` memakai SKS **lulus**, sedangkan `min_sks_pendadaran` memakai SKS **bernilai** (termasuk huruf tidak lulus selain E).
+69. **Data demo:** mahasiswa demo paling tinggi semester 5 dengan SKS di bawah 120, jadi KRS Skripsi di seeder dibuat langsung (tidak lewat aturan KRS) agar alur TA bisa dicoba.

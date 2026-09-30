@@ -1,6 +1,6 @@
 # Flowchart Sistem SIA VD
 
-Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `693048f`. Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 19](system-flow.md#19-perlu-dikonfirmasi).
+Diagram Mermaid untuk alur di [system-flow.md](system-flow.md). Keduanya disusun dari kode di cabang `main` pada commit `693048f`, dengan pembaruan sesudahnya (terakhir: aturan SKS TA/Skripsi, 30 September 2026). Penjelasan lengkap tiap validasi, status, dan butir **Perlu dikonfirmasi** ada di dokumen teks. Di diagram, butir yang perlu dikonfirmasi ditandai dengan catatan (PD-nomor), merujuk ke nomor di [bagian 19](system-flow.md#19-perlu-dikonfirmasi).
 
 Versi HTML yang siap dibaca di browser (diagram dirender statis, bisa diperbesar dan diunduh): [system-flowchart.html](system-flowchart.html). Bangun ulang dengan `python3 docs/build-flowchart-html.py` setiap kali berkas ini berubah.
 
@@ -180,13 +180,13 @@ flowchart TD
 flowchart TD
     A["Admin: Terbitkan Tagihan Semester Ini"] --> B{"Ada jenis biaya aktif<br/>kategori semester?"}
     B -- Tidak --> B1["Ditolak"]
-    B -- Ya --> C{"Ada nilai semester sebelumnya<br/>yang masih kosong?"}
+    B -- Ya --> C{"Ada nilai semester sebelumnya<br/>yang masih kosong?<br/>(TA/Skripsi berlanjut diabaikan)"}
     C -- "Ya, belum paksa" --> C1["Minta konfirmasi<br/>kuota sebagian mahasiswa memakai<br/>maks SKS tanpa IPS"]
     C1 -- "Lanjut: paksa" --> D
     C -- Tidak --> D["Untuk tiap mahasiswa berstatus Aktif"]
     D --> E{"Sudah punya tagihan yang<br/>tidak boleh dihitung ulang?<br/>(lunas, ada bukti, rincian manual)"}
     E -- Ya --> E1["Tidak disentuh"]
-    E -- "Tidak / belum ada" --> F["Hitung rincian dari tarif paling khusus<br/>tetap = nominal x 1<br/>per_sks = nominal x kuota SKS"]
+    E -- "Tidak / belum ada" --> F["Hitung rincian dari tarif paling khusus<br/>tetap = nominal x 1<br/>per_sks = nominal x kuota SKS<br/>(tinggal TA/Skripsi: SKS TA saja, PD-67)"]
     F --> F1{"Total Rp0?"}
     F1 -- Ya --> F2["Tidak ditagih (tanpa tarif)<br/>tagihan lama dihapus"]
     F1 -- Tidak --> H["Status belum_bayar<br/>rincian dibekukan di tagihan_item"]
@@ -227,15 +227,15 @@ flowchart TD
     E -- Ya --> F["Transaksi + lockForUpdate<br/>mahasiswa dan kelas"]
     F --> G{"Riwayat mata kuliah yang sama"}
     G -- "Sudah diambil tahun ini" --> X4["Ditolak"]
-    G -- "Pengambilan lama belum bernilai" --> X5["Ditolak: menunggu nilai"]
+    G -- "Pengambilan lama belum bernilai<br/>(bukan TA/Skripsi)" --> X5["Ditolak: menunggu nilai"]
     G -- "Nilai lama tidak boleh diulang" --> X6["Ditolak: sudah lulus"]
-    G -- "Belum pernah / boleh diulang" --> H{"Termasuk tawaran?<br/>semester ini, tertunda<br/>(smt lebih kecil, paritas sama,<br/>belum pernah diambil), atau mengulang"}
+    G -- "Belum pernah / boleh diulang" --> H{"Termasuk tawaran?<br/>semester ini, tertunda<br/>(smt lebih kecil, paritas sama,<br/>belum pernah diambil), atau mengulang<br/>TA/Skripsi: smt >= smt matkul tanpa paritas,<br/>atau Lanjutan TA bila belum dinilai"}
     H -- Tidak --> X7["Ditolak: tidak ditawarkan<br/>untuk semester Anda"]
-    H -- Ya --> P{"Semua prasyarat sudah lulus?<br/>(nilai keluar dan lulus)"}
+    H -- Ya --> P{"Semua prasyarat sudah lulus?<br/>(nilai keluar dan lulus)<br/>TA/Skripsi: SKS lulus >= min_sks_ambil_ta"}
     P -- Tidak --> X11["Ditolak: Prasyarat ... belum lulus<br/>(di daftar tampil terkunci)"]
     P -- Ya --> I{"Bentrok jadwal dengan<br/>kelas lain tahun ini?"}
     I -- Ya --> X8["Ditolak: sebutkan kelas yang bentrok"]
-    I -- Tidak --> J{"Jumlah KRS kelas<br/>kurang dari kapasitas?"}
+    I -- Tidak --> J{"Jumlah KRS kelas<br/>kurang dari kapasitas?<br/>(kelas TA/Skripsi tanpa batas)"}
     J -- Tidak --> X9["Ditolak: kelas penuh"]
     J -- Ya --> K{"SKS tahun ini + SKS kelas<br/>tidak melebihi batas SKS?"}
     K -- Tidak --> X10["Ditolak: melebihi batas SKS"]
@@ -247,7 +247,7 @@ flowchart TD
     M1 -.-> H
 
     subgraph Batas["Batas SKS"]
-        S1["IPS semester terakhir yang diambil"] --> S2{"IPS ada dan nilai lengkap?"}
+        S1["IPS semester terakhir yang diambil<br/>(TA/Skripsi belum dinilai diabaikan)"] --> S2{"IPS ada dan nilai lengkap?"}
         S2 -- Tidak --> S3["maks_sks_tanpa_ips (bawaan 20)"]
         S2 -- Ya --> S4["Baris batas SKS bertingkat<br/>3,00 = 24 | 2,50 = 21 | 2,00 = 18 | 0 = 15"]
     end
@@ -286,7 +286,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["Admin buat kelas<br/>kode unik per TA, dosen, mata kuliah,<br/>kapasitas, jumlah pertemuan (bawaan 16)"] --> B["Admin tambah jadwal mingguan<br/>hari, jam, ruang"]
+    A["Admin buat kelas<br/>kode unik per TA, dosen, mata kuliah,<br/>kapasitas, jumlah pertemuan (bawaan 16)"] --> T{"Mata kuliah TA/Skripsi?"}
+    T -- Ya --> T1(["Kelas TA: dosen boleh kosong,<br/>tanpa jadwal, pertemuan, konten, ujian, remidi<br/>(rute ditolak 403)"])
+    T -- Tidak --> B["Admin tambah jadwal mingguan<br/>hari, jam, ruang"]
     B --> C{"Bentrok kelas sendiri, ruang,<br/>atau dosen pada TA yang sama?"}
     C -- Ya --> C1["Ditolak"]
     C -- Tidak --> D["Jadwal disimpan"]
@@ -470,7 +472,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["Dosen/admin isi huruf akhir di tabel Nilai Mahasiswa"] --> B{"Peran admin?"}
+    A["Dosen/admin isi huruf akhir di tabel Nilai Mahasiswa"] --> TA{"Kelas TA/Skripsi?"}
+    TA -- Ya --> XT["Ditolak: nilai hanya dari hasil pendadaran<br/>(finalisasi juga ditolak)"]
+    TA -- Tidak --> B{"Peran admin?"}
     B -- Ya --> Z["Simpan (admin tidak pernah terkunci)"]
     B -- Tidak --> C{"TA kelas nonaktif?"}
     C -- Ya --> X["Nilai terkunci"]
@@ -652,6 +656,7 @@ stateDiagram-v2
 
 ```mermaid
 flowchart TD
+    A0["KRS: TA/Skripsi terbuka bila smt >= smt matkul<br/>dan SKS lulus >= min_sks_ambil_ta (bawaan 120)"] --> A
     A["Mahasiswa mengambil mata kuliah TA/Skripsi<br/>di KRS tahun aktif"] --> B["Pengajuan TA: judul, bidang, ringkasan,<br/>usulan pembimbing, proposal"]
     B --> C{"Admin: TA & Wisuda"}
     C -- "Perbaikan" --> B
@@ -684,6 +689,9 @@ flowchart TD
     O -- "Setujui" --> P["Daftar Mahasiswa Wisuda per periode"]
     P --> Q(["Generate SKL: IPK, predikat, tanggal lulus dibekukan<br/>status mahasiswa menjadi Lulus"])
 
+    D -.- S1["Semester berakhir sebelum lulus pendadaran:<br/>KRS TA menjadi Berlanjut (tanpa nilai, di luar IPS)"]
+    S1 -.-> S2["Ambil lagi TA/Skripsi di KRS semester berikutnya<br/>(Lanjutan TA, pengingat di Beranda)"]
+    S2 -.-> D
     F -.- R["Biaya pendadaran/wisuda hanya informasi di Biaya Kuliah;<br/>bukti bayar diunggah di form"]
 ```
 
@@ -779,7 +787,7 @@ erDiagram
     TAHUN_AKADEMIK ||--o{ KELAS_KULIAH : memiliki
     MATA_KULIAH ||--o{ KELAS_KULIAH : diajarkan_di
     MATA_KULIAH }o--o{ MATA_KULIAH : prasyarat
-    DOSEN ||--o{ KELAS_KULIAH : mengampu
+    DOSEN |o--o{ KELAS_KULIAH : "mengampu (boleh kosong utk TA)"
     KELAS_KULIAH ||--o{ JADWAL : punya
     KELAS_KULIAH ||--o{ PERTEMUAN : punya
     KELAS_KULIAH ||--o{ KRS : diambil_lewat

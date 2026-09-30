@@ -113,11 +113,12 @@ it('seeds KRS that follows the prodi, semester, and SKS rules', function () {
         expect($rows->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks))->toBeLessThanOrEqual($maks);
     }
 
-    // Nilai memakai huruf yang terdaftar; tahun berjalan belum dinilai, tahun lampau sudah lengkap.
+    // Nilai memakai huruf yang terdaftar; tahun berjalan belum dinilai, tahun lampau sudah lengkap
+    // kecuali Skripsi yang berlanjut (nilainya baru keluar dari pendadaran).
     $huruf = SkalaNilai::huruf();
     $tahunAktifId = TahunAkademik::where('status', true)->value('id');
     $tahunBerjalan = $krs->filter(fn (Krs $item): bool => $item->kelasKuliah->tahun_akademik_id === $tahunAktifId);
-    $tahunLampau = $krs->filter(fn (Krs $item): bool => $item->kelasKuliah->tahun_akademik_id !== $tahunAktifId);
+    $tahunLampau = $krs->filter(fn (Krs $item): bool => $item->kelasKuliah->tahun_akademik_id !== $tahunAktifId && ! $item->taBerlanjut());
 
     expect($tahunBerjalan->whereNotNull('nilai'))->toBeEmpty()
         ->and($tahunLampau)->not->toBeEmpty()
@@ -321,6 +322,13 @@ it('seeds tugas akhir examples that follow the TA rules', function () {
     expect($ta->mahasiswa_id)->toBe($pengajuan[1]->mahasiswa_id)
         ->and($ta->status)->toBe(TugasAkhir::BERJALAN)
         ->and($ta->pembimbing_1_id)->not->toBeNull();
+
+    // Kelas Skripsi tanpa dosen pengampu; mahasiswa TA berjalan punya Skripsi semester lalu yang berlanjut.
+    $kelasSkripsi = KelasKuliah::whereHas('mataKuliah', fn ($q) => $q->where('tugas_akhir', true))->get();
+    $berlanjut = Krs::where('mahasiswa_id', $ta->mahasiswa_id)->whereIn('kelas_id', $kelasSkripsi->pluck('id'))
+        ->with('kelasKuliah.mataKuliah', 'kelasKuliah.tahunAkademik')->get()->filter(fn (Krs $k): bool => $k->taBerlanjut());
+    expect($kelasSkripsi->pluck('dosen_id')->filter())->toBeEmpty()
+        ->and($berlanjut)->toHaveCount(1);
 
     // Biaya pendadaran/wisuda hanya informasi: tidak masuk tagihan semester.
     expect(JenisBiaya::whereIn('kategori', JenisBiaya::INFO)->count())->toBe(3)

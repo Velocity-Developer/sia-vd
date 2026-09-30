@@ -117,7 +117,7 @@ class DemoSeeder extends Seeder
         $this->kelasDanJadwal($tahunAkademik, $prodi, $mataKuliah, $dosen, $ruang);
         $this->krsDanNilai($tahunAkademik, $mahasiswa);
         // KRS Skripsi disusun sebelum presensi dan tagihan semester dibuat dari KRS.
-        $this->tugasAkhir($tahunAkademik->last(), $mataKuliah);
+        $this->tugasAkhir($tahunAkademik, $mataKuliah);
         $this->kontenKelas($tahunAkademik->last(), $mahasiswa);
         $this->presensi($tahunAkademik);
         $this->pengajuanIzin($tahunAkademik->last());
@@ -1020,6 +1020,8 @@ class DemoSeeder extends Seeder
         $kelasSemua = KelasKuliah::query()
             ->where('tahun_akademik_id', $tahun->id)
             ->whereHas('krs')
+            // Kelas Skripsi tidak difinalisasi dan tidak punya remidi: nilainya dari pendadaran.
+            ->whereHas('mataKuliah', fn ($q) => $q->where('tugas_akhir', false))
             ->with(['dosen:id,user_id', 'jadwals:id,kelas_id,ruang_id', 'mataKuliah:id,sks'])
             ->orderBy('kode_kelas')
             ->get();
@@ -1170,8 +1172,13 @@ class DemoSeeder extends Seeder
      *
      * @param  Collection<int, MataKuliah>  $mataKuliah
      */
-    private function tugasAkhir(TahunAkademik $tahunAktif, Collection $mataKuliah): void
+    /**
+     * @param  Collection<int, TahunAkademik>  $tahunAkademik  berurutan, yang terakhir aktif
+     */
+    private function tugasAkhir(Collection $tahunAkademik, Collection $mataKuliah): void
     {
+        $tahunAktif = $tahunAkademik->last();
+        $tahunLalu = $tahunAkademik->slice(-2, 1)->first();
         foreach ([[JenisBiaya::PENDADARAN, 'PENDADARAN', 'Biaya Pendadaran', 750_000], [JenisBiaya::WISUDA, 'WISUDA', 'Biaya Wisuda', 1_500_000]] as $urut => [$kategori, $kode, $nama, $nominal]) {
             JenisBiaya::query()->create(['kode' => $kode, 'nama' => $nama, 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => $kategori, 'keterangan' => 'Dibayar sebelum mendaftar; bukti bayar diunggah di form pendaftaran.', 'aktif' => true, 'urutan' => 5 + $urut])
                 ->tarif()->create(['prodi_id' => null, 'angkatan' => null, 'nominal' => $nominal]);
@@ -1190,26 +1197,29 @@ class DemoSeeder extends Seeder
 
         $skripsi = $mataKuliah->first(fn (MataKuliah $m): bool => $m->tugas_akhir);
         $dosen = DosenProfile::query()->where('prodi_id', $skripsi->prodi_id)->orderBy('id')->get();
-        $kelas = KelasKuliah::query()->create([
+        // Kelas Skripsi tanpa dosen pengampu: pembimbing ditetapkan per mahasiswa di tugas akhir.
+        $kelasSkripsi = fn (TahunAkademik $tahun): KelasKuliah => KelasKuliah::query()->create([
             'kode_kelas' => $skripsi->kode_matkul.'-A',
-            'tahun_akademik_id' => $tahunAktif->id,
+            'tahun_akademik_id' => $tahun->id,
             'kapasitas' => 30,
-            'dosen_id' => $dosen->first()->id,
+            'dosen_id' => null,
             'matkul_id' => $skripsi->id,
         ]);
+        $kelas = $kelasSkripsi($tahunAktif);
 
         $peserta = MahasiswaProfile::query()->where('prodi_id', $skripsi->prodi_id)->orderBy('angkatan')->orderBy('nim')->take(2)->get();
 
         $admin = User::query()->where('username', 'admin')->firstOrFail();
+        // Mahasiswa kedua sudah mengambil Skripsi semester lalu dan belum selesai (Berlanjut), lalu mengambilnya lagi.
+        $kelasLalu = $tahunLalu !== null ? $kelasSkripsi($tahunLalu) : null;
+
         foreach ($peserta as $urut => $m) {
-            $maks = PengaturanAkademik::maksSksUntuk($m->ipsSemesterSebelum($tahunAktif)['ips'] ?? null);
-            $krs = Krs::query()->where('mahasiswa_id', $m->id)->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahunAktif->id))
-                ->with('kelasKuliah.mataKuliah:id,sks,jenis')->get()
-                // Mata kuliah pilihan dilepas lebih dulu.
-                ->sortBy(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->jenis === 'Pilihan' ? 0 : 1)->values();
-            while ($krs->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks) + $skripsi->sks > $maks && $krs->isNotEmpty()) {
-                $krs->shift()->delete();
+            if ($urut === 1 && $kelasLalu !== null) {
+                $this->beriRuangSkripsi($m, $tahunLalu, $skripsi->sks);
+                Krs::create(['mahasiswa_id' => $m->id, 'kelas_id' => $kelasLalu->id, 'status' => 'Aktif', 'nilai' => null]);
             }
+
+            $this->beriRuangSkripsi($m, $tahunAktif, $skripsi->sks);
             Krs::create(['mahasiswa_id' => $m->id, 'kelas_id' => $kelas->id, 'status' => 'Aktif', 'nilai' => null]);
             $pengajuan = PengajuanAkademik::query()->create([
                 'mahasiswa_id' => $m->id,
@@ -1238,6 +1248,21 @@ class DemoSeeder extends Seeder
                 ]);
                 $pengajuan->catat(PengajuanAkademik::DISETUJUI, null, $admin->id);
             }
+        }
+    }
+
+    /**
+     * Lepas KRS (mata kuliah pilihan lebih dulu) sampai Skripsi muat dalam batas SKS mahasiswa di tahun itu.
+     */
+    private function beriRuangSkripsi(MahasiswaProfile $mahasiswa, TahunAkademik $tahun, int $sksSkripsi): void
+    {
+        $maks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahun)['ips'] ?? null);
+        $krs = Krs::query()->where('mahasiswa_id', $mahasiswa->id)->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahun->id))
+            ->with('kelasKuliah.mataKuliah:id,sks,jenis')->get()
+            ->sortBy(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->jenis === 'Pilihan' ? 0 : 1)->values();
+
+        while ($krs->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks) + $sksSkripsi > $maks && $krs->isNotEmpty()) {
+            $krs->shift()->delete();
         }
     }
 
