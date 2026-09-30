@@ -126,7 +126,7 @@ class HasilStudiController extends Controller
         $krs = Krs::query()
             ->where('mahasiswa_id', $mahasiswa->id)
             ->when($tahunAkademikTerpilih, fn ($query) => $query->whereHas('kelasKuliah', fn ($kelas) => $kelas->where('tahun_akademik_id', $tahunAkademikTerpilih->id)))
-            ->with(['kelasKuliah:id,matkul_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul,sks'])
+            ->with(['kelasKuliah:id,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul,sks,tugas_akhir', 'kelasKuliah.tahunAkademik:id,status'])
             ->get();
         $krsDinilai = $krs->filter(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0);
         $totalSksDinilai = $krsDinilai->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
@@ -140,6 +140,8 @@ class HasilStudiController extends Controller
                 'nama' => $item->kelasKuliah?->mataKuliah?->nama_matkul,
                 'sks' => $item->kelasKuliah?->mataKuliah?->sks,
                 'nilai' => $item->nilai,
+                // TA/Skripsi yang belum selesai di semester itu dan diambil lagi semester berikutnya.
+                'berlanjut' => $item->taBerlanjut(),
             ])->values(),
             'tahunAkademiks' => $tahunAkademik,
             'tahunAkademik' => $tahunAkademikTerpilih,

@@ -114,6 +114,22 @@ class KelasKuliah extends Model
         $this->update(['nilai_final_at' => null, 'nilai_final_oleh' => null, 'nilai_dibuka_sampai' => $sampai]);
     }
 
+    /**
+     * Kelas mata kuliah TA/Skripsi: tanpa jadwal, pertemuan, konten, ujian, dan remidi; nilainya dari pendadaran.
+     */
+    public function tugasAkhir(): bool
+    {
+        return (bool) $this->loadMissing('mataKuliah')->mataKuliah?->tugas_akhir;
+    }
+
+    /**
+     * Tolak fitur perkuliahan (jadwal, pertemuan, konten, ujian, nilai manual) untuk kelas TA/Skripsi.
+     */
+    public function pastikanBukanTugasAkhir(string $fitur): void
+    {
+        abort_if($this->tugasAkhir(), 403, "Kelas TA/Skripsi tidak memakai {$fitur}.");
+    }
+
     public function tahunAkademik(): BelongsTo
     {
         return $this->belongsTo(TahunAkademik::class, 'tahun_akademik_id');

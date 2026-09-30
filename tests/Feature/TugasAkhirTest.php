@@ -238,11 +238,13 @@ it('serves submission files only to the owner, admins, and the supervisors', fun
 
 it('saves the minimum credits for the defence', function () {
     $admin = User::factory()->admin()->create();
-    expect(PengaturanAkademik::current()->min_sks_pendadaran)->toBe(138);
+    expect(PengaturanAkademik::current()->min_sks_pendadaran)->toBe(138)
+        ->and(PengaturanAkademik::current()->min_sks_ambil_ta)->toBe(120);
 
-    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.tugas-akhir'), ['min_sks_pendadaran' => 144])->assertSessionHas('success');
-    expect(PengaturanAkademik::current()->min_sks_pendadaran)->toBe(144);
-    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.tugas-akhir'), ['min_sks_pendadaran' => -1])->assertSessionHasErrors('min_sks_pendadaran');
+    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.tugas-akhir'), ['min_sks_ambil_ta' => 110, 'min_sks_pendadaran' => 144])->assertSessionHas('success');
+    expect(PengaturanAkademik::current()->min_sks_pendadaran)->toBe(144)
+        ->and(PengaturanAkademik::current()->min_sks_ambil_ta)->toBe(110);
+    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.tugas-akhir'), ['min_sks_ambil_ta' => 110, 'min_sks_pendadaran' => -1])->assertSessionHasErrors('min_sks_pendadaran');
 });
 
 it('reminds the student and the admin on the dashboard', function () {

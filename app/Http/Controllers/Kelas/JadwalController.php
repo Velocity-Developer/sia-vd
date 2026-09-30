@@ -48,6 +48,7 @@ class JadwalController extends Controller
 
     public function create(KelasKuliah $kelasKuliah): Response
     {
+        $kelasKuliah->pastikanBukanTugasAkhir('jadwal mingguan');
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
         return Inertia::render('Admin/JadwalForm', [
@@ -60,6 +61,7 @@ class JadwalController extends Controller
 
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
+        $kelasKuliah->pastikanBukanTugasAkhir('jadwal mingguan');
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
         $this->ensureNoConflict($kelasKuliah, $data, null);
         $data['kelas_id'] = $kelasKuliah->id;

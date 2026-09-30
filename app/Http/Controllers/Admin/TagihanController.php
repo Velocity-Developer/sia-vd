@@ -348,6 +348,8 @@ class TagihanController extends Controller
         return Krs::query()
             ->whereNull('nilai')
             ->whereHas('kelasKuliah', fn (Builder $query) => $query->where('tahun_akademik_id', $sebelumnya->id))
+            // TA/Skripsi yang belum dinilai memang berlanjut ke semester berikutnya, bukan nilai yang tertinggal.
+            ->whereHas('kelasKuliah.mataKuliah', fn (Builder $query) => $query->where('tugas_akhir', false))
             ->whereHas('mahasiswa', fn (Builder $query) => $query->where('status', 'Aktif'))
             ->count();
     }

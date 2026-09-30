@@ -106,6 +106,7 @@ trait KontenKelas
         $targets = KelasKuliah::query()
             ->whereIn('id', $ids)
             ->whereKeyNot($asal->id)
+            ->whereHas('mataKuliah', fn ($query) => $query->where('tugas_akhir', false))
             ->when($this->peran() === 'dosen', fn ($query) => $query->where('dosen_id', $request->user()->dosenProfile?->id))
             ->get();
 

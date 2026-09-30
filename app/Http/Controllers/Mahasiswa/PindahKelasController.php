@@ -155,6 +155,8 @@ class PindahKelasController extends Controller
         return $mahasiswa->krs()
             ->where('status', 'Aktif')
             ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query->where('status', true))
+            // Kelas TA/Skripsi tidak punya jadwal, jadi tidak ada alasan pindah kelas.
+            ->whereHas('kelasKuliah.mataKuliah', fn ($query) => $query->where('tugas_akhir', false))
             ->pluck('kelas_id');
     }
 }

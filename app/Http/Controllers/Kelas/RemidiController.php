@@ -20,6 +20,7 @@ class RemidiController extends Controller
     public function kunci(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
         $this->pastikanAksesKelas($kelasKuliah);
+        $kelasKuliah->pastikanBukanTugasAkhir('remidi');
 
         if ($this->tahunAkademikTerkunci($kelasKuliah)) {
             return back()->with('error', 'Tahun akademik kelas ini sudah tidak aktif. Hubungi admin.');

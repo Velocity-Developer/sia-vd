@@ -139,6 +139,7 @@ class InfoBiayaKuliahController extends Controller
                 : null,
             'sks_diambil' => $sksDiambil,
             'sisa_sks' => max($perSks->jumlah - $sksDiambil, 0),
+            'tinggal_ta' => TagihanSemester::sksTinggalTa($mahasiswa) !== null,
         ];
     }
 

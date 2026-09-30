@@ -90,6 +90,7 @@ class UjianController extends Controller
         DB::transaction(function () use ($data, $request, &$hasil): void {
             $kelas = KelasKuliah::query()
                 ->where('tahun_akademik_id', $data['tahun_akademik_id'])
+                ->whereHas('mataKuliah', fn (Builder $q) => $q->where('tugas_akhir', false))
                 ->whereDoesntHave('ujians', fn (Builder $q) => $q->where('jenis', $data['jenis']))
                 ->with(['pertemuans' => fn ($q) => $q->where('jenis', $data['jenis'])])
                 ->get();
@@ -307,6 +308,10 @@ class UjianController extends Controller
         $ta = $kelas?->tahunAkademik;
         $utama = null;
 
+        if ($kelas?->tugasAkhir()) {
+            throw ValidationException::withMessages(['kelas_id' => 'Kelas TA/Skripsi tidak memakai ujian; nilainya dari hasil pendadaran.']);
+        }
+
         if ($remidi && $kelas !== null) {
             $this->pastikanKelasSiapRemidi($kelas);
         }
@@ -505,6 +510,7 @@ class UjianController extends Controller
             ],
             'kelasOptions' => KelasKuliah::query()
                 ->where('tahun_akademik_id', $tahunId)
+                ->whereHas('mataKuliah', fn (Builder $q) => $q->where('tugas_akhir', false))
                 ->with('mataKuliah:id,kode_matkul,nama_matkul')
                 ->orderBy('kode_kelas')
                 ->get(['id', 'kode_kelas', 'matkul_id'])

@@ -165,6 +165,7 @@ const props = defineProps<{
     otherClasses: OtherClass[];
     skalaNilai: string[];
     nilaiTerkunci: boolean;
+    kelasTugasAkhir: boolean;
     statusNilai: StatusNilai;
     remidi: RemidiInfo | null;
     remidiTerbuka: number[];
@@ -288,7 +289,8 @@ const bukaFinalRemidi = () => router.post(route('admin.kelas-kuliah.remidi.buka-
 // Huruf peserta remidi hanya berubah lewat remidi, walau admin membuka kembali kunci nilai kelas.
 const jalurRemidi = (krs: KrsShow) => props.remidiTerbuka.includes(krs.mahasiswa_id);
 const menungguRemidi = (krs: KrsShow) => props.pesertaRemidi.includes(krs.mahasiswa_id) && !jalurRemidi(krs);
-const bolehUbahNilai = (krs: KrsShow) => jalurRemidi(krs) || (!props.nilaiTerkunci && !menungguRemidi(krs));
+// Nilai TA/Skripsi hanya diisi otomatis dari hasil pendadaran.
+const bolehUbahNilai = (krs: KrsShow) => !props.kelasTugasAkhir && (jalurRemidi(krs) || (!props.nilaiTerkunci && !menungguRemidi(krs)));
 const opsiHuruf = (krs: KrsShow) => (jalurRemidi(krs) ? props.hurufRemidi : props.skalaNilai);
 const ketIkutUas = (m: RemidiMahasiswa) => (m.ikut_uas === null ? '—' : m.ikut_uas ? 'Ya' : 'Tidak');
 
@@ -455,7 +457,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <Button as-child variant="outline"><Link :href="rute('kelas-kuliah.index')">Kembali</Link></Button>
-                        <Button v-if="can(`${props.peran}.presensi`)" as-child variant="outline">
+                        <Button v-if="can(`${props.peran}.presensi`) && !props.kelasTugasAkhir" as-child variant="outline">
                             <Link :href="rute('presensi.kelas', props.kelasKuliah.id)">Presensi</Link>
                         </Button>
                         <Button v-if="isAdmin" as-child><Link :href="rute('kelas-kuliah.edit', props.kelasKuliah.id)">Edit</Link></Button>
@@ -477,9 +479,16 @@ const formatTenggat = (value: string | null | undefined): string => {
                         </div>
                         <div class="space-y-1">
                             <dt class="teks-bantu">Kapasitas</dt>
-                            <dd class="break-words text-sm font-medium text-black">{{ v(props.kelasKuliah.kapasitas) }}</dd>
+                            <dd class="break-words text-sm font-medium text-black">
+                                {{ props.kelasTugasAkhir ? 'Tanpa batas' : v(props.kelasKuliah.kapasitas) }}
+                            </dd>
                         </div>
                     </dl>
+                    <p v-if="props.kelasTugasAkhir" class="alert-info mt-4">
+                        Kelas TA/Skripsi: tanpa jadwal, pertemuan, materi, tugas, quiz, dan ujian. Pembimbing ditetapkan per mahasiswa saat pengajuan
+                        tugas akhir disetujui, dan nilai terisi otomatis dari hasil pendadaran. Mahasiswa yang belum selesai mengambil kelas TA lagi
+                        di semester berikutnya.
+                    </p>
                 </section>
 
                 <section v-if="isAdmin" class="kartu p-6">
@@ -536,415 +545,421 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </dl>
                 </section>
 
-                <BagianLipat
-                    v-model:open="terbuka.jadwal"
-                    judul="Jadwal"
-                    :jumlah="(props.kelasKuliah.jadwals ?? []).length"
-                    keterangan="Hari, jam, dan ruang untuk kelas ini."
-                >
-                    <template #keterangan>
-                        <Link
-                            :href="rute('jadwal.index', { kelas_id: props.kelasKuliah.id })"
-                            class="text-xs font-medium text-[#0075de] hover:underline"
-                            >Buka di menu Jadwal Kelas →</Link
-                        >
-                    </template>
-                    <template v-if="isAdmin" #aksi>
-                        <Button as-child size="sm">
-                            <Link :href="rute('kelas-kuliah.jadwal.create', props.kelasKuliah.id)"><Plus />Tambah Jadwal</Link>
-                        </Button>
-                    </template>
+                <template v-if="!props.kelasTugasAkhir">
+                    <BagianLipat
+                        v-model:open="terbuka.jadwal"
+                        judul="Jadwal"
+                        :jumlah="(props.kelasKuliah.jadwals ?? []).length"
+                        keterangan="Hari, jam, dan ruang untuk kelas ini."
+                    >
+                        <template #keterangan>
+                            <Link
+                                :href="rute('jadwal.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Jadwal Kelas →</Link
+                            >
+                        </template>
+                        <template v-if="isAdmin" #aksi>
+                            <Button as-child size="sm">
+                                <Link :href="rute('kelas-kuliah.jadwal.create', props.kelasKuliah.id)"><Plus />Tambah Jadwal</Link>
+                            </Button>
+                        </template>
 
-                    <div v-if="page.props.flash?.jadwal_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.jadwal_success }}</div>
-                    <div v-if="page.props.flash?.jadwal_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.jadwal_error }}</div>
-
-                    <div class="tabel-wadah mt-4">
-                        <div class="tabel-gulir">
-                            <table class="tabel min-w-[640px]">
-                                <thead>
-                                    <tr>
-                                        <th class="kolom-no">No</th>
-                                        <th>Hari</th>
-                                        <th>Jam</th>
-                                        <th>Ruang</th>
-                                        <th v-if="isAdmin" class="kolom-aksi">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(jadwal, index) in props.kelasKuliah.jadwals ?? []" :key="jadwal.id">
-                                        <td class="kolom-no">{{ index + 1 }}</td>
-                                        <td class="font-medium text-black">{{ v(jadwal.hari) }}</td>
-                                        <td>{{ jam(jadwal.jam_mulai) }}–{{ jam(jadwal.jam_akhir) }}</td>
-                                        <td>
-                                            <span class="block">{{ v(jadwal.ruang?.kode_ruang) }} — {{ v(jadwal.ruang?.nama_ruang) }}</span>
-                                        </td>
-                                        <td v-if="isAdmin" class="kolom-aksi">
-                                            <div class="aksi-tabel">
-                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
-                                                    <Link
-                                                        :href="rute('kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
-                                                        title="Edit"
-                                                        aria-label="Edit"
-                                                        ><Pencil
-                                                    /></Link>
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="text-[#dd5b00]"
-                                                    title="Hapus"
-                                                    aria-label="Hapus"
-                                                    @click="removeJadwal(jadwal)"
-                                                    ><Trash2
-                                                /></Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="!(props.kelasKuliah.jadwals ?? []).length" class="baris-kosong">
-                                        <td :colspan="isAdmin ? 5 : 4" class="tabel-kosong">
-                                            Belum ada jadwal. Tambahkan hari, jam, dan ruang untuk kelas ini.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div v-if="page.props.flash?.jadwal_success" class="alert-sukses mt-4" role="alert">
+                            {{ page.props.flash.jadwal_success }}
                         </div>
-                    </div>
-                </BagianLipat>
+                        <div v-if="page.props.flash?.jadwal_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.jadwal_error }}</div>
 
-                <BagianLipat
-                    v-model:open="terbuka.materi"
-                    judul="Materi"
-                    :jumlah="(props.kelasKuliah.materis ?? []).length"
-                    keterangan="Bahan ajar per pertemuan untuk kelas ini."
-                >
-                    <template #keterangan>
-                        <Link
-                            :href="rute('materi.index', { kelas_id: props.kelasKuliah.id })"
-                            class="text-xs font-medium text-[#0075de] hover:underline"
-                            >Buka di menu Materi →</Link
-                        >
-                    </template>
-                    <template #aksi>
-                        <Button as-child size="sm">
-                            <Link :href="rute('kelas-kuliah.materi.create', props.kelasKuliah.id)"><Plus />Tambah Materi</Link>
-                        </Button>
-                    </template>
-
-                    <div v-if="page.props.flash?.materi_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.materi_success }}</div>
-                    <div v-if="page.props.flash?.materi_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.materi_error }}</div>
-
-                    <div class="tabel-wadah mt-4">
-                        <div class="tabel-gulir">
-                            <table class="tabel min-w-[640px]">
-                                <thead>
-                                    <tr>
-                                        <th class="kolom-no">No</th>
-                                        <th>Pertemuan</th>
-                                        <th>Judul Materi</th>
-                                        <th>Berkas</th>
-                                        <th>Diunggah Oleh</th>
-                                        <th class="kolom-aksi">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(materi, index) in props.kelasKuliah.materis ?? []" :key="materi.id">
-                                        <td class="kolom-no">{{ index + 1 }}</td>
-                                        <td class="font-medium text-black">Pertemuan {{ v(materi.pertemuan_ke) }}</td>
-                                        <td>
-                                            <span class="block font-medium text-black">{{ v(materi.judul_materi) }}</span>
-                                            <span
-                                                v-if="materi.catatan"
-                                                class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
-                                                :title="String(materi.catatan)"
-                                                >{{ materi.catatan }}</span
-                                            >
-                                        </td>
-                                        <td>
-                                            <ul v-if="materiFiles(materi).length" class="space-y-1">
-                                                <li v-for="(path, fileIndex) in materiFiles(materi)" :key="path">
-                                                    <a
-                                                        :href="route('berkas.materi', [materi.id, fileIndex])"
-                                                        target="_blank"
-                                                        rel="noopener"
-                                                        class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"
-                                                    >
-                                                        <Download class="size-4" />{{ fileName(path) }}
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                            <span v-else>-</span>
-                                        </td>
-                                        <td>
-                                            {{ v(materi.uploader?.name) }}
-                                        </td>
-                                        <td class="kolom-aksi">
-                                            <div class="aksi-tabel">
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="text-[#2a9d99]"
-                                                    title="Duplikasi"
-                                                    aria-label="Duplikasi"
-                                                    @click="openDuplicate('materi', materi)"
-                                                    ><Copy
-                                                /></Button>
-                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
-                                                    <Link
-                                                        :href="rute('kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
-                                                        title="Edit"
-                                                        aria-label="Edit"
-                                                        ><Pencil
-                                                    /></Link>
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="text-[#dd5b00]"
-                                                    title="Hapus"
-                                                    aria-label="Hapus"
-                                                    @click="removeMateri(materi)"
-                                                    ><Trash2
-                                                /></Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="!(props.kelasKuliah.materis ?? []).length" class="baris-kosong">
-                                        <td colspan="6" class="tabel-kosong">
-                                            Belum ada materi. Tambahkan judul, pertemuan, berkas, dan catatan untuk kelas ini.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="tabel-wadah mt-4">
+                            <div class="tabel-gulir">
+                                <table class="tabel min-w-[640px]">
+                                    <thead>
+                                        <tr>
+                                            <th class="kolom-no">No</th>
+                                            <th>Hari</th>
+                                            <th>Jam</th>
+                                            <th>Ruang</th>
+                                            <th v-if="isAdmin" class="kolom-aksi">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(jadwal, index) in props.kelasKuliah.jadwals ?? []" :key="jadwal.id">
+                                            <td class="kolom-no">{{ index + 1 }}</td>
+                                            <td class="font-medium text-black">{{ v(jadwal.hari) }}</td>
+                                            <td>{{ jam(jadwal.jam_mulai) }}–{{ jam(jadwal.jam_akhir) }}</td>
+                                            <td>
+                                                <span class="block">{{ v(jadwal.ruang?.kode_ruang) }} — {{ v(jadwal.ruang?.nama_ruang) }}</span>
+                                            </td>
+                                            <td v-if="isAdmin" class="kolom-aksi">
+                                                <div class="aksi-tabel">
+                                                    <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                        <Link
+                                                            :href="rute('kelas-kuliah.jadwal.edit', [props.kelasKuliah.id, jadwal.id])"
+                                                            title="Edit"
+                                                            aria-label="Edit"
+                                                            ><Pencil
+                                                        /></Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon-sm"
+                                                        class="text-[#dd5b00]"
+                                                        title="Hapus"
+                                                        aria-label="Hapus"
+                                                        @click="removeJadwal(jadwal)"
+                                                        ><Trash2
+                                                    /></Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="!(props.kelasKuliah.jadwals ?? []).length" class="baris-kosong">
+                                            <td :colspan="isAdmin ? 5 : 4" class="tabel-kosong">
+                                                Belum ada jadwal. Tambahkan hari, jam, dan ruang untuk kelas ini.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-                </BagianLipat>
+                    </BagianLipat>
 
-                <BagianLipat
-                    v-model:open="terbuka.tugas"
-                    judul="Tugas"
-                    :jumlah="(props.kelasKuliah.tugas ?? []).length"
-                    keterangan="Daftar tugas beserta tenggat waktu untuk kelas ini."
-                >
-                    <template #keterangan>
-                        <Link
-                            :href="rute('tugas.index', { kelas_id: props.kelasKuliah.id })"
-                            class="text-xs font-medium text-[#0075de] hover:underline"
-                            >Buka di menu Tugas →</Link
-                        >
-                    </template>
-                    <template #aksi>
-                        <Button as-child size="sm">
-                            <Link :href="rute('kelas-kuliah.tugas.create', props.kelasKuliah.id)"><Plus />Tambah Tugas</Link>
-                        </Button>
-                    </template>
+                    <BagianLipat
+                        v-model:open="terbuka.materi"
+                        judul="Materi"
+                        :jumlah="(props.kelasKuliah.materis ?? []).length"
+                        keterangan="Bahan ajar per pertemuan untuk kelas ini."
+                    >
+                        <template #keterangan>
+                            <Link
+                                :href="rute('materi.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Materi →</Link
+                            >
+                        </template>
+                        <template #aksi>
+                            <Button as-child size="sm">
+                                <Link :href="rute('kelas-kuliah.materi.create', props.kelasKuliah.id)"><Plus />Tambah Materi</Link>
+                            </Button>
+                        </template>
 
-                    <div v-if="page.props.flash?.tugas_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.tugas_success }}</div>
-                    <div v-if="page.props.flash?.tugas_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.tugas_error }}</div>
-
-                    <div class="tabel-wadah mt-4">
-                        <div class="tabel-gulir">
-                            <table class="tabel min-w-[640px]">
-                                <thead>
-                                    <tr>
-                                        <th class="kolom-no">No</th>
-                                        <th>Judul Tugas</th>
-                                        <th>Tenggat Waktu</th>
-                                        <th>Berkas</th>
-                                        <th>Diunggah Oleh</th>
-                                        <th class="kolom-aksi">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(tugas, index) in props.kelasKuliah.tugas ?? []" :key="tugas.id">
-                                        <td class="kolom-no">{{ index + 1 }}</td>
-                                        <td>
-                                            <span class="block font-medium text-black">{{ v(tugas.judul_tugas) }}</span>
-                                            <span
-                                                v-if="tugas.catatan"
-                                                class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
-                                                :title="String(tugas.catatan)"
-                                                >{{ tugas.catatan }}</span
-                                            >
-                                        </td>
-                                        <td>
-                                            {{ formatTenggat(tugas.tenggat_waktu) }}
-                                        </td>
-                                        <td>
-                                            <ul v-if="tugasFiles(tugas).length" class="space-y-1">
-                                                <li v-for="(path, fileIndex) in tugasFiles(tugas)" :key="path">
-                                                    <a
-                                                        :href="route('berkas.tugas', [tugas.id, fileIndex])"
-                                                        target="_blank"
-                                                        rel="noopener"
-                                                        class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"
-                                                    >
-                                                        <Download class="size-4" />{{ fileName(path) }}
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                            <span v-else>-</span>
-                                        </td>
-                                        <td>
-                                            {{ v(tugas.uploader?.name) }}
-                                        </td>
-                                        <td class="kolom-aksi">
-                                            <div class="aksi-tabel">
-                                                <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
-                                                    <Link
-                                                        :href="rute('kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
-                                                        title="Lihat detail"
-                                                        aria-label="Lihat detail"
-                                                        ><Eye
-                                                    /></Link>
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="text-[#2a9d99]"
-                                                    title="Duplikasi"
-                                                    aria-label="Duplikasi"
-                                                    @click="openDuplicate('tugas', tugas)"
-                                                    ><Copy
-                                                /></Button>
-                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
-                                                    <Link
-                                                        :href="rute('kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
-                                                        title="Edit"
-                                                        aria-label="Edit"
-                                                        ><Pencil
-                                                    /></Link>
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="text-[#dd5b00]"
-                                                    title="Hapus"
-                                                    aria-label="Hapus"
-                                                    @click="removeTugas(tugas)"
-                                                    ><Trash2
-                                                /></Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="!(props.kelasKuliah.tugas ?? []).length" class="baris-kosong">
-                                        <td colspan="6" class="tabel-kosong">
-                                            Belum ada tugas. Tambahkan judul, tenggat waktu, berkas, dan catatan untuk kelas ini.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div v-if="page.props.flash?.materi_success" class="alert-sukses mt-4" role="alert">
+                            {{ page.props.flash.materi_success }}
                         </div>
-                    </div>
-                </BagianLipat>
+                        <div v-if="page.props.flash?.materi_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.materi_error }}</div>
 
-                <BagianLipat
-                    v-model:open="terbuka.quiz"
-                    judul="Quiz"
-                    :jumlah="(props.kelasKuliah.quizzes ?? []).length"
-                    keterangan="Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini."
-                >
-                    <template #keterangan>
-                        <Link
-                            :href="rute('quiz.index', { kelas_id: props.kelasKuliah.id })"
-                            class="text-xs font-medium text-[#0075de] hover:underline"
-                            >Buka di menu Quiz →</Link
-                        >
-                    </template>
-                    <template #aksi>
-                        <Button as-child size="sm">
-                            <Link :href="rute('kelas-kuliah.quiz.create', props.kelasKuliah.id)"><Plus />Tambah Quiz</Link>
-                        </Button>
-                    </template>
-
-                    <div v-if="page.props.flash?.quiz_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.quiz_success }}</div>
-                    <div v-if="page.props.flash?.quiz_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.quiz_error }}</div>
-
-                    <div class="tabel-wadah mt-4">
-                        <div class="tabel-gulir">
-                            <table class="tabel min-w-[640px]">
-                                <thead>
-                                    <tr>
-                                        <th class="kolom-no">No</th>
-                                        <th>Nama Quiz</th>
-                                        <th>Durasi</th>
-                                        <th>Tenggat Waktu</th>
-                                        <th>Diunggah Oleh</th>
-                                        <th class="kolom-aksi">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(quiz, index) in props.kelasKuliah.quizzes ?? []" :key="quiz.id">
-                                        <td class="kolom-no">{{ index + 1 }}</td>
-                                        <td>
-                                            <span class="block font-medium text-black">{{ v(quiz.nama_quiz) }}</span>
-                                            <span
-                                                v-if="quiz.catatan"
-                                                class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
-                                                :title="String(quiz.catatan)"
-                                                >{{ quiz.catatan }}</span
-                                            >
-                                        </td>
-                                        <td>
-                                            {{ quiz.waktu_pengerjaan ? `${quiz.waktu_pengerjaan} menit` : '-' }}
-                                        </td>
-                                        <td>
-                                            {{ formatTenggat(quiz.tenggat_waktu) }}
-                                        </td>
-                                        <td>
-                                            {{ v(quiz.uploader?.name) }}
-                                        </td>
-                                        <td class="kolom-aksi">
-                                            <div class="aksi-tabel">
-                                                <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
-                                                    <Link
-                                                        :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
-                                                        title="Detail"
-                                                        aria-label="Detail"
-                                                        ><Eye
-                                                    /></Link>
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="text-[#2a9d99]"
-                                                    title="Duplikasi"
-                                                    aria-label="Duplikasi"
-                                                    @click="openDuplicate('quiz', quiz)"
-                                                    ><Copy
-                                                /></Button>
-                                                <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
-                                                    <Link
-                                                        :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
-                                                        title="Edit"
-                                                        aria-label="Edit"
-                                                        ><Pencil
-                                                    /></Link>
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="icon-sm"
-                                                    class="text-[#dd5b00]"
-                                                    title="Hapus"
-                                                    aria-label="Hapus"
-                                                    @click="removeQuiz(quiz)"
-                                                    ><Trash2
-                                                /></Button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="!(props.kelasKuliah.quizzes ?? []).length" class="baris-kosong">
-                                        <td colspan="6" class="tabel-kosong">
-                                            Belum ada quiz. Tambahkan nama, durasi, tenggat waktu, dan catatan untuk kelas ini.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div class="tabel-wadah mt-4">
+                            <div class="tabel-gulir">
+                                <table class="tabel min-w-[640px]">
+                                    <thead>
+                                        <tr>
+                                            <th class="kolom-no">No</th>
+                                            <th>Pertemuan</th>
+                                            <th>Judul Materi</th>
+                                            <th>Berkas</th>
+                                            <th>Diunggah Oleh</th>
+                                            <th class="kolom-aksi">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(materi, index) in props.kelasKuliah.materis ?? []" :key="materi.id">
+                                            <td class="kolom-no">{{ index + 1 }}</td>
+                                            <td class="font-medium text-black">Pertemuan {{ v(materi.pertemuan_ke) }}</td>
+                                            <td>
+                                                <span class="block font-medium text-black">{{ v(materi.judul_materi) }}</span>
+                                                <span
+                                                    v-if="materi.catatan"
+                                                    class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
+                                                    :title="String(materi.catatan)"
+                                                    >{{ materi.catatan }}</span
+                                                >
+                                            </td>
+                                            <td>
+                                                <ul v-if="materiFiles(materi).length" class="space-y-1">
+                                                    <li v-for="(path, fileIndex) in materiFiles(materi)" :key="path">
+                                                        <a
+                                                            :href="route('berkas.materi', [materi.id, fileIndex])"
+                                                            target="_blank"
+                                                            rel="noopener"
+                                                            class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"
+                                                        >
+                                                            <Download class="size-4" />{{ fileName(path) }}
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                                <span v-else>-</span>
+                                            </td>
+                                            <td>
+                                                {{ v(materi.uploader?.name) }}
+                                            </td>
+                                            <td class="kolom-aksi">
+                                                <div class="aksi-tabel">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon-sm"
+                                                        class="text-[#2a9d99]"
+                                                        title="Duplikasi"
+                                                        aria-label="Duplikasi"
+                                                        @click="openDuplicate('materi', materi)"
+                                                        ><Copy
+                                                    /></Button>
+                                                    <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                        <Link
+                                                            :href="rute('kelas-kuliah.materi.edit', [props.kelasKuliah.id, materi.id])"
+                                                            title="Edit"
+                                                            aria-label="Edit"
+                                                            ><Pencil
+                                                        /></Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon-sm"
+                                                        class="text-[#dd5b00]"
+                                                        title="Hapus"
+                                                        aria-label="Hapus"
+                                                        @click="removeMateri(materi)"
+                                                        ><Trash2
+                                                    /></Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="!(props.kelasKuliah.materis ?? []).length" class="baris-kosong">
+                                            <td colspan="6" class="tabel-kosong">
+                                                Belum ada materi. Tambahkan judul, pertemuan, berkas, dan catatan untuk kelas ini.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-                </BagianLipat>
+                    </BagianLipat>
+
+                    <BagianLipat
+                        v-model:open="terbuka.tugas"
+                        judul="Tugas"
+                        :jumlah="(props.kelasKuliah.tugas ?? []).length"
+                        keterangan="Daftar tugas beserta tenggat waktu untuk kelas ini."
+                    >
+                        <template #keterangan>
+                            <Link
+                                :href="rute('tugas.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Tugas →</Link
+                            >
+                        </template>
+                        <template #aksi>
+                            <Button as-child size="sm">
+                                <Link :href="rute('kelas-kuliah.tugas.create', props.kelasKuliah.id)"><Plus />Tambah Tugas</Link>
+                            </Button>
+                        </template>
+
+                        <div v-if="page.props.flash?.tugas_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.tugas_success }}</div>
+                        <div v-if="page.props.flash?.tugas_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.tugas_error }}</div>
+
+                        <div class="tabel-wadah mt-4">
+                            <div class="tabel-gulir">
+                                <table class="tabel min-w-[640px]">
+                                    <thead>
+                                        <tr>
+                                            <th class="kolom-no">No</th>
+                                            <th>Judul Tugas</th>
+                                            <th>Tenggat Waktu</th>
+                                            <th>Berkas</th>
+                                            <th>Diunggah Oleh</th>
+                                            <th class="kolom-aksi">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(tugas, index) in props.kelasKuliah.tugas ?? []" :key="tugas.id">
+                                            <td class="kolom-no">{{ index + 1 }}</td>
+                                            <td>
+                                                <span class="block font-medium text-black">{{ v(tugas.judul_tugas) }}</span>
+                                                <span
+                                                    v-if="tugas.catatan"
+                                                    class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
+                                                    :title="String(tugas.catatan)"
+                                                    >{{ tugas.catatan }}</span
+                                                >
+                                            </td>
+                                            <td>
+                                                {{ formatTenggat(tugas.tenggat_waktu) }}
+                                            </td>
+                                            <td>
+                                                <ul v-if="tugasFiles(tugas).length" class="space-y-1">
+                                                    <li v-for="(path, fileIndex) in tugasFiles(tugas)" :key="path">
+                                                        <a
+                                                            :href="route('berkas.tugas', [tugas.id, fileIndex])"
+                                                            target="_blank"
+                                                            rel="noopener"
+                                                            class="inline-flex items-center gap-1.5 text-[#0075de] hover:underline"
+                                                        >
+                                                            <Download class="size-4" />{{ fileName(path) }}
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                                <span v-else>-</span>
+                                            </td>
+                                            <td>
+                                                {{ v(tugas.uploader?.name) }}
+                                            </td>
+                                            <td class="kolom-aksi">
+                                                <div class="aksi-tabel">
+                                                    <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                                        <Link
+                                                            :href="rute('kelas-kuliah.tugas.show', [props.kelasKuliah.id, tugas.id])"
+                                                            title="Lihat detail"
+                                                            aria-label="Lihat detail"
+                                                            ><Eye
+                                                        /></Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon-sm"
+                                                        class="text-[#2a9d99]"
+                                                        title="Duplikasi"
+                                                        aria-label="Duplikasi"
+                                                        @click="openDuplicate('tugas', tugas)"
+                                                        ><Copy
+                                                    /></Button>
+                                                    <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                        <Link
+                                                            :href="rute('kelas-kuliah.tugas.edit', [props.kelasKuliah.id, tugas.id])"
+                                                            title="Edit"
+                                                            aria-label="Edit"
+                                                            ><Pencil
+                                                        /></Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon-sm"
+                                                        class="text-[#dd5b00]"
+                                                        title="Hapus"
+                                                        aria-label="Hapus"
+                                                        @click="removeTugas(tugas)"
+                                                        ><Trash2
+                                                    /></Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="!(props.kelasKuliah.tugas ?? []).length" class="baris-kosong">
+                                            <td colspan="6" class="tabel-kosong">
+                                                Belum ada tugas. Tambahkan judul, tenggat waktu, berkas, dan catatan untuk kelas ini.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </BagianLipat>
+
+                    <BagianLipat
+                        v-model:open="terbuka.quiz"
+                        judul="Quiz"
+                        :jumlah="(props.kelasKuliah.quizzes ?? []).length"
+                        keterangan="Daftar quiz beserta durasi dan tenggat waktu untuk kelas ini."
+                    >
+                        <template #keterangan>
+                            <Link
+                                :href="rute('quiz.index', { kelas_id: props.kelasKuliah.id })"
+                                class="text-xs font-medium text-[#0075de] hover:underline"
+                                >Buka di menu Quiz →</Link
+                            >
+                        </template>
+                        <template #aksi>
+                            <Button as-child size="sm">
+                                <Link :href="rute('kelas-kuliah.quiz.create', props.kelasKuliah.id)"><Plus />Tambah Quiz</Link>
+                            </Button>
+                        </template>
+
+                        <div v-if="page.props.flash?.quiz_success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.quiz_success }}</div>
+                        <div v-if="page.props.flash?.quiz_error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.quiz_error }}</div>
+
+                        <div class="tabel-wadah mt-4">
+                            <div class="tabel-gulir">
+                                <table class="tabel min-w-[640px]">
+                                    <thead>
+                                        <tr>
+                                            <th class="kolom-no">No</th>
+                                            <th>Nama Quiz</th>
+                                            <th>Durasi</th>
+                                            <th>Tenggat Waktu</th>
+                                            <th>Diunggah Oleh</th>
+                                            <th class="kolom-aksi">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="(quiz, index) in props.kelasKuliah.quizzes ?? []" :key="quiz.id">
+                                            <td class="kolom-no">{{ index + 1 }}</td>
+                                            <td>
+                                                <span class="block font-medium text-black">{{ v(quiz.nama_quiz) }}</span>
+                                                <span
+                                                    v-if="quiz.catatan"
+                                                    class="mt-0.5 block max-w-md truncate text-xs text-[#a39e98]"
+                                                    :title="String(quiz.catatan)"
+                                                    >{{ quiz.catatan }}</span
+                                                >
+                                            </td>
+                                            <td>
+                                                {{ quiz.waktu_pengerjaan ? `${quiz.waktu_pengerjaan} menit` : '-' }}
+                                            </td>
+                                            <td>
+                                                {{ formatTenggat(quiz.tenggat_waktu) }}
+                                            </td>
+                                            <td>
+                                                {{ v(quiz.uploader?.name) }}
+                                            </td>
+                                            <td class="kolom-aksi">
+                                                <div class="aksi-tabel">
+                                                    <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                                        <Link
+                                                            :href="rute('kelas-kuliah.quiz.show', [props.kelasKuliah.id, quiz.id])"
+                                                            title="Detail"
+                                                            aria-label="Detail"
+                                                            ><Eye
+                                                        /></Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon-sm"
+                                                        class="text-[#2a9d99]"
+                                                        title="Duplikasi"
+                                                        aria-label="Duplikasi"
+                                                        @click="openDuplicate('quiz', quiz)"
+                                                        ><Copy
+                                                    /></Button>
+                                                    <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                                        <Link
+                                                            :href="rute('kelas-kuliah.quiz.edit', [props.kelasKuliah.id, quiz.id])"
+                                                            title="Edit"
+                                                            aria-label="Edit"
+                                                            ><Pencil
+                                                        /></Link>
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon-sm"
+                                                        class="text-[#dd5b00]"
+                                                        title="Hapus"
+                                                        aria-label="Hapus"
+                                                        @click="removeQuiz(quiz)"
+                                                        ><Trash2
+                                                    /></Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="!(props.kelasKuliah.quizzes ?? []).length" class="baris-kosong">
+                                            <td colspan="6" class="tabel-kosong">
+                                                Belum ada quiz. Tambahkan nama, durasi, tenggat waktu, dan catatan untuk kelas ini.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </BagianLipat>
+                </template>
 
                 <BagianLipat v-model:open="terbuka.nilai" judul="Nilai Mahasiswa" :jumlah="(props.kelasKuliah.krs ?? []).length">
-                    <template #keterangan>
+                    <template v-if="!props.kelasTugasAkhir" #keterangan>
                         <p v-if="props.statusNilai.final_at" class="text-sm text-[#31302e]">
                             <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Final</span>
                             Difinalisasi {{ formatTanggal(props.statusNilai.final_at) }}
@@ -958,7 +973,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                             Batas input nilai: <span class="font-medium text-black">{{ formatTanggal(props.statusNilai.batas) }}</span>
                         </p>
                     </template>
-                    <template #aksi>
+                    <template v-if="!props.kelasTugasAkhir" #aksi>
                         <template v-if="!props.statusNilai.final && !props.nilaiTerkunci">
                             <Button
                                 size="sm"
@@ -1029,6 +1044,12 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                 <template v-if="editingKrs === krs.id">
                                                     <Button size="sm" variant="outline" @click="editingKrs = null">Batal</Button>
                                                     <Button size="sm" @click="saveGrade(krs)">Simpan</Button>
+                                                </template>
+                                                <template v-else-if="props.kelasTugasAkhir">
+                                                    <span class="teks-bantu">Dari hasil pendadaran</span>
+                                                    <Button v-if="isAdmin && !krs.nilai" size="sm" variant="destructive" @click="cancelKrs(krs)"
+                                                        >Batalkan KRS</Button
+                                                    >
                                                 </template>
                                                 <span v-else-if="!bolehUbahNilai(krs)" class="teks-bantu">{{
                                                     menungguRemidi(krs) && !props.nilaiTerkunci ? 'Diubah lewat remidi' : 'Nilai terkunci'

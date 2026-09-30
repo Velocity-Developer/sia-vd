@@ -28,6 +28,7 @@ type Dasar = {
     ips_tahun_akademik: string | null;
     sks_diambil: number;
     sisa_sks: number;
+    tinggal_ta: boolean;
 };
 
 type TagihanRemidi = {
@@ -209,9 +210,11 @@ const statusTagihan = (tagihan: Tagihan | null) => STATUS_TAGIHAN_REMIDI[tagihan
                             <p class="mt-1 text-lg font-bold text-black dark:text-foreground">{{ props.dasar.kuota_sks }} SKS</p>
                             <p class="teks-bantu">
                                 {{
-                                    props.dasar.ips !== null
-                                        ? `Jatah SKS dari IPS ${props.dasar.ips.toFixed(2)} (${props.dasar.ips_tahun_akademik})`
-                                        : 'Jatah SKS untuk mahasiswa yang belum punya IPS'
+                                    props.dasar.tinggal_ta
+                                        ? 'SKS mata kuliah TA/Skripsi, karena Anda tinggal mengerjakan TA/Skripsi'
+                                        : props.dasar.ips !== null
+                                          ? `Jatah SKS dari IPS ${props.dasar.ips.toFixed(2)} (${props.dasar.ips_tahun_akademik})`
+                                          : 'Jatah SKS untuk mahasiswa yang belum punya IPS'
                                 }}
                             </p>
                         </div>

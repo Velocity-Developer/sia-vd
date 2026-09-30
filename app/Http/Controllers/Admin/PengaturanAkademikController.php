@@ -29,6 +29,7 @@ class PengaturanAkademikController extends Controller
             'hurufMaksRemidi' => $pengaturan->huruf_maks_remidi,
             'susulan' => $pengaturan->only(['batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari']),
             'minSksPendadaran' => $pengaturan->min_sks_pendadaran,
+            'minSksAmbilTa' => $pengaturan->min_sks_ambil_ta,
             'maksCuti' => $pengaturan->maks_cuti,
             'pindahKelasAktif' => PengaturanPindahKelas::current()->is_active,
             'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
@@ -231,8 +232,9 @@ class PengaturanAkademikController extends Controller
     public function updateTugasAkhir(Request $request): RedirectResponse
     {
         $data = $request->validate([
+            'min_sks_ambil_ta' => ['required', 'integer', 'min:0', 'max:300'],
             'min_sks_pendadaran' => ['required', 'integer', 'min:0', 'max:300'],
-        ], attributes: ['min_sks_pendadaran' => 'SKS minimal pendadaran']);
+        ], attributes: ['min_sks_ambil_ta' => 'SKS minimal ambil TA/Skripsi', 'min_sks_pendadaran' => 'SKS minimal pendadaran']);
 
         PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
 

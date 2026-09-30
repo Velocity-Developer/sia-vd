@@ -49,6 +49,7 @@ class QuizController extends Controller
 
     public function create(KelasKuliah $kelasKuliah): Response
     {
+        $kelasKuliah->pastikanBukanTugasAkhir('quiz');
         $this->pastikanAksesKelas($kelasKuliah);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
@@ -61,6 +62,7 @@ class QuizController extends Controller
 
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
+        $kelasKuliah->pastikanBukanTugasAkhir('quiz');
         $this->pastikanAksesKelas($kelasKuliah);
         $data = $request->validate($this->rules(), $this->messages(), $this->attributes());
         $data['kelas_id'] = $kelasKuliah->id;

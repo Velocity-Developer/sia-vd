@@ -317,6 +317,7 @@ class PresensiController extends Controller
     public function generate(KelasKuliah $kelasKuliah): RedirectResponse
     {
         $this->pastikanPengampu($kelasKuliah);
+        $kelasKuliah->pastikanBukanTugasAkhir('pertemuan dan presensi');
         $hasil = Pertemuan::generateUntuk($kelasKuliah);
 
         if ($hasil['dibuat'] === 0) {

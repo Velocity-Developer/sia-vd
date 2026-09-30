@@ -18,6 +18,7 @@ type KelasKuliah = {
         sks: number;
         jenis: string;
         semester: number;
+        tugas_akhir?: boolean;
         prodi?: { nama_prodi: string } | null;
     } | null;
     mataKuliah?: {
@@ -27,6 +28,7 @@ type KelasKuliah = {
         sks: number;
         jenis: string;
         semester: number;
+        tugas_akhir?: boolean;
         prodi?: { nama_prodi: string } | null;
     } | null;
     tahun_akademik?: { tahun: string; semester: string } | null;
@@ -306,7 +308,8 @@ const jadwal = (kelas: KelasKuliah) =>
                                             </div>
                                             <span v-else>-</span>
                                         </td>
-                                        <td>{{ kelas.kapasitas }} total · {{ Math.max(kelas.kapasitas - kelas.krs_count, 0) }} tersisa</td>
+                                        <td v-if="matkul(kelas)?.tugas_akhir">Tanpa batas</td>
+                                        <td v-else>{{ kelas.kapasitas }} total · {{ Math.max(kelas.kapasitas - kelas.krs_count, 0) }} tersisa</td>
                                         <td class="kolom-aksi">
                                             <Button
                                                 v-if="isTaken(kelas.id) && krsBisaDibatalkan(kelas.id) && !krsTersimpan"

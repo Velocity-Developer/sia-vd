@@ -33,6 +33,7 @@ const props = defineProps<{
     hurufMaksRemidi: string | null;
     susulan: { batas_pengajuan_susulan_hari: number; batas_bayar_susulan_hari: number };
     minSksPendadaran: number;
+    minSksAmbilTa: number;
     maksCuti: number;
     pindahKelasAktif: boolean;
     presensi: Presensi;
@@ -63,7 +64,7 @@ const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
 const susulanForm = useForm({ ...props.susulan });
 const simpanSusulan = () => susulanForm.put(route('admin.pengaturan-akademik.susulan'), { preserveScroll: true });
 
-const tugasAkhirForm = useForm({ min_sks_pendadaran: props.minSksPendadaran });
+const tugasAkhirForm = useForm({ min_sks_ambil_ta: props.minSksAmbilTa, min_sks_pendadaran: props.minSksPendadaran });
 const simpanTugasAkhir = () => tugasAkhirForm.put(route('admin.pengaturan-akademik.tugas-akhir'), { preserveScroll: true });
 const cutiForm = useForm({ maks_cuti: props.maksCuti });
 const simpanCuti = () => cutiForm.put(route('admin.pengaturan-akademik.cuti'), { preserveScroll: true });
@@ -361,14 +362,18 @@ const saveNilai = () =>
         <section id="tugas-akhir" class="flex scroll-mt-4 flex-col gap-4">
             <h2 class="teks-bantu font-semibold uppercase tracking-[0.06em]">Tugas Akhir</h2>
             <form class="kartu p-6" @submit.prevent="simpanTugasAkhir">
-                <h3 class="judul-bagian">Syarat Pendadaran</h3>
+                <h3 class="judul-bagian">Syarat SKS</h3>
                 <p class="teks-bantu mt-1">
-                    SKS yang sudah bernilai di transkrip (tanpa mata kuliah TA/Skripsi yang sedang berjalan) minimal untuk mendaftar pendadaran. Mata
-                    kuliah TA/Skripsi ditandai di Master Akademik → Mata Kuliah.
+                    Dihitung dari transkrip tanpa mata kuliah TA/Skripsi. Mata kuliah TA/Skripsi ditandai di Master Akademik → Mata Kuliah.
                 </p>
                 <div class="mt-4 grid content-start gap-4 sm:grid-cols-2">
                     <div class="grid content-start gap-2">
-                        <Label for="min_sks_pendadaran" class="label-isian">SKS minimal</Label>
+                        <Label for="min_sks_ambil_ta" class="label-isian">SKS lulus minimal untuk mengambil TA/Skripsi di KRS</Label>
+                        <Input id="min_sks_ambil_ta" v-model="tugasAkhirForm.min_sks_ambil_ta" type="number" min="0" max="300" />
+                        <InputError :message="tugasAkhirForm.errors.min_sks_ambil_ta" />
+                    </div>
+                    <div class="grid content-start gap-2">
+                        <Label for="min_sks_pendadaran" class="label-isian">SKS bernilai minimal untuk mendaftar pendadaran</Label>
                         <Input id="min_sks_pendadaran" v-model="tugasAkhirForm.min_sks_pendadaran" type="number" min="0" max="300" />
                         <InputError :message="tugasAkhirForm.errors.min_sks_pendadaran" />
                     </div>

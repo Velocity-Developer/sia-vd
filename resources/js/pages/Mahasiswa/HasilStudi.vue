@@ -11,6 +11,7 @@ type Krs = {
     nama: string | null;
     sks: number | null;
     nilai: string | null;
+    berlanjut: boolean;
 };
 
 type TahunAkademik = { id: number; tahun: string; semester: string; status: boolean };
@@ -100,7 +101,7 @@ const changeYear = () => {
                                         <span
                                             class="inline-flex min-w-9 justify-center rounded-full px-2.5 py-1 text-xs font-bold uppercase"
                                             :class="nilaiClass(item.nilai)"
-                                            >{{ item.nilai ?? 'Belum ada' }}</span
+                                            >{{ item.nilai ?? (item.berlanjut ? 'Berlanjut' : 'Belum ada') }}</span
                                         >
                                     </td>
                                 </tr>

@@ -48,6 +48,7 @@ class MateriController extends Controller
 
     public function create(KelasKuliah $kelasKuliah): Response
     {
+        $kelasKuliah->pastikanBukanTugasAkhir('materi');
         $this->pastikanAksesKelas($kelasKuliah);
         $kelasKuliah->load(['mataKuliah', 'dosen.user']);
 
@@ -60,6 +61,7 @@ class MateriController extends Controller
 
     public function store(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
+        $kelasKuliah->pastikanBukanTugasAkhir('materi');
         $this->pastikanAksesKelas($kelasKuliah);
         $data = $request->validate($this->rules($kelasKuliah), $this->messages(), $this->attributes());
 

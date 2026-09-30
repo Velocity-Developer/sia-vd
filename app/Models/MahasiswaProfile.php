@@ -105,6 +105,8 @@ class MahasiswaProfile extends Model
      *
      * Bernilai null bila mahasiswa belum pernah mengambil kelas, atau bila nilai semester itu belum
      * lengkap — batas SKS lalu memakai angka "tanpa IPS" ketimbang IPS dari sebagian nilai saja.
+     * TA/Skripsi yang belum dinilai (berlanjut) tidak dihitung; semester yang isinya hanya TA berlanjut
+     * dilewati sehingga yang dipakai IPS semester sebelumnya.
      *
      * @param  Collection<int, Krs>|null  $krsTerpakai  KRS yang sudah dimuat, agar halaman KRS tidak query ulang.
      * @return array{tahun_akademik: TahunAkademik, ips: float}|null
@@ -118,10 +120,10 @@ class MahasiswaProfile extends Model
             : $this->krs()
                 ->whereHas('kelasKuliah.tahunAkademik', fn ($query) => $query
                     ->when($tahunAkademik?->tanggal_mulai, fn ($query, $mulai) => $query->where('tanggal_mulai', '<', $mulai)))
-                ->with('kelasKuliah.tahunAkademik', 'kelasKuliah.mataKuliah:id,sks')
+                ->with('kelasKuliah.tahunAkademik', 'kelasKuliah.mataKuliah:id,sks,tugas_akhir')
                 ->get();
 
-        $krs = $krs->filter(fn (Krs $item): bool => $item->kelasKuliah?->tahunAkademik !== null);
+        $krs = $krs->filter(fn (Krs $item): bool => $item->kelasKuliah?->tahunAkademik !== null && ! $item->taBelumDinilai());
 
         $semesterTerakhir = $krs
             ->groupBy(fn (Krs $item): int => $item->kelasKuliah->tahun_akademik_id)

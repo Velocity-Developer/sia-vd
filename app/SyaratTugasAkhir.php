@@ -88,7 +88,7 @@ class SyaratTugasAkhir
      *
      * @return list<array{label: string, terpenuhi: bool, keterangan: ?string}>
      */
-    private static function nilai(MahasiswaProfile $mahasiswa, bool $termasukTa): array
+    public static function nilai(MahasiswaProfile $mahasiswa, bool $termasukTa): array
     {
         $minSks = PengaturanAkademik::current()->min_sks_pendadaran;
         $semua = Transkrip::krs($mahasiswa->id);

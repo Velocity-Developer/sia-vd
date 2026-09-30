@@ -125,7 +125,8 @@ class KrsController extends Controller
                 return 'Jadwal kelas ini bentrok dengan kelas '.$bentrok->keterangan().'.';
             }
 
-            if ($kelas->krs()->count() >= $kelas->kapasitas) {
+            // Kelas TA/Skripsi tidak dibatasi kapasitas: tiap mahasiswa dibimbing terpisah.
+            if (! $kelasKuliah->mataKuliah->tugas_akhir && $kelas->krs()->count() >= $kelas->kapasitas) {
                 return 'Kelas sudah penuh, silakan ambil kelas lain.';
             }
 
@@ -286,8 +287,8 @@ class KrsController extends Controller
         return $mahasiswa->krs()
             ->with([
                 'kelasKuliah:id,matkul_id,tahun_akademik_id',
-                'kelasKuliah.mataKuliah:id,sks',
-                'kelasKuliah.tahunAkademik:id,tahun,semester,tanggal_mulai',
+                'kelasKuliah.mataKuliah:id,sks,tugas_akhir',
+                'kelasKuliah.tahunAkademik:id,tahun,semester,tanggal_mulai,status',
             ])
             ->get();
     }

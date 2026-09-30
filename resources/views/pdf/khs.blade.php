@@ -43,7 +43,7 @@
                     <td class="tengah">{{ $item['kode'] ?? '-' }}</td>
                     <td>{{ $item['nama'] ?? '-' }}</td>
                     <td class="tengah">{{ $item['sks'] ?? '-' }}</td>
-                    <td class="tengah tebal">{{ $item['nilai'] ? strtoupper($item['nilai']) : '-' }}</td>
+                    <td class="tengah tebal">{{ $item['nilai'] ? strtoupper($item['nilai']) : ($item['berlanjut'] ? 'Berlanjut' : '-') }}</td>
                     <td class="tengah">{{ $bobot !== null ? number_format($bobot, 2, ',', '.') : '-' }}</td>
                     <td class="tengah">{{ $bobot !== null ? number_format($bobot * ($item['sks'] ?? 0), 2, ',', '.') : '-' }}</td>
                 </tr>

@@ -82,16 +82,18 @@ class KelasKuliahController extends Controller
             'otherClasses' => KelasKuliah::query()
                 ->where('tahun_akademik_id', $kelasKuliah->tahun_akademik_id)
                 ->whereKeyNot($kelasKuliah->id)
+                ->whereHas('mataKuliah', fn ($query) => $query->where('tugas_akhir', false))
                 ->with('mataKuliah:id,nama_matkul')
                 ->orderBy('kode_kelas')
                 ->get(['id', 'kode_kelas', 'matkul_id'])
                 ->map(fn (KelasKuliah $kelas): array => ['id' => $kelas->id, 'kode_kelas' => $kelas->kode_kelas, 'nama_matkul' => $kelas->mataKuliah?->nama_matkul]),
             'skalaNilai' => SkalaNilai::huruf(),
             'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
+            'kelasTugasAkhir' => $kelasKuliah->tugasAkhir(),
             'statusNilai' => $this->statusNilai($kelasKuliah),
             // Peserta remidi yang huruf akhirnya boleh diubah dosen walau kelas final, dan huruf yang boleh dipilih.
             ...$this->aksesNilaiRemidi($kelasKuliah, $pengaturan),
-            'remidi' => $kelasKuliah->nilaiFinal() ? [
+            'remidi' => $kelasKuliah->nilaiFinal() && ! $kelasKuliah->tugasAkhir() ? [
                 ...$this->infoUjianRemidi($kelasKuliah, $pengaturan),
                 'dikunci_at' => $kelasKuliah->remidi_dikunci_at?->toIso8601String(),
                 'dikunci_oleh' => $kelasKuliah->remidi_dikunci_oleh !== null ? $kelasKuliah->remidiDikunciOleh()->value('name') : null,
@@ -106,6 +108,7 @@ class KelasKuliahController extends Controller
     public function finalisasiNilai(KelasKuliah $kelasKuliah): RedirectResponse
     {
         $this->pastikanAksesKelas($kelasKuliah);
+        $kelasKuliah->pastikanBukanTugasAkhir('finalisasi nilai; nilainya dari hasil pendadaran');
 
         if (($pesan = $this->pesanNilaiTerkunci($kelasKuliah)) !== null || $kelasKuliah->nilai_final_at !== null) {
             return back()->with('error', $pesan ?? 'Nilai kelas ini sudah difinalisasi.');
@@ -149,6 +152,10 @@ class KelasKuliahController extends Controller
     {
         abort_if($krs->kelas_id !== $kelasKuliah->id, 404);
         $this->pastikanAksesKelas($kelasKuliah);
+
+        if ($kelasKuliah->tugasAkhir()) {
+            return back()->with('error', 'Nilai TA/Skripsi terisi otomatis dari hasil pendadaran dan tidak bisa diubah di sini.');
+        }
 
         $pesan = $this->pesanNilaiTerkunci($kelasKuliah);
         $dosen = $this->peran() === 'dosen';
@@ -365,15 +372,15 @@ class KelasKuliahController extends Controller
     }
 
     /**
-     * @return array<int, array{label: string, options: array<int, array{id: int, name: string}>}>
+     * @return array<int, array{label: string, options: array<int, array{id: int, name: string, tugas_akhir: bool}>}>
      */
     private function matkulGroups(): array
     {
-        $mataKuliahs = MataKuliah::with('prodi:id,nama_prodi')->orderBy('kode_matkul')->get(['id', 'kode_matkul', 'nama_matkul', 'prodi_id']);
+        $mataKuliahs = MataKuliah::with('prodi:id,nama_prodi')->orderBy('kode_matkul')->get(['id', 'kode_matkul', 'nama_matkul', 'prodi_id', 'tugas_akhir']);
         $groups = [];
         foreach ($mataKuliahs as $mk) {
             $label = $mk->prodi?->nama_prodi ?? 'Program Studi Lainnya';
-            $groups[$label][] = ['id' => $mk->id, 'name' => $mk->kode_matkul.' — '.$mk->nama_matkul];
+            $groups[$label][] = ['id' => $mk->id, 'name' => $mk->kode_matkul.' — '.$mk->nama_matkul, 'tugas_akhir' => $mk->tugas_akhir];
         }
 
         $result = [];
@@ -391,7 +398,8 @@ class KelasKuliahController extends Controller
             'tahun_akademik_id' => ['required', 'exists:tahun_akademik,id'],
             'kapasitas' => ['required', 'integer', 'min:1', 'max:500'],
             'jumlah_pertemuan' => ['nullable', 'integer', 'min:1', 'max:32'],
-            'dosen_id' => ['required', DosenProfile::rulePilihan($model->dosen_id)],
+            // Kelas TA/Skripsi boleh tanpa dosen pengampu: pembimbing ditetapkan per mahasiswa.
+            'dosen_id' => [Rule::requiredIf(fn (): bool => ! MataKuliah::query()->whereKey($request->integer('matkul_id'))->value('tugas_akhir')), 'nullable', DosenProfile::rulePilihan($model->dosen_id)],
             'matkul_id' => ['required', 'exists:mata_kuliahs,id'],
         ], $this->messages(), $this->attributes());
 

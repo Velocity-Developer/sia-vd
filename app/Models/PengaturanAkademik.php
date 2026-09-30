@@ -17,7 +17,7 @@ class PengaturanAkademik extends Model
 
     protected $table = 'pengaturan_akademik';
 
-    protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif', 'huruf_maks_remidi', 'batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari', 'min_sks_pendadaran', 'maks_cuti', 'updated_by'];
+    protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif', 'huruf_maks_remidi', 'batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari', 'min_sks_pendadaran', 'min_sks_ambil_ta', 'maks_cuti', 'updated_by'];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
@@ -32,6 +32,7 @@ class PengaturanAkademik extends Model
         'batas_pengajuan_susulan_hari' => 3,
         'batas_bayar_susulan_hari' => 3,
         'min_sks_pendadaran' => 138,
+        'min_sks_ambil_ta' => 120,
         'maks_cuti' => 2,
     ];
 
@@ -49,6 +50,7 @@ class PengaturanAkademik extends Model
             'batas_pengajuan_susulan_hari' => 'integer',
             'batas_bayar_susulan_hari' => 'integer',
             'min_sks_pendadaran' => 'integer',
+            'min_sks_ambil_ta' => 'integer',
             'maks_cuti' => 'integer',
         ];
     }

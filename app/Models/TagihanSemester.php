@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\Models\Concerns\TagihanBerbukti;
+use App\SyaratTugasAkhir;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -142,11 +143,31 @@ class TagihanSemester extends Model
      * Jumlah SKS yang dipakai menghitung biaya per SKS: kuota (batas) SKS mahasiswa pada semester itu.
      *
      * Tagihan terbit sebelum KRS diisi, jadi SKS yang benar-benar diambil belum ada. Yang dipakai
-     * adalah batas SKS menurut IPS semester sebelumnya (lihat Pengaturan Akademik).
+     * adalah batas SKS menurut IPS semester sebelumnya (lihat Pengaturan Akademik), kecuali mahasiswa
+     * yang tinggal mengerjakan TA/Skripsi: kuotanya SKS mata kuliah TA/Skripsi saja.
      */
     public static function kuotaSks(MahasiswaProfile $mahasiswa, ?TahunAkademik $tahunAkademik): int
     {
-        return PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null);
+        return self::sksTinggalTa($mahasiswa)
+            ?? PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null);
+    }
+
+    /**
+     * SKS mata kuliah TA/Skripsi prodi mahasiswa bila ia tinggal mengerjakan TA/Skripsi: syarat nilai pendadaran
+     * (SKS minimal, tanpa E, semua dinilai) sudah terpenuhi dan TA/Skripsi belum dinilai. Selain itu null.
+     */
+    public static function sksTinggalTa(MahasiswaProfile $mahasiswa): ?int
+    {
+        $matkulTa = MataKuliah::query()->where('prodi_id', $mahasiswa->prodi_id)->where('tugas_akhir', true)->orderBy('id')->first(['id', 'sks']);
+
+        if ($matkulTa === null) {
+            return null;
+        }
+
+        $sudahDinilai = Krs::query()->where('mahasiswa_id', $mahasiswa->id)->whereNotNull('nilai')
+            ->whereHas('kelasKuliah.mataKuliah', fn (Builder $q) => $q->where('tugas_akhir', true))->exists();
+
+        return ! $sudahDinilai && SyaratTugasAkhir::terpenuhi(SyaratTugasAkhir::nilai($mahasiswa, false)) ? $matkulTa->sks : null;
     }
 
     /**

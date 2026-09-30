@@ -3,9 +3,11 @@
 namespace App;
 
 use App\Models\DosenProfile;
+use App\Models\Krs;
 use App\Models\MahasiswaProfile;
 use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
+use App\Models\TahunAkademik;
 use App\Models\TugasAkhir;
 use App\Models\Wisuda;
 use Illuminate\Contracts\Database\Eloquent\Builder;
@@ -30,6 +32,10 @@ class PengingatTugasAkhir
             }
         }
 
+        if (self::taBerlanjutBelumDiambil($mahasiswa)) {
+            $pesan[] = ['teks' => 'Tugas akhir Anda berlanjut: ambil lagi mata kuliah TA/Skripsi di KRS semester ini.', 'penting' => true];
+        }
+
         $ta = TugasAkhir::milik($mahasiswa->id);
         $pendadaran = $ta ? Pendadaran::query()->where('tugas_akhir_id', $ta->id)->whereIn('status', Pendadaran::AKTIF)->with('ruang')->latest('id')->first() : null;
         if ($pendadaran?->status === Pendadaran::DIJADWALKAN && $pendadaran->tanggal->greaterThanOrEqualTo(today())) {
@@ -48,6 +54,27 @@ class PengingatTugasAkhir
         }
 
         return $pesan === [] ? null : ['pesan' => $pesan, 'tautan' => route('mahasiswa.tugas-akhir')];
+    }
+
+    /**
+     * TA/Skripsi semester lalu belum dinilai (berlanjut), tetapi belum diambil lagi di tahun akademik aktif.
+     */
+    private static function taBerlanjutBelumDiambil(MahasiswaProfile $mahasiswa): bool
+    {
+        $aktif = TahunAkademik::aktif();
+
+        if ($aktif === null || ! in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true)) {
+            return false;
+        }
+
+        $krsTa = Krs::query()->where('mahasiswa_id', $mahasiswa->id)
+            ->whereHas('kelasKuliah.mataKuliah', fn (Builder $q) => $q->where('tugas_akhir', true))
+            ->with('kelasKuliah:id,tahun_akademik_id')
+            ->get(['id', 'kelas_id', 'nilai']);
+
+        return $krsTa->every(fn (Krs $krs): bool => blank($krs->nilai))
+            && $krsTa->contains(fn (Krs $krs): bool => $krs->kelasKuliah->tahun_akademik_id !== $aktif->id)
+            && ! $krsTa->contains(fn (Krs $krs): bool => $krs->kelasKuliah->tahun_akademik_id === $aktif->id);
     }
 
     /**

@@ -36,6 +36,22 @@ class Krs extends Model
     }
 
     /**
+     * KRS mata kuliah TA/Skripsi yang belum dinilai. Nilainya baru keluar dari pendadaran, jadi tidak ikut IPS.
+     */
+    public function taBelumDinilai(): bool
+    {
+        return blank($this->nilai) && (bool) $this->kelasKuliah?->mataKuliah?->tugas_akhir;
+    }
+
+    /**
+     * TA/Skripsi semester lalu yang belum selesai: statusnya "Berlanjut" dan diambil lagi di KRS semester berikutnya.
+     */
+    public function taBerlanjut(): bool
+    {
+        return $this->taBelumDinilai() && $this->kelasKuliah?->tahunAkademik?->status === false;
+    }
+
+    /**
      * Hapus KRS beserta pengajuan pindah kelas yang masih menunggu untuk kelas ini.
      */
     public function cancel(): void

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -13,7 +14,7 @@ const props = defineProps<{
     kelasKuliah: Record<string, any> | null;
     jumlahPertemuanBawaan?: number;
     dosens: { id: number; name: string }[];
-    matkulGroups: { label: string; options: { id: number; name: string }[] }[];
+    matkulGroups: { label: string; options: { id: number; name: string; tugas_akhir: boolean }[] }[];
     tahunAkademiks: { id: number; tahun: string; semester: string }[];
 }>();
 
@@ -28,6 +29,11 @@ const form = useForm({
     matkul_id: props.kelasKuliah?.matkul_id ?? '',
     tahun_akademik_id: props.kelasKuliah?.tahun_akademik_id ?? '',
 });
+
+// Kelas TA/Skripsi boleh tanpa dosen pengampu: pembimbing ditetapkan per mahasiswa.
+const matkulTa = computed(() =>
+    props.matkulGroups.some((group) => group.options.some((option) => option.id === Number(form.matkul_id) && option.tugas_akhir)),
+);
 
 const submit = () =>
     props.kelasKuliah ? form.put(route('admin.kelas-kuliah.update', props.kelasKuliah.id)) : form.post(route('admin.kelas-kuliah.store'));
@@ -80,15 +86,16 @@ const submit = () =>
                         </div>
                     </div>
                     <div class="mt-4 grid gap-2">
-                        <Label for="dosen_id" class="label-isian">Dosen Pengampu</Label>
+                        <Label for="dosen_id" class="label-isian">Dosen Pengampu<template v-if="matkulTa"> (opsional)</template></Label>
                         <SearchSelect
                             id="dosen_id"
                             v-model="form.dosen_id"
                             :options="props.dosens"
                             placeholder="Pilih dosen"
                             search-placeholder="Cari dosen (nama / NIDN)"
-                            required
+                            :required="!matkulTa"
                         />
+                        <p v-if="matkulTa" class="teks-bantu">Kelas TA/Skripsi boleh tanpa dosen pengampu; pembimbing ditetapkan per mahasiswa.</p>
                         <InputError :message="form.errors.dosen_id" />
                     </div>
                     <div class="mt-4 grid gap-2">
