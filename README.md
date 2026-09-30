@@ -184,23 +184,6 @@ Zona waktu yang tampil ke pengguna diatur lagi per institusi di **Pengaturan Sis
    $u->adminProfile()->create(['nomor_induk' => 'ADM-001']);
    ```
 
-   **Dosen pertama.** Fakultas wajib punya dekan dan program studi wajib punya kaprodi (keduanya dosen),
-   sedangkan form dosen di aplikasi mewajibkan program studi. Pada database kosong, buat satu dosen tanpa
-   program studi lewat tinker, lalu lengkapi program studinya dari menu **Dosen** setelah prodi dibuat
-   (lihat [langkah A2](#a-persiapan-sekali-di-awal)):
-
-   ```php
-   $d = App\Models\User::create([
-       'name' => 'Nama Dekan', 'username' => '0011223344', 'email' => 'dekan@kampus.ac.id',
-       'password' => 'ganti-sandi-awal', 'role_id' => App\Models\Role::system(App\UserType::Dosen)->id,
-   ]);
-   $d->forceFill(['email_verified_at' => now()])->save();
-   $d->dosenProfile()->create([
-       'nidn' => '0011223344', 'jabatan_fungsional' => 'Lektor', 'pendidikan_terakhir' => 'S3',
-       'status_kepegawaian' => 'Tetap', 'status' => 'Aktif',
-   ]);
-   ```
-
 5. **Akun developer** (bila panel dipakai): buat akun admin/karyawan dengan cara yang sama, lalu
    `php artisan sia:developer <username>` dan pastikan `DEV_PANEL=true`.
 
@@ -253,8 +236,8 @@ flowchart TD
 | # | Langkah | Oleh | Menu | Rujukan |
 |---|---|---|---|---|
 | A1 | Isi identitas institusi (nama, logo, **zona waktu**), SMTP, aturan akademik (skala nilai, batas SKS, jumlah pertemuan, syarat ujian, remidi, susulan, TA, cuti), tampilan halaman masuk. Zona waktu ditetapkan sekali di awal karena mengubahnya tidak menggeser data lama. | Admin | Pengaturan Sistem | 4 |
-| A2 | Data master berurutan: **dosen pertama** (lihat Onboarding) → **Fakultas** (dekan) → **Program Studi** (kaprodi) → lengkapi prodi dosen pertama → **Ruang** → **Mata Kuliah** (SKS, semester, prasyarat, tanda **TA/Skripsi** untuk mata kuliah skripsi). | Admin | Master Akademik | 3.2 |
-| A3 | Akun **Dosen** (NIDN, prodi), **Mahasiswa** (NIM, angkatan, prodi, dosen wali; semester dihitung otomatis dari angkatan), dan **Karyawan**. Role tambahan (mis. Staf Keuangan) disusun developer di `/dev/roles` atau admin bila `kelola_role` aktif. | Admin / developer | Pengguna & Akses | 3.3, 3.4 |
+| A2 | Data master berurutan: **dosen calon dekan/kaprodi** (menu Dosen, program studi dikosongkan dulu) → **Fakultas** (dekan) → **Program Studi** (kaprodi) → lengkapi program studi dosen tadi → **Ruang** → **Mata Kuliah** (SKS, semester, prasyarat, tanda **TA/Skripsi** untuk mata kuliah skripsi). | Admin | Master Akademik | 3.2 |
+| A3 | Akun **Dosen** (NIDN, program studi opsional), **Mahasiswa** (NIM, angkatan, prodi, dosen wali; semester dihitung otomatis dari angkatan), dan **Karyawan**. Role tambahan (mis. Staf Keuangan) disusun developer di `/dev/roles` atau admin bila `kelola_role` aktif. | Admin / developer | Pengguna & Akses | 3.3, 3.4 |
 | A4 | *Keuangan aktif:* **Jenis Biaya** (semester, remidi, susulan, serta info pendadaran/wisuda/cuti) dan **tarif** per prodi/angkatan. | Admin | Keuangan | 6.1 |
 
 Dosen dan mahasiswa masuk memakai NIDN/NIM/username. Akun buatan admin belum terverifikasi emailnya, jadi saat

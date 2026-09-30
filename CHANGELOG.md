@@ -6,8 +6,9 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Diubah
-- README dilengkapi **Alur pemakaian dari awal** (persiapan, siklus per semester, akhir studi) dan langkah membuat
-  dosen pertama saat onboarding (fakultas/prodi butuh dekan/kaprodi, sedangkan form dosen butuh prodi).
+- README dilengkapi **Alur pemakaian dari awal** (persiapan, siklus per semester, akhir studi).
+- Isian **Program Studi** pada form dosen kini opsional, sehingga instalasi baru bisa membuat dosen calon
+  dekan/kaprodi sebelum fakultas dan program studi ada (sebelumnya buntu tanpa tinker).
 
 ## [1.0.0] - 2026-09-30
 

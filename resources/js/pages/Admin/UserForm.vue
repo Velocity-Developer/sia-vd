@@ -609,12 +609,23 @@ const submit = () => {
                             ><InputError :message="form.errors.agama" />
                         </div>
                         <div v-for="field in roleFields" :key="field" class="grid gap-2">
-                            <Label :for="field" class="label-isian">{{ labels[field] }}</Label
+                            <Label :for="field" class="label-isian"
+                                >{{ labels[field]
+                                }}<span v-if="field === 'prodi_id' && props.type === 'dosen'" class="font-normal text-[#a39e98]">
+                                    (opsional)</span
+                                ></Label
                             ><select v-if="field === 'status'" :id="field" v-model="form[field]" class="isian isian-pilih" required>
                                 <option value="">Pilih status</option>
                                 <option v-for="item in statuses" :key="item" :value="item">{{ item }}</option></select
-                            ><select v-else-if="field === 'prodi_id'" :id="field" v-model="form[field]" class="isian isian-pilih" required>
-                                <option value="">Pilih program studi</option>
+                            ><select
+                                v-else-if="field === 'prodi_id'"
+                                :id="field"
+                                v-model="form[field]"
+                                class="isian isian-pilih"
+                                :required="props.type !== 'dosen'"
+                            >
+                                <!-- Prodi dosen opsional: dosen pertama (dekan/kaprodi) dibuat sebelum ada program studi. -->
+                                <option value="">{{ props.type === 'dosen' ? 'Tanpa program studi' : 'Pilih program studi' }}</option>
                                 <optgroup v-for="[fakultas, prodiList] in groupedProgramStudi" :key="fakultas" :label="fakultas">
                                     <option v-for="item in prodiList" :key="item.id" :value="item.id">
                                         {{ item.jenjang }} - {{ item.nama_prodi }}

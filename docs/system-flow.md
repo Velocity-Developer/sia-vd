@@ -209,8 +209,9 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 **Field per jenis:**
 
 - Karyawan: `nomor_induk`.
-- Dosen: `nidn` (unik), jabatan fungsional, pendidikan, status kepegawaian, `status` (`Aktif`/`Nonaktif`, bawaan `Aktif`; nonaktif = tidak dapat masuk, lihat 2.1), `prodi_id`.
+- Dosen: `nidn` (unik), jabatan fungsional, pendidikan, status kepegawaian, `status` (`Aktif`/`Nonaktif`, bawaan `Aktif`; nonaktif = tidak dapat masuk, lihat 2.1), `prodi_id` (opsional).
   - Dosen `Nonaktif` tidak muncul di pilihan dosen (dosen wali, dekan, kaprodi, pengampu kelas, dosen pertemuan, pembimbing, penguji) dan ditolak validasi (`DosenProfile::pilihan`/`rulePilihan`), kecuali dosen yang sudah terpilih pada data yang sedang diedit. Filter daftar (kelas, jadwal) tetap memuat semua dosen agar data lama bisa dicari.
+  - `prodi_id` dosen **opsional**, karena fakultas (dekan) dan program studi (kaprodi) membutuhkan dosen lebih dulu; pada instalasi baru dosen calon dekan/kaprodi dibuat tanpa prodi lalu dilengkapi.
 - Mahasiswa: `nim` (unik), `angkatan` (wajib, 4 digit), `status`, `dosen_wali_id`, `prodi_id`, sekolah asal, `nisn` (10 digit, unik), `email_alternatif`, data orang tua.
   - Pilihan `status`: `Aktif`, `Nonaktif`, `Lulus`, `Dropout`, `Cuti`, `Mengundurkan Diri`, `Meninggal`. `Aktif`, `Lulus`, dan `Cuti` dapat masuk; status lain ditolak (lihat 2.1). Hanya `Aktif` yang ditagih (terbit massal maupun rincian manual admin) dan boleh mengambil KRS; halaman KRS mahasiswa lain tidak menawarkan kelas apa pun. Status `Transfer Masuk` dihapus 28 Sep 2026; mahasiswa yang berstatus itu diubah menjadi `Aktif` saat migrasi.
   - **Semester tidak disimpan**, tetapi dihitung dari angkatan (`MahasiswaProfile::semesterPada`): `(tahun pertama tahun akademik − angkatan) × 2 + (Ganjil ? 1 : 2)`. Angkatan 2024 berada di semester 1 pada 2024/2025 Ganjil dan semester 5 pada 2026/2027 Ganjil. Semester tetap bertambah selama mahasiswa cuti. Hasilnya kosong bila mahasiswa belum mulai kuliah. Detail pengguna menampilkan semester pada tahun akademik aktif.

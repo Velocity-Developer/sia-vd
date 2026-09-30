@@ -66,6 +66,29 @@ it('creates dosen and edits users with self-excluded unique fields', function ()
     $this->actingAs($admin)->delete(route('admin.users.dosen.destroy', $dosen))->assertRedirect()->assertSessionHas('success', 'Dosen berhasil dihapus.');
 });
 
+it('creates the first dosen without a program studi so a fresh install can add fakultas and prodi', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->post(route('admin.users.dosen.store'), [
+        'role_id' => Role::system(UserType::Dosen)->id,
+        'name' => 'Dekan Pertama', 'username' => 'dekan-pertama', 'email' => 'dekan@example.com',
+        'password' => 'password123', 'password_confirmation' => 'password123',
+        'nidn' => '11112222', 'tempat_lahir' => 'Bandung', 'tanggal_lahir' => '1975-01-02',
+        'jenis_kelamin' => 'Laki-laki', 'agama' => 'Islam', 'no_telepon' => '08123456789',
+        'alamat' => 'Jl. Merdeka', 'kewarganegaraan' => 'Indonesia',
+        'jabatan_fungsional' => 'Lektor', 'pendidikan_terakhir' => 'S3',
+        'status_kepegawaian' => 'Tetap', 'status' => 'Aktif', 'prodi_id' => '',
+    ])->assertSessionHasNoErrors();
+
+    $dosen = User::where('username', 'dekan-pertama')->sole()->dosenProfile;
+    expect($dosen->prodi_id)->toBeNull();
+
+    $this->actingAs($admin)->post(route('admin.fakultas.store'), [
+        'kode_fakultas' => 'FT', 'nama_fakultas' => 'Fakultas Teknik', 'dekan_id' => $dosen->id,
+        'tanggal_berdiri' => '2001-01-01', 'no_telp' => '021-555', 'email' => 'ft@example.ac.id',
+    ])->assertSessionHasNoErrors();
+});
+
 it('validates required profile fields and new dropdown values', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin)->post(route('admin.users.dosen.store'), [])->assertSessionHasErrors([
