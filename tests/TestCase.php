@@ -8,14 +8,15 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     /**
-     * Tes lama menguji alur lengkap dengan fitur keuangan (tagihan, kunci KRS, remidi & susulan berbayar),
-     * jadi fitur itu dinyalakan di sini. Tes yang menguji keadaan fitur mati mematikannya sendiri.
+     * Tes lama menguji alur lengkap dengan fitur keuangan (tagihan, kunci KRS, remidi & susulan berbayar)
+     * dan menu Kelola Role, jadi kedua fitur itu dinyalakan di sini. Tes yang menguji keadaan fitur mati
+     * mematikannya sendiri.
      */
     protected function setUp(): void
     {
         parent::setUp();
 
-        config(['client.fitur.keuangan.default' => true]);
+        config(['client.fitur.keuangan.default' => true, 'client.fitur.kelola_role.default' => true]);
     }
 
     /**

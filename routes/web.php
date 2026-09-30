@@ -160,7 +160,8 @@ Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function (
 });
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas): void {
-    Route::middleware(['can:admin.roles', 'password.confirm'])->group(function (): void {
+    // Kelola Role hanya dibuka selama fitur kelola_role aktif; izin admin.roles tetap berlaku untuk mengelola akun.
+    Route::middleware(['fitur:kelola_role', 'can:admin.roles', 'password.confirm'])->group(function (): void {
         Route::resource('roles', RoleController::class)->except('show')->names('admin.roles');
     });
 

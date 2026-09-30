@@ -3,6 +3,7 @@ import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { useFitur } from '@/composables/useFitur';
 import { usePermissions } from '@/composables/usePermissions';
 import { type NavEntry, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -36,11 +37,14 @@ import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
 const { can } = usePermissions();
+const fitur = useFitur();
+const tampil = (item: MenuItem): boolean => can(item.permission) && (!item.fitur || fitur.aktif(item.fitur));
 
 // URL dibentuk setelah menu difilter izin: daftar route yang dikirim ke browser hanya berisi
 // route milik peran pengguna (lihat config/ziggy.php), jadi route('admin…') tidak boleh dipanggil
 // untuk pengguna yang tidak punya izin itu.
-type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string };
+// `fitur`: menu hanya tampil selama fitur per klien itu aktif (config/client.php), selain izinnya.
+type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: 'kelola_role' | 'keuangan' | 'ujian_susulan' };
 type MenuSeksi = { title: string; icon?: NavItem['icon']; items: MenuItem[] };
 type MenuEntry = MenuItem | MenuSeksi;
 
@@ -111,7 +115,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Dosen', href: '/admin/users/dosen', icon: GraduationCap, permission: 'admin.users.dosen' },
                     { title: 'Mahasiswa', href: '/admin/users/mahasiswa', icon: Users, permission: 'admin.users.mahasiswa' },
                     { title: 'Karyawan', href: '/admin/users/karyawan', icon: Briefcase, permission: 'admin.users.karyawan' },
-                    { title: 'Kelola Role', routeName: 'admin.roles.index', icon: ShieldCheck, permission: 'admin.roles' },
+                    { title: 'Kelola Role', routeName: 'admin.roles.index', icon: ShieldCheck, permission: 'admin.roles', fitur: 'kelola_role' },
                 ],
             },
         ],
@@ -212,9 +216,9 @@ const bentukItem = (item: MenuItem): NavItem[] => {
 // Seksi yang tersisa satu menu ditampilkan langsung tanpa dropdown agar tidak menambah klik.
 const filterEntries = (entries: MenuEntry[]): NavEntry[] =>
     entries.flatMap((entry): NavEntry[] => {
-        if (!adalahSeksi(entry)) return can(entry.permission) ? bentukItem(entry) : [];
+        if (!adalahSeksi(entry)) return tampil(entry) ? bentukItem(entry) : [];
 
-        const items = entry.items.filter((item) => can(item.permission)).flatMap(bentukItem);
+        const items = entry.items.filter(tampil).flatMap(bentukItem);
 
         if (items.length === 0) return [];
         if (items.length === 1) return [items[0]];

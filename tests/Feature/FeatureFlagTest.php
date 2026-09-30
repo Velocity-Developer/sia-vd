@@ -1,6 +1,7 @@
 <?php
 
 use App\Feature;
+use Illuminate\Support\Env;
 
 it('registers the client features and lists their env keys in .env.example', function () {
     expect(array_keys(config('client.fitur')))->toBe(['kelola_role', 'keuangan', 'ujian_susulan']);
@@ -12,14 +13,18 @@ it('registers the client features and lists their env keys in .env.example', fun
 });
 
 it('keeps every feature off and unlocked when the env keys are not set', function () {
-    foreach (['KELOLA_ROLE', 'KEUANGAN', 'UJIAN_SUSULAN'] as $kunci) {
-        if (env("FEATURE_{$kunci}") !== null || env("LOCK_{$kunci}") !== null) {
-            $this->markTestSkipped("FEATURE_{$kunci}/LOCK_{$kunci} diisi di .env mesin ini.");
-        }
-    }
+    // Kosongkan sementara FEATURE_*/LOCK_* yang mungkin diisi .env mesin ini, lalu baca config dari berkasnya
+    // (TestCase menyalakan sebagian fitur untuk tes lama).
+    $repo = Env::getRepository();
+    $kunci = collect(['KELOLA_ROLE', 'KEUANGAN', 'UJIAN_SUSULAN'])->flatMap(fn (string $k): array => ["FEATURE_{$k}", "LOCK_{$k}"]);
+    $asli = $kunci->mapWithKeys(fn (string $k): array => [$k => $repo->get($k)]);
+    $kunci->each(fn (string $k) => $repo->clear($k));
 
-    // Dibaca langsung dari berkasnya karena TestCase menyalakan keuangan untuk tes lama.
-    config(['client' => require config_path('client.php')]);
+    try {
+        config(['client' => require config_path('client.php')]);
+    } finally {
+        $asli->filter(fn ($v) => $v !== null)->each(fn (string $v, string $k) => $repo->set($k, $v));
+    }
 
     foreach (config('client.fitur') as $nama => $fitur) {
         expect($fitur['default'])->toBeFalse()

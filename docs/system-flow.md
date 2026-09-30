@@ -41,7 +41,9 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 - `PermissionCatalog::sync()` membuat satu role sistem per jenis (slug `admin`, `dosen`, `mahasiswa`, `is_system = true`).
   - Role sistem baru mendapat semua permission bawaan.
   - Role sistem yang sudah ada hanya ditambah permission yang baru masuk katalog, sehingga perubahan dari admin tidak tertimpa.
-- Admin bisa membuat role tambahan di menu **Kelola Role**.
+- Admin bisa membuat role tambahan di menu **Kelola Role**, **hanya bila fitur `kelola_role` aktif** (`FEATURE_KELOLA_ROLE=true`, bawaan mati). Selama mati, menu itu tidak tampil dan rute `admin.roles.*` mengembalikan 404 (middleware `fitur:kelola_role`); role diatur developer dengan menyalakan flag sementara lalu mematikannya lagi.
+  - Izin `admin.roles` tetap berlaku walau fiturnya mati, karena izin itu juga menentukan siapa yang boleh memberi role apa pun dan mengelola akun (`User::canAssignRole`, `User::canManage`).
+  - Memilih role yang sudah ada untuk pengguna di menu Kelola User tetap bisa.
 
 ### 1.2 Cara izin diperiksa
 
