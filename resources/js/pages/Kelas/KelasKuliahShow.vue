@@ -3,6 +3,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import BagianLipat from '@/components/BagianLipat.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useFitur } from '@/composables/useFitur';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam as jamPendek } from '@/lib/presensi';
@@ -286,6 +287,8 @@ const finalisasiRemidi = () =>
     );
 const bukaFinalRemidi = () => router.post(route('admin.kelas-kuliah.remidi.buka-finalisasi', props.kelasKuliah.id), {}, { preserveScroll: true });
 // Huruf akhir peserta remidi yang lunas dibuka setelah ujian remidi selesai, walau nilai kelas sudah final.
+// Tanpa fitur keuangan, remidi tidak bersyarat bayar dan kolom tagihan tidak ditampilkan.
+const keuangan = useFitur().aktif('keuangan');
 // Huruf peserta remidi hanya berubah lewat remidi, walau admin membuka kembali kunci nilai kelas.
 const jalurRemidi = (krs: KrsShow) => props.remidiTerbuka.includes(krs.mahasiswa_id);
 const menungguRemidi = (krs: KrsShow) => props.pesertaRemidi.includes(krs.mahasiswa_id) && !jalurRemidi(krs);
@@ -1088,7 +1091,8 @@ const formatTenggat = (value: string | null | undefined): string => {
                                 Mahasiswa dengan huruf akhir tidak lulus atau boleh diulang<template v-if="props.remidi.ada_uas">
                                     yang ikut UAS</template
                                 >
-                                sudah dicentang otomatis. Tambah atau coret sesuai kebutuhan, lalu kunci daftar agar tagihan remidi bisa diterbitkan.
+                                sudah dicentang otomatis. Tambah atau coret sesuai kebutuhan, lalu kunci daftar agar
+                                {{ keuangan ? 'tagihan remidi bisa diterbitkan' : 'ujian remidi bisa dijadwalkan' }}.
                             </p>
                             <p v-if="!props.remidi.ada_uas && !remidiDikunci" class="teks-bantu mt-1">
                                 Kelas ini tidak punya jadwal UAS terbit di sistem, jadi keikutsertaan UAS tidak diperiksa.
@@ -1110,7 +1114,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                                     {{ formatTanggal(props.remidi.final_at) }}
                                 </p>
                                 <p v-else-if="props.remidi.ujian?.selesai && props.remidi.jendela_terbuka" class="mt-1 text-sm text-[#615d59]">
-                                    Huruf akhir peserta lunas bisa diubah di tabel Nilai Mahasiswa<template v-if="props.remidi.huruf_maks">
+                                    Huruf akhir peserta{{ keuangan ? ' lunas' : '' }} bisa diubah di tabel Nilai Mahasiswa<template
+                                        v-if="props.remidi.huruf_maks"
+                                    >
                                         (paling tinggi {{ props.remidi.huruf_maks }})</template
                                     ><template v-if="props.remidi.batas_nilai"> sampai {{ formatTanggal(props.remidi.batas_nilai) }}</template
                                     >.
@@ -1150,7 +1156,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         <th>Mahasiswa</th>
                                         <template v-if="remidiDikunci">
                                             <th>Nilai Awal</th>
-                                            <th>Tagihan</th>
+                                            <th v-if="keuangan">Tagihan</th>
                                             <th>Nilai Remidi</th>
                                             <th>Huruf Akhir</th>
                                         </template>
@@ -1180,7 +1186,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         </td>
                                         <template v-if="remidiDikunci">
                                             <td class="font-semibold text-[#dd5b00]">{{ m.nilai_awal ?? '-' }}</td>
-                                            <td>
+                                            <td v-if="keuangan">
                                                 <span
                                                     v-if="m.tagihan"
                                                     class="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium"

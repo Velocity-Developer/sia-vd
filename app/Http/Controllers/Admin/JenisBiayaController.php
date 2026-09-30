@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\JenisBiaya;
 use App\Models\ProgramStudi;
@@ -18,6 +19,7 @@ class JenisBiayaController extends Controller
     {
         return Inertia::render('Admin/JenisBiaya', [
             'jenisBiaya' => JenisBiaya::query()
+                ->whereIn('kategori', JenisBiaya::kategoriTersedia())
                 ->withCount('tarif')
                 ->orderBy('urutan')
                 ->orderBy('nama')
@@ -30,14 +32,18 @@ class JenisBiayaController extends Controller
         return Inertia::render('Admin/JenisBiayaForm', [
             'jenis' => null,
             'prodiOptions' => $this->prodiOptions(),
+            'kategoriOptions' => JenisBiaya::kategoriTersedia(),
         ]);
     }
 
     public function edit(JenisBiaya $jenisBiaya): Response
     {
+        $this->pastikanKategoriTersedia($jenisBiaya);
+
         return Inertia::render('Admin/JenisBiayaForm', [
             'jenis' => $jenisBiaya->load(['tarif' => fn ($query) => $query->orderBy('prodi_id')->orderBy('angkatan')]),
             'prodiOptions' => $this->prodiOptions(),
+            'kategoriOptions' => JenisBiaya::kategoriTersedia(),
         ]);
     }
 
@@ -50,6 +56,7 @@ class JenisBiayaController extends Controller
 
     public function update(Request $request, JenisBiaya $jenisBiaya): RedirectResponse
     {
+        $this->pastikanKategoriTersedia($jenisBiaya);
         $this->simpan($request, $jenisBiaya);
 
         return to_route('admin.jenis-biaya.index')->with('success', 'Jenis biaya berhasil diperbarui.');
@@ -57,11 +64,21 @@ class JenisBiayaController extends Controller
 
     public function destroy(JenisBiaya $jenisBiaya): RedirectResponse
     {
+        $this->pastikanKategoriTersedia($jenisBiaya);
+
         // Rincian tagihan yang sudah terbit menyimpan salinan nama dan nominalnya sendiri,
         // jadi menghapus jenis biaya tidak mengubah tagihan lama.
         $jenisBiaya->delete();
 
         return to_route('admin.jenis-biaya.index')->with('success', 'Jenis biaya berhasil dihapus.');
+    }
+
+    /**
+     * Jenis biaya tagihan (semester, remidi, susulan) tidak bisa dibuka selama fitur keuangan mati.
+     */
+    private function pastikanKategoriTersedia(JenisBiaya $jenis): void
+    {
+        abort_unless(in_array($jenis->kategori, JenisBiaya::kategoriTersedia(), true), 404);
     }
 
     private function simpan(Request $request, JenisBiaya $jenis): void
@@ -70,7 +87,7 @@ class JenisBiayaController extends Controller
             'kode' => ['required', 'string', 'max:30', Rule::unique('jenis_biaya', 'kode')->ignore($jenis)],
             'nama' => ['required', 'string', 'max:255'],
             'cara_hitung' => ['required', Rule::in([JenisBiaya::TETAP, JenisBiaya::PER_SKS])],
-            'kategori' => ['nullable', Rule::in(JenisBiaya::KATEGORI)],
+            'kategori' => [Feature::aktif('keuangan') ? 'nullable' : 'required', Rule::in(JenisBiaya::kategoriTersedia())],
             'keterangan' => ['nullable', 'string', 'max:255'],
             'aktif' => ['required', 'boolean'],
             'urutan' => ['nullable', 'integer', 'min:0', 'max:999'],

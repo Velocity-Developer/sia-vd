@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\PengajuanCuti;
 use Illuminate\Database\Eloquent\Builder;
@@ -97,5 +98,32 @@ class TahunAkademik extends Model
     public function batasNilaiRemidiLewat(): bool
     {
         return $this->batas_input_nilai_remidi?->copy()->endOfDay()->isPast() ?? false;
+    }
+
+    /**
+     * Ujian remidi dijadwalkan sesudah tanggal ini: batas bayar remidi selama fitur keuangan aktif, atau
+     * batas input nilai (tanggal akhir semester bila kosong) bila remidi tanpa tagihan.
+     *
+     * @return array{tanggal: ?Carbon, label: string}
+     */
+    public function awalRemidi(): array
+    {
+        return match (true) {
+            Feature::aktif('keuangan') => ['tanggal' => $this->batas_bayar_remidi, 'label' => 'batas bayar remidi'],
+            $this->batas_input_nilai !== null => ['tanggal' => $this->batas_input_nilai, 'label' => 'batas input nilai'],
+            default => ['tanggal' => $this->tanggal_akhir, 'label' => 'tanggal akhir semester'],
+        };
+    }
+
+    /**
+     * Pesan bila batas remidi di Tahun Akademik belum lengkap, atau null bila remidi sudah bisa dijadwalkan.
+     */
+    public function batasRemidiBelumLengkap(): ?string
+    {
+        return match (true) {
+            Feature::aktif('keuangan') && ($this->batas_bayar_remidi === null || $this->batas_input_nilai_remidi === null) => 'Isi dulu Batas Bayar Remidi dan Batas Input Nilai Remidi di menu Tahun Akademik.',
+            $this->batas_input_nilai_remidi === null => 'Isi dulu Batas Input Nilai Remidi di menu Tahun Akademik.',
+            default => null,
+        };
     }
 }

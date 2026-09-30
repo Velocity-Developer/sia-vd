@@ -61,7 +61,7 @@ class BerandaMahasiswa
         $pesan = [];
         $tautan = null;
         $tagihan = TagihanSemester::query()->where('mahasiswa_id', $mahasiswa->id)->where('tahun_akademik_id', $tahunAkademik->id)->first();
-        $krsTerkunci = PengaturanAkademik::current()->kunci_krs_aktif && $tagihan !== null && ! $tagihan->lunas();
+        $krsTerkunci = PengaturanAkademik::current()->kunciKrsBerlaku() && $tagihan !== null && ! $tagihan->lunas();
 
         if ($lihatTagihan && $tagihan !== null) {
             $rupiah = 'Rp '.number_format($tagihan->total, 0, ',', '.');

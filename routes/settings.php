@@ -39,7 +39,7 @@ Route::middleware('auth')->group(function () {
             Route::get('akademik', [PengaturanAkademikController::class, 'index'])->name('pengaturan-sistem.akademik');
             Route::put('akademik/batas-sks', [PengaturanAkademikController::class, 'updateBatasSks'])->name('admin.pengaturan-akademik.batas-sks');
             Route::put('akademik/skala-nilai', [PengaturanAkademikController::class, 'updateSkalaNilai'])->name('admin.pengaturan-akademik.skala-nilai');
-            Route::put('akademik/kunci-krs', [PengaturanAkademikController::class, 'updateKunciKrs'])->name('admin.pengaturan-akademik.kunci-krs');
+            Route::put('akademik/kunci-krs', [PengaturanAkademikController::class, 'updateKunciKrs'])->middleware('fitur:keuangan')->name('admin.pengaturan-akademik.kunci-krs');
             Route::put('akademik/presensi', [PengaturanAkademikController::class, 'updatePresensi'])->name('admin.pengaturan-akademik.presensi');
             Route::put('akademik/pindah-kelas', [PengaturanAkademikController::class, 'updatePindahKelas'])->name('admin.pengaturan-akademik.pindah-kelas');
             Route::put('akademik/remidi', [PengaturanAkademikController::class, 'updateRemidi'])->name('admin.pengaturan-akademik.remidi');

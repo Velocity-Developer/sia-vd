@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\BatasSks;
 use App\Models\Krs;
@@ -218,7 +219,8 @@ class PengaturanAkademikController extends Controller
     {
         $data = $request->validate([
             'batas_pengajuan_susulan_hari' => ['required', 'integer', 'min:0', 'max:30'],
-            'batas_bayar_susulan_hari' => ['required', 'integer', 'min:1', 'max:30'],
+            // Batas bayar susulan hanya tampil selama fitur keuangan aktif; bila mati, nilai lamanya dibiarkan.
+            'batas_bayar_susulan_hari' => Feature::aktif('keuangan') ? ['required', 'integer', 'min:1', 'max:30'] : ['exclude'],
         ], attributes: [
             'batas_pengajuan_susulan_hari' => 'Batas pengajuan susulan',
             'batas_bayar_susulan_hari' => 'Batas bayar susulan',

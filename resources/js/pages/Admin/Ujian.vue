@@ -4,6 +4,7 @@ import Pagination from '@/components/Pagination.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
 import { JENIS_UJIAN, MODE_UJIAN, STATUS_UJIAN, labelMode, type JenisUjian, type ModeUjian } from '@/lib/ujian';
@@ -41,6 +42,8 @@ const props = defineProps<{
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
+// Tanpa fitur keuangan, remidi dan susulan tidak bersyarat bayar.
+const keuangan = useFitur().aktif('keuangan');
 const tahun = ref<number | string>(props.filter.tahun_akademik_id ?? '');
 const prodi = ref<number | string>(props.filter.prodi_id ?? 'all');
 const jenis = ref<string>(props.filter.jenis ?? 'all');
@@ -122,7 +125,10 @@ const hapus = () => {
                 <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
                 <div v-if="props.remidiSiap" class="alert-info flex flex-wrap items-center gap-3">
-                    <span>{{ props.remidiSiap }} kelas punya peserta remidi yang sudah lunas tetapi belum dijadwalkan remidinya.</span>
+                    <span
+                        >{{ props.remidiSiap }} kelas punya peserta remidi{{ keuangan ? ' yang sudah lunas' : '' }} tetapi belum dijadwalkan
+                        remidinya.</span
+                    >
                     <Button size="sm" variant="outline" @click="massalJenis = 'remidi'">Buat semua jadwal remidi</Button>
                     <Button as-child size="sm" variant="outline">
                         <Link :href="route('admin.ujian.create', { tahun_akademik_id: props.filter.tahun_akademik_id, jenis: 'remidi' })"
@@ -133,8 +139,8 @@ const hapus = () => {
                 <template v-for="j in ['uts', 'uas'] as const" :key="`susulan-${j}`">
                     <div v-if="props.susulanSiap[j]" class="alert-info flex flex-wrap items-center gap-3">
                         <span
-                            >{{ props.susulanSiap[j] }} kelas punya pemohon susulan {{ JENIS_UJIAN[j] }} yang sudah lunas tetapi belum dijadwalkan
-                            susulannya.</span
+                            >{{ props.susulanSiap[j] }} kelas punya pemohon susulan {{ JENIS_UJIAN[j] }}
+                            {{ keuangan ? 'yang sudah lunas' : 'yang disetujui' }} tetapi belum dijadwalkan susulannya.</span
                         >
                         <Button size="sm" variant="outline" @click="massalJenis = `${j}_susulan`"
                             >Buat semua jadwal {{ JENIS_UJIAN[j] }} susulan</Button

@@ -23,7 +23,11 @@ const adaGambar = computed(() => Boolean(tampilan.value?.login_gambar_url));
 const sorotan = [
     { icon: ClipboardList, judul: 'Rencana Studi', teks: 'Isi KRS dan pantau batas SKS tiap semester.' },
     { icon: BookOpen, judul: 'Materi & Tugas', teks: 'Materi kuliah, tugas, dan quiz dalam satu tempat.' },
-    { icon: GraduationCap, judul: 'Hasil Studi', teks: 'KHS, transkrip nilai, dan informasi biaya kuliah.' },
+    {
+        icon: GraduationCap,
+        judul: 'Hasil Studi',
+        teks: page.props.fitur?.keuangan ? 'KHS, transkrip nilai, dan informasi biaya kuliah.' : 'KHS dan transkrip nilai.',
+    },
 ];
 </script>
 

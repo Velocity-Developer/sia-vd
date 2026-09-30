@@ -18,6 +18,9 @@ it('keeps every feature off and unlocked when the env keys are not set', functio
         }
     }
 
+    // Dibaca langsung dari berkasnya karena TestCase menyalakan keuangan untuk tes lama.
+    config(['client' => require config_path('client.php')]);
+
     foreach (config('client.fitur') as $nama => $fitur) {
         expect($fitur['default'])->toBeFalse()
             ->and($fitur['locked'])->toBeFalse()
@@ -33,7 +36,7 @@ it('treats unregistered features as off', function () {
 });
 
 it('turns a feature on from its default value', function () {
-    config(['client.fitur.keuangan.default' => true]);
+    config(['client.fitur.keuangan.default' => true, 'client.fitur.ujian_susulan.default' => false]);
 
     expect(Feature::aktif('keuangan'))->toBeTrue()
         ->and(Feature::aktif('ujian_susulan'))->toBeFalse();

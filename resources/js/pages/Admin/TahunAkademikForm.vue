@@ -4,10 +4,13 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 const props = defineProps<{ tahunAkademik: Record<string, any> | null; kelasBerpertemuan?: number }>();
 const title = `${props.tahunAkademik ? 'Edit' : 'Tambah'} Tahun Akademik`;
+// Batas bayar remidi hanya ada selama fitur keuangan aktif; bila mati, remidi dijadwalkan sesudah batas input nilai.
+const keuangan = useFitur().aktif('keuangan');
 const form = useForm({
     tahun: props.tahunAkademik?.tahun ?? '',
     semester: props.tahunAkademik?.semester ?? 'Ganjil',
@@ -94,7 +97,7 @@ const submit = () =>
                             <p class="teks-bantu">Lewat tanggal ini nilai semua kelas terkunci untuk dosen. Kosongkan bila tanpa batas.</p>
                             <InputError :message="form.errors.batas_input_nilai" />
                         </div>
-                        <div class="grid content-start gap-2">
+                        <div v-if="keuangan" class="grid content-start gap-2">
                             <Label for="batas_bayar_remidi" class="label-isian">Batas Bayar Remidi</Label>
                             <DatePicker id="batas_bayar_remidi" v-model="form.batas_bayar_remidi" placeholder="Pilih batas bayar remidi" />
                             <p class="teks-bantu">
@@ -110,7 +113,8 @@ const submit = () =>
                                 placeholder="Pilih batas input nilai remidi"
                             />
                             <p class="teks-bantu">
-                                Ujian remidi dijadwalkan sesudah batas bayar s.d. tanggal ini; lewat tanggal ini nilai remidi terkunci untuk dosen.
+                                Ujian remidi dijadwalkan sesudah {{ keuangan ? 'batas bayar' : 'batas input nilai' }} s.d. tanggal ini; lewat tanggal
+                                ini nilai remidi terkunci untuk dosen.
                             </p>
                             <InputError :message="form.errors.batas_input_nilai_remidi" />
                         </div>

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import PengaturanSistemLayout from '@/layouts/PengaturanSistemLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { Plus, Trash2 } from 'lucide-vue-next';
@@ -59,6 +60,8 @@ const nilaiForm = useForm({
 const dipakai = (huruf: string) => props.skalaNilai.find((row) => row.huruf === huruf.toUpperCase())?.dipakai ?? 0;
 const errorOf = (form: { errors: object }, key: string) => (form.errors as Record<string, string | undefined>)[key];
 
+// Penguncian KRS dan batas bayar susulan hanya berlaku selama fitur keuangan aktif.
+const keuangan = useFitur().aktif('keuangan');
 const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
 
 const susulanForm = useForm({ ...props.susulan });
@@ -115,7 +118,7 @@ const saveNilai = () =>
 
         <section id="krs" class="flex scroll-mt-4 flex-col gap-4">
             <h2 class="teks-bantu font-semibold uppercase tracking-[0.06em]">KRS &amp; SKS</h2>
-            <form class="kartu p-6" @submit.prevent="simpanKunciKrs">
+            <form v-if="keuangan" class="kartu p-6" @submit.prevent="simpanKunciKrs">
                 <h3 class="judul-bagian">Penguncian KRS oleh Pembayaran</h3>
                 <p class="teks-bantu mt-1">
                     Saat menyala, mahasiswa yang tagihan semester berjalannya belum lunas tidak bisa membuka halaman KRS. Mahasiswa yang tagihannya
@@ -338,8 +341,10 @@ const saveNilai = () =>
             <form class="kartu p-6" @submit.prevent="simpanSusulan">
                 <h3 class="judul-bagian">Batas Waktu Ujian Susulan</h3>
                 <p class="teks-bantu mt-1">
-                    Mahasiswa bisa mengajukan susulan sejak jadwal UTS/UAS terbit sampai beberapa hari sesudah ujian. Tagihan susulan harus dibayar
-                    dalam beberapa hari sejak diterbitkan; lewat batas itu hak susulan gugur.
+                    Mahasiswa bisa mengajukan susulan sejak jadwal UTS/UAS terbit sampai beberapa hari sesudah ujian.
+                    <template v-if="keuangan">
+                        Tagihan susulan harus dibayar dalam beberapa hari sejak diterbitkan; lewat batas itu hak susulan gugur.
+                    </template>
                 </p>
                 <div class="mt-4 grid content-start gap-4 sm:grid-cols-2">
                     <div class="grid content-start gap-2">
@@ -347,7 +352,7 @@ const saveNilai = () =>
                         <Input id="batas_pengajuan_susulan_hari" v-model="susulanForm.batas_pengajuan_susulan_hari" type="number" min="0" max="30" />
                         <InputError :message="susulanForm.errors.batas_pengajuan_susulan_hari" />
                     </div>
-                    <div class="grid content-start gap-2">
+                    <div v-if="keuangan" class="grid content-start gap-2">
                         <Label for="batas_bayar_susulan_hari" class="label-isian">Batas bayar (hari sejak tagihan terbit)</Label>
                         <Input id="batas_bayar_susulan_hari" v-model="susulanForm.batas_bayar_susulan_hari" type="number" min="1" max="30" />
                         <InputError :message="susulanForm.errors.batas_bayar_susulan_hari" />

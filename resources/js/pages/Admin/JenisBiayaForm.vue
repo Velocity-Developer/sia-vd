@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { LoaderCircle, Plus, Trash2 } from 'lucide-vue-next';
@@ -25,13 +26,25 @@ type Jenis = {
     tarif: Tarif[];
 };
 
-const props = defineProps<{ jenis: Jenis | null; prodiOptions: { id: number; name: string }[] }>();
+const props = defineProps<{ jenis: Jenis | null; prodiOptions: { id: number; name: string }[]; kategoriOptions: string[] }>();
+
+const LABEL_KATEGORI: Record<string, string> = {
+    semester: 'Tagihan semester',
+    remidi: 'Remidi (per mata kuliah)',
+    susulan: 'Ujian susulan (per ujian)',
+    pendadaran: 'Pendadaran (informasi)',
+    wisuda: 'Wisuda (informasi)',
+    cuti: 'Cuti (informasi)',
+};
+// Selama fitur keuangan mati hanya biaya informasi yang bisa dikelola, dan menu Biaya Kuliah tidak ada.
+const keuangan = useFitur().aktif('keuangan');
+const tempatInfo = keuangan ? 'tampil sebagai informasi di Biaya Kuliah' : 'tampil sebagai informasi di form pengajuannya';
 
 const form = useForm({
     kode: props.jenis?.kode ?? '',
     nama: props.jenis?.nama ?? '',
     cara_hitung: props.jenis?.cara_hitung ?? 'tetap',
-    kategori: props.jenis?.kategori ?? 'semester',
+    kategori: props.jenis?.kategori ?? props.kategoriOptions[0],
     keterangan: props.jenis?.keterangan ?? '',
     aktif: props.jenis?.aktif ?? true,
     urutan: props.jenis?.urutan ?? 0,
@@ -55,10 +68,9 @@ const keteranganKategori = computed(
             semester: 'Ikut dihitung saat menerbitkan tagihan semester.',
             remidi: 'Hanya dipakai saat menerbitkan tagihan remidi.',
             susulan: 'Hanya dipakai saat menerbitkan tagihan ujian susulan.',
-            pendadaran:
-                'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pendaftaran pendadaran.',
-            wisuda: 'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pendaftaran wisuda.',
-            cuti: 'Tidak ditagihkan: tampil sebagai informasi di Biaya Kuliah; mahasiswa mengunggah bukti bayar di form pengajuan cuti.',
+            pendadaran: `Tidak ditagihkan: ${tempatInfo}; mahasiswa mengunggah bukti bayar di form pendaftaran pendadaran.`,
+            wisuda: `Tidak ditagihkan: ${tempatInfo}; mahasiswa mengunggah bukti bayar di form pendaftaran wisuda.`,
+            cuti: `Tidak ditagihkan: ${tempatInfo}; mahasiswa mengunggah bukti bayar di form pengajuan cuti.`,
         })[form.kategori as string] ?? '',
 );
 const keteranganHitung = computed(() => {
@@ -134,12 +146,9 @@ const rupiah = (nilai: number) => new Intl.NumberFormat('id-ID', { style: 'curre
                             <div class="grid content-start gap-2">
                                 <Label for="kategori" class="label-isian">Kategori</Label>
                                 <SelectFilter v-model="form.kategori" label="Kategori" penuh>
-                                    <option value="semester">Tagihan semester</option>
-                                    <option value="remidi">Remidi (per mata kuliah)</option>
-                                    <option value="susulan">Ujian susulan (per ujian)</option>
-                                    <option value="pendadaran">Pendadaran (informasi)</option>
-                                    <option value="wisuda">Wisuda (informasi)</option>
-                                    <option value="cuti">Cuti (informasi)</option>
+                                    <option v-for="kategori in props.kategoriOptions" :key="kategori" :value="kategori">
+                                        {{ LABEL_KATEGORI[kategori] }}
+                                    </option>
                                 </SelectFilter>
                                 <p class="teks-bantu">
                                     {{ keteranganKategori }}

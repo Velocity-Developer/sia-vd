@@ -63,6 +63,8 @@ export interface SharedData {
     quote: { message: string; author: string };
     institusi: Institusi;
     tampilan: Tampilan;
+    /** Fitur per klien dari config/client.php (lihat App\\Feature). */
+    fitur: Record<'kelola_role' | 'keuangan' | 'ujian_susulan', boolean>;
     auth: Auth;
     ziggy: {
         location: string;

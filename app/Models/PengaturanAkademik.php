@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -53,6 +54,14 @@ class PengaturanAkademik extends Model
             'min_sks_ambil_ta' => 'integer',
             'maks_cuti' => 'integer',
         ];
+    }
+
+    /**
+     * Kunci KRS hanya berlaku selama fitur keuangan aktif; sakelarnya tetap tersimpan bila fitur dimatikan.
+     */
+    public function kunciKrsBerlaku(): bool
+    {
+        return $this->kunci_krs_aktif && Feature::aktif('keuangan');
     }
 
     /**

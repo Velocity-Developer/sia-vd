@@ -4,6 +4,7 @@ import Pagination from '@/components/Pagination.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import { JENIS_UJIAN, STATUS_PENGAJUAN_SUSULAN, type JenisUjian, type StatusPengajuanSusulan } from '@/lib/ujian';
@@ -38,6 +39,8 @@ const props = defineProps<{
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
+// Tanpa fitur keuangan, remidi dan susulan tidak bersyarat bayar.
+const keuangan = useFitur().aktif('keuangan');
 const semua = 'all';
 const tahun = ref<number | string>(props.filter.tahun_akademik_id ?? '');
 const status = ref<string>(props.filter.status ?? semua);
@@ -88,8 +91,12 @@ const tolak = () => {
                     <div>
                         <h1 class="judul-halaman">Ujian Susulan</h1>
                         <p class="deskripsi-halaman">
-                            Pengajuan mahasiswa yang tidak bisa mengikuti UTS/UAS. Setelah disetujui, terbitkan tagihannya di Keuangan → Tagihan
-                            Susulan; jadwal susulan hanya tampil bagi yang sudah lunas.
+                            Pengajuan mahasiswa yang tidak bisa mengikuti UTS/UAS.
+                            <template v-if="keuangan">
+                                Setelah disetujui, terbitkan tagihannya di Keuangan → Tagihan Susulan; jadwal susulan hanya tampil bagi yang sudah
+                                lunas.
+                            </template>
+                            <template v-else>Setelah disetujui, jadwalkan susulannya di Jadwal Ujian.</template>
                         </p>
                     </div>
                 </div>
@@ -203,7 +210,7 @@ const tolak = () => {
             title="Setujui pengajuan?"
             :description="
                 setujuiItem
-                    ? `Setujui ujian susulan ${JENIS_UJIAN[setujuiItem.jenis]} ${setujuiItem.matkul} untuk ${setujuiItem.nama}? Tagihannya diterbitkan dari menu Tagihan Susulan.`
+                    ? `Setujui ujian susulan ${JENIS_UJIAN[setujuiItem.jenis]} ${setujuiItem.matkul} untuk ${setujuiItem.nama}?${keuangan ? ' Tagihannya diterbitkan dari menu Tagihan Susulan.' : ''}`
                     : ''
             "
             confirm-text="Setujui"

@@ -6,6 +6,7 @@ import TimePicker from '@/components/TimePicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
 import { JENIS_UJIAN, MODE_UJIAN, type JenisUjian, type ModeUjian } from '@/lib/ujian';
@@ -34,7 +35,7 @@ const props = defineProps<{
     kelasOptions: Opsi[];
     kelasRemidiOptions: Opsi[];
     kelasSusulanOptions: Record<'uts_susulan' | 'uas_susulan', Opsi[]>;
-    batasRemidi: { bayar: string | null; nilai: string | null };
+    batasRemidi: { bayar: string | null; awal: string | null; awal_label: string | null; nilai: string | null };
     menungguVerifikasi: Record<number, number>;
     ruangOptions: Opsi[];
     jenisAwal: JenisUjian | null;
@@ -65,6 +66,8 @@ const simpan = () => {
 };
 const bentrokMahasiswa = computed(() => (form.errors.tanggal ?? '').includes('punya ujian lain'));
 const remidi = computed(() => (props.ujian?.jenis ?? form.jenis) === 'remidi');
+// Tanpa fitur keuangan, remidi dan susulan tidak bersyarat bayar.
+const keuangan = useFitur().aktif('keuangan');
 // Remidi hanya untuk kelas yang daftar remidinya dikunci dan punya peserta lunas.
 const kelasTerpilih = computed(() => Number(props.ujian?.kelas_id ?? form.kelas_id) || 0);
 const jumlahMenunggu = computed(() => (remidi.value ? (props.menungguVerifikasi[kelasTerpilih.value] ?? 0) : 0));
@@ -123,10 +126,10 @@ const judul = computed(() => (props.ujian ? 'Ubah Jadwal Ujian' : 'Tambah Jadwal
                                     required
                                 />
                                 <p v-if="remidi && !props.kelasRemidiOptions.length" class="teks-bantu">
-                                    Belum ada kelas yang daftar remidinya dikunci dan punya peserta lunas.
+                                    Belum ada kelas yang daftar remidinya dikunci dan punya peserta{{ keuangan ? ' lunas' : '' }}.
                                 </p>
                                 <p v-if="susulan && !opsiKelas.length" class="teks-bantu">
-                                    Belum ada kelas dengan pemohon susulan yang disetujui dan tagihannya lunas.
+                                    Belum ada kelas dengan pemohon susulan yang disetujui{{ keuangan ? ' dan tagihannya lunas' : '' }}.
                                 </p>
                                 <p v-if="jumlahMenunggu" class="text-xs text-[#dd5b00]">
                                     {{ jumlahMenunggu }} bukti bayar kelas ini masih menunggu verifikasi. Verifikasi dulu di Tagihan Remidi agar
@@ -172,8 +175,8 @@ const judul = computed(() => (props.ujian ? 'Ubah Jadwal Ujian' : 'Tambah Jadwal
                                 <Label for="tanggal" class="label-isian">Tanggal</Label>
                                 <DatePicker id="tanggal" v-model="form.tanggal" placeholder="Pilih tanggal" />
                                 <p v-if="susulan" class="teks-bantu">Tidak sebelum ujian utamanya, paling lambat batas input nilai kelas.</p>
-                                <p v-if="remidi && props.batasRemidi.bayar" class="teks-bantu">
-                                    Sesudah {{ formatTanggal(props.batasRemidi.bayar, false) }} s.d.
+                                <p v-if="remidi && props.batasRemidi.awal" class="teks-bantu">
+                                    Sesudah {{ props.batasRemidi.awal_label }} {{ formatTanggal(props.batasRemidi.awal, false) }} s.d.
                                     {{ formatTanggal(props.batasRemidi.nilai, false) }}
                                 </p>
                                 <InputError :message="form.errors.tanggal" />

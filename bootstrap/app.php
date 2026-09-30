@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PastikanAkunAktif;
+use App\Http\Middleware\PastikanFiturAktif;
 use App\Http\Middleware\PastikanTagihanLunas;
 use App\Http\Middleware\TerapkanZonaWaktu;
 use Illuminate\Foundation\Application;
@@ -29,7 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        $middleware->alias(['tagihan.lunas' => PastikanTagihanLunas::class]);
+        $middleware->alias(['tagihan.lunas' => PastikanTagihanLunas::class, 'fitur' => PastikanFiturAktif::class]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

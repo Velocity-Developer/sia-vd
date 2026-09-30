@@ -314,6 +314,17 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 
 ## 6. Keuangan semester
 
+### 6.0 Fitur keuangan per klien
+
+Seluruh isi bagian ini hanya berlaku bila fitur `keuangan` aktif (`FEATURE_KEUANGAN=true`, lihat `config/client.php` dan `App\Feature`). Bawaannya **mati**. Selama mati:
+
+- Izin `admin.tagihan` dan `mahasiswa.info-biaya` dianggap tidak dimiliki siapa pun (`PermissionCatalog::FITUR`) dan disembunyikan dari Kelola Role. Izin itu tetap tersimpan di role dan aktif lagi begitu fitur dinyalakan.
+- Menu Tagihan Mahasiswa/Remidi/Susulan dan Biaya Kuliah hilang. Rutenya, berkas bukti bayar tagihan, dan sakelar kunci KRS mengembalikan 404 (middleware `fitur:keuangan`). Ringkasan dan bukti bayar di Beranda admin serta pengingat tagihan di Beranda mahasiswa tidak tampil.
+- **Kunci KRS** tidak berlaku walau sakelarnya masih menyala (`PengaturanAkademik::kunciKrsBerlaku`).
+- **Remidi dan ujian susulan tanpa syarat bayar**: semua peserta daftar remidi yang dikunci ikut remidi (`RemidiPeserta::scopeLunas`), dan pemohon susulan cukup disetujui (`UjianSusulan::pemohonLunas`). Remidi dijadwalkan sesudah batas input nilai (tanggal akhir semester bila kosong) sampai batas input nilai remidi (`TahunAkademik::awalRemidi`). Isian Batas Bayar Remidi dan batas bayar susulan disembunyikan, nilai lamanya dibiarkan.
+- **Jenis Biaya** tetap ada, tetapi hanya kategori informasi (`pendadaran`, `wisuda`, `cuti`). Bukti bayar cuti, pendadaran, dan wisuda **tetap wajib** karena alurnya terpisah dari tagihan.
+- Data tagihan lama tidak dihapus, hanya tidak ditampilkan.
+
 ### 6.1 Jenis biaya dan tarif
 
 - **Field jenis biaya:**

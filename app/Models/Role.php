@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use App\PermissionCatalog;
 use App\UserType;
 use Database\Factories\RoleFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -54,7 +55,7 @@ class Role extends Model
     public function permissionKeys(): array
     {
         return $this->permissions
-            ->filter(fn (Permission $permission): bool => $permission->isAvailableFor($this->user_type))
+            ->filter(fn (Permission $permission): bool => $permission->isAvailableFor($this->user_type) && PermissionCatalog::fiturAktif($permission->key))
             ->pluck('key')
             ->values()
             ->all();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -38,6 +39,17 @@ class JenisBiaya extends Model
 
     /** Kategori yang hanya ditampilkan sebagai informasi di Biaya Kuliah. */
     public const INFO = [self::PENDADARAN, self::WISUDA, self::CUTI];
+
+    /**
+     * Kategori yang bisa dikelola: selama fitur keuangan mati hanya biaya informasi (cuti, pendadaran,
+     * wisuda), karena alur bukti bayarnya terpisah dari tagihan.
+     *
+     * @return list<string>
+     */
+    public static function kategoriTersedia(): array
+    {
+        return Feature::aktif('keuangan') ? self::KATEGORI : self::INFO;
+    }
 
     protected $table = 'jenis_biaya';
 

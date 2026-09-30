@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\PengajuanSusulan;
 use App\Models\TahunAkademik;
@@ -87,7 +88,9 @@ class UjianSusulanController extends Controller
             'diproses_at' => now(),
         ]);
 
-        return back()->with('success', 'Pengajuan ujian susulan disetujui. Terbitkan tagihannya di menu Tagihan Susulan.');
+        return back()->with('success', Feature::aktif('keuangan')
+            ? 'Pengajuan ujian susulan disetujui. Terbitkan tagihannya di menu Tagihan Susulan.'
+            : 'Pengajuan ujian susulan disetujui. Jadwalkan susulannya di menu Jadwal Ujian.');
     }
 
     public function tolak(Request $request, PengajuanSusulan $pengajuanSusulan): RedirectResponse

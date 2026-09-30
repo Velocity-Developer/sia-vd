@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\Role;
+use App\PermissionCatalog;
 use App\UserType;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -146,7 +147,7 @@ class RoleController extends Controller
      */
     private function permissionGroups(): array
     {
-        return Permission::query()->orderBy('sort_order')->get()
+        return Permission::query()->whereNotIn('key', PermissionCatalog::milikFiturMati())->orderBy('sort_order')->get()
             ->groupBy('group')
             ->map(fn (Collection $permissions, string $group): array => [
                 'group' => $group,
@@ -220,7 +221,12 @@ class RoleController extends Controller
             ]);
         }
 
-        $data['permissions'] = $permissionIds;
+        // Permission fitur yang mati tidak tampil di form, jadi yang sudah dimiliki role dipertahankan apa adanya.
+        $tersembunyi = Permission::query()->whereIn('key', PermissionCatalog::milikFiturMati())->pluck('id')->all();
+        $data['permissions'] = array_values(array_unique([
+            ...array_diff($permissionIds, $tersembunyi),
+            ...($role ? $role->permissions()->whereIn('permissions.id', $tersembunyi)->pluck('permissions.id')->all() : []),
+        ]));
 
         return $data;
     }

@@ -20,7 +20,7 @@ class PastikanTagihanLunas
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! PengaturanAkademik::current()->kunci_krs_aktif) {
+        if (! PengaturanAkademik::current()->kunciKrsBerlaku()) {
             return $next($request);
         }
 

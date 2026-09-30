@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatJamDari, formatTanggal, jam } from '@/lib/presensi';
 import { JENIS_UJIAN, STATUS_PENGAJUAN_SUSULAN, type JenisUjian, type ModeUjian, type StatusPengajuanSusulan } from '@/lib/ujian';
@@ -50,6 +51,8 @@ const props = defineProps<{
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
+// Tanpa fitur keuangan, remidi dan susulan tidak bersyarat bayar.
+const keuangan = useFitur().aktif('keuangan');
 const berlangsung = computed(() => props.sudahMulai && !props.sudahSelesai);
 
 // Hitung mundur dari jam server; saat habis, halaman meminta status terbaru ke server.
@@ -314,7 +317,11 @@ const galat = computed(() => Object.entries(form.errors).find(([k]) => k.startsW
                             </button>
                         </p>
                         <p v-else-if="props.susulan.pengajuan.status === 'disetujui'" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
-                            Disetujui. Tagihan ujian susulan akan muncul di menu Biaya Kuliah; jadwal susulan tampil setelah tagihan lunas.
+                            {{
+                                keuangan
+                                    ? 'Disetujui. Tagihan ujian susulan akan muncul di menu Biaya Kuliah; jadwal susulan tampil setelah tagihan lunas.'
+                                    : 'Disetujui. Jadwal susulan tampil di sini setelah dijadwalkan admin.'
+                            }}
                         </p>
                         <p v-else-if="props.susulan.pengajuan.status === 'gugur'" class="mt-2 text-sm text-[#615d59] dark:text-muted-foreground">
                             Anda tercatat mengikuti ujian utama, jadi hak ujian susulan gugur.

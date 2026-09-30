@@ -118,9 +118,11 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
-    Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
-    Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->name('berkas.bukti-susulan');
-    Route::get('bukti-semester/{tagihanSemester}', [BerkasController::class, 'buktiSemester'])->name('berkas.bukti-semester');
+    Route::middleware('fitur:keuangan')->group(function (): void {
+        Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
+        Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->name('berkas.bukti-susulan');
+        Route::get('bukti-semester/{tagihanSemester}', [BerkasController::class, 'buktiSemester'])->name('berkas.bukti-semester');
+    });
     Route::get('pengajuan-akademik/{pengajuanAkademik}/{kunci}', [BerkasController::class, 'pengajuanAkademik'])->where('kunci', '[a-z_]+')->name('berkas.pengajuan-akademik');
     Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->name('berkas.lampiran-susulan');
     Route::get('surat-pendadaran/{pendadaran}', [PendadaranBerkasController::class, 'surat'])->name('berkas.surat-pendadaran');
@@ -175,7 +177,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::delete('jenis-biaya/{jenisBiaya}', [JenisBiayaController::class, 'destroy'])->name('admin.jenis-biaya.destroy');
     });
 
-    Route::middleware('can:admin.tagihan')->group(function (): void {
+    Route::middleware(['fitur:keuangan', 'can:admin.tagihan'])->group(function (): void {
         Route::get('tagihan', [TagihanController::class, 'index'])->name('admin.tagihan.index');
         Route::get('tagihan/{mahasiswa}/rincian', [TagihanController::class, 'rincian'])->name('admin.tagihan.rincian');
         Route::post('tagihan/terbitkan', [TagihanController::class, 'terbitkan'])->name('admin.tagihan.terbitkan');
@@ -397,7 +399,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         }
     });
 
-    Route::middleware('can:mahasiswa.info-biaya')->group(function (): void {
+    Route::middleware(['fitur:keuangan', 'can:mahasiswa.info-biaya'])->group(function (): void {
         Route::get('info-biaya-kuliah', [InfoBiayaKuliahController::class, 'index'])->name('mahasiswa.info-biaya-kuliah');
         Route::post('tagihan-semester/{tagihanSemester}/bukti', [MahasiswaTagihanSemesterController::class, 'unggahBukti'])->name('mahasiswa.tagihan-semester.bukti');
         Route::post('tagihan-remidi/{tagihanRemidi}/bukti', [MahasiswaTagihanRemidiController::class, 'unggahBukti'])->name('mahasiswa.tagihan-remidi.bukti');

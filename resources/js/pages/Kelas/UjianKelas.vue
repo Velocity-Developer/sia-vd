@@ -2,6 +2,7 @@
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatJamDari, formatTanggal, jam } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
@@ -64,6 +65,8 @@ const props = defineProps<{
 }>();
 
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
+// Tanpa fitur keuangan, remidi dan susulan tidak bersyarat bayar.
+const keuangan = useFitur().aktif('keuangan');
 const rute = rutePeran(props.peran);
 const berkasMode = computed(() => props.ujian.mode === 'online_berkas');
 const soalMode = computed(() => props.ujian.mode === 'online_soal');
@@ -134,14 +137,14 @@ const labelSyarat = (s: Syarat) => (s?.dispensasi ? 'Dispensasi' : s?.memenuhi =
                             >
                         </p>
                         <p v-if="props.ujian.jenis === 'remidi'" class="deskripsi-halaman">
-                            Hanya peserta remidi yang tagihannya lunas.
+                            {{ keuangan ? 'Hanya peserta remidi yang tagihannya lunas.' : 'Hanya peserta daftar remidi kelas ini.' }}
                             <template v-if="props.batasNilaiRemidi"
                                 >Nilai remidi bisa diisi sampai {{ formatTanggal(props.batasNilaiRemidi) }}.</template
                             >
                         </p>
                         <p v-else-if="jenisKhusus(props.ujian.jenis)" class="deskripsi-halaman">
-                            Hanya pemohon susulan yang disetujui, tagihannya lunas, dan tidak mengikuti ujian utama. Mengerjakan susulan tidak
-                            mengubah presensi.
+                            Hanya pemohon susulan yang disetujui{{ keuangan ? ', tagihannya lunas,' : '' }} dan tidak mengikuti ujian utama.
+                            Mengerjakan susulan tidak mengubah presensi.
                         </p>
                     </div>
                 </div>
@@ -412,7 +415,7 @@ const labelSyarat = (s: Syarat) => (s?.dispensasi ? 'Dispensasi' : s?.memenuhi =
                     <p v-if="jenisKhusus(props.ujian.jenis)" class="text-sm text-[#615d59] dark:text-muted-foreground">
                         Ujian {{ JENIS_UJIAN[props.ujian.jenis].toLowerCase() }} tatap muka:
                         <a :href="rute('ujian.daftar-hadir', props.ujian.id)" class="text-[#0075de] hover:underline">unduh daftar hadir (PDF)</a>
-                        berisi pesertanya yang sudah lunas.
+                        berisi pesertanya{{ keuangan ? ' yang sudah lunas' : '' }}.
                     </p>
                     <p v-else class="text-sm text-[#615d59] dark:text-muted-foreground">
                         Ujian tatap muka: daftar hadir dicetak dari halaman

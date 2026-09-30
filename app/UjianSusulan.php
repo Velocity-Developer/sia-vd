@@ -87,6 +87,7 @@ class UjianSusulan
 
     /**
      * Pemohon susulan yang disetujui dan tagihannya lunas untuk satu ujian utama.
+     * Selama fitur keuangan mati, susulan tanpa syarat bayar: cukup pengajuannya disetujui.
      *
      * @return Collection<int, int> id mahasiswa
      */
@@ -95,7 +96,7 @@ class UjianSusulan
         return PengajuanSusulan::query()
             ->where('ujian_id', $utama->id)
             ->where('status', PengajuanSusulan::DISETUJUI)
-            ->whereHas('tagihan', fn ($q) => $q->where('status', TagihanSusulan::LUNAS))
+            ->when(Feature::aktif('keuangan'), fn ($q) => $q->whereHas('tagihan', fn ($t) => $t->where('status', TagihanSusulan::LUNAS)))
             ->pluck('mahasiswa_id');
     }
 
@@ -110,7 +111,8 @@ class UjianSusulan
             ->whereIn('jenis', $jenis ? [$jenis] : Ujian::JENIS)
             ->terbit()
             ->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahunAkademikId))
-            ->whereHas('pengajuanSusulan', fn ($q) => $q->where('status', PengajuanSusulan::DISETUJUI)->whereHas('tagihan', fn ($t) => $t->where('status', TagihanSusulan::LUNAS)))
+            ->whereHas('pengajuanSusulan', fn ($q) => $q->where('status', PengajuanSusulan::DISETUJUI)
+                ->when(Feature::aktif('keuangan'), fn ($p) => $p->whereHas('tagihan', fn ($t) => $t->where('status', TagihanSusulan::LUNAS))))
             ->with(['kelasKuliah:id,kode_kelas,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,nama_matkul'])
             ->get()
             ->filter(fn (Ujian $u): bool => ! Ujian::query()->where('kelas_id', $u->kelas_id)->where('jenis', Ujian::jenisSusulanUntuk($u->jenis))->exists()
@@ -122,6 +124,7 @@ class UjianSusulan
      * Pemohon UAS susulan kelas ini yang susulannya masih berjalan, sehingga nilai kelas belum boleh difinalisasi:
      * pengajuan disetujui dan tidak ikut UAS utama, lalu tagihannya belum terbit, belum lunas tetapi belum lewat
      * batas bayar, atau sudah lunas tetapi UAS susulannya belum dijadwalkan/belum selesai. Yang gugur tidak dihitung.
+     * Selama fitur keuangan mati, tagihan diabaikan: tertunda sampai UAS susulannya selesai.
      *
      * @return Collection<int, int> id mahasiswa
      */
@@ -136,6 +139,7 @@ class UjianSusulan
         $ikutUtama = self::pesertaUjianUtama($uas)->flip();
         $susulan = $kelas->ujianTerbit(Ujian::UAS_SUSULAN);
         $susulanSelesai = $susulan !== null && $susulan->sudahSelesai();
+        $keuangan = Feature::aktif('keuangan');
 
         return PengajuanSusulan::query()
             ->where('ujian_id', $uas->id)
@@ -143,10 +147,11 @@ class UjianSusulan
             ->with('tagihan')
             ->get()
             ->reject(fn (PengajuanSusulan $p): bool => $ikutUtama->has($p->mahasiswa_id))
-            ->filter(function (PengajuanSusulan $p) use ($susulanSelesai): bool {
+            ->filter(function (PengajuanSusulan $p) use ($susulanSelesai, $keuangan): bool {
                 $tagihan = $p->tagihan;
 
                 return match (true) {
+                    ! $keuangan => ! $susulanSelesai,
                     $tagihan === null => true,
                     $tagihan->status === TagihanSusulan::LUNAS => ! $susulanSelesai,
                     default => ! $tagihan->gugur(),

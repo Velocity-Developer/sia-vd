@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Feature;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengaturanTampilan;
 use Illuminate\Http\Request;
@@ -42,6 +43,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'institusi' => fn (): array => PengaturanInstitusi::shared(),
             'tampilan' => fn (): array => PengaturanTampilan::shared(),
+            'fitur' => fn (): array => collect(config('client.fitur'))->keys()->mapWithKeys(fn (string $nama): array => [$nama => Feature::aktif($nama)])->all(),
             'auth' => [
                 'user' => $request->user()?->withoutRelations(),
                 'role' => fn (): ?array => $request->user()?->role?->only(['id', 'name', 'slug', 'user_type']),

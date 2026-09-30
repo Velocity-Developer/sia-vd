@@ -16,6 +16,31 @@ use Illuminate\Support\Str;
 class PermissionCatalog
 {
     /**
+     * Permission milik fitur per klien (config/client.php). Selama fiturnya mati, permission ini dianggap
+     * tidak dimiliki siapa pun dan disembunyikan dari Kelola Role, tetapi tetap tersimpan di role-nya.
+     * Jangan masukkan Role::SUPER_PERMISSION: izin itu juga menentukan siapa yang boleh mengelola akun.
+     */
+    public const FITUR = [
+        'admin.tagihan' => 'keuangan',
+        'mahasiswa.info-biaya' => 'keuangan',
+    ];
+
+    public static function fiturAktif(string $key): bool
+    {
+        return ! isset(self::FITUR[$key]) || Feature::aktif(self::FITUR[$key]);
+    }
+
+    /**
+     * Permission yang fiturnya sedang mati.
+     *
+     * @return list<string>
+     */
+    public static function milikFiturMati(): array
+    {
+        return array_values(array_filter(array_keys(self::FITUR), fn (string $key): bool => ! self::fiturAktif($key)));
+    }
+
+    /**
      * @return list<array{key: string, name: string, group: string, user_type: ?UserType, description: string, defaults: list<UserType>}>
      */
     public static function definitions(): array

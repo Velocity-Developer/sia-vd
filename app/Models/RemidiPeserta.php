@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -43,11 +44,16 @@ class RemidiPeserta extends Model
 
     /**
      * Peserta yang tagihan remidinya lunas, satu-satunya yang boleh mengikuti ujian remidi.
+     * Selama fitur keuangan mati, remidi tanpa syarat bayar: semua peserta daftar yang dikunci ikut.
      *
      * @param  Builder<self>  $query
      */
     public function scopeLunas(Builder $query): void
     {
+        if (! Feature::aktif('keuangan')) {
+            return;
+        }
+
         $query->whereHas('tagihan', fn (Builder $q) => $q->where('status', TagihanRemidi::LUNAS));
     }
 }

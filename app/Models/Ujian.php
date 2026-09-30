@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\SyaratUjian;
 use App\UjianSusulan;
@@ -205,11 +206,11 @@ class Ujian extends Model
         if ($this->remidi()) {
             return RemidiPeserta::query()->where('kelas_id', $this->kelas_id)->where('mahasiswa_id', $mahasiswaId)->lunas()->exists()
                 ? null
-                : 'Anda bukan peserta remidi yang tagihannya lunas.';
+                : (Feature::aktif('keuangan') ? 'Anda bukan peserta remidi yang tagihannya lunas.' : 'Anda bukan peserta remidi kelas ini.');
         }
 
         if ($this->susulan() && ! UjianSusulan::pesertaSusulan($this)->contains($mahasiswaId)) {
-            return 'Anda bukan peserta ujian susulan yang tagihannya lunas.';
+            return Feature::aktif('keuangan') ? 'Anda bukan peserta ujian susulan yang tagihannya lunas.' : 'Anda bukan peserta ujian susulan ini.';
         }
 
         $kelas = $this->kelasKuliah;

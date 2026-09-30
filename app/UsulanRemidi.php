@@ -92,7 +92,8 @@ class UsulanRemidi
         // Setelah daftar dikunci: status tagihan dan nilai ujian remidi tiap peserta.
         if ($kelas->remidi_dikunci_at !== null) {
             $kelas->loadMissing('tahunAkademik');
-            $tagihan = TagihanRemidi::query()->where('kelas_id', $kelas->id)->get()->keyBy('mahasiswa_id')
+            // Status tagihan hanya ditampilkan selama fitur keuangan aktif.
+            $tagihan = ! Feature::aktif('keuangan') ? collect() : TagihanRemidi::query()->where('kelas_id', $kelas->id)->get()->keyBy('mahasiswa_id')
                 ->each(fn (TagihanRemidi $t) => $t->setRelation('kelasKuliah', $kelas));
             $nilaiRemidi = $kelas->ujianRemidi()?->nilaiPeserta() ?? collect();
             $nilaiAwal = RemidiPeserta::query()->where('kelas_id', $kelas->id)->pluck('nilai_awal', 'mahasiswa_id');
