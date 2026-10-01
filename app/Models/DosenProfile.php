@@ -14,7 +14,7 @@ class DosenProfile extends Model
 {
     use SerializesDatesInAppTimezone;
 
-    protected $fillable = ['user_id', 'nidn', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'no_telepon', 'alamat', 'kewarganegaraan', 'jabatan_fungsional', 'pendidikan_terakhir', 'status_kepegawaian', 'status', 'prodi_id'];
+    protected $fillable = ['user_id', 'foto', 'nidn', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'no_telepon', 'alamat', 'kewarganegaraan', 'jabatan_fungsional', 'pendidikan_terakhir', 'status_kepegawaian', 'status', 'prodi_id'];
 
     public const STATUS = ['Aktif', 'Nonaktif'];
 

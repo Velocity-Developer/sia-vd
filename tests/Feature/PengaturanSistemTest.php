@@ -17,7 +17,7 @@ beforeEach(fn () => Storage::fake('public'));
 it('opens the first settings tab the user is allowed to see', function () {
     $this->actingAs(User::factory()->admin()->create())
         ->get(route('pengaturan-sistem.index'))
-        ->assertRedirect(route('pengaturan-sistem.institusi'));
+        ->assertRedirect(route('pengaturan-sistem.email'));
 
     $staf = Role::factory()->type(UserType::Admin)->withPermissions(['admin.dashboard', 'admin.pengaturan-tampilan'])->create();
     $this->actingAs(User::factory()->withRole($staf)->create())
@@ -33,7 +33,6 @@ it('renders every settings tab for admin', function (string $tab, string $kompon
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component($komponen));
 })->with([
-    ['institusi', 'PengaturanSistem/Institusi'],
     ['email', 'PengaturanSistem/Email'],
     ['akademik', 'PengaturanSistem/Akademik'],
     ['tampilan', 'PengaturanSistem/Tampilan'],
@@ -44,7 +43,8 @@ it('renders every settings tab for admin', function (string $tab, string $kompon
 it('redirects the old settings addresses', function (string $lama, string $baru) {
     $this->actingAs(User::factory()->admin()->create())->get($lama)->assertRedirect($baru)->assertStatus(301);
 })->with([
-    ['/settings/institusi', '/pengaturan-sistem/institusi'],
+    ['/settings/institusi', '/admin/perguruan-tinggi'],
+    ['/pengaturan-sistem/institusi', '/admin/perguruan-tinggi'],
     ['/settings/email', '/pengaturan-sistem/email'],
     ['/admin/pengaturan-akademik', '/pengaturan-sistem/akademik'],
 ]);
@@ -128,7 +128,7 @@ it('limits the display tab to its own permission', function () {
 
     $this->actingAs($user)->get(route('pengaturan-sistem.tampilan'))->assertForbidden();
     $this->actingAs($user)->post(route('pengaturan-tampilan.update'), ['login_sorotan' => true, 'login_tata_letak' => 'panel', 'sidebar_bawaan' => 'lebar'])->assertForbidden();
-    $this->actingAs($user)->get(route('pengaturan-sistem.institusi'))->assertOk();
+    $this->actingAs($user)->get(route('admin.perguruan-tinggi.edit'))->assertOk();
 });
 
 it('marks singleton settings models with a manual id as non-incrementing', function (string $model) {

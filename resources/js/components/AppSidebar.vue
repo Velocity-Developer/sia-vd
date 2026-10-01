@@ -13,6 +13,7 @@ import {
     BookOpen,
     BookOpenCheck,
     Briefcase,
+    Building2,
     CalendarDays,
     CalendarRange,
     ClipboardCheck,
@@ -21,15 +22,20 @@ import {
     DoorOpen,
     FileText,
     GraduationCap,
+    HandHeart,
     Inbox,
+    Landmark,
     LayoutGrid,
     Library,
+    MapIcon,
+    MapPin,
     NotebookPen,
     PauseCircle,
     Receipt,
     Settings2,
     ShieldCheck,
     SlidersHorizontal,
+    Table2,
     UserCheck,
     Users,
     Wallet,
@@ -46,7 +52,7 @@ const tampil = (item: MenuItem): boolean => can(item.permission) && (!item.fitur
 // untuk pengguna yang tidak punya izin itu.
 // `fitur`: menu hanya tampil selama fitur per klien itu aktif (config/client.php), selain izinnya.
 type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: NamaFitur };
-type MenuSeksi = { title: string; icon?: NavItem['icon']; items: MenuItem[] };
+type MenuSeksi = { title: string; icon?: NavItem['icon']; items: (MenuItem | MenuSeksi)[] };
 type MenuEntry = MenuItem | MenuSeksi;
 
 const adalahSeksi = (entry: MenuEntry): entry is MenuSeksi => 'items' in entry && Array.isArray(entry.items);
@@ -59,12 +65,31 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
         entries: [
             { title: 'Dashboard', href: '/admin', icon: LayoutGrid, permission: 'admin.dashboard' },
             {
-                title: 'Master Akademik',
+                title: 'Master',
                 icon: Database,
                 items: [
+                    {
+                        title: 'Master Tabel',
+                        icon: Table2,
+                        items: [
+                            { title: 'Badan Hukum', routeName: 'admin.badan-hukum.edit', icon: Landmark, permission: 'admin.badan-hukum' },
+                            { title: 'Perguruan Tinggi', routeName: 'admin.perguruan-tinggi.edit', icon: Building2, permission: 'admin.institusi' },
+                            { title: 'Fakultas', routeName: 'admin.fakultas.index', icon: GraduationCap, permission: 'admin.fakultas' },
+                            { title: 'Program Studi', routeName: 'admin.program-studi.index', icon: BookOpen, permission: 'admin.program-studi' },
+                            { title: 'Agama', routeName: 'admin.agama.index', icon: HandHeart, permission: 'admin.agama' },
+                            { title: 'Provinsi', routeName: 'admin.provinsi.index', icon: MapIcon, permission: 'admin.provinsi' },
+                            { title: 'Kota/Kabupaten', routeName: 'admin.kota.index', icon: MapPin, permission: 'admin.kota' },
+                        ],
+                    },
+                    { title: 'Data Dosen', href: '/admin/users/dosen', icon: GraduationCap, permission: 'admin.users.dosen' },
+                    { title: 'Data Mahasiswa', href: '/admin/users/mahasiswa', icon: Users, permission: 'admin.users.mahasiswa' },
+                ],
+            },
+            {
+                title: 'Akademik',
+                icon: CalendarRange,
+                items: [
                     { title: 'Tahun Akademik', routeName: 'admin.tahun-akademik.index', icon: CalendarRange, permission: 'admin.tahun-akademik' },
-                    { title: 'Fakultas', routeName: 'admin.fakultas.index', icon: GraduationCap, permission: 'admin.fakultas' },
-                    { title: 'Program Studi', routeName: 'admin.program-studi.index', icon: BookOpen, permission: 'admin.program-studi' },
                     { title: 'Mata Kuliah', routeName: 'admin.mata-kuliah.index', icon: Library, permission: 'admin.mata-kuliah' },
                     { title: 'Ruang', routeName: 'admin.ruang.index', icon: DoorOpen, permission: 'admin.ruang' },
                 ],
@@ -132,8 +157,6 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 title: 'Pengguna & Akses',
                 icon: Users,
                 items: [
-                    { title: 'Dosen', href: '/admin/users/dosen', icon: GraduationCap, permission: 'admin.users.dosen' },
-                    { title: 'Mahasiswa', href: '/admin/users/mahasiswa', icon: Users, permission: 'admin.users.mahasiswa' },
                     { title: 'Karyawan', href: '/admin/users/karyawan', icon: Briefcase, permission: 'admin.users.karyawan' },
                     { title: 'Kelola Role', routeName: 'admin.roles.index', icon: ShieldCheck, permission: 'admin.roles', fitur: 'kelola_role' },
                 ],
@@ -221,11 +244,12 @@ const bentukItem = (item: MenuItem): NavItem[] => {
 };
 
 // Seksi yang tersisa satu menu ditampilkan langsung tanpa dropdown agar tidak menambah klik.
+// Seksi boleh berisi seksi lagi (mis. Master → Master Tabel); aturan yang sama berlaku di tiap tingkat.
 const filterEntries = (entries: MenuEntry[]): NavEntry[] =>
     entries.flatMap((entry): NavEntry[] => {
         if (!adalahSeksi(entry)) return tampil(entry) ? bentukItem(entry) : [];
 
-        const items = entry.items.filter(tampil).flatMap(bentukItem);
+        const items = filterEntries(entry.items);
 
         if (items.length === 0) return [];
         if (items.length === 1) return [items[0]];
@@ -246,7 +270,6 @@ const footerNavItems: NavItem[] = [];
 const page = usePage();
 const bisaPengaturanSistem = computed(() =>
     [
-        'admin.institusi',
         'admin.pengaturan-email',
         'admin.pengaturan-akademik',
         'admin.pengaturan-tampilan',

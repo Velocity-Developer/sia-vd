@@ -13,6 +13,24 @@ type ProgramStudiShowProps = {
     tanggal_akreditasi_mulai: string;
     tanggal_akreditasi_akhir: string;
     tahun_berdiri: number;
+    gelar_akademik?: string | null;
+    singkatan_gelar?: string | null;
+    sks_lulus?: number | null;
+    status_prodi?: string | null;
+    nomor_kaprodi?: string | null;
+    operator?: string | null;
+    nomor_operator?: string | null;
+    no_sk_dikti?: string | null;
+    tanggal_sk_dikti?: string | null;
+    tanggal_berakhir_sk_dikti?: string | null;
+    alamat?: string | null;
+    provinsi?: { nama: string } | null;
+    kota?: { nama: string } | null;
+    kode_pos?: string | null;
+    telepon?: string | null;
+    faximili?: string | null;
+    email?: string | null;
+    website?: string | null;
     fakultas?: { id: number; kode_fakultas: string; nama_fakultas: string; dekan?: { user?: { name?: string } } | null } | null;
     ketuaProgramStudi?: { user?: { name?: string } } | null;
     ketua_program_studi?: { user?: { name?: string } } | null;
@@ -92,6 +110,26 @@ const fakultas = () => (props.programStudi as any).fakultas ?? null;
                             <dt class="teks-bantu">Tahun Berdiri</dt>
                             <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.tahun_berdiri) }}</dd>
                         </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Gelar Akademik</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">
+                                {{ v(props.programStudi.gelar_akademik) }}
+                            </dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Singkatan Gelar</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">
+                                {{ v(props.programStudi.singkatan_gelar) }}
+                            </dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Status Prodi</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.status_prodi) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">SKS Lulus</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.sks_lulus) }}</dd>
+                        </div>
                     </dl>
                 </section>
 
@@ -113,6 +151,82 @@ const fakultas = () => (props.programStudi as any).fakultas ?? null;
                         <div class="space-y-1">
                             <dt class="teks-bantu">Kaprodi</dt>
                             <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(kaprodi()) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Nomor Kaprodi</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.nomor_kaprodi) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Operator</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.operator) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Nomor Operator</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">
+                                {{ v(props.programStudi.nomor_operator) }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">SK Dikti</h2>
+                    <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Nomor SK Dikti</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.no_sk_dikti) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Tanggal SK Dikti</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">
+                                {{ v(props.programStudi.tanggal_sk_dikti) }}
+                            </dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Tanggal Berakhir SK Dikti</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">
+                                {{ v(props.programStudi.tanggal_berakhir_sk_dikti) }}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Alamat &amp; Kontak</h2>
+                    <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="space-y-1 sm:col-span-2 lg:col-span-3">
+                            <dt class="teks-bantu">Alamat</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.alamat) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Kota/Kabupaten</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.kota?.nama) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Provinsi</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">
+                                {{ v(props.programStudi.provinsi?.nama) }}
+                            </dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Kode Pos</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.kode_pos) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Telepon</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.telepon) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Faximili</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.faximili) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Email</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.email) }}</dd>
+                        </div>
+                        <div class="space-y-1">
+                            <dt class="teks-bantu">Website</dt>
+                            <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.programStudi.website) }}</dd>
                         </div>
                     </dl>
                 </section>

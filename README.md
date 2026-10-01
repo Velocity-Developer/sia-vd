@@ -149,7 +149,7 @@ LOCK_KEUANGAN=false
 DEV_PANEL=true
 ```
 
-Zona waktu yang tampil ke pengguna diatur lagi per institusi di **Pengaturan Sistem → Institusi**.
+Zona waktu yang tampil ke pengguna diatur lagi per institusi di **Master Akademik → Perguruan Tinggi**.
 
 ## Onboarding klien baru
 
@@ -203,11 +203,13 @@ Zona waktu yang tampil ke pengguna diatur lagi per institusi di **Pengaturan Sis
    - Naikkan batas unggah PHP (`upload_max_filesize`, `post_max_size`) sesuai kebutuhan berkas kuliah.
    - Sesudah `.env` final: `php artisan config:cache && php artisan route:cache && php artisan view:cache`.
 
-7. **Pengaturan di aplikasi** (masuk sebagai admin → **Pengaturan Sistem**)
-   - **Institusi**: nama, singkatan, logo, alamat, zona waktu.
-   - **Email**: SMTP untuk verifikasi email dan atur ulang kata sandi.
-   - **Akademik**: skala nilai, batas SKS, jumlah pertemuan, syarat ujian, remidi, susulan, TA, cuti.
-   - **Tampilan**: nama aplikasi, favicon, halaman masuk.
+7. **Pengaturan di aplikasi** (masuk sebagai admin)
+   - **Master Akademik → Perguruan Tinggi**: nama, singkatan, logo, badan hukum, akta & pengesahan, akreditasi,
+     alamat, zona waktu. Data yayasan penyelenggara di **Master Akademik → Badan Hukum**.
+   - Di **Pengaturan Sistem**:
+     - **Email**: SMTP untuk verifikasi email dan atur ulang kata sandi.
+     - **Akademik**: skala nilai, batas SKS, jumlah pertemuan, syarat ujian, remidi, susulan, TA, cuti.
+     - **Tampilan**: nama aplikasi, favicon, halaman masuk.
 
 8. **Role dan fitur** (masuk sebagai developer → `/dev`)
    - Susun role tambahan (misalnya Staf Keuangan, Staf Akademik) di **Kelola Role**.
@@ -245,7 +247,7 @@ flowchart TD
 
 | # | Langkah | Oleh | Menu | Rujukan |
 |---|---|---|---|---|
-| A1 | Isi identitas institusi (nama, logo, **zona waktu**), SMTP, aturan akademik (skala nilai, batas SKS, jumlah pertemuan, syarat ujian, remidi, susulan, TA, cuti), tampilan halaman masuk. Zona waktu ditetapkan sekali di awal karena mengubahnya tidak menggeser data lama. | Admin | Pengaturan Sistem | 4 |
+| A1 | Isi identitas institusi (nama, logo, **zona waktu**), SMTP, aturan akademik (skala nilai, batas SKS, jumlah pertemuan, syarat ujian, remidi, susulan, TA, cuti), tampilan halaman masuk. Zona waktu ditetapkan sekali di awal karena mengubahnya tidak menggeser data lama. | Admin | Perguruan Tinggi, Pengaturan Sistem | 4 |
 | A2 | Data master berurutan: **dosen calon dekan/kaprodi** (menu Dosen, program studi dikosongkan dulu) → **Fakultas** (dekan) → **Program Studi** (kaprodi) → lengkapi program studi dosen tadi → **Ruang** → **Mata Kuliah** (SKS, semester, prasyarat, tanda **TA/Skripsi** untuk mata kuliah skripsi). | Admin | Master Akademik | 3.2 |
 | A3 | Akun **Dosen** (NIDN, program studi opsional), **Mahasiswa** (NIM, angkatan, prodi, dosen wali; semester dihitung otomatis dari angkatan), dan **Karyawan**. Role tambahan (mis. Staf Keuangan) disusun developer di `/dev/roles` atau admin bila `kelola_role` aktif. | Admin / developer | Pengguna & Akses | 3.3, 3.4 |
 | A4 | *Keuangan aktif:* **Jenis Biaya** (semester, remidi, susulan, serta info pendadaran/wisuda/cuti) dan **tarif** per prodi/angkatan. | Admin | Keuangan | 6.1 |

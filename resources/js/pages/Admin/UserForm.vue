@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DatePicker from '@/components/DatePicker.vue';
 import InputError from '@/components/InputError.vue';
+import UnggahFoto from '@/components/UnggahFoto.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -191,24 +192,25 @@ const onClickOutside = (event: MouseEvent) => {
 };
 onMounted(() => document.addEventListener('click', onClickOutside));
 onUnmounted(() => document.removeEventListener('click', onClickOutside));
+// Foto dikirim sebagai berkas, jadi form selalu dikirim sebagai multipart (PUT lewat _method).
+const foto = ref<File | null>(null);
+const hapusFoto = ref(false);
 const submit = () => {
+    const denganFoto = (data: Record<string, any>) => ({
+        ...data,
+        ...(foto.value ? { foto: foto.value } : {}),
+        ...(hapusFoto.value ? { hapus_foto: '1' } : {}),
+    });
     if (props.user) {
-        if (!form.password) {
-            form.clearErrors('password', 'password_confirmation');
-            form.transform((data) => {
-                const { password, password_confirmation, ...rest } = data as Record<string, any>;
-                void password;
-                void password_confirmation;
-                return rest;
-            }).put(route(`admin.users.${props.type}.update`, props.user.id), {
-                onFinish: () => form.transform((data) => data),
-            });
-        } else {
-            form.transform((data) => data).put(route(`admin.users.${props.type}.update`, props.user.id));
-        }
+        if (!form.password) form.clearErrors('password', 'password_confirmation');
+        form.transform((data) => {
+            const { password, password_confirmation, ...rest } = data as Record<string, any>;
+            const isian = form.password ? { ...rest, password, password_confirmation } : rest;
+            return { ...denganFoto(isian), _method: 'put' };
+        }).post(route(`admin.users.${props.type}.update`, props.user.id), { forceFormData: true });
         return;
     }
-    form.post(route(`admin.users.${props.type}.store`));
+    form.transform(denganFoto).post(route(`admin.users.${props.type}.store`), { forceFormData: true });
 };
 </script>
 <template>
@@ -265,6 +267,9 @@ const submit = () => {
                     <!-- Data Pribadi -->
                     <section class="kartu p-6">
                         <h2 class="judul-bagian">Data Pribadi</h2>
+                        <div class="mt-4">
+                            <UnggahFoto v-model="foto" v-model:hapus="hapusFoto" :url-tersimpan="props.user?.foto_url" :error="form.errors.foto" />
+                        </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="tempat_lahir" class="label-isian">{{ labels.tempat_lahir }}</Label
@@ -567,6 +572,7 @@ const submit = () => {
 
                 <form v-else class="kartu p-6" @submit.prevent="submit">
                     <div class="space-y-4">
+                        <UnggahFoto v-model="foto" v-model:hapus="hapusFoto" :url-tersimpan="props.user?.foto_url" :error="form.errors.foto" />
                         <div class="grid gap-2">
                             <Label for="role_id" class="label-isian">{{ labels.role_id }}</Label
                             ><select id="role_id" v-model="form.role_id" class="isian isian-pilih" required>

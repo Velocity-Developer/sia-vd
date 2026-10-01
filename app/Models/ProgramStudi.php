@@ -11,16 +11,42 @@ class ProgramStudi extends Model
 {
     use SerializesDatesInAppTimezone;
 
-    protected $fillable = ['fakultas_id', 'kode_prodi', 'nama_prodi', 'jenjang', 'status_akreditasi', 'no_sk_akreditasi', 'tanggal_akreditasi_mulai', 'tanggal_akreditasi_akhir', 'kaprodi', 'tahun_berdiri'];
+    /**
+     * Status program studi (mengikuti istilah PDDikti).
+     */
+    public const STATUS_PRODI = ['Aktif', 'Pembinaan', 'Alih Bentuk', 'Alih Kelola', 'Tutup'];
+
+    protected $fillable = [
+        'fakultas_id', 'kode_prodi', 'nama_prodi', 'jenjang', 'gelar_akademik', 'singkatan_gelar', 'sks_lulus', 'status_prodi',
+        'status_akreditasi', 'no_sk_akreditasi', 'tanggal_akreditasi_mulai', 'tanggal_akreditasi_akhir', 'kaprodi', 'nomor_kaprodi',
+        'operator', 'nomor_operator', 'no_sk_dikti', 'tanggal_sk_dikti', 'tanggal_berakhir_sk_dikti', 'tahun_berdiri', 'alamat',
+        'provinsi_id', 'kota_id', 'kode_pos', 'telepon', 'faximili', 'email', 'website',
+    ];
 
     protected function casts(): array
     {
-        return ['tanggal_akreditasi_mulai' => 'date', 'tanggal_akreditasi_akhir' => 'date'];
+        return [
+            'tanggal_akreditasi_mulai' => 'date',
+            'tanggal_akreditasi_akhir' => 'date',
+            'tanggal_sk_dikti' => 'date',
+            'tanggal_berakhir_sk_dikti' => 'date',
+            'sks_lulus' => 'integer',
+        ];
     }
 
     public function fakultas(): BelongsTo
     {
         return $this->belongsTo(Fakultas::class);
+    }
+
+    public function provinsi(): BelongsTo
+    {
+        return $this->belongsTo(Provinsi::class, 'provinsi_id');
+    }
+
+    public function kota(): BelongsTo
+    {
+        return $this->belongsTo(Kota::class, 'kota_id');
     }
 
     public function ketuaProgramStudi(): BelongsTo

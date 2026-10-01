@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\DispensasiUjian;
 use App\Models\DosenProfile;
@@ -17,7 +18,9 @@ use App\Models\User;
 use App\UserType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -122,7 +125,7 @@ class UserController extends Controller
 
         return Inertia::render('Admin/UserShow', [
             'title' => 'Detail '.ucfirst($type).' - '.$user->name, 'type' => $type,
-            'user' => $user->only(['id', 'name', 'username', 'email', 'email_verified_at']) + ['role_name' => $user->role?->name] + ($profile ?? []) + $extra,
+            'user' => $user->only(['id', 'name', 'username', 'email', 'email_verified_at']) + ['role_name' => $user->role?->name] + $this->denganFotoUrl($user, $profile) + $extra,
             'bolehKelola' => request()->user()->canManage($user),
             'kunciKrs' => $kunciKrs,
         ]);
@@ -168,7 +171,7 @@ class UserController extends Controller
 
         return Inertia::render('Admin/UserForm', [
             'title' => 'Edit User - '.ucfirst($type), 'type' => $type,
-            'user' => $user->only(['id', 'name', 'username', 'email', 'role_id']) + ($profile ?? []),
+            'user' => $user->only(['id', 'name', 'username', 'email', 'role_id']) + $this->denganFotoUrl($user, $profile),
             'roles' => $this->roleOptions($role), 'defaultRoleId' => $user->role_id,
             'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions($user->mahasiswaProfile?->dosen_wali_id) : [],
             'programStudi' => $type !== 'karyawan' ? $this->programStudiOptions() : [],
@@ -216,14 +219,17 @@ class UserController extends Controller
         $data = $request->validate($this->rules(null, $role), $this->messages(), $this->attributes());
         $this->ensureCanAssignRole($request, (int) $data['role_id']);
         $label = $this->roleLabel($type);
+        $foto = $this->simpanFoto($request->file('foto'), $type);
         try {
-            $user = DB::transaction(function () use ($data, $role): User {
+            $user = DB::transaction(function () use ($data, $role, $foto): User {
                 $user = User::create($this->userData($data));
-                $user->profile()->create($this->profileData($data, $role));
+                $user->profile()->create([...$this->profileData($data, $role), 'foto' => $foto]);
 
                 return $user;
             });
         } catch (Throwable) {
+            $this->hapusFoto($foto);
+
             return to_route('admin.users.'.$type)->with('error', $label.' gagal ditambahkan.');
         }
 
@@ -259,17 +265,27 @@ class UserController extends Controller
             return back()->withErrors(['role_id' => 'Akun ini satu-satunya yang memegang akses Kelola Role, sehingga role-nya tidak dapat diganti.'])->withInput();
         }
         $label = $this->roleLabel($type);
+        // Foto baru menggantikan yang lama; centang "hapus foto" mengosongkannya. Berkas lama baru dihapus
+        // setelah data tersimpan, agar kegagalan simpan tidak menghilangkan foto yang masih dipakai.
+        $fotoLama = $user->profile?->foto;
+        $fotoBaru = $this->simpanFoto($request->file('foto'), $type);
+        $gantiFoto = $fotoBaru !== null || $request->boolean('hapus_foto');
         try {
-            DB::transaction(function () use ($user, $data, $role): void {
+            DB::transaction(function () use ($user, $data, $role, $fotoBaru, $gantiFoto): void {
                 $user->fill($this->userData($data));
                 if ($user->isDirty('email')) {
                     $user->email_verified_at = null;
                 }
                 $user->save();
-                $user->profile()->updateOrCreate([], $this->profileData($data, $role));
+                $user->profile()->updateOrCreate([], [...$this->profileData($data, $role), ...($gantiFoto ? ['foto' => $fotoBaru] : [])]);
             });
         } catch (Throwable) {
+            $this->hapusFoto($fotoBaru);
+
             return to_route('admin.users.'.$type)->with('error', $label.' gagal diperbarui.');
+        }
+        if ($gantiFoto) {
+            $this->hapusFoto($fotoLama);
         }
 
         if ($user->wasChanged('email')) {
@@ -355,13 +371,44 @@ class UserController extends Controller
             return to_route('admin.users.'.$type)->with('error', $label.' tidak dapat dihapus karena sudah memiliki riwayat presensi atau pengajuan izin.');
         }
 
+        $foto = $user->profile?->foto;
         try {
             DB::transaction(fn (): ?bool => $user->delete());
         } catch (Throwable) {
             return to_route('admin.users.'.$type)->with('error', $label.' gagal dihapus.');
         }
+        $this->hapusFoto($foto);
 
         return to_route('admin.users.'.$type)->with('success', $label.' berhasil dihapus.');
+    }
+
+    /**
+     * Simpan foto profil di disk privat; null bila tidak ada unggahan.
+     */
+    private function simpanFoto(?UploadedFile $berkas, string $type): ?string
+    {
+        return $berkas?->store('foto/'.$type, AllowedUpload::DISK) ?: null;
+    }
+
+    private function hapusFoto(?string $path): void
+    {
+        if ($path !== null) {
+            Storage::disk(AllowedUpload::DISK)->delete($path);
+        }
+    }
+
+    /**
+     * Ganti path foto di data profil dengan URL tampilnya (path disk tidak dikirim ke browser).
+     *
+     * @param  array<string, mixed>|null  $profile
+     * @return array<string, mixed>
+     */
+    private function denganFotoUrl(User $user, ?array $profile): array
+    {
+        $foto = $profile['foto'] ?? null;
+        unset($profile['foto']);
+
+        return ($profile ?? []) + ['foto_url' => $foto ? route('berkas.foto', ['user' => $user->id, 'v' => substr(md5($foto), 0, 8)]) : null];
     }
 
     private function role(string $type): UserType
@@ -408,6 +455,8 @@ class UserController extends Controller
         foreach (self::COMMON_PROFILE_FIELDS as $field) {
             $rules[$field] = ['required', 'string', 'max:1000'];
         }
+        $rules['foto'] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
+        $rules['hapus_foto'] = ['nullable', 'boolean'];
         $rules['jenis_kelamin'] = ['required', 'in:Laki-laki,Perempuan'];
         $rules['agama'] = ['required', 'in:Islam,Kristen Protestan,Kristen Katolik,Hindu,Buddha,Konghucu'];
         // Karyawan: nomor_induk wajib agar detail tidak tampil "-".
@@ -450,6 +499,9 @@ class UserController extends Controller
             'different' => ':attribute tidak boleh sama dengan :other.',
             'email_alternatif.different' => 'Email Alternatif tidak boleh sama dengan Email utama.',
             'min.string' => ':attribute minimal :min karakter.',
+            'foto.image' => 'Foto harus berupa gambar.',
+            'foto.mimes' => 'Foto harus berformat jpg, jpeg, png, atau webp.',
+            'foto.max' => 'Ukuran foto maksimal 2 MB.',
         ];
     }
 
@@ -461,6 +513,7 @@ class UserController extends Controller
     private function attributes(): array
     {
         return [
+            'foto' => 'Foto',
             'role_id' => 'Role',
             'name' => 'Nama',
             'username' => 'Username',

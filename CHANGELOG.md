@@ -5,6 +5,33 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 
 ## [Belum dirilis]
 
+### Ditambahkan
+- Master **Agama**, **Provinsi**, dan **Kota/Kabupaten** (tabel `agamas`, `provinsis`, `kotas`, masing-masing dengan
+  `kode` unik) beserta CRUD di menu Master Akademik (izin `admin.agama`, `admin.provinsi`, `admin.kota`). Kota/kabupaten
+  milik satu provinsi (nama unik per provinsi, filter per provinsi); provinsi yang masih punya kota tidak bisa dihapus.
+- Master **Badan Hukum** (tabel `badan_hukum`, satu baris; izin `admin.badan-hukum`): halaman edit ala Pengaturan
+  Institusi tanpa tambah data, ID tampil terkunci di atas. Isian nama, tanggal berdiri, nomor/tanggal akta terakhir,
+  nomor/tanggal pengesahan, alamat jalan, provinsi, kota/kabupaten (harus di provinsi terpilih), kode pos, telepon,
+  faximili, email, website. Provinsi/kota yang dipakai badan hukum tidak bisa dihapus.
+
+- Isian baru **Program Studi**: gelar akademik, singkatan gelar, SKS lulus (baru disimpan, belum dipakai perhitungan),
+  status prodi (Aktif/Pembinaan/Alih Bentuk/Alih Kelola/Tutup), nomor kaprodi, operator, nomor operator, nomor/tanggal/
+  tanggal berakhir SK Dikti, alamat, provinsi, kota/kabupaten, kode pos, telepon, faximili, email, website.
+- **Foto** di data mahasiswa, dosen, dan karyawan (kolom `foto` di `mahasiswa_profiles`, `dosen_profiles`,
+  `admin_profiles`): unggah/ganti/hapus di form pengguna (jpg/jpeg/png/webp, maks. 2 MB), tampil di halaman detail.
+  Berkas disimpan di disk privat dan dibuka lewat `/berkas/foto/{user}` (pemilik akun atau pemegang izin kelola jenis
+  pengguna itu); foto lama terhapus saat diganti atau akun dihapus.
+
+### Diubah
+- Tab **Institusi** di Pengaturan Sistem pindah ke **Master Akademik → Perguruan Tinggi** (`/admin/perguruan-tinggi`,
+  izin tetap `admin.institusi`, kini bernama "Perguruan Tinggi"); alamat lama dialihkan. Isian baru: badan hukum,
+  nomor/tanggal akta terakhir, nomor/tanggal pengesahan, akreditasi, alamat lain, provinsi, kota/kabupaten, kode pos,
+  faximili.
+- Susunan menu admin: menu baru **Master** berisi **Master Tabel** (Badan Hukum, Perguruan Tinggi, Fakultas, Program
+  Studi, Agama, Provinsi, Kota/Kabupaten), **Data Dosen**, dan **Data Mahasiswa** (pindah dari Pengguna & Akses).
+  "Master Akademik" menjadi **Akademik** (Tahun Akademik, Mata Kuliah, Ruang). Sidebar kini mendukung seksi di dalam
+  seksi (satu tingkat), termasuk submenu melayang saat sidebar diciutkan.
+
 ## [1.1.0] - 2026-10-01
 
 ### Ditambahkan

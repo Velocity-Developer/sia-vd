@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Admin\PengaturanAkademikController;
 use App\Http\Controllers\Settings\EmailController;
-use App\Http\Controllers\Settings\InstitusiController;
 use App\Http\Controllers\Settings\MaintenanceController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\PengaturanSistemController;
@@ -24,11 +23,6 @@ Route::middleware('auth')->group(function () {
     // Pengaturan Sistem: satu halaman bertab, tiap tab beralamat sendiri dan diperiksa izinnya sendiri.
     Route::prefix('pengaturan-sistem')->middleware('verified')->group(function (): void {
         Route::get('/', [PengaturanSistemController::class, 'index'])->name('pengaturan-sistem.index');
-
-        Route::middleware('can:admin.institusi')->group(function (): void {
-            Route::get('institusi', [InstitusiController::class, 'edit'])->name('pengaturan-sistem.institusi');
-            Route::put('institusi', [InstitusiController::class, 'update'])->name('institusi.update');
-        });
 
         Route::middleware('can:admin.pengaturan-email')->group(function (): void {
             Route::get('email', [EmailController::class, 'edit'])->name('pengaturan-sistem.email');
@@ -73,7 +67,9 @@ Route::middleware('auth')->group(function () {
     });
 
     // Alamat lama dialihkan agar tautan/bookmark yang sudah ada tetap berfungsi.
-    Route::redirect('settings/institusi', '/pengaturan-sistem/institusi', 301);
+    // Data institusi pindah ke menu Master → Perguruan Tinggi.
+    Route::redirect('settings/institusi', '/admin/perguruan-tinggi', 301);
+    Route::redirect('pengaturan-sistem/institusi', '/admin/perguruan-tinggi', 301);
     Route::redirect('settings/email', '/pengaturan-sistem/email', 301);
     Route::redirect('admin/pengaturan-akademik', '/pengaturan-sistem/akademik', 301);
 });

@@ -9,7 +9,7 @@ it('membagikan data institusi terbaru ke halaman berikutnya', function () {
     $admin = User::factory()->admin()->create();
     PengaturanInstitusi::current();
 
-    $this->actingAs($admin)->put(route('institusi.update'), [
+    $this->actingAs($admin)->put(route('admin.perguruan-tinggi.update'), [
         'nama_pt' => 'Universitas Uji Coba',
         'singkatan' => 'UUC',
     ])->assertSessionHasNoErrors();
@@ -21,14 +21,14 @@ it('membagikan data institusi terbaru ke halaman berikutnya', function () {
 it('menolak pengguna tanpa izin mengubah institusi', function () {
     $mahasiswa = User::factory()->mahasiswa()->create();
 
-    $this->actingAs($mahasiswa)->put(route('institusi.update'), ['nama_pt' => 'Kampus Lain'])->assertForbidden();
+    $this->actingAs($mahasiswa)->put(route('admin.perguruan-tinggi.update'), ['nama_pt' => 'Kampus Lain'])->assertForbidden();
 });
 
 it('menyimpan zona waktu dan memakainya di permintaan berikutnya', function () {
     $admin = User::factory()->admin()->create();
     PengaturanInstitusi::current();
 
-    $this->actingAs($admin)->put(route('institusi.update'), [
+    $this->actingAs($admin)->put(route('admin.perguruan-tinggi.update'), [
         'nama_pt' => 'Universitas Uji Coba',
         'zona_waktu' => 'Asia/Jayapura',
     ])->assertSessionHasNoErrors();
@@ -48,7 +48,7 @@ it('menolak zona waktu di luar WIB, WITA, dan WIT', function () {
     $admin = User::factory()->admin()->create();
     PengaturanInstitusi::current();
 
-    $this->actingAs($admin)->put(route('institusi.update'), [
+    $this->actingAs($admin)->put(route('admin.perguruan-tinggi.update'), [
         'nama_pt' => 'Universitas Uji Coba',
         'zona_waktu' => 'Europe/London',
     ])->assertSessionHasErrors('zona_waktu');

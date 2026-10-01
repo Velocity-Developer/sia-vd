@@ -12,7 +12,6 @@ class PengaturanSistemController extends Controller
      * Tab Pengaturan Sistem beserta izin yang dibutuhkan, sesuai urutan tampil.
      */
     public const TAB = [
-        'institusi' => 'admin.institusi',
         'email' => 'admin.pengaturan-email',
         'akademik' => 'admin.pengaturan-akademik',
         'tampilan' => 'admin.pengaturan-tampilan',

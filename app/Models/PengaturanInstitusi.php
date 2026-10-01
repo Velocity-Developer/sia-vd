@@ -39,7 +39,11 @@ class PengaturanInstitusi extends Model
 
     protected $table = 'pengaturan_institusi';
 
-    protected $fillable = ['nama_pt', 'singkatan', 'logo', 'npsn', 'alamat', 'telepon', 'email', 'website', 'tahun_berdiri', 'zona_waktu', 'updated_by'];
+    protected $fillable = [
+        'nama_pt', 'badan_hukum_id', 'singkatan', 'logo', 'npsn', 'alamat', 'alamat_lain', 'provinsi_id', 'kota_id', 'kode_pos',
+        'telepon', 'faximili', 'email', 'website', 'tahun_berdiri', 'nomor_akta_terakhir', 'tanggal_akta_terakhir',
+        'nomor_pengesahan', 'tanggal_pengesahan', 'akreditasi', 'zona_waktu', 'updated_by',
+    ];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
@@ -51,6 +55,8 @@ class PengaturanInstitusi extends Model
     {
         return [
             'tahun_berdiri' => 'integer',
+            'tanggal_akta_terakhir' => 'date:Y-m-d',
+            'tanggal_pengesahan' => 'date:Y-m-d',
         ];
     }
 
@@ -197,6 +203,21 @@ class PengaturanInstitusi extends Model
             $this->email,
             $this->website,
         ]));
+    }
+
+    public function badanHukum(): BelongsTo
+    {
+        return $this->belongsTo(BadanHukum::class, 'badan_hukum_id');
+    }
+
+    public function provinsi(): BelongsTo
+    {
+        return $this->belongsTo(Provinsi::class, 'provinsi_id');
+    }
+
+    public function kota(): BelongsTo
+    {
+        return $this->belongsTo(Kota::class, 'kota_id');
     }
 
     public function updater(): BelongsTo

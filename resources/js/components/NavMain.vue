@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -48,7 +57,7 @@ const isItemActive = (item: NavItem) => {
 
     return isActive(item.href, !isRoleHome);
 };
-const seksiAktif = (seksi: NavGroup) => seksi.items.some((item) => isItemActive(item));
+const seksiAktif = (seksi: NavGroup): boolean => seksi.items.some((item) => (adalahSeksi(item) ? seksiAktif(item) : isItemActive(item)));
 
 // Seksi yang dibuka/ditutup pengguna diingat per peramban; seksi yang memuat halaman aktif
 // tetap terbuka sendiri agar posisi pengguna selalu terlihat.
@@ -110,12 +119,33 @@ const aturSeksi = (seksi: NavGroup, terbuka: boolean) => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="right" align="start" class="min-w-52">
                             <DropdownMenuLabel class="text-[11px] uppercase tracking-[0.08em] text-[#a39e98]">{{ entry.title }}</DropdownMenuLabel>
-                            <DropdownMenuItem v-for="sub in entry.items" :key="sub.href" as-child>
-                                <Link :href="sub.href" class="flex w-full items-center gap-2" :data-active="isItemActive(sub)">
-                                    <component :is="sub.icon" v-if="sub.icon" class="size-4 text-muted-foreground" />
-                                    <span>{{ sub.title }}</span>
-                                </Link>
-                            </DropdownMenuItem>
+                            <template v-for="sub in entry.items" :key="sub.title">
+                                <DropdownMenuSub v-if="adalahSeksi(sub)">
+                                    <DropdownMenuSubTrigger class="flex items-center gap-2">
+                                        <component :is="sub.icon" v-if="sub.icon" class="size-4 text-muted-foreground" />
+                                        <span>{{ sub.title }}</span>
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuSubContent class="min-w-52">
+                                        <DropdownMenuItem v-for="anak in sub.items" :key="anak.title" as-child>
+                                            <Link
+                                                v-if="!adalahSeksi(anak)"
+                                                :href="anak.href"
+                                                class="flex w-full items-center gap-2"
+                                                :data-active="isItemActive(anak)"
+                                            >
+                                                <component :is="anak.icon" v-if="anak.icon" class="size-4 text-muted-foreground" />
+                                                <span>{{ anak.title }}</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuItem v-else as-child>
+                                    <Link :href="sub.href" class="flex w-full items-center gap-2" :data-active="isItemActive(sub)">
+                                        <component :is="sub.icon" v-if="sub.icon" class="size-4 text-muted-foreground" />
+                                        <span>{{ sub.title }}</span>
+                                    </Link>
+                                </DropdownMenuItem>
+                            </template>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </SidebarMenuItem>
@@ -143,14 +173,57 @@ const aturSeksi = (seksi: NavGroup, terbuka: boolean) => {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <SidebarMenuSub class="ml-3.5 border-l border-[#e6e6e6] pl-2">
-                                <SidebarMenuSubItem v-for="sub in entry.items" :key="sub.href">
-                                    <SidebarMenuSubButton as-child :is-active="isItemActive(sub)" class="rounded-[5px] text-[14px] leading-5">
-                                        <Link :href="sub.href">
-                                            <component :is="sub.icon" v-if="sub.icon" class="text-muted-foreground" />
-                                            <span>{{ sub.title }}</span>
-                                        </Link>
-                                    </SidebarMenuSubButton>
-                                </SidebarMenuSubItem>
+                                <template v-for="sub in entry.items" :key="sub.title">
+                                    <Collapsible
+                                        v-if="adalahSeksi(sub)"
+                                        as-child
+                                        class="group/subseksi"
+                                        :open="seksiTerbuka(sub)"
+                                        @update:open="(nilai: boolean) => aturSeksi(sub, nilai)"
+                                    >
+                                        <SidebarMenuSubItem>
+                                            <CollapsibleTrigger as-child>
+                                                <SidebarMenuSubButton
+                                                    as="button"
+                                                    :is-active="seksiAktif(sub) && !seksiTerbuka(sub)"
+                                                    class="w-full rounded-[5px] text-[14px] leading-5"
+                                                >
+                                                    <component :is="sub.icon" v-if="sub.icon" class="text-muted-foreground" />
+                                                    <span>{{ sub.title }}</span>
+                                                    <ChevronRight
+                                                        class="ml-auto size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/subseksi:rotate-90"
+                                                    />
+                                                </SidebarMenuSubButton>
+                                            </CollapsibleTrigger>
+                                            <CollapsibleContent>
+                                                <SidebarMenuSub class="ml-3 mr-0 border-l border-[#e6e6e6] pl-2 pr-0">
+                                                    <template v-for="anak in sub.items" :key="anak.title">
+                                                        <SidebarMenuSubItem v-if="!adalahSeksi(anak)">
+                                                            <SidebarMenuSubButton
+                                                                as-child
+                                                                :is-active="isItemActive(anak)"
+                                                                class="rounded-[5px] text-[14px] leading-5"
+                                                            >
+                                                                <Link :href="anak.href">
+                                                                    <component :is="anak.icon" v-if="anak.icon" class="text-muted-foreground" />
+                                                                    <span>{{ anak.title }}</span>
+                                                                </Link>
+                                                            </SidebarMenuSubButton>
+                                                        </SidebarMenuSubItem>
+                                                    </template>
+                                                </SidebarMenuSub>
+                                            </CollapsibleContent>
+                                        </SidebarMenuSubItem>
+                                    </Collapsible>
+                                    <SidebarMenuSubItem v-else>
+                                        <SidebarMenuSubButton as-child :is-active="isItemActive(sub)" class="rounded-[5px] text-[14px] leading-5">
+                                            <Link :href="sub.href">
+                                                <component :is="sub.icon" v-if="sub.icon" class="text-muted-foreground" />
+                                                <span>{{ sub.title }}</span>
+                                            </Link>
+                                        </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                </template>
                             </SidebarMenuSub>
                         </CollapsibleContent>
                     </SidebarMenuItem>

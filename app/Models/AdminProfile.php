@@ -10,7 +10,7 @@ class AdminProfile extends Model
 {
     use SerializesDatesInAppTimezone;
 
-    protected $fillable = ['user_id', 'nomor_induk', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'no_telepon', 'alamat', 'kewarganegaraan'];
+    protected $fillable = ['user_id', 'foto', 'nomor_induk', 'tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'no_telepon', 'alamat', 'kewarganegaraan'];
 
     protected function casts(): array
     {

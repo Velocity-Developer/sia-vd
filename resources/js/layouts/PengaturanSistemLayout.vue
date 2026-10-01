@@ -2,12 +2,11 @@
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, Construction, GraduationCap, Mail, Palette, ShieldCheck } from 'lucide-vue-next';
+import { Construction, GraduationCap, Mail, Palette, ShieldCheck } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 // Satu halaman Pengaturan Sistem dengan tab; tiap tab punya alamat sendiri dan hanya tampil bila diizinkan.
 const semuaTab = [
-    { nama: 'institusi', judul: 'Institusi', izin: 'admin.institusi', ikon: Building2 },
     { nama: 'email', judul: 'Email', izin: 'admin.pengaturan-email', ikon: Mail },
     { nama: 'akademik', judul: 'Akademik', izin: 'admin.pengaturan-akademik', ikon: GraduationCap },
     { nama: 'tampilan', judul: 'Tampilan', izin: 'admin.pengaturan-tampilan', ikon: Palette },

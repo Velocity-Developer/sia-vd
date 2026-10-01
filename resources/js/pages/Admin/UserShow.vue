@@ -5,6 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { STATUS_KRS, type RingkasanKrs } from '@/lib/krs';
 import { formatTanggal } from '@/lib/presensi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { UserRound } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -142,21 +143,34 @@ const ibu = [
 
                 <section class="kartu p-6">
                     <h2 class="judul-bagian">Akun</h2>
-                    <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        <div v-for="f in akun" :key="f.key" class="space-y-1">
-                            <dt class="teks-bantu">{{ f.label }}</dt>
-                            <dd class="break-all text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
+                    <div class="mt-4 flex flex-col gap-6 sm:flex-row sm:items-start">
+                        <div
+                            class="flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#e6e6e6] bg-[#f6f5f4] dark:border-border dark:bg-muted"
+                        >
+                            <img
+                                v-if="props.user.foto_url"
+                                :src="props.user.foto_url"
+                                :alt="`Foto ${props.user.name}`"
+                                class="size-full object-cover"
+                            />
+                            <UserRound v-else class="size-12 text-[#a39e98]" aria-label="Belum ada foto" />
                         </div>
-                        <div class="space-y-1">
-                            <dt class="teks-bantu">Verifikasi Email</dt>
-                            <dd class="text-sm font-medium">
-                                <span v-if="props.user.email_verified_at" class="text-[#1aae39]"
-                                    >Terverifikasi {{ v(props.user.email_verified_at) }}</span
-                                >
-                                <span v-else class="text-[#dd5b00]">Belum terverifikasi</span>
-                            </dd>
-                        </div>
-                    </dl>
+                        <dl class="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div v-for="f in akun" :key="f.key" class="space-y-1">
+                                <dt class="teks-bantu">{{ f.label }}</dt>
+                                <dd class="break-all text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
+                            </div>
+                            <div class="space-y-1">
+                                <dt class="teks-bantu">Verifikasi Email</dt>
+                                <dd class="text-sm font-medium">
+                                    <span v-if="props.user.email_verified_at" class="text-[#1aae39]"
+                                        >Terverifikasi {{ v(props.user.email_verified_at) }}</span
+                                    >
+                                    <span v-else class="text-[#dd5b00]">Belum terverifikasi</span>
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
                     <div v-if="!props.user.email_verified_at && props.bolehKelola" class="mt-4 flex flex-wrap gap-2">
                         <Button variant="outline" size="sm" :disabled="memproses" @click="aksiVerifikasi('verifikasi-email')"
                             >Kirim Ulang Tautan Verifikasi</Button

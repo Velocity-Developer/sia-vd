@@ -19,6 +19,7 @@ use App\Models\TugasAkhir;
 use App\Models\Ujian;
 use App\Models\UjianJawaban;
 use App\Models\User;
+use App\UserType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -219,6 +220,23 @@ class BerkasController extends Controller
      * Tipe berkas ditentukan dari ekstensi yang sudah divalidasi, bukan ditebak dari isinya; selain PDF dan
      * gambar berkas diunduh, dan header sandbox mencegah isi berkas dijalankan sebagai halaman.
      */
+    /**
+     * Foto profil: pemilik akun dan pengelola data jenis pengguna itu (Data Dosen/Mahasiswa, Karyawan).
+     */
+    public function foto(Request $request, User $user): StreamedResponse
+    {
+        $izin = match ($user->type()) {
+            UserType::Admin => 'admin.users.karyawan',
+            UserType::Dosen => 'admin.users.dosen',
+            UserType::Mahasiswa => 'admin.users.mahasiswa',
+            default => null,
+        };
+
+        abort_unless($request->user()->is($user) || ($izin !== null && $request->user()->hasPermission($izin)), 403);
+
+        return $this->kirim($user->profile?->foto);
+    }
+
     private function kirim(?string $path): StreamedResponse
     {
         $disk = Storage::disk(AllowedUpload::DISK);

@@ -29,11 +29,11 @@ export interface NavItem {
     items?: NavItem[];
 }
 
-/** Seksi menu di sidebar: kumpulan menu sejenis yang dibuka-tutup sebagai dropdown. */
+/** Seksi menu di sidebar: kumpulan menu sejenis yang dibuka-tutup sebagai dropdown. Isinya boleh seksi lagi (satu tingkat). */
 export interface NavGroup {
     title: string;
     icon?: LucideIcon;
-    items: NavItem[];
+    items: NavEntry[];
 }
 
 export type NavEntry = NavItem | NavGroup;

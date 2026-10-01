@@ -1,15 +1,20 @@
 <?php
 
+use App\Http\Controllers\Admin\AgamaController;
+use App\Http\Controllers\Admin\BadanHukumController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JenisBiayaController;
+use App\Http\Controllers\Admin\KotaController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\PengajuanAkademikController as AdminPengajuanAkademikController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
+use App\Http\Controllers\Admin\PerguruanTinggiController;
 use App\Http\Controllers\Admin\PeriodeWisudaController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
 use App\Http\Controllers\Admin\ProgramStudiController;
+use App\Http\Controllers\Admin\ProvinsiController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RuangController;
 use App\Http\Controllers\Admin\TagihanController;
@@ -136,6 +141,7 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
         Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
     });
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
+    Route::get('foto/{user}', [BerkasController::class, 'foto'])->name('berkas.foto');
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
     Route::middleware('fitur:keuangan')->group(function (): void {
         Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
@@ -292,6 +298,29 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:admin.ruang')->group(function (): void {
         Route::resource('ruang', RuangController::class)->parameters(['ruang' => 'ruang'])->names('admin.ruang');
+    });
+
+    Route::middleware('can:admin.agama')->group(function (): void {
+        Route::resource('agama', AgamaController::class)->except('show')->parameters(['agama' => 'agama'])->names('admin.agama');
+    });
+
+    Route::middleware('can:admin.provinsi')->group(function (): void {
+        Route::resource('provinsi', ProvinsiController::class)->except('show')->parameters(['provinsi' => 'provinsi'])->names('admin.provinsi');
+    });
+
+    Route::middleware('can:admin.kota')->group(function (): void {
+        Route::resource('kota', KotaController::class)->except('show')->parameters(['kota' => 'kota'])->names('admin.kota');
+    });
+
+    Route::middleware('can:admin.badan-hukum')->group(function (): void {
+        Route::get('badan-hukum', [BadanHukumController::class, 'edit'])->name('admin.badan-hukum.edit');
+        Route::put('badan-hukum', [BadanHukumController::class, 'update'])->name('admin.badan-hukum.update');
+    });
+
+    Route::middleware('can:admin.institusi')->group(function (): void {
+        Route::get('perguruan-tinggi', [PerguruanTinggiController::class, 'edit'])->name('admin.perguruan-tinggi.edit');
+        // POST + _method=put karena membawa unggahan logo.
+        Route::put('perguruan-tinggi', [PerguruanTinggiController::class, 'update'])->name('admin.perguruan-tinggi.update');
     });
 
     Route::middleware('can:admin.tahun-akademik')->group(function (): void {
