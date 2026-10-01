@@ -6,6 +6,7 @@ use App\AllowedUpload;
 use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
+use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\PengajuanSusulan;
 use App\Models\PengaturanAkademik;
@@ -49,7 +50,7 @@ class UjianController extends Controller
         return Inertia::render('Mahasiswa/Ujian', [
             'ujians' => $ujians,
             // jenis => alasan kartu tidak bisa dicetak (null = boleh dicetak).
-            'kartuTerkunci' => $ujians->groupBy('jenis')->map(fn (Collection $u): ?string => $this->alasanKartuTerkunci($u)),
+            'kartuTerkunci' => $ujians->groupBy('jenis')->map(fn (Collection $u): ?string => $this->alasanKartuTerkunci($u, $mahasiswa, $tahun)),
             'tahunAkademikId' => $tahun?->id,
             'tahunAkademikOptions' => $tahunAkademiks->map(fn (TahunAkademik $t): array => ['id' => $t->id, 'name' => $t->tahun.' '.$t->semester]),
         ]);
@@ -181,7 +182,7 @@ class UjianController extends Controller
         $ujians = $this->daftarUjian($mahasiswa, $tahun->id)->where('jenis', $jenis)->values();
         abort_if($ujians->isEmpty(), 404, 'Belum ada jadwal ujian jenis ini yang terbit.');
 
-        if (($alasan = $this->alasanKartuTerkunci($ujians)) !== null) {
+        if (($alasan = $this->alasanKartuTerkunci($ujians, $mahasiswa, $tahun)) !== null) {
             return redirect()->route('mahasiswa.ujian', ['tahun_akademik_id' => $tahun->id])->with('error', $alasan);
         }
         $institusi = PengaturanInstitusi::current();
@@ -199,14 +200,19 @@ class UjianController extends Controller
     }
 
     /**
+     * Saat verifikasi KRS aktif, kartu baru bisa dicetak setelah KRS semester itu disetujui.
      * Saat syarat kehadiran ujian diberlakukan, kartu satu jenis ujian tidak bisa dicetak selama ada mata
      * kuliah di kartu itu yang belum memenuhi syarat (tanpa dispensasi). Remidi tidak bersyarat kehadiran,
      * dan UTS/UAS yang disusulkan tidak dihitung karena mahasiswa mengikuti jadwal susulannya.
      *
      * @param  Collection<int, array<string, mixed>>  $ujians  ujian satu jenis dari daftarUjian()
      */
-    private function alasanKartuTerkunci(Collection $ujians): ?string
+    private function alasanKartuTerkunci(Collection $ujians, MahasiswaProfile $mahasiswa, ?TahunAkademik $tahun): ?string
     {
+        if ($tahun !== null && KrsSemester::verifikasiAktif() && ! KrsSemester::disetujui($mahasiswa->id, $tahun->id)) {
+            return 'Kartu ujian belum bisa dicetak karena KRS semester ini belum disetujui. Hubungi bagian akademik atau prodi.';
+        }
+
         $kurang = $ujians
             ->reject(fn (array $u): bool => $u['jenis'] === Ujian::REMIDI || $u['terdaftar_susulan'])
             ->filter(fn (array $u): bool => ($u['syarat']['memenuhi'] ?? null) === false)

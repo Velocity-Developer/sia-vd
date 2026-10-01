@@ -30,7 +30,9 @@ class KrsController extends Controller
     {
         $mahasiswa = $this->mahasiswa($request);
         $tahunAkademik = TahunAkademik::aktif();
-        $periodeKrsAktif = $this->periodeKrsAktif($tahunAkademik);
+        $kunci = $tahunAkademik === null ? null : KrsSemester::untuk($mahasiswa->id, $tahunAkademik->id);
+        // Kelas ditawarkan selama periode KRS, atau selama KRS dikembalikan untuk revisi / dibuka admin.
+        $periodeKrsAktif = $this->periodeKrsAktif($tahunAkademik) || ($kunci?->setRelation('tahunAkademik', $tahunAkademik)->bisaDirevisi() ?? false);
         // Seluruh KRS mahasiswa dimuat sekali, lalu dipakai untuk tawaran, IPS, dan ringkasan SKS.
         $bolehKrs = in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true);
         $semuaKrs = $this->semuaKrs($mahasiswa);
@@ -82,11 +84,10 @@ class KrsController extends Controller
             'bolehKrs' => $bolehKrs,
             'tahunAkademik' => $tahunAkademik,
             'periodeKrsAktif' => $periodeKrsAktif,
-            'krsTersimpan' => $tahunAkademik !== null && KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id),
-            'krsDisimpanPada' => $tahunAkademik === null ? null : KrsSemester::query()
-                ->where('mahasiswa_id', $mahasiswa->id)
-                ->where('tahun_akademik_id', $tahunAkademik->id)
-                ->value('disimpan_pada'),
+            'krsTersimpan' => in_array($kunci?->status, KrsSemester::STATUS_TERKUNCI, true),
+            'statusKrs' => $kunci?->ringkasan(),
+            'verifikasiKrs' => KrsSemester::verifikasiAktif(),
+            'batasRevisi' => $tahunAkademik === null ? null : KrsSemester::batasRevisi($tahunAkademik)?->toDateString(),
         ]);
     }
 
@@ -97,12 +98,8 @@ class KrsController extends Controller
 
         abort_unless($kelasKuliah->mataKuliah?->prodi_id === $mahasiswa->prodi_id && $kelasKuliah->tahunAkademik?->status === true, 404);
 
-        if (! $this->periodeKrsAktif($kelasKuliah->tahunAkademik)) {
-            return back()->with('krs_error', 'Periode pengambilan KRS belum dibuka atau sudah berakhir.');
-        }
-
-        if (KrsSemester::tersimpan($mahasiswa->id, $kelasKuliah->tahun_akademik_id)) {
-            return back()->with('krs_error', 'KRS Anda sudah disimpan dan terkunci. '.(Feature::aktif('pindah_kelas') ? 'Gunakan form pindah kelas, atau hubungi' : 'Hubungi').' admin bila perlu membukanya.');
+        if (($alasan = $this->alasanTidakBolehUbah($mahasiswa, $kelasKuliah->tahunAkademik)) !== null) {
+            return back()->with('krs_error', $alasan);
         }
 
         if (! in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true)) {
@@ -154,7 +151,7 @@ class KrsController extends Controller
     }
 
     /**
-     * Batalkan kelas yang sudah diambil, hanya selama periode KRS dan sebelum ada nilai.
+     * Batalkan kelas yang sudah diambil, hanya selama KRS masih bisa diubah dan sebelum ada nilai.
      */
     public function destroy(Request $request, Krs $krs): RedirectResponse
     {
@@ -162,12 +159,8 @@ class KrsController extends Controller
         abort_unless($krs->mahasiswa_id === $mahasiswa->id, 403);
         $tahunAkademik = $krs->kelasKuliah?->tahunAkademik;
 
-        if ($tahunAkademik?->status !== true || ! $this->periodeKrsAktif($tahunAkademik)) {
-            return back()->with('krs_error', 'Kelas hanya dapat dibatalkan selama periode pengambilan KRS.');
-        }
-
-        if (KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id)) {
-            return back()->with('krs_error', 'KRS Anda sudah disimpan dan terkunci, kelas tidak dapat dibatalkan sendiri.');
+        if (($alasan = $this->alasanTidakBolehUbah($mahasiswa, $tahunAkademik)) !== null) {
+            return back()->with('krs_error', $alasan);
         }
 
         if (filled($krs->nilai)) {
@@ -182,18 +175,15 @@ class KrsController extends Controller
     /**
      * Simpan (kunci) KRS semester berjalan. Setelah ini mahasiswa tidak bisa menambah atau
      * membatalkan kelas sendiri; perubahan hanya lewat pengajuan pindah kelas atau admin.
+     * Saat verifikasi KRS aktif, KRS berstatus diajukan sampai disetujui atau dikembalikan admin.
      */
     public function simpan(Request $request): RedirectResponse
     {
         $mahasiswa = $this->mahasiswa($request);
-        $tahunAkademik = TahunAkademik::where('status', true)->first();
+        $tahunAkademik = TahunAkademik::aktif();
 
-        if (! $this->periodeKrsAktif($tahunAkademik)) {
-            return back()->with('krs_error', 'Periode pengambilan KRS belum dibuka atau sudah berakhir.');
-        }
-
-        if (KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id)) {
-            return back()->with('krs_error', 'KRS Anda sudah tersimpan sebelumnya.');
+        if (($alasan = KrsSemester::alasanTidakBolehUbah($mahasiswa->id, $tahunAkademik)) !== null) {
+            return back()->with('krs_error', $alasan);
         }
 
         $krsTahunIni = $this->semuaKrs($mahasiswa)
@@ -212,13 +202,11 @@ class KrsController extends Controller
             return back()->with('krs_konfirmasi', "Anda baru mengambil {$sksDiambil} dari {$maksSks} SKS yang menjadi jatah Anda. Tambah kelas lagi, atau simpan bila sisa mata kuliah Anda memang tinggal ini.");
         }
 
-        KrsSemester::create([
-            'mahasiswa_id' => $mahasiswa->id,
-            'tahun_akademik_id' => $tahunAkademik->id,
-            'disimpan_pada' => now(),
-        ]);
+        $kunci = KrsSemester::simpan($mahasiswa->id, $tahunAkademik->id);
 
-        return back()->with('krs_success', 'KRS berhasil disimpan dan dikunci.');
+        return back()->with('krs_success', $kunci->status === KrsSemester::DIAJUKAN
+            ? 'KRS berhasil diajukan dan menunggu verifikasi admin.'
+            : 'KRS berhasil disimpan dan dikunci.');
     }
 
     /**
@@ -258,10 +246,7 @@ class KrsController extends Controller
             'krs' => $krs,
             'ipsSebelumnya' => $ipsSebelumnya['ips'] ?? null,
             'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null),
-            'disimpanPada' => KrsSemester::query()
-                ->where('mahasiswa_id', $mahasiswa->id)
-                ->where('tahun_akademik_id', $tahunAkademik->id)
-                ->first()?->disimpan_pada,
+            'kunci' => KrsSemester::untuk($mahasiswa->id, $tahunAkademik->id),
         ])->download('krs-'.$mahasiswa->nim.'-'.Str::slug($tahunAkademik->tahun.'-'.$tahunAkademik->semester).'.pdf');
     }
 
@@ -276,6 +261,20 @@ class KrsController extends Controller
     private function periodeKrsAktif(?TahunAkademik $tahunAkademik): bool
     {
         return $tahunAkademik?->periodeKrsAktif() === true;
+    }
+
+    /**
+     * Alasan KRS tidak bisa diubah sendiri, ditambah arahan pindah kelas bila KRS sudah terkunci.
+     */
+    private function alasanTidakBolehUbah(MahasiswaProfile $mahasiswa, ?TahunAkademik $tahunAkademik): ?string
+    {
+        $alasan = KrsSemester::alasanTidakBolehUbah($mahasiswa->id, $tahunAkademik);
+
+        if ($alasan !== null && Feature::aktif('pindah_kelas') && KrsSemester::disetujui($mahasiswa->id, (int) $tahunAkademik?->id)) {
+            return 'KRS Anda sudah disimpan dan terkunci. Gunakan form pindah kelas, atau hubungi admin bila perlu membukanya.';
+        }
+
+        return $alasan;
     }
 
     /**

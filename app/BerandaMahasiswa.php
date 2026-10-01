@@ -77,11 +77,20 @@ class BerandaMahasiswa
             }
         }
 
-        if ($lihatKrs && $tahunAkademik->periodeKrsAktif() && ! KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id)) {
+        $kunci = $lihatKrs ? KrsSemester::untuk($mahasiswa->id, $tahunAkademik->id)?->setRelation('tahunAkademik', $tahunAkademik) : null;
+
+        if ($lihatKrs && $kunci === null && $tahunAkademik->periodeKrsAktif()) {
             $batas = Carbon::parse($tahunAkademik->tanggal_krs_akhir)->translatedFormat('d F Y');
             $pesan[] = $krsTerkunci
                 ? ['teks' => "Masa KRS berakhir {$batas}. KRS baru bisa diisi setelah tagihan semester lunas.", 'penting' => true]
                 : ['teks' => "Masa KRS dibuka sampai {$batas}. KRS Anda belum disimpan.", 'penting' => true];
+            $tautan ??= route('mahasiswa.krs');
+        } elseif ($kunci?->bisaDirevisi()) {
+            $batas = Carbon::parse($kunci->ringkasan()['batas_revisi'])->translatedFormat('d F Y');
+            $pesan[] = ['teks' => 'KRS Anda perlu direvisi'.($kunci->catatan_revisi ? ': '.$kunci->catatan_revisi : '').'. Perbaiki dan '.(KrsSemester::verifikasiAktif() ? 'ajukan' : 'simpan')." lagi paling lambat {$batas}.", 'penting' => true];
+            $tautan ??= route('mahasiswa.krs');
+        } elseif ($kunci?->status === KrsSemester::DIAJUKAN) {
+            $pesan[] = ['teks' => 'KRS Anda sedang menunggu verifikasi admin.', 'penting' => false];
             $tautan ??= route('mahasiswa.krs');
         }
 

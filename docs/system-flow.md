@@ -421,8 +421,7 @@ Mahasiswa mengisi KRS di menu **Rencana Studi (KRS)**. Semua rute KRS dijaga `ca
 Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 
 1. Mata kuliah dari prodi mahasiswa dan kelas di tahun akademik aktif (bila tidak, 404).
-2. Periode KRS sedang berjalan.
-3. KRS belum disimpan (belum terkunci).
+2–3. KRS masih bisa diubah (`KrsSemester::alasanTidakBolehUbah`): belum disimpan dan periode KRS berjalan, atau berstatus `perlu_revisi` dan masih dalam masa revisi / tanggal buka kunci ([7.4](#74-menyimpan-mengunci-krs)). KRS `diajukan` atau `disetujui` ditolak.
 4. Status mahasiswa diizinkan.
 5. Dalam transaksi, baris mahasiswa dan kelas dikunci (`lockForUpdate`).
 6. Riwayat mata kuliah yang sama (`TawaranKrs::alasanTidakBolehAmbil`):
@@ -437,24 +436,47 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 
 ### 7.3 Membatalkan kelas
 
-- **Mahasiswa:** hanya KRS miliknya, selama periode KRS, sebelum KRS disimpan, dan nilainya masih kosong.
+- **Mahasiswa:** hanya KRS miliknya, selama KRS masih bisa diubah (aturan sama dengan 7.2 langkah 2–3), dan nilainya masih kosong.
   - Pembatalan juga menghapus pengajuan pindah kelas `pending` dari kelas itu (`Krs::cancel`).
 - **Admin**, dari halaman kelas: hanya mensyaratkan nilai kosong. Periode dan kunci KRS tidak dicek.
 
 ### 7.4 Menyimpan (mengunci) KRS
 
-1. Mahasiswa menekan **Simpan KRS**. Syaratnya: periode berjalan, belum pernah disimpan, dan minimal satu kelas sudah diambil.
+Status KRS per semester disimpan di `krs_semester.status` (`App\Models\KrsSemester`). Tanpa baris = belum disimpan.
+
+| Status | Arti | Mahasiswa bisa mengubah? |
+| --- | --- | --- |
+| `diajukan` | disimpan mahasiswa, menunggu verifikasi admin | tidak |
+| `perlu_revisi` | dikembalikan admin untuk revisi, atau kuncinya dibuka admin | ya, sampai akhir masa revisi atau tanggal `dibuka_sampai` (mana yang lebih lama) |
+| `disetujui` | final | tidak |
+
+1. Mahasiswa menekan **Simpan KRS** (atau **Ajukan KRS** saat verifikasi aktif). Syaratnya: KRS masih bisa diubah (7.2 langkah 2–3) dan minimal satu kelas sudah diambil.
 2. Bila SKS yang diambil masih di bawah batas, sistem meminta konfirmasi (`krs_konfirmasi`).
-3. Sistem mencatat baris `krs_semester` (waktu simpan). Sejak itu mahasiswa tidak bisa lagi menambah atau membatalkan kelas sendiri.
-4. Jalan keluar setelah KRS terkunci:
+3. `KrsSemester::simpan` mencatat waktu simpan dengan status:
+   - **verifikasi KRS mati** (bawaan, `pengaturan_akademik.verifikasi_krs_aktif`): langsung `disetujui`, sama seperti alur lama;
+   - **verifikasi KRS aktif:** `diajukan`, lalu diverifikasi admin ([7.6](#76-verifikasi-krs)).
+4. Mahasiswa yang **belum pernah menyimpan** KRS sampai periode KRS berakhir tidak bisa mengisi di masa revisi; hanya lewat buka kunci admin.
+5. **Masa revisi** = sejak `tanggal_krs_awal` sampai `tahun_akademik.tanggal_revisi_krs_akhir` (diisi di form Tahun Akademik, hanya tampil saat verifikasi aktif; kosong = sama dengan `tanggal_krs_akhir`). Sesudahnya semua KRS terkunci, apa pun statusnya. KRS yang masih `diajukan` tetap `diajukan` dan masih bisa disetujui admin.
+6. Jalan keluar setelah KRS terkunci:
    - **pindah kelas** ([bagian 16](#16-pindah-kelas));
-   - **admin membuka kunci KRS** dari **Pengguna → Mahasiswa → Detail** (kartu "KRS <tahun akademik aktif>", izin `admin.users.mahasiswa`, tidak bergantung fitur keuangan) atau dari menu Tagihan Mahasiswa bila keuangan aktif. Keduanya menghapus baris `krs_semester` (`KrsSemester::bukaKunci`). Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
+   - **admin membuka kunci KRS** dari **Pengguna → Mahasiswa → Detail** (kartu "KRS <tahun akademik aktif>", izin `admin.users.mahasiswa`, tidak bergantung fitur keuangan), dari menu Tagihan Mahasiswa bila keuangan aktif, atau **Kembalikan untuk Revisi** di Verifikasi KRS. Semuanya memakai `KrsSemester::bukaKunci`: status menjadi `perlu_revisi` dengan catatan opsional dan tanggal **Dibuka sampai** opsional. Setelah masa revisi berakhir, tanggal itu **wajib**, jadi admin tetap bisa membuka kunci mahasiswa tertentu kapan saja. Baris dibuat bila mahasiswa belum pernah menyimpan.
 
 ### 7.5 Unduh KRS (PDF)
 
 - Tombol **Download KRS** (`mahasiswa.krs.download`) tampil bila mahasiswa sudah mengambil kelas di tahun akademik aktif, baik sebelum maupun sesudah KRS disimpan. Parameter `tahun_akademik_id` opsional untuk tahun lain; tanpa kelas di tahun itu hasilnya 404.
-- Isi: identitas, semester, IPS sebelumnya dan batas SKS, tabel kode–mata kuliah–kelas–SKS–jadwal–dosen, jumlah SKS, status KRS (disimpan pada … / belum disimpan), dan blok tanda tangan ([17.6](#176-dokumen-pdf)).
+- Isi: identitas, semester, IPS sebelumnya dan batas SKS, tabel kode–mata kuliah–kelas–SKS–jadwal–dosen, jumlah SKS, status KRS (disetujui / diajukan / perlu revisi / belum disimpan); saat verifikasi aktif, KRS yang belum disetujui diberi tanda merah **"BELUM DISETUJUI — KRS INI MASIH DAPAT BERUBAH"**, dan blok tanda tangan ([17.6](#176-dokumen-pdf)).
 - Rute berada di grup yang sama dengan KRS, jadi ikut kunci pembayaran (`tagihan.lunas`) bila sakelarnya aktif.
+
+### 7.6 Verifikasi KRS
+
+Menu **Administrasi → Verifikasi KRS** (`admin.verifikasi-krs.*`, izin `admin.verifikasi-krs`, bawaan role Admin). Menu tetap ada saat verifikasi mati sebagai rekap status KRS.
+
+- Daftar per tahun akademik (bawaan: aktif), filter prodi, cari nama/NIM, tab status dengan jumlah. Yang paling lama menunggu tampil lebih dulu.
+- **Rincian** (`show`): kelas yang diambil, total SKS dibanding batas SKS dan IPS sebelumnya.
+- **Setujui** (satu per satu atau massal untuk yang `diajukan` di halaman itu): status `disetujui`, dicatat `diverifikasi_oleh/pada`. KRS tanpa kelas tidak bisa disetujui.
+- **Kembalikan untuk Revisi:** catatan **wajib** (tampil di halaman KRS dan Beranda mahasiswa), tanggal Dibuka sampai opsional (wajib setelah masa revisi berakhir). Mahasiswa memperbaiki lalu mengajukan ulang.
+- Dashboard admin menampilkan butir **"KRS menunggu verifikasi"** per tahun akademik.
+- **Yang menunggu KRS final:** hanya cetak KRS (tanda "BELUM DISETUJUI") dan **kartu ujian**. Saat verifikasi aktif, kartu ujian tidak bisa dicetak selama KRS semester itu belum `disetujui`. Presensi, materi, tugas, dan nilai tetap memakai baris KRS sejak kelas diambil, seperti sebelumnya.
 
 ---
 
@@ -656,7 +678,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 - **Mode `online_soal`:** mulai hanya bila ujian `terbit`, sedang berlangsung, dan mahasiswa boleh ikut. Soal dan opsi diacak per mahasiswa.
 - **Kehadiran otomatis:** mengumpulkan berkas atau memulai lembar soal otomatis mencatat **hadir** (metode `ujian`) di pertemuan UTS/UAS.
   - Ujian tatap muka tidak mencatat kehadiran otomatis.
-- **Kartu ujian (PDF)** per jenis berisi jadwal ujian terbit, kolom paraf pengawas, dan kolom syarat kehadiran bila syarat aktif (kartu terkunci bila ada mata kuliah tidak memenuhi syarat, lihat [9.4](#94-syarat-kehadiran-ujian-dan-dispensasi)), ditutup blok tanda tangan dokumen mahasiswa ([17.6](#176-dokumen-pdf)).
+- **Kartu ujian (PDF)** per jenis berisi jadwal ujian terbit, kolom paraf pengawas, dan kolom syarat kehadiran bila syarat aktif (kartu terkunci bila ada mata kuliah tidak memenuhi syarat, lihat [9.4](#94-syarat-kehadiran-ujian-dan-dispensasi); saat verifikasi KRS aktif kartu juga terkunci sampai KRS semester itu disetujui, lihat [7.6](#76-verifikasi-krs)), ditutup blok tanda tangan dokumen mahasiswa ([17.6](#176-dokumen-pdf)).
 
 ### 10.4 Penilaian ujian
 

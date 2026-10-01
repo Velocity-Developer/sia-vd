@@ -100,12 +100,16 @@ class UserController extends Controller
         }
         $kunciKrs = null;
         if ($role === UserType::Mahasiswa && $user->mahasiswaProfile && ($tahunAktif = TahunAkademik::aktif())) {
-            $kunci = KrsSemester::query()->where('mahasiswa_id', $user->mahasiswaProfile->id)->where('tahun_akademik_id', $tahunAktif->id)->first();
-            $kunciKrs = $kunci === null ? null : [
+            $kunci = KrsSemester::untuk($user->mahasiswaProfile->id, $tahunAktif->id)?->setRelation('tahunAkademik', $tahunAktif);
+            $terkunci = ! KrsSemester::bolehDiubah($user->mahasiswaProfile->id, $tahunAktif, $kunci);
+            // Kartu tampil bila KRS sudah tersimpan/dikembalikan, atau terkunci karena periode berakhir sebelum disimpan.
+            $kunciKrs = $kunci === null && ! $terkunci ? null : [
                 'tahun_akademik_id' => $tahunAktif->id,
                 'tahun_akademik' => $tahunAktif->tahun.' '.$tahunAktif->semester,
-                'disimpan_pada' => $kunci->disimpan_pada?->toIso8601String(),
-                'periode_berjalan' => $tahunAktif->periodeKrsAktif(),
+                ...($kunci?->ringkasan() ?? ['status' => null, 'disimpan_pada' => null, 'catatan_revisi' => null, 'batas_revisi' => null]),
+                'terkunci' => $terkunci,
+                'masa_revisi_berjalan' => KrsSemester::masaRevisiBerjalan($tahunAktif),
+                'verifikasi' => KrsSemester::verifikasiAktif(),
             ];
         }
         if ($role === UserType::Dosen && $user->dosenProfile) {
@@ -125,20 +129,26 @@ class UserController extends Controller
     }
 
     /**
-     * Buka kunci KRS mahasiswa di tahun akademik aktif agar ia bisa memperbaiki pilihan kelasnya sendiri.
+     * Buka kunci KRS mahasiswa di tahun akademik aktif agar ia bisa memperbaiki pilihan kelasnya sendiri,
+     * juga sesudah masa KRS/revisi berakhir bila tanggal batasnya diisi.
      * Tidak bergantung pada fitur keuangan (tombol yang sama di menu Tagihan hanya ada bila keuangan aktif).
      */
-    public function bukaKunciKrs(User $user): RedirectResponse
+    public function bukaKunciKrs(Request $request, User $user): RedirectResponse
     {
         abort_unless($user->type() === UserType::Mahasiswa && $user->mahasiswaProfile, 404);
-        abort_unless(request()->user()->canManage($user), 403, 'Anda tidak dapat mengubah akun dengan hak akses lebih tinggi.');
+        abort_unless($request->user()->canManage($user), 403, 'Anda tidak dapat mengubah akun dengan hak akses lebih tinggi.');
+        $data = $request->validate(KrsSemester::ATURAN_BUKA_KUNCI, attributes: KrsSemester::ATRIBUT_BUKA_KUNCI);
         $tahunAktif = TahunAkademik::aktif();
 
-        if ($tahunAktif === null || ! KrsSemester::bukaKunci($user->mahasiswaProfile->id, $tahunAktif->id)) {
-            return back()->with('error', 'KRS mahasiswa ini di tahun akademik aktif memang belum dikunci.');
+        if ($tahunAktif === null) {
+            return back()->with('error', 'Belum ada tahun akademik aktif.');
         }
 
-        return back()->with('success', 'Kunci KRS '.$user->name.' dibuka. Mahasiswa bisa mengubah KRS selama periode masih berjalan.');
+        $galat = KrsSemester::bukaKunci($user->mahasiswaProfile->id, $tahunAktif, $data['catatan'] ?? null, $data['dibuka_sampai'] ?? null, $request->user()->id);
+
+        return $galat !== null
+            ? back()->with('error', $galat)
+            : back()->with('success', 'Kunci KRS '.$user->name.' dibuka. '.KrsSemester::pesanDibuka($data['dibuka_sampai'] ?? null, $tahunAktif));
     }
 
     public function edit(string $type, User $user): Response

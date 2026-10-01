@@ -988,7 +988,7 @@ class DemoSeeder extends Seeder
                 if ($tahun->id !== $tahunAktif->id && $profil->krs()->whereHas('kelasKuliah', fn ($query) => $query->where('tahun_akademik_id', $tahun->id))->exists()) {
                     KrsSemester::query()->updateOrCreate(
                         ['mahasiswa_id' => $profil->id, 'tahun_akademik_id' => $tahun->id],
-                        ['disimpan_pada' => $tahun->tanggal_krs_akhir ?? $tahun->tanggal_mulai],
+                        ['status' => KrsSemester::DISETUJUI, 'disimpan_pada' => $tahun->tanggal_krs_akhir ?? $tahun->tanggal_mulai],
                     );
                 }
             }

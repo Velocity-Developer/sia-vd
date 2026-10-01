@@ -3,6 +3,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import { Button } from '@/components/ui/button';
 import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { type RingkasanKrs } from '@/lib/krs';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Download } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
@@ -51,7 +52,9 @@ const props = defineProps<{
     tahunAkademik: { tahun: string; semester: string; tanggal_krs_awal: string; tanggal_krs_akhir: string } | null;
     periodeKrsAktif: boolean;
     krsTersimpan: boolean;
-    krsDisimpanPada: string | null;
+    statusKrs: RingkasanKrs | null;
+    verifikasiKrs: boolean;
+    batasRevisi: string | null;
 }>();
 
 const formatTanggal = (value?: string) =>
@@ -185,6 +188,10 @@ const jadwal = (kelas: KelasKuliah) =>
     ) || [];
 
 const pindahKelas = useFitur().aktif('pindah_kelas');
+const status = computed(() => props.statusKrs?.status ?? null);
+const tampilRevisi = computed(
+    () => props.verifikasiKrs && props.batasRevisi && props.batasRevisi !== props.tahunAkademik?.tanggal_krs_akhir?.slice(0, 10),
+);
 </script>
 
 <template>
@@ -212,12 +219,14 @@ const pindahKelas = useFitur().aktif('pindah_kelas');
                     <p v-if="tahunAkademik" class="mt-2 text-lg font-semibold">{{ tahunAkademik.tahun }} — {{ tahunAkademik.semester }}</p>
                     <p v-if="tahunAkademik" class="mt-1 text-sm text-blue-100">
                         {{ formatTanggal(tahunAkademik.tanggal_krs_awal) }} — {{ formatTanggal(tahunAkademik.tanggal_krs_akhir) }}
+                        <template v-if="tampilRevisi"> · masa revisi sampai {{ formatTanggal(batasRevisi ?? undefined) }}</template>
                     </p>
                     <p v-if="!periodeKrsAktif" class="mt-3 text-sm font-medium">Periode pengambilan KRS sudah selesai.</p>
+                    <p v-else-if="status === 'perlu_revisi'" class="mt-3 text-sm font-medium">KRS Anda sedang dibuka untuk revisi.</p>
                     <p v-else class="mt-3 text-sm font-medium">Periode pengambilan KRS sedang berlangsung.</p>
                 </div>
 
-                <div v-if="periodeKrsAktif" class="kartu p-6">
+                <div v-if="periodeKrsAktif || status" class="kartu p-6">
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div>
                             <p class="teks-bantu uppercase tracking-[0.08em]">Semester</p>
@@ -244,19 +253,43 @@ const pindahKelas = useFitur().aktif('pindah_kelas');
                         ditawarkan. Silakan hubungi bagian akademik.
                     </div>
 
-                    <div v-if="krsTersimpan" class="alert-sukses mt-4" role="status">
-                        KRS sudah disimpan dan terkunci{{ krsDisimpanPada ? ` pada ${formatTanggal(krsDisimpanPada)}` : '' }}. Perubahan kelas hanya
-                        bisa {{ pindahKelas ? 'lewat form pindah kelas, atau ' : 'dengan ' }}minta admin membuka kuncinya.
+                    <div v-if="status === 'diajukan'" class="alert-info mt-4" role="status">
+                        KRS sudah diajukan{{ statusKrs?.disimpan_pada ? ` pada ${formatTanggal(statusKrs.disimpan_pada)}` : '' }} dan sedang menunggu
+                        verifikasi admin. Selama menunggu, kelas tidak bisa ditambah atau dibatalkan.
+                    </div>
+                    <div v-else-if="status === 'disetujui'" class="alert-sukses mt-4" role="status">
+                        KRS sudah {{ verifikasiKrs ? 'disetujui' : 'disimpan' }} dan terkunci{{
+                            statusKrs?.disimpan_pada ? ` (disimpan ${formatTanggal(statusKrs.disimpan_pada)})` : ''
+                        }}. Perubahan kelas hanya bisa {{ pindahKelas ? 'lewat form pindah kelas, atau ' : 'dengan ' }}minta admin membuka kuncinya.
+                    </div>
+                    <div
+                        v-else-if="status === 'perlu_revisi'"
+                        :class="statusKrs?.bisa_direvisi ? 'alert-gagal' : 'alert-info'"
+                        class="mt-4"
+                        role="status"
+                    >
+                        <template v-if="statusKrs?.bisa_direvisi">
+                            KRS Anda perlu direvisi<template v-if="statusKrs.catatan_revisi">: {{ statusKrs.catatan_revisi }}</template
+                            >. Perbaiki kelas lalu {{ verifikasiKrs ? 'ajukan' : 'simpan' }} lagi paling lambat
+                            {{ formatTanggal(statusKrs.batas_revisi ?? undefined) }}.
+                        </template>
+                        <template v-else>Masa revisi KRS sudah berakhir, jadi KRS terkunci dengan isi terakhir. Hubungi admin atau prodi.</template>
                     </div>
 
                     <div
-                        v-else-if="bolehKrs"
+                        v-if="bolehKrs && periodeKrsAktif && !krsTersimpan"
                         class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-[#e6e6e6] pt-4 dark:border-border"
                     >
                         <p class="text-sm text-[#615d59] dark:text-muted-foreground">
-                            Setelah disimpan, KRS terkunci dan kelas tidak bisa ditambah atau dibatalkan sendiri.
+                            {{
+                                verifikasiKrs
+                                    ? 'Setelah diajukan, KRS terkunci sampai diverifikasi admin. Bila perlu revisi, admin akan mengembalikannya.'
+                                    : 'Setelah disimpan, KRS terkunci dan kelas tidak bisa ditambah atau dibatalkan sendiri.'
+                            }}
                         </p>
-                        <Button :disabled="sksDiambil === 0" @click="simpanKrs(false)">Simpan KRS</Button>
+                        <Button :disabled="sksDiambil === 0" @click="simpanKrs(false)">
+                            {{ verifikasiKrs ? (status === 'perlu_revisi' ? 'Ajukan Ulang KRS' : 'Ajukan KRS') : 'Simpan KRS' }}
+                        </Button>
                     </div>
                 </div>
 
@@ -369,9 +402,9 @@ const pindahKelas = useFitur().aktif('pindah_kelas');
         />
         <AlertModal
             v-model:open="simpanModalOpen"
-            title="Simpan KRS dengan SKS di bawah jatah?"
+            :title="verifikasiKrs ? 'Ajukan KRS dengan SKS di bawah jatah?' : 'Simpan KRS dengan SKS di bawah jatah?'"
             :description="pesanKonfirmasi"
-            confirm-text="Ya, Simpan KRS"
+            :confirm-text="verifikasiKrs ? 'Ya, Ajukan KRS' : 'Ya, Simpan KRS'"
             cancel-text="Tambah Kelas Dulu"
             @confirm="
                 simpanModalOpen = false;

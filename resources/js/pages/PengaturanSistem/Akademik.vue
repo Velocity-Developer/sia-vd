@@ -31,6 +31,7 @@ type Presensi = {
 const props = defineProps<{
     maksSksTanpaIps: number;
     kunciKrsAktif: boolean;
+    verifikasiKrsAktif: boolean;
     hurufMaksRemidi: string | null;
     susulan: { batas_pengajuan_susulan_hari: number; batas_bayar_susulan_hari: number };
     minSksPendadaran: number;
@@ -100,6 +101,9 @@ const daftarBagian = [
     { id: 'presensi', judul: 'Presensi' },
 ];
 
+const verifikasiForm = useForm({ verifikasi_krs_aktif: props.verifikasiKrsAktif });
+const simpanVerifikasiKrs = () => verifikasiForm.put(route('admin.pengaturan-akademik.verifikasi-krs'), { preserveScroll: true });
+
 const simpanKunciKrs = () => kunciForm.put(route('admin.pengaturan-akademik.kunci-krs'), { preserveScroll: true });
 
 const saveSks = () => sksForm.put(route('admin.pengaturan-akademik.batas-sks'), { preserveScroll: true });
@@ -123,6 +127,24 @@ const saveNilai = () =>
 
         <section id="krs" class="flex scroll-mt-4 flex-col gap-4">
             <h2 class="teks-bantu font-semibold uppercase tracking-[0.06em]">KRS &amp; SKS</h2>
+            <form class="kartu p-6" @submit.prevent="simpanVerifikasiKrs">
+                <h3 class="judul-bagian">Verifikasi KRS</h3>
+                <p class="teks-bantu mt-1">
+                    Saat menyala, KRS yang disimpan mahasiswa berstatus Diajukan dan terkunci sampai admin menyetujuinya di menu Verifikasi KRS, atau
+                    mengembalikannya untuk revisi. Revisi bisa dilakukan sampai Akhir Masa Revisi KRS di Tahun Akademik; sesudahnya semua KRS
+                    terkunci. Kartu ujian baru bisa dicetak setelah KRS disetujui. Saat mati, KRS yang disimpan langsung final.
+                </p>
+
+                <Label for="verifikasi_krs_aktif" class="label-isian mt-4 flex w-fit items-center gap-2.5 font-normal">
+                    <Checkbox id="verifikasi_krs_aktif" v-model="verifikasiForm.verifikasi_krs_aktif" />
+                    <span>KRS harus disetujui admin sebelum final</span>
+                </Label>
+
+                <div class="mt-6 flex justify-end gap-2">
+                    <Button type="submit" :disabled="verifikasiForm.processing"> Simpan Pengaturan Verifikasi </Button>
+                </div>
+            </form>
+
             <form v-if="keuangan" class="kartu p-6" @submit.prevent="simpanKunciKrs">
                 <h3 class="judul-bagian">Penguncian KRS oleh Pembayaran</h3>
                 <p class="teks-bantu mt-1">

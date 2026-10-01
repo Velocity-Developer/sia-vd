@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\TahunAkademikController;
 use App\Http\Controllers\Admin\UjianController as AdminUjianController;
 use App\Http\Controllers\Admin\UjianSusulanController as AdminUjianSusulanController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VerifikasiKrsController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\BimbinganController;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
@@ -260,6 +261,14 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('periode-wisuda/{periodeWisuda}/cetak', [PeriodeWisudaController::class, 'cetak'])->name('admin.periode-wisuda.cetak');
         Route::post('periode-wisuda/{periodeWisuda}/skl', [PeriodeWisudaController::class, 'sklMassal'])->name('admin.periode-wisuda.skl-massal');
         Route::post('wisuda/{wisuda}/skl', [PeriodeWisudaController::class, 'skl'])->name('admin.wisuda.skl');
+    });
+
+    Route::middleware('can:admin.verifikasi-krs')->group(function (): void {
+        Route::get('verifikasi-krs', [VerifikasiKrsController::class, 'index'])->name('admin.verifikasi-krs.index');
+        Route::post('verifikasi-krs/setujui', [VerifikasiKrsController::class, 'setujuiMassal'])->name('admin.verifikasi-krs.setujui-massal');
+        Route::get('verifikasi-krs/{krsSemester}', [VerifikasiKrsController::class, 'show'])->name('admin.verifikasi-krs.show');
+        Route::post('verifikasi-krs/{krsSemester}/setujui', [VerifikasiKrsController::class, 'setujui'])->name('admin.verifikasi-krs.setujui');
+        Route::post('verifikasi-krs/{krsSemester}/revisi', [VerifikasiKrsController::class, 'revisi'])->name('admin.verifikasi-krs.revisi');
     });
 
     Route::middleware('can:admin.pengajuan-cuti')->group(function (): void {

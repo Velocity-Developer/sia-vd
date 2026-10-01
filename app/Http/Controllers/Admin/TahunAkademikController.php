@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Feature;
 use App\Http\Controllers\Controller;
+use App\Models\KrsSemester;
 use App\Models\Pertemuan;
 use App\Models\TahunAkademik;
 use Closure;
@@ -27,7 +28,7 @@ class TahunAkademikController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/TahunAkademikForm', ['tahunAkademik' => null]);
+        return Inertia::render('Admin/TahunAkademikForm', ['tahunAkademik' => null, 'verifikasiKrs' => KrsSemester::verifikasiAktif()]);
     }
 
     public function edit(TahunAkademik $tahunAkademik): Response
@@ -35,6 +36,7 @@ class TahunAkademikController extends Controller
         return Inertia::render('Admin/TahunAkademikForm', [
             'tahunAkademik' => $tahunAkademik,
             'kelasBerpertemuan' => $tahunAkademik->kelasKuliahs()->whereHas('pertemuans')->count(),
+            'verifikasiKrs' => KrsSemester::verifikasiAktif(),
         ]);
     }
 
@@ -95,6 +97,8 @@ class TahunAkademikController extends Controller
                 'tanggal_krs_awal' => ['required', 'date'],
                 // KRS boleh dibuka sebelum kuliah dimulai, tetapi harus ditutup sebelum semester berakhir.
                 'tanggal_krs_akhir' => ['required', 'date', 'after_or_equal:tanggal_krs_awal', 'before_or_equal:tanggal_akhir'],
+                // Masa revisi KRS (dipakai saat verifikasi KRS aktif) menyambung periode KRS; kosong = sama dengan akhir KRS.
+                'tanggal_revisi_krs_akhir' => ['nullable', 'date', 'after_or_equal:tanggal_krs_akhir', 'before_or_equal:tanggal_akhir'],
                 // Periode pengajuan cuti untuk semester ini: keduanya diisi atau keduanya kosong (tertutup).
                 'tanggal_cuti_awal' => ['nullable', 'date', 'required_with:tanggal_cuti_akhir'],
                 'tanggal_cuti_akhir' => ['nullable', 'date', 'required_with:tanggal_cuti_awal', 'after_or_equal:tanggal_cuti_awal', 'before_or_equal:tanggal_akhir'],
@@ -115,6 +119,7 @@ class TahunAkademikController extends Controller
             [
                 'after_or_equal' => ':attribute harus sama atau setelah :date.',
                 'tanggal_krs_akhir.before_or_equal' => 'Tanggal KRS akhir tidak boleh setelah tanggal akhir semester.',
+                'tanggal_revisi_krs_akhir.before_or_equal' => 'Masa revisi KRS harus berakhir paling lambat di tanggal akhir semester.',
                 'tanggal_cuti_akhir.before_or_equal' => 'Pengajuan cuti harus ditutup paling lambat di tanggal akhir semester.',
                 'required_with' => 'Isi tanggal buka dan tutup pengajuan cuti, atau kosongkan keduanya.',
                 'batas_input_nilai_remidi.after' => $keuangan
@@ -132,6 +137,7 @@ class TahunAkademikController extends Controller
                 'tanggal_akhir' => 'tanggal akhir',
                 'tanggal_krs_awal' => 'tanggal KRS awal',
                 'tanggal_krs_akhir' => 'tanggal KRS akhir',
+                'tanggal_revisi_krs_akhir' => 'akhir masa revisi KRS',
                 'tanggal_cuti_awal' => 'tanggal buka pengajuan cuti',
                 'tanggal_cuti_akhir' => 'tanggal tutup pengajuan cuti',
                 'batas_input_nilai' => 'batas input nilai',

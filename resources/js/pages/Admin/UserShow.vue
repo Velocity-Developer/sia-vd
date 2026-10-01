@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import DialogBukaKunciKrs from '@/components/DialogBukaKunciKrs.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { STATUS_KRS, type RingkasanKrs } from '@/lib/krs';
+import { formatTanggal } from '@/lib/presensi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
@@ -9,7 +12,15 @@ const props = defineProps<{
     type: string;
     user: Record<string, any>;
     bolehKelola: boolean;
-    kunciKrs?: { tahun_akademik_id: number; tahun_akademik: string; disimpan_pada: string | null; periode_berjalan: boolean } | null;
+    kunciKrs?:
+        | (RingkasanKrs & {
+              tahun_akademik_id: number;
+              tahun_akademik: string;
+              terkunci: boolean;
+              masa_revisi_berjalan: boolean;
+              verifikasi: boolean;
+          })
+        | null;
 }>();
 
 const page = usePage<{ flash?: { success?: string | null; error?: string | null } }>();
@@ -22,14 +33,7 @@ const aksiVerifikasi = (aksi: 'verifikasi-email' | 'tandai-terverifikasi') => {
     else router.put(url, {}, opsi);
 };
 
-const bukaKunciKrs = () => {
-    if (!confirm(`Buka kunci KRS ${props.user.name}? Mahasiswa bisa mengubah kelasnya lagi selama periode KRS masih berjalan.`)) return;
-    // Tanpa preserveScroll: kartu ini hilang setelah dibuka, pesan hasilnya tampil di kartu Akun paling atas.
-    router.delete(route('admin.users.mahasiswa.buka-kunci-krs', props.user.id), {
-        onStart: () => (memproses.value = true),
-        onFinish: () => (memproses.value = false),
-    });
-};
+const bukaKunciOpen = ref(false);
 
 const v = (val: unknown): string => {
     if (val === null || val === undefined || val === '') return '-';
@@ -189,18 +193,42 @@ const ibu = [
                     </section>
 
                     <section v-if="props.kunciKrs" class="kartu p-6">
-                        <h2 class="judul-bagian">KRS {{ props.kunciKrs.tahun_akademik }}</h2>
-                        <p class="mt-2 text-sm">
-                            KRS sudah disimpan dan terkunci<template v-if="props.kunciKrs.disimpan_pada">
-                                sejak {{ v(props.kunciKrs.disimpan_pada) }}</template
-                            >. Buka kuncinya bila mahasiswa perlu memperbaiki pilihan kelas sendiri.
-                        </p>
-                        <p v-if="!props.kunciKrs.periode_berjalan" class="alert-info mt-3">
-                            Periode KRS sedang tidak berjalan, jadi setelah dibuka mahasiswa tetap belum bisa mengubah KRS.
-                        </p>
-                        <div v-if="props.bolehKelola" class="mt-4">
-                            <Button variant="outline" size="sm" :disabled="memproses" @click="bukaKunciKrs">Buka Kunci KRS</Button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="judul-bagian">KRS {{ props.kunciKrs.tahun_akademik }}</h2>
+                            <span
+                                v-if="props.kunciKrs.verifikasi && props.kunciKrs.status"
+                                class="rounded-full px-2 py-0.5 text-xs font-medium"
+                                :class="STATUS_KRS[props.kunciKrs.status].kelas"
+                                >{{ STATUS_KRS[props.kunciKrs.status].label }}</span
+                            >
                         </div>
+                        <p class="mt-2 text-sm">
+                            <template v-if="!props.kunciKrs.status">KRS belum disimpan dan periode KRS sudah berakhir.</template>
+                            <template v-else-if="!props.kunciKrs.terkunci">
+                                Kunci KRS sedang dibuka sampai {{ formatTanggal(props.kunciKrs.batas_revisi, false) }}.
+                            </template>
+                            <template v-else>
+                                KRS terkunci<template v-if="props.kunciKrs.disimpan_pada">
+                                    (disimpan {{ formatTanggal(props.kunciKrs.disimpan_pada, false) }})</template
+                                >.
+                            </template>
+                            <template v-if="props.kunciKrs.terkunci">Buka kuncinya bila mahasiswa perlu memperbaiki pilihan kelas sendiri.</template>
+                        </p>
+                        <p v-if="props.kunciKrs.status === 'perlu_revisi' && props.kunciKrs.catatan_revisi" class="teks-bantu mt-1">
+                            Catatan: {{ props.kunciKrs.catatan_revisi }}
+                        </p>
+                        <div v-if="props.bolehKelola && props.kunciKrs.terkunci" class="mt-4">
+                            <Button variant="outline" size="sm" :disabled="memproses" @click="bukaKunciOpen = true">Buka Kunci KRS</Button>
+                        </div>
+                        <DialogBukaKunciKrs
+                            v-model:open="bukaKunciOpen"
+                            judul="Buka Kunci KRS"
+                            :nama="props.user.name"
+                            :url="route('admin.users.mahasiswa.buka-kunci-krs', props.user.id)"
+                            metode="delete"
+                            :masa-revisi-berjalan="props.kunciKrs.masa_revisi_berjalan"
+                            :batas-revisi="props.kunciKrs.batas_revisi"
+                        />
                     </section>
 
                     <!-- Ayah & Ibu — 2-up on desktop -->

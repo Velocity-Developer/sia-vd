@@ -1,12 +1,19 @@
 @extends('pdf.layout')
 
 @php($unitKop = $mahasiswa->prodi?->unitKop())
+@php($verifikasi = \App\Models\KrsSemester::verifikasiAktif())
 
 @section('judul-berkas', 'KRS '.$mahasiswa->nim.' '.$tahunAkademik->tahun.' '.$tahunAkademik->semester)
 
 @section('isi')
     <p class="judul">Kartu Rencana Studi</p>
     <p class="subjudul">Tahun Akademik {{ $tahunAkademik->tahun }} Semester {{ $tahunAkademik->semester }}</p>
+    @if ($verifikasi && $kunci?->status !== \App\Models\KrsSemester::DISETUJUI)
+        {{-- KRS yang belum final tetap bisa dicetak, tetapi jelas ditandai agar tidak dipakai sebagai KRS sah. --}}
+        <p style="margin: 6px 0 10px; padding: 5px 8px; border: 1.5px solid #b91c1c; color: #b91c1c; text-align: center; font-weight: bold; letter-spacing: 1px;">
+            BELUM DISETUJUI &mdash; KRS INI MASIH DAPAT BERUBAH
+        </p>
+    @endif
 
     <table class="identitas">
         <tr>
@@ -67,7 +74,12 @@
 
     <p class="catatan">
         Status KRS:
-        <strong>{{ $disimpanPada ? 'Disimpan dan dikunci pada '.$disimpanPada->translatedFormat('d F Y, H.i').' '.\App\Models\PengaturanInstitusi::singkatanZona() : 'Belum disimpan (masih dapat berubah)' }}</strong>.
+        <strong>{{ match ($kunci?->status) {
+            \App\Models\KrsSemester::DISETUJUI => ($verifikasi ? 'Disetujui' : 'Disimpan dan dikunci').(($waktu = $kunci->diverifikasi_pada ?? $kunci->disimpan_pada) ? ' pada '.$waktu->translatedFormat('d F Y, H.i').' '.\App\Models\PengaturanInstitusi::singkatanZona() : ''),
+            \App\Models\KrsSemester::DIAJUKAN => 'Diajukan, menunggu verifikasi (masih dapat berubah)',
+            \App\Models\KrsSemester::PERLU_REVISI => 'Perlu revisi (masih dapat berubah)',
+            default => 'Belum disimpan (masih dapat berubah)',
+        } }}</strong>.
         KRS ini sah setelah ditandatangani Dosen Pembimbing Akademik dan diketahui Ketua Program Studi.
     </p>
 

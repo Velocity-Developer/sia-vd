@@ -15,6 +15,7 @@ import {
     Briefcase,
     CalendarDays,
     CalendarRange,
+    ClipboardCheck,
     ClipboardList,
     Database,
     DoorOpen,
@@ -93,6 +94,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 icon: Inbox,
                 items: [
                     { title: 'Info Kuliah', routeName: 'admin.info-kuliah.index', icon: FileText, permission: 'admin.info-kuliah' },
+                    { title: 'Verifikasi KRS', routeName: 'admin.verifikasi-krs.index', icon: ClipboardCheck, permission: 'admin.verifikasi-krs' },
                     {
                         title: 'Pindah Kelas',
                         routeName: 'admin.pindah-kelas.index',

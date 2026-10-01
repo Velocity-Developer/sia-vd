@@ -270,14 +270,23 @@ flowchart TD
     end
 
     subgraph Simpan["Simpan KRS"]
-        C1["Mahasiswa klik Simpan KRS"] --> C2{"Periode berjalan, belum pernah<br/>disimpan, minimal 1 kelas?"}
+        C1["Mahasiswa klik Simpan / Ajukan KRS"] --> C2{"KRS bisa diubah<br/>(belum disimpan & periode berjalan,<br/>atau perlu_revisi & masa revisi),<br/>minimal 1 kelas?"}
         C2 -- Tidak --> C3["Ditolak"]
         C2 -- Ya --> C4{"SKS diambil di bawah batas<br/>dan belum konfirmasi?"}
         C4 -- Ya --> C5["Minta konfirmasi"] --> C1
-        C4 -- Tidak --> C6["Catat krs_semester<br/>KRS terkunci untuk mahasiswa"]
+        C4 -- Tidak --> V0{"Verifikasi KRS aktif?"}
+        V0 -- Tidak --> C6["krs_semester: disetujui<br/>KRS terkunci final"]
+        V0 -- Ya --> V1["krs_semester: diajukan<br/>terkunci menunggu admin"]
+        V1 --> V2{"Admin: Verifikasi KRS"}
+        V2 -- Setujui --> C6
+        V2 -- "Kembalikan + catatan" --> V3["perlu_revisi"]
+        V3 --> V4{"Masih masa revisi<br/>atau sebelum Dibuka sampai?"}
+        V4 -- Ya --> C1
+        V4 -- Tidak --> V5["Terkunci: hubungi admin/prodi"]
+        V1 -.- V6["Masa revisi habis: tetap diajukan,<br/>admin masih bisa menyetujui"]
         C6 --> C7{"Perlu diubah?"}
         C7 -- "Ganti kelas paralel" --> C8["Pindah kelas (diagram 26)"]
-        C7 -- "Salah ambil mata kuliah" --> C9["Admin: Buka kunci KRS<br/>hapus krs_semester"]
+        C7 -- "Salah ambil mata kuliah" --> C9["Admin: Buka kunci KRS<br/>perlu_revisi + Dibuka sampai"]
         C9 --> C1
     end
 ```

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-const props = defineProps<{ tahunAkademik: Record<string, any> | null; kelasBerpertemuan?: number }>();
+const props = defineProps<{ tahunAkademik: Record<string, any> | null; kelasBerpertemuan?: number; verifikasiKrs?: boolean }>();
 const title = `${props.tahunAkademik ? 'Edit' : 'Tambah'} Tahun Akademik`;
 // Batas bayar remidi hanya ada selama fitur keuangan aktif; bila mati, remidi dijadwalkan sesudah batas input nilai.
 const keuangan = useFitur().aktif('keuangan');
@@ -18,6 +18,7 @@ const form = useForm({
     tanggal_akhir: props.tahunAkademik?.tanggal_akhir?.slice(0, 10) ?? '',
     tanggal_krs_awal: props.tahunAkademik?.tanggal_krs_awal?.slice(0, 10) ?? '',
     tanggal_krs_akhir: props.tahunAkademik?.tanggal_krs_akhir?.slice(0, 10) ?? '',
+    tanggal_revisi_krs_akhir: props.tahunAkademik?.tanggal_revisi_krs_akhir?.slice(0, 10) ?? '',
     tanggal_cuti_awal: props.tahunAkademik?.tanggal_cuti_awal?.slice(0, 10) ?? '',
     tanggal_cuti_akhir: props.tahunAkademik?.tanggal_cuti_akhir?.slice(0, 10) ?? '',
     batas_input_nilai: props.tahunAkademik?.batas_input_nilai?.slice(0, 10) ?? '',
@@ -78,6 +79,16 @@ const submit = () =>
                             <DatePicker id="tanggal_krs_akhir" v-model="form.tanggal_krs_akhir" placeholder="Pilih tanggal KRS akhir" />
                             <InputError :message="form.errors.tanggal_krs_akhir" />
                         </div>
+                        <div v-if="props.verifikasiKrs" class="grid content-start gap-2">
+                            <Label for="tanggal_revisi_krs_akhir" class="label-isian">Akhir Masa Revisi KRS</Label>
+                            <DatePicker id="tanggal_revisi_krs_akhir" v-model="form.tanggal_revisi_krs_akhir" placeholder="Pilih akhir masa revisi" />
+                            <p class="teks-bantu">
+                                KRS yang dikembalikan untuk revisi bisa diubah mahasiswa sampai tanggal ini. Sesudahnya semua KRS terkunci. Kosongkan
+                                bila sama dengan tanggal KRS akhir.
+                            </p>
+                            <InputError :message="form.errors.tanggal_revisi_krs_akhir" />
+                        </div>
+                        <div v-if="props.verifikasiKrs" class="hidden sm:block" aria-hidden="true" />
                         <div class="grid content-start gap-2">
                             <Label for="tanggal_cuti_awal" class="label-isian">Buka Pengajuan Cuti</Label>
                             <DatePicker id="tanggal_cuti_awal" v-model="form.tanggal_cuti_awal" placeholder="Pilih tanggal buka" />

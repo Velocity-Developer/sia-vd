@@ -6,6 +6,7 @@ use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
 use App\Models\KelasKuliah;
+use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\PengajuanAkademik;
 use App\Models\PengajuanPindahKelas;
@@ -34,7 +35,7 @@ use Inertia\Response;
 class DashboardController extends Controller
 {
     /** Izin yang menghasilkan butir "Perlu ditindaklanjuti"; tanpa satu pun, bagian itu disembunyikan. */
-    private const IZIN_TINDAKAN = ['admin.tagihan', 'admin.pengajuan-akademik', 'admin.pengajuan-cuti', 'admin.ujian', 'admin.pindah-kelas'];
+    private const IZIN_TINDAKAN = ['admin.tagihan', 'admin.verifikasi-krs', 'admin.pengajuan-akademik', 'admin.pengajuan-cuti', 'admin.ujian', 'admin.pindah-kelas'];
 
     private const IZIN_MASA_KRS = ['admin.tahun-akademik', 'admin.kelas-kuliah', 'admin.users.mahasiswa'];
 
@@ -170,6 +171,12 @@ class DashboardController extends Controller
                         route('admin.tagihan.index', ['tahun_akademik_id' => $tahunAkademik->id, 'status' => 'belum_terbit']), false));
                 }
             }
+        }
+
+        if ($user->hasPermission('admin.verifikasi-krs')) {
+            $this->perTahun(KrsSemester::query()->where('status', KrsSemester::DIAJUKAN), 'tahun_akademik_id')
+                ->each(fn (int $jumlah, int|string $taId) => $daftar->push($this->butir('KRS menunggu verifikasi', $label($taId), $jumlah,
+                    route('admin.verifikasi-krs.index', ['tahun_akademik_id' => $taId]), true)));
         }
 
         if ($user->hasPermission('admin.pengajuan-akademik')) {

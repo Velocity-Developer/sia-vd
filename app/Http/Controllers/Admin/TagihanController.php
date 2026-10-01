@@ -259,13 +259,15 @@ class TagihanController extends Controller
     {
         $data = $request->validate([
             'tahun_akademik_id' => ['required', 'integer', Rule::exists('tahun_akademik', 'id')],
-        ], attributes: ['tahun_akademik_id' => 'Tahun akademik']);
+            ...KrsSemester::ATURAN_BUKA_KUNCI,
+        ], attributes: ['tahun_akademik_id' => 'Tahun akademik', ...KrsSemester::ATRIBUT_BUKA_KUNCI]);
+        $tahunAkademik = TahunAkademik::findOrFail($data['tahun_akademik_id']);
 
-        if (! KrsSemester::bukaKunci($mahasiswa->id, (int) $data['tahun_akademik_id'])) {
-            return back()->with('error', 'KRS mahasiswa ini memang belum dikunci.');
+        if (($galat = KrsSemester::bukaKunci($mahasiswa->id, $tahunAkademik, $data['catatan'] ?? null, $data['dibuka_sampai'] ?? null, $request->user()->id)) !== null) {
+            return back()->with('error', $galat);
         }
 
-        return back()->with('success', 'Kunci KRS '.$mahasiswa->user?->name.' dibuka. Mahasiswa bisa mengubah KRS selama periode masih berjalan.');
+        return back()->with('success', 'Kunci KRS '.$mahasiswa->user?->name.' dibuka. '.KrsSemester::pesanDibuka($data['dibuka_sampai'] ?? null, $tahunAkademik));
     }
 
     /**
@@ -364,7 +366,7 @@ class TagihanController extends Controller
             ->where('status', 'Aktif')
             ->with(['user:id,name', 'prodi:id,nama_prodi,jenjang'])
             ->with(['tagihan' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)->with(['editor:id,name', 'verifikator:id,name'])])
-            ->with(['krsSemester' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)])
+            ->with(['krsSemester' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)->whereIn('status', KrsSemester::STATUS_TERKUNCI)])
             ->whereHas('user');
     }
 

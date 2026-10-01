@@ -91,7 +91,7 @@ it('signs the transcript, study plan, and exam card with the advisor, head of pr
             'krs' => $profil->krs()->with('kelasKuliah.mataKuliah')->get(),
             'ipsSebelumnya' => null,
             'maksSks' => 20,
-            'disimpanPada' => null,
+            'kunci' => null,
         ])->render(),
         view('pdf.kartu-ujian', kopPdf() + [
             'mahasiswa' => $profil,

@@ -27,6 +27,7 @@ class PengaturanAkademikController extends Controller
         return Inertia::render('PengaturanSistem/Akademik', [
             'maksSksTanpaIps' => $pengaturan->maks_sks_tanpa_ips,
             'kunciKrsAktif' => $pengaturan->kunci_krs_aktif,
+            'verifikasiKrsAktif' => $pengaturan->verifikasi_krs_aktif,
             'hurufMaksRemidi' => $pengaturan->huruf_maks_remidi,
             'susulan' => $pengaturan->only(['batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari']),
             'minSksPendadaran' => $pengaturan->min_sks_pendadaran,
@@ -57,6 +58,26 @@ class PengaturanAkademikController extends Controller
         return back()->with('success', $data['kunci_krs_aktif']
             ? 'Penguncian KRS dinyalakan: mahasiswa dengan tagihan belum lunas tidak bisa mengisi KRS.'
             : 'Penguncian KRS dimatikan.');
+    }
+
+    /**
+     * Nyalakan/matikan verifikasi KRS: KRS yang disimpan mahasiswa menunggu persetujuan admin dan bisa
+     * dikembalikan untuk revisi sampai akhir masa revisi di Tahun Akademik.
+     */
+    public function updateVerifikasiKrs(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'verifikasi_krs_aktif' => ['required', 'boolean'],
+        ], attributes: ['verifikasi_krs_aktif' => 'Verifikasi KRS']);
+
+        PengaturanAkademik::current()->update([
+            'verifikasi_krs_aktif' => $data['verifikasi_krs_aktif'],
+            'updated_by' => $request->user()->id,
+        ]);
+
+        return back()->with('success', $data['verifikasi_krs_aktif']
+            ? 'Verifikasi KRS dinyalakan: KRS yang disimpan mahasiswa menunggu persetujuan admin.'
+            : 'Verifikasi KRS dimatikan: KRS yang disimpan mahasiswa langsung final.');
     }
 
     /**

@@ -145,7 +145,7 @@ it('menganggap KRS terkunci setelah periode berakhir walau belum disimpan', func
 
     $kelas->tahunAkademik->update(['tanggal_krs_awal' => now()->subDays(10), 'tanggal_krs_akhir' => now()->subDay()]);
 
-    expect(KrsSemester::terkunci($mahasiswa->mahasiswaProfile->id, $kelas->tahunAkademik->fresh()))->toBeTrue();
+    expect(KrsSemester::bolehDiubah($mahasiswa->mahasiswaProfile->id, $kelas->tahunAkademik->fresh()))->toBeFalse();
 });
 
 it('memungkinkan admin membuka kunci KRS mahasiswa', function () {
@@ -158,7 +158,7 @@ it('memungkinkan admin membuka kunci KRS mahasiswa', function () {
         'tahun_akademik_id' => $kelas->tahun_akademik_id,
     ])->assertSessionHas('success');
 
-    expect(KrsSemester::count())->toBe(0);
+    expect(KrsSemester::query()->sole()->status)->toBe(KrsSemester::PERLU_REVISI);
 
     $krs = Krs::query()->firstOrFail();
     $this->actingAs($mahasiswa)->delete(route('mahasiswa.krs.destroy', $krs))->assertSessionHas('krs_success');
@@ -180,15 +180,15 @@ it('memungkinkan admin membuka kunci KRS dari detail mahasiswa walau fitur keuan
     $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.simpan'), ['konfirmasi' => true]);
 
     $this->actingAs($admin)->get(route('admin.users.mahasiswa.show', $mahasiswa))
-        ->assertInertia(fn ($page) => $page->where('kunciKrs.tahun_akademik_id', $kelas->tahun_akademik_id)->where('kunciKrs.periode_berjalan', true));
+        ->assertInertia(fn ($page) => $page->where('kunciKrs.tahun_akademik_id', $kelas->tahun_akademik_id)->where('kunciKrs.masa_revisi_berjalan', true)->where('kunciKrs.terkunci', true));
     $this->actingAs($admin)->delete(route('admin.tagihan.buka-kunci-krs', $mahasiswa->mahasiswaProfile->id), [
         'tahun_akademik_id' => $kelas->tahun_akademik_id,
     ])->assertNotFound();
 
     $this->actingAs($admin)->delete(route('admin.users.mahasiswa.buka-kunci-krs', $mahasiswa))->assertSessionHas('success');
 
-    expect(KrsSemester::count())->toBe(0);
-    $this->actingAs($admin)->get(route('admin.users.mahasiswa.show', $mahasiswa))->assertInertia(fn ($page) => $page->where('kunciKrs', null));
+    expect(KrsSemester::query()->sole()->status)->toBe(KrsSemester::PERLU_REVISI);
+    $this->actingAs($admin)->get(route('admin.users.mahasiswa.show', $mahasiswa))->assertInertia(fn ($page) => $page->where('kunciKrs.terkunci', false));
     $this->actingAs($admin)->delete(route('admin.users.mahasiswa.buka-kunci-krs', $mahasiswa))->assertSessionHas('error');
     $this->actingAs($mahasiswa)->delete(route('mahasiswa.krs.destroy', Krs::query()->firstOrFail()))->assertSessionHas('krs_success');
 });
