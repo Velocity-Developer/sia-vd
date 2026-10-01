@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DispensasiUjian;
 use App\Models\DosenProfile;
 use App\Models\Fakultas;
+use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\PengajuanIzin;
 use App\Models\PresensiMahasiswa;
@@ -97,6 +98,16 @@ class UserController extends Controller
             $extra['fakultas_kode'] = $user->mahasiswaProfile->prodi?->fakultas?->kode_fakultas;
             $extra['semester'] = $user->mahasiswaProfile->semesterPada(TahunAkademik::aktif());
         }
+        $kunciKrs = null;
+        if ($role === UserType::Mahasiswa && $user->mahasiswaProfile && ($tahunAktif = TahunAkademik::aktif())) {
+            $kunci = KrsSemester::query()->where('mahasiswa_id', $user->mahasiswaProfile->id)->where('tahun_akademik_id', $tahunAktif->id)->first();
+            $kunciKrs = $kunci === null ? null : [
+                'tahun_akademik_id' => $tahunAktif->id,
+                'tahun_akademik' => $tahunAktif->tahun.' '.$tahunAktif->semester,
+                'disimpan_pada' => $kunci->disimpan_pada?->toIso8601String(),
+                'periode_berjalan' => $tahunAktif->periodeKrsAktif(),
+            ];
+        }
         if ($role === UserType::Dosen && $user->dosenProfile) {
             $extra['prodi_name'] = $user->dosenProfile->prodi?->nama_prodi;
             $extra['prodi_jenjang'] = $user->dosenProfile->prodi?->jenjang;
@@ -109,7 +120,25 @@ class UserController extends Controller
             'title' => 'Detail '.ucfirst($type).' - '.$user->name, 'type' => $type,
             'user' => $user->only(['id', 'name', 'username', 'email', 'email_verified_at']) + ['role_name' => $user->role?->name] + ($profile ?? []) + $extra,
             'bolehKelola' => request()->user()->canManage($user),
+            'kunciKrs' => $kunciKrs,
         ]);
+    }
+
+    /**
+     * Buka kunci KRS mahasiswa di tahun akademik aktif agar ia bisa memperbaiki pilihan kelasnya sendiri.
+     * Tidak bergantung pada fitur keuangan (tombol yang sama di menu Tagihan hanya ada bila keuangan aktif).
+     */
+    public function bukaKunciKrs(User $user): RedirectResponse
+    {
+        abort_unless($user->type() === UserType::Mahasiswa && $user->mahasiswaProfile, 404);
+        abort_unless(request()->user()->canManage($user), 403, 'Anda tidak dapat mengubah akun dengan hak akses lebih tinggi.');
+        $tahunAktif = TahunAkademik::aktif();
+
+        if ($tahunAktif === null || ! KrsSemester::bukaKunci($user->mahasiswaProfile->id, $tahunAktif->id)) {
+            return back()->with('error', 'KRS mahasiswa ini di tahun akademik aktif memang belum dikunci.');
+        }
+
+        return back()->with('success', 'Kunci KRS '.$user->name.' dibuka. Mahasiswa bisa mengubah KRS selama periode masih berjalan.');
     }
 
     public function edit(string $type, User $user): Response

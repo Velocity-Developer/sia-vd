@@ -446,7 +446,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 3. Sistem mencatat baris `krs_semester` (waktu simpan). Sejak itu mahasiswa tidak bisa lagi menambah atau membatalkan kelas sendiri.
 4. Jalan keluar setelah KRS terkunci:
    - **pindah kelas** ([bagian 16](#16-pindah-kelas));
-   - **admin membuka kunci KRS** dari menu Tagihan Mahasiswa, yang menghapus baris `krs_semester`. Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
+   - **admin membuka kunci KRS** dari **Pengguna → Mahasiswa → Detail** (kartu "KRS <tahun akademik aktif>", izin `admin.users.mahasiswa`, tidak bergantung fitur keuangan) atau dari menu Tagihan Mahasiswa bila keuangan aktif. Keduanya menghapus baris `krs_semester` (`KrsSemester::bukaKunci`). Mahasiswa lalu bisa mengubah KRS selama periode masih berjalan.
 
 ### 7.5 Unduh KRS (PDF)
 

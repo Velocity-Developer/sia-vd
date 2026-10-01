@@ -261,12 +261,7 @@ class TagihanController extends Controller
             'tahun_akademik_id' => ['required', 'integer', Rule::exists('tahun_akademik', 'id')],
         ], attributes: ['tahun_akademik_id' => 'Tahun akademik']);
 
-        $dihapus = KrsSemester::query()
-            ->where('mahasiswa_id', $mahasiswa->id)
-            ->where('tahun_akademik_id', $data['tahun_akademik_id'])
-            ->delete();
-
-        if ($dihapus === 0) {
+        if (! KrsSemester::bukaKunci($mahasiswa->id, (int) $data['tahun_akademik_id'])) {
             return back()->with('error', 'KRS mahasiswa ini memang belum dikunci.');
         }
 

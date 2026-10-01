@@ -45,6 +45,18 @@ class KrsSemester extends Model
         return ! $tahunAkademik->periodeKrsAktif();
     }
 
+    /**
+     * Hapus kunci KRS satu mahasiswa di satu semester agar ia bisa mengubah KRS lagi selama periode berjalan.
+     * Mengembalikan false bila KRS itu memang belum dikunci.
+     */
+    public static function bukaKunci(int $mahasiswaId, int $tahunAkademikId): bool
+    {
+        return static::query()
+            ->where('mahasiswa_id', $mahasiswaId)
+            ->where('tahun_akademik_id', $tahunAkademikId)
+            ->delete() > 0;
+    }
+
     public static function tersimpan(int $mahasiswaId, int $tahunAkademikId): bool
     {
         return static::query()

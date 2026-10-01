@@ -172,6 +172,35 @@ it('menolak mahasiswa membuka kunci KRS sendiri', function () {
     ])->assertForbidden();
 });
 
+it('memungkinkan admin membuka kunci KRS dari detail mahasiswa walau fitur keuangan mati', function () {
+    config(['client.fitur.keuangan.default' => false]);
+    [$mahasiswa, $kelas] = kunciKrsSetup();
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelas));
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.simpan'), ['konfirmasi' => true]);
+
+    $this->actingAs($admin)->get(route('admin.users.mahasiswa.show', $mahasiswa))
+        ->assertInertia(fn ($page) => $page->where('kunciKrs.tahun_akademik_id', $kelas->tahun_akademik_id)->where('kunciKrs.periode_berjalan', true));
+    $this->actingAs($admin)->delete(route('admin.tagihan.buka-kunci-krs', $mahasiswa->mahasiswaProfile->id), [
+        'tahun_akademik_id' => $kelas->tahun_akademik_id,
+    ])->assertNotFound();
+
+    $this->actingAs($admin)->delete(route('admin.users.mahasiswa.buka-kunci-krs', $mahasiswa))->assertSessionHas('success');
+
+    expect(KrsSemester::count())->toBe(0);
+    $this->actingAs($admin)->get(route('admin.users.mahasiswa.show', $mahasiswa))->assertInertia(fn ($page) => $page->where('kunciKrs', null));
+    $this->actingAs($admin)->delete(route('admin.users.mahasiswa.buka-kunci-krs', $mahasiswa))->assertSessionHas('error');
+    $this->actingAs($mahasiswa)->delete(route('mahasiswa.krs.destroy', Krs::query()->firstOrFail()))->assertSessionHas('krs_success');
+});
+
+it('menolak membuka kunci KRS lewat detail pengguna yang bukan mahasiswa atau tanpa izin', function () {
+    [$mahasiswa] = kunciKrsSetup();
+    $dosen = User::factory()->dosen()->create();
+
+    $this->actingAs(User::factory()->admin()->create())->delete(route('admin.users.mahasiswa.buka-kunci-krs', $dosen))->assertNotFound();
+    $this->actingAs($mahasiswa)->delete(route('admin.users.mahasiswa.buka-kunci-krs', $mahasiswa))->assertForbidden();
+});
+
 it('menyimpan rincian tagihan yang diketik admin dan menghitung ulang totalnya', function () {
     [$mahasiswa, $kelas] = kunciKrsSetup();
     $admin = User::factory()->admin()->create();

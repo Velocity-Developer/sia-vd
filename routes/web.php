@@ -168,6 +168,9 @@ Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function (
                 ->name('admin.users.'.$type.'.tandai-terverifikasi');
         });
     }
+    Route::delete('mahasiswa/{user}/kunci-krs', [UserController::class, 'bukaKunciKrs'])
+        ->middleware(['can:admin.users.mahasiswa', 'password.confirm'])
+        ->name('admin.users.mahasiswa.buka-kunci-krs');
 });
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas, $ruteMenuKonten): void {
