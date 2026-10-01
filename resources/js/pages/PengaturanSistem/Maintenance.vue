@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import DateTimePicker from '@/components/DateTimePicker.vue';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import PengaturanSistemLayout from '@/layouts/PengaturanSistemLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { LoaderCircle } from 'lucide-vue-next';
+import { LoaderCircle, X } from 'lucide-vue-next';
 
 interface Pengaturan {
     aktif: boolean;
@@ -26,6 +26,9 @@ const form = useForm({
     pesan: props.pengaturan.pesan ?? '',
     perkiraan_selesai: props.pengaturan.perkiraan_selesai ?? '',
 });
+
+const sekarang = new Date();
+const hariIni = `${sekarang.getFullYear()}-${String(sekarang.getMonth() + 1).padStart(2, '0')}-${String(sekarang.getDate()).padStart(2, '0')}`;
 
 const simpan = () =>
     form
@@ -84,8 +87,23 @@ const simpan = () =>
             </div>
 
             <div class="grid gap-2 sm:max-w-xs">
-                <Label class="label-isian" for="perkiraan_selesai">Perkiraan Selesai</Label>
-                <Input id="perkiraan_selesai" v-model="form.perkiraan_selesai" type="datetime-local" />
+                <Label class="label-isian">Perkiraan Selesai</Label>
+                <div class="flex items-center gap-2">
+                    <div class="min-w-0 flex-1">
+                        <DateTimePicker v-model="form.perkiraan_selesai" :min-date="hariIni" placeholder="Pilih tanggal & jam" />
+                    </div>
+                    <Button
+                        v-if="form.perkiraan_selesai"
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Kosongkan perkiraan selesai"
+                        title="Kosongkan"
+                        @click="form.perkiraan_selesai = ''"
+                    >
+                        <X />
+                    </Button>
+                </div>
                 <p class="teks-bantu">Opsional. Hanya informasi; mode maintenance tidak mati otomatis.</p>
                 <InputError :message="form.errors.perkiraan_selesai" />
             </div>
