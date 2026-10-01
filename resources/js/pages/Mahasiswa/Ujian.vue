@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
 import { JENIS_UJIAN, type JenisUjian, type ModeUjian } from '@/lib/ujian';
-import { Head, Link, router } from '@inertiajs/vue3';
-import { Download } from 'lucide-vue-next';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Download, Lock } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Syarat = { persen: number | null; memenuhi: boolean | null; dispensasi: { alasan: string } | null } | null;
@@ -27,7 +27,14 @@ type Ujian = {
     terdaftar_susulan: boolean;
 };
 
-const props = defineProps<{ ujians: Ujian[]; tahunAkademikId: number | null; tahunAkademikOptions: { id: number; name: string }[] }>();
+const props = defineProps<{
+    ujians: Ujian[];
+    /** jenis => alasan kartu tidak bisa dicetak (syarat kehadiran), null bila boleh. */
+    kartuTerkunci: Partial<Record<JenisUjian, string | null>>;
+    tahunAkademikId: number | null;
+    tahunAkademikOptions: { id: number; name: string }[];
+}>();
+const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const tahun = ref<number | string>(props.tahunAkademikId ?? '');
 const gantiTahun = () => router.get(route('mahasiswa.ujian'), { tahun_akademik_id: tahun.value }, { preserveScroll: true });
 const perJenis = computed(() =>
@@ -55,13 +62,19 @@ const urlKartu = (jenis: JenisUjian) => route('mahasiswa.ujian.kartu', { jenis, 
                     </SelectFilter>
                 </div>
 
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
+
                 <section v-for="g in perJenis" :key="g.jenis" class="flex flex-col gap-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <h2 class="judul-bagian">{{ JENIS_UJIAN[g.jenis] }}</h2>
-                        <Button as-child variant="outline" size="sm">
+                        <Button v-if="props.kartuTerkunci[g.jenis]" variant="outline" size="sm" disabled>
+                            <Lock class="size-4" /> Kartu {{ JENIS_UJIAN[g.jenis] }} (PDF)
+                        </Button>
+                        <Button v-else as-child variant="outline" size="sm">
                             <a :href="urlKartu(g.jenis)"><Download class="size-4" /> Kartu {{ JENIS_UJIAN[g.jenis] }} (PDF)</a>
                         </Button>
                     </div>
+                    <div v-if="props.kartuTerkunci[g.jenis]" class="alert-gagal" role="alert">{{ props.kartuTerkunci[g.jenis] }}</div>
                     <div v-for="u in g.ujians" :key="u.id" class="kartu p-4 sm:p-6">
                         <div class="flex flex-wrap items-start justify-between gap-2">
                             <div>

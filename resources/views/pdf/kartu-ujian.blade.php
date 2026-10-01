@@ -64,7 +64,7 @@
             <li>Kartu ini wajib dibawa dan ditunjukkan kepada pengawas pada setiap ujian tatap muka.</li>
             <li>Ujian online dikerjakan melalui menu Jadwal Ujian di SIA sesuai waktu yang tertera.</li>
             @if ($syaratAktif)
-                <li>Mahasiswa yang tidak memenuhi syarat kehadiran tidak dapat mengikuti ujian kecuali mendapat dispensasi.</li>
+                <li>Kartu ini hanya diterbitkan bagi mahasiswa yang memenuhi syarat kehadiran minimal atau mendapat dispensasi.</li>
             @endif
         </ol>
     </div>

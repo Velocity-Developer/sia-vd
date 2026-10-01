@@ -595,6 +595,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 - **Dampaknya:**
   - ujian **online** memblokir mahasiswa yang tidak memenuhi syarat (`Ujian::bolehIkut`);
   - ujian **tatap muka** hanya diberi penanda di daftar hadir dan PDF peserta ujian, tanpa memblokir.
+  - **kartu ujian** satu jenis (UTS, UAS, susulan) tidak bisa dicetak selama ada mata kuliah di kartu itu yang tidak memenuhi syarat; tombolnya terkunci dengan daftar mata kuliah + persentasenya, dan rute PDF mengalihkan kembali dengan pesan galat (`UjianController::alasanKartuTerkunci`). Remidi dan UTS/UAS yang disusulkan tidak dihitung. Dispensasi membuka kartu.
 
 ### 9.5 Laporan dan peringatan
 
@@ -655,7 +656,7 @@ Pemeriksaan dilakukan berurutan. Kegagalan pertama menghentikan proses.
 - **Mode `online_soal`:** mulai hanya bila ujian `terbit`, sedang berlangsung, dan mahasiswa boleh ikut. Soal dan opsi diacak per mahasiswa.
 - **Kehadiran otomatis:** mengumpulkan berkas atau memulai lembar soal otomatis mencatat **hadir** (metode `ujian`) di pertemuan UTS/UAS.
   - Ujian tatap muka tidak mencatat kehadiran otomatis.
-- **Kartu ujian (PDF)** per jenis berisi jadwal ujian terbit, kolom paraf pengawas, dan kolom syarat kehadiran bila syarat aktif, ditutup blok tanda tangan dokumen mahasiswa ([17.6](#176-dokumen-pdf)).
+- **Kartu ujian (PDF)** per jenis berisi jadwal ujian terbit, kolom paraf pengawas, dan kolom syarat kehadiran bila syarat aktif (kartu terkunci bila ada mata kuliah tidak memenuhi syarat, lihat [9.4](#94-syarat-kehadiran-ujian-dan-dispensasi)), ditutup blok tanda tangan dokumen mahasiswa ([17.6](#176-dokumen-pdf)).
 
 ### 10.4 Penilaian ujian
 

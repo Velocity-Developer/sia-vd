@@ -16,6 +16,8 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   dan/atau mahasiswa dengan pesan dan perkiraan selesai. Admin/karyawan tetap bisa masuk dan melihat spanduk pengingat.
 
 ### Diubah
+- Saat **syarat kehadiran ujian** aktif, kartu ujian (UTS/UAS/susulan) tidak bisa dicetak selama ada mata kuliah yang
+  kehadirannya di bawah batas tanpa dispensasi. Sebelumnya kartu tetap tercetak dengan tanda "Tidak memenuhi".
 - README dilengkapi **Alur pemakaian dari awal** (persiapan, siklus per semester, akhir studi).
 - Isian **Program Studi** pada form dosen kini opsional, sehingga instalasi baru bisa membuat dosen calon
   dekan/kaprodi sebelum fakultas dan program studi ada (sebelumnya buntu tanpa tinker).

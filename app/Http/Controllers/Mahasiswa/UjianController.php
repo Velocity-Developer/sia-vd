@@ -44,8 +44,12 @@ class UjianController extends Controller
             ?? $tahunAkademiks->firstWhere('status', true)
             ?? $tahunAkademiks->first();
 
+        $ujians = $this->daftarUjian($mahasiswa, $tahun?->id);
+
         return Inertia::render('Mahasiswa/Ujian', [
-            'ujians' => $this->daftarUjian($mahasiswa, $tahun?->id),
+            'ujians' => $ujians,
+            // jenis => alasan kartu tidak bisa dicetak (null = boleh dicetak).
+            'kartuTerkunci' => $ujians->groupBy('jenis')->map(fn (Collection $u): ?string => $this->alasanKartuTerkunci($u)),
             'tahunAkademikId' => $tahun?->id,
             'tahunAkademikOptions' => $tahunAkademiks->map(fn (TahunAkademik $t): array => ['id' => $t->id, 'name' => $t->tahun.' '.$t->semester]),
         ]);
@@ -167,7 +171,7 @@ class UjianController extends Controller
     /**
      * Kartu ujian (PDF) untuk UTS atau UAS di tahun akademik yang dipilih.
      */
-    public function kartu(Request $request): HttpResponse
+    public function kartu(Request $request): HttpResponse|RedirectResponse
     {
         $mahasiswa = $this->mahasiswa($request)->muatPengesahan();
         $jenis = in_array($request->query('jenis'), Ujian::SEMUA_JENIS, true) ? $request->query('jenis') : Pertemuan::UTS;
@@ -176,6 +180,10 @@ class UjianController extends Controller
 
         $ujians = $this->daftarUjian($mahasiswa, $tahun->id)->where('jenis', $jenis)->values();
         abort_if($ujians->isEmpty(), 404, 'Belum ada jadwal ujian jenis ini yang terbit.');
+
+        if (($alasan = $this->alasanKartuTerkunci($ujians)) !== null) {
+            return redirect()->route('mahasiswa.ujian', ['tahun_akademik_id' => $tahun->id])->with('error', $alasan);
+        }
         $institusi = PengaturanInstitusi::current();
 
         return Pdf::loadView('pdf.kartu-ujian', [
@@ -188,6 +196,31 @@ class UjianController extends Controller
             'ujians' => $ujians,
             'syaratAktif' => $jenis !== Ujian::REMIDI && PengaturanAkademik::current()->syarat_ujian_aktif,
         ])->download('kartu-'.$jenis.'-'.$mahasiswa->nim.'-'.Str::slug($tahun->tahun.'-'.$tahun->semester).'.pdf');
+    }
+
+    /**
+     * Saat syarat kehadiran ujian diberlakukan, kartu satu jenis ujian tidak bisa dicetak selama ada mata
+     * kuliah di kartu itu yang belum memenuhi syarat (tanpa dispensasi). Remidi tidak bersyarat kehadiran,
+     * dan UTS/UAS yang disusulkan tidak dihitung karena mahasiswa mengikuti jadwal susulannya.
+     *
+     * @param  Collection<int, array<string, mixed>>  $ujians  ujian satu jenis dari daftarUjian()
+     */
+    private function alasanKartuTerkunci(Collection $ujians): ?string
+    {
+        $kurang = $ujians
+            ->reject(fn (array $u): bool => $u['jenis'] === Ujian::REMIDI || $u['terdaftar_susulan'])
+            ->filter(fn (array $u): bool => ($u['syarat']['memenuhi'] ?? null) === false)
+            ->map(fn (array $u): string => $u['nama_matkul'].($u['syarat']['persen'] !== null ? ' ('.$u['syarat']['persen'].'%)' : ''))
+            ->unique()
+            ->values();
+
+        if ($kurang->isEmpty()) {
+            return null;
+        }
+
+        return 'Kartu ujian belum bisa dicetak karena kehadiran belum memenuhi syarat minimal '
+            .PengaturanAkademik::current()->min_kehadiran_ujian.'% di: '.$kurang->join(', ')
+            .'. Hubungi bagian akademik atau kaprodi untuk dispensasi.';
     }
 
     /**

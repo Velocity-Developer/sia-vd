@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\DispensasiUjian;
 use App\Models\Jadwal;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
@@ -148,6 +149,37 @@ it('shows exam eligibility on the student schedule when the rule is on', functio
     $this->app['auth']->forgetGuards();
     $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian'))
         ->assertInertia(fn ($page) => $page->where('ujians.0.syarat.memenuhi', false)->where('ujians.0.syarat.persen', 0));
+});
+
+it('blocks the exam card while a course is below the attendance rule, unless dispensed', function () {
+    [$kelas, $mahasiswa] = kelasUjian(1);
+    PengaturanAkademik::current()->update(['syarat_ujian_aktif' => true]);
+    $id = $mahasiswa[0]->mahasiswaProfile->id;
+    $admin = User::factory()->admin()->create();
+    $p = Pertemuan::where('kelas_id', $kelas->id)->where('pertemuan_ke', 1)->first();
+    $this->actingAs($admin)->post(route('admin.presensi.pertemuan.mulai', $p));
+    $this->actingAs($admin)->put(route('admin.presensi.pertemuan.mahasiswa', $p), ['presensi' => [['mahasiswa_id' => $id, 'status' => 'alpa']]]);
+    $this->actingAs($admin)->post(route('admin.presensi.pertemuan.selesai', $p), ['topik' => 'x']);
+    Ujian::create([...isianUjian(), 'kelas_id' => $kelas->id, 'jenis' => 'uts', 'status' => 'terbit']);
+    $kartu = route('mahasiswa.ujian.kartu', ['jenis' => 'uts', 'tahun_akademik_id' => $kelas->tahun_akademik_id]);
+
+    $this->flushSession();
+    $this->app['auth']->forgetGuards();
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian'))
+        ->assertInertia(fn ($page) => $page->where('kartuTerkunci.uts', fn ($alasan) => str_contains($alasan, $kelas->mataKuliah->nama_matkul.' (0%)')));
+    $this->actingAs($mahasiswa[0])->get($kartu)
+        ->assertRedirect(route('mahasiswa.ujian', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
+        ->assertSessionHas('error', fn ($pesan) => str_contains($pesan, 'Kartu ujian belum bisa dicetak'));
+
+    // Dispensasi membuka kartu.
+    DispensasiUjian::create(['kelas_id' => $kelas->id, 'mahasiswa_id' => $id, 'jenis' => 'uts', 'alasan' => 'Sakit', 'diberikan_oleh' => $admin->id]);
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian'))->assertInertia(fn ($page) => $page->where('kartuTerkunci.uts', null));
+    $this->actingAs($mahasiswa[0])->get($kartu)->assertOk()->assertHeader('content-type', 'application/pdf');
+
+    // Tanpa syarat kehadiran, kartu selalu bisa dicetak.
+    DispensasiUjian::query()->delete();
+    PengaturanAkademik::current()->update(['syarat_ujian_aktif' => false]);
+    $this->actingAs($mahasiswa[0])->get($kartu)->assertOk()->assertHeader('content-type', 'application/pdf');
 });
 
 it('lets lecturers see exams of their own classes, including drafts', function () {

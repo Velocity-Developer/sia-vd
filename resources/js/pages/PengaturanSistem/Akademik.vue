@@ -467,7 +467,8 @@ const saveNilai = () =>
                     <Checkbox id="syarat_ujian_aktif" v-model="presensiForm.syarat_ujian_aktif" class="mt-0.5" />
                     <span>
                         Terapkan syarat kehadiran ujian: mahasiswa di bawah batas minimal ditandai <strong>tidak memenuhi syarat</strong> UTS/UAS di
-                        daftar peserta ujian dan halaman presensinya, kecuali mendapat dispensasi.
+                        daftar peserta ujian dan halaman presensinya, tidak bisa mengerjakan ujian online, dan
+                        <strong>tidak bisa mencetak kartu ujian</strong> jenis itu, kecuali mendapat dispensasi.
                     </span>
                 </Label>
 
