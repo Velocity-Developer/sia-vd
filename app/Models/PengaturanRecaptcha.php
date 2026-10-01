@@ -18,6 +18,10 @@ class PengaturanRecaptcha extends Model
 
     public const SINGLETON_ID = 1;
 
+    // Kolom id bukan auto-increment: tanpa ini, simpanan pertama di MySQL memakai lastInsertId (0) dan
+    // update berikutnya pada model yang sama tidak mengenai baris mana pun.
+    public $incrementing = false;
+
     public const URL_VERIFIKASI = 'https://www.google.com/recaptcha/api/siteverify';
 
     protected $table = 'pengaturan_recaptcha';

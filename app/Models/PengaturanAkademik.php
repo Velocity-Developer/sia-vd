@@ -16,6 +16,10 @@ class PengaturanAkademik extends Model
      */
     public const SINGLETON_ID = 1;
 
+    // Kolom id bukan auto-increment: tanpa ini, simpanan pertama di MySQL memakai lastInsertId (0) dan
+    // update berikutnya pada model yang sama tidak mengenai baris mana pun.
+    public $incrementing = false;
+
     protected $table = 'pengaturan_akademik';
 
     protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif', 'huruf_maks_remidi', 'batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari', 'min_sks_pendadaran', 'min_sks_ambil_ta', 'maks_cuti', 'updated_by'];

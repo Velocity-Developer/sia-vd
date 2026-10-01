@@ -1,6 +1,10 @@
 <?php
 
+use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
+use App\Models\PengaturanMaintenance;
+use App\Models\PengaturanPindahKelas;
+use App\Models\PengaturanRecaptcha;
 use App\Models\PengaturanTampilan;
 use App\Models\Role;
 use App\Models\User;
@@ -34,6 +38,7 @@ it('renders every settings tab for admin', function (string $tab, string $kompon
     ['akademik', 'PengaturanSistem/Akademik'],
     ['tampilan', 'PengaturanSistem/Tampilan'],
     ['recaptcha', 'PengaturanSistem/Recaptcha'],
+    ['maintenance', 'PengaturanSistem/Maintenance'],
 ]);
 
 it('redirects the old settings addresses', function (string $lama, string $baru) {
@@ -125,3 +130,16 @@ it('limits the display tab to its own permission', function () {
     $this->actingAs($user)->post(route('pengaturan-tampilan.update'), ['login_sorotan' => true, 'login_tata_letak' => 'panel', 'sidebar_bawaan' => 'lebar'])->assertForbidden();
     $this->actingAs($user)->get(route('pengaturan-sistem.institusi'))->assertOk();
 });
+
+it('marks singleton settings models with a manual id as non-incrementing', function (string $model) {
+    // SQLite mengembalikan rowid sehingga bug ini tidak terlihat di tes; di MySQL lastInsertId bernilai 0
+    // dan simpanan pertama sesudah firstOrCreate tidak mengenai baris mana pun.
+    expect((new $model)->getIncrementing())->toBeFalse();
+})->with([
+    PengaturanInstitusi::class,
+    PengaturanTampilan::class,
+    PengaturanAkademik::class,
+    PengaturanPindahKelas::class,
+    PengaturanRecaptcha::class,
+    PengaturanMaintenance::class,
+]);

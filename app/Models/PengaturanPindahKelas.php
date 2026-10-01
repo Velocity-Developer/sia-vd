@@ -15,6 +15,10 @@ class PengaturanPindahKelas extends Model
      */
     public const SINGLETON_ID = 1;
 
+    // Kolom id bukan auto-increment: tanpa ini, simpanan pertama di MySQL memakai lastInsertId (0) dan
+    // update berikutnya pada model yang sama tidak mengenai baris mana pun.
+    public $incrementing = false;
+
     protected $table = 'pengaturan_pindah_kelas';
 
     protected $fillable = ['is_active', 'updated_by'];
