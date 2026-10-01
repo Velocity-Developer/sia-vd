@@ -5,7 +5,16 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 
 ## [Belum dirilis]
 
+## [1.1.0] - 2026-10-01
+
 ### Ditambahkan
+- **Verifikasi KRS** (sakelar `verifikasi_krs_aktif` di Pengaturan Akademik, bawaan mati): KRS yang disimpan mahasiswa
+  berstatus *Diajukan* lalu disetujui admin atau dikembalikan untuk revisi dengan catatan. Menu Administrasi →
+  Verifikasi KRS (izin `admin.verifikasi-krs`) dengan rincian dan setujui massal. Isian **Akhir Masa Revisi KRS** di
+  Tahun Akademik; sesudahnya semua KRS terkunci, yang masih diajukan tetap bisa disetujui. Kartu ujian menunggu KRS
+  disetujui dan PDF KRS ditandai "BELUM DISETUJUI". Saat sakelar mati, KRS yang disimpan langsung final seperti dulu.
+- **Feature flag per klien** baru (bawaan nyala): `materi`, `tugas`, `quiz`, `ujian_online`, `presensi_qr`,
+  `pindah_kelas`, `ujian_susulan` (`FEATURE_*` di `.env`). Fitur yang mati menyembunyikan menu, izin, dan rutenya (404).
 - Tab **reCAPTCHA** di Pengaturan Sistem (izin `admin.pengaturan-recaptcha`): site key & secret key Google reCAPTCHA v2.
   Bila aktif, halaman masuk menampilkan kotak centang "Saya bukan robot" yang diverifikasi di server. Captcha uji wajib
   lolos saat menyalakan atau mengganti kunci.
@@ -16,11 +25,18 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   dan/atau mahasiswa dengan pesan dan perkiraan selesai. Admin/karyawan tetap bisa masuk dan melihat spanduk pengingat.
 
 ### Diubah
+- **Buka kunci KRS** oleh admin kini mengembalikan KRS ke status *perlu revisi* dengan catatan dan tanggal
+  "Dibuka sampai" opsional (wajib setelah masa KRS/revisi berakhir), jadi bisa dipakai di luar periode KRS.
 - Saat **syarat kehadiran ujian** aktif, kartu ujian (UTS/UAS/susulan) tidak bisa dicetak selama ada mata kuliah yang
   kehadirannya di bawah batas tanpa dispensasi. Sebelumnya kartu tetap tercetak dengan tanda "Tidak memenuhi".
 - README dilengkapi **Alur pemakaian dari awal** (persiapan, siklus per semester, akhir studi).
 - Isian **Program Studi** pada form dosen kini opsional, sehingga instalasi baru bisa membuat dosen calon
   dekan/kaprodi sebelum fakultas dan program studi ada (sebelumnya buntu tanpa tinker).
+
+### Diperbaiki
+- Admin tidak bisa membuka kunci KRS saat fitur keuangan mati (tombolnya hanya ada di menu Tagihan yang ikut 404);
+  kini juga tersedia di Detail Mahasiswa.
+- Simpanan pertama pengaturan singleton (mis. Maintenance) hilang di MySQL karena id tidak auto-increment.
 
 ## [1.0.0] - 2026-09-30
 
@@ -150,5 +166,6 @@ Rilis pertama bernomor versi. Isinya seluruh riwayat di bawah (per tanggal sejak
 - KRS mahasiswa dan persetujuan dosen, jadwal kuliah mahasiswa, info kuliah, pindah kelas.
 - KHS, ekspor KHS, dan transkrip nilai.
 
-[Belum dirilis]: https://github.com/Velocity-Developer/sia-vd/compare/v1.0.0...HEAD
+[Belum dirilis]: https://github.com/Velocity-Developer/sia-vd/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Velocity-Developer/sia-vd/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Velocity-Developer/sia-vd/releases/tag/v1.0.0
