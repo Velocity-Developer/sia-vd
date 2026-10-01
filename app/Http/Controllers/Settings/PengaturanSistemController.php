@@ -17,6 +17,7 @@ class PengaturanSistemController extends Controller
         'akademik' => 'admin.pengaturan-akademik',
         'tampilan' => 'admin.pengaturan-tampilan',
         'recaptcha' => 'admin.pengaturan-recaptcha',
+        'maintenance' => 'admin.pengaturan-maintenance',
     ];
 
     /**

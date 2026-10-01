@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Feature;
 use App\Models\PengaturanInstitusi;
+use App\Models\PengaturanMaintenance;
 use App\Models\PengaturanTampilan;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -43,6 +44,8 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'institusi' => fn (): array => PengaturanInstitusi::shared(),
             'tampilan' => fn (): array => PengaturanTampilan::shared(),
+            // Untuk pesan di halaman masuk dan spanduk pengingat bagi admin selama maintenance aktif.
+            'maintenance' => fn (): array => PengaturanMaintenance::shared(),
             'fitur' => fn (): array => collect(config('client.fitur'))->keys()->mapWithKeys(fn (string $nama): array => [$nama => Feature::aktif($nama)])->all(),
             'auth' => [
                 'user' => $request->user()?->withoutRelations(),

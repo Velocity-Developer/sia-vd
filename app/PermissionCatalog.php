@@ -84,6 +84,7 @@ class PermissionCatalog
             ['key' => 'admin.pengaturan-akademik', 'name' => 'Pengaturan Akademik', 'group' => 'Pengaturan Sistem', 'user_type' => null, 'description' => 'Mengatur KRS, batas SKS, skala nilai, presensi, dan form pindah kelas.', 'defaults' => $admin],
             ['key' => 'admin.pengaturan-tampilan', 'name' => 'Pengaturan Tampilan', 'group' => 'Pengaturan Sistem', 'user_type' => null, 'description' => 'Mengatur nama di tab browser, favicon, halaman masuk, dan sidebar bawaan.', 'defaults' => $admin],
             ['key' => 'admin.pengaturan-recaptcha', 'name' => 'Pengaturan reCAPTCHA', 'group' => 'Pengaturan Sistem', 'user_type' => null, 'description' => 'Mengatur Google reCAPTCHA v2 (site key & secret key) di halaman masuk.', 'defaults' => $admin],
+            ['key' => 'admin.pengaturan-maintenance', 'name' => 'Pengaturan Maintenance', 'group' => 'Pengaturan Sistem', 'user_type' => null, 'description' => 'Menyalakan mode maintenance untuk dosen/mahasiswa. Pemegang izin ini tetap bisa masuk saat maintenance.', 'defaults' => $admin],
 
             ['key' => 'dosen.dashboard', 'name' => 'Beranda Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Membuka beranda dan profil dosen.', 'defaults' => [UserType::Dosen]],
             ['key' => 'dosen.kelas-kuliah', 'name' => 'Kelas Kuliah Dosen', 'group' => 'Dosen', 'user_type' => UserType::Dosen, 'description' => 'Mengelola kelas yang diampu beserta materi, tugas, quiz, dan nilai.', 'defaults' => [UserType::Dosen]],

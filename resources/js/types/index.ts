@@ -59,12 +59,22 @@ export interface Tampilan {
     sidebar_bawaan: 'lebar' | 'ringkas';
 }
 
+/** Status mode maintenance (lihat PengaturanMaintenance::shared). */
+export interface Maintenance {
+    aktif: boolean;
+    untuk: ('dosen' | 'mahasiswa')[];
+    pesan: string;
+    /** Label siap tampil, mis. "1 Oktober 2026, 14.00 WIB". */
+    perkiraan_selesai: string | null;
+}
+
 export interface SharedData {
     [key: string]: unknown;
     name: string;
     quote: { message: string; author: string };
     institusi: Institusi;
     tampilan: Tampilan;
+    maintenance: Maintenance;
     /** Fitur per klien dari config/client.php (lihat App\\Feature). */
     fitur: Record<NamaFitur, boolean>;
     auth: Auth;

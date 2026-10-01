@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\PengaturanMaintenance;
 use App\Models\PengaturanRecaptcha;
 use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
@@ -97,6 +98,11 @@ class LoginRequest extends FormRequest
         $user = Auth::getLastAttempted();
         if (($alasan = $user->alasanTidakBolehMasuk()) !== null) {
             throw ValidationException::withMessages(['username' => $alasan]);
+        }
+
+        // Sama seperti status akun: maintenance baru diberitahukan sesudah kata sandi cocok.
+        if (PengaturanMaintenance::menghalangi($user)) {
+            throw ValidationException::withMessages(['username' => PengaturanMaintenance::shared()['pesan']]);
         }
 
         Auth::login($user, $this->boolean('remember'));

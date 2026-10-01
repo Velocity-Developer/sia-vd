@@ -6,6 +6,7 @@ use App\Http\Middleware\PastikanDeveloper;
 use App\Http\Middleware\PastikanFiturAktif;
 use App\Http\Middleware\PastikanFiturQuiz;
 use App\Http\Middleware\PastikanTagihanLunas;
+use App\Http\Middleware\TahanSaatMaintenance;
 use App\Http\Middleware\TerapkanZonaWaktu;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AuthenticateSession::class,
             PastikanAkunAktif::class,
             HandleInertiaRequests::class,
+            TahanSaatMaintenance::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 

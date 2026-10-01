@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\PengaturanAkademikController;
 use App\Http\Controllers\Settings\EmailController;
 use App\Http\Controllers\Settings\InstitusiController;
+use App\Http\Controllers\Settings\MaintenanceController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\PengaturanSistemController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -62,6 +63,11 @@ Route::middleware('auth')->group(function () {
         Route::middleware('can:admin.pengaturan-recaptcha')->group(function (): void {
             Route::get('recaptcha', [RecaptchaController::class, 'edit'])->name('pengaturan-sistem.recaptcha');
             Route::put('recaptcha', [RecaptchaController::class, 'update'])->name('pengaturan-recaptcha.update');
+        });
+
+        Route::middleware('can:admin.pengaturan-maintenance')->group(function (): void {
+            Route::get('maintenance', [MaintenanceController::class, 'edit'])->name('pengaturan-sistem.maintenance');
+            Route::put('maintenance', [MaintenanceController::class, 'update'])->name('pengaturan-maintenance.update');
         });
     });
 

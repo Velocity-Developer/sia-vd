@@ -62,7 +62,7 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 | Administrasi | `admin.dashboard`, `admin.info-kuliah`, `admin.tahun-akademik`, `admin.fakultas`, `admin.program-studi`, `admin.mata-kuliah`, `admin.ruang`, `admin.kelas-kuliah`, `admin.jadwal`, `admin.materi`, `admin.tugas`, `admin.quiz`, `admin.presensi`, `admin.ujian`, `admin.pindah-kelas`, `admin.pengajuan-akademik` (TA & Wisuda, Periode Wisuda) |
 | Keuangan | `admin.jenis-biaya`, `admin.tagihan` (termasuk Tagihan Remidi) |
 | Manajemen pengguna | `admin.users.dosen`, `admin.users.mahasiswa`, `admin.users.karyawan`, `admin.roles` |
-| Pengaturan sistem | `admin.institusi`, `admin.pengaturan-email`, `admin.pengaturan-akademik`, `admin.pengaturan-tampilan`, `admin.pengaturan-recaptcha` |
+| Pengaturan sistem | `admin.institusi`, `admin.pengaturan-email`, `admin.pengaturan-akademik`, `admin.pengaturan-tampilan`, `admin.pengaturan-recaptcha`, `admin.pengaturan-maintenance` |
 | Dosen | `dosen.dashboard`, `dosen.kelas-kuliah`, `dosen.jadwal`, `dosen.materi`, `dosen.tugas`, `dosen.quiz`, `dosen.presensi`, `dosen.ujian`, `dosen.mahasiswa-kelas`, `dosen.bimbingan` (Bimbingan TA) |
 | Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.tugas-akhir`, `mahasiswa.info-biaya` |
 
@@ -245,6 +245,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 | Akademik | `admin.pengaturan-akademik` | Delapan formulir, dijelaskan di bawah tabel ini. |
 | Tampilan | `admin.pengaturan-tampilan` | Nama aplikasi, favicon (png/ico/webp, SVG ditolak), halaman masuk (judul, teks, gambar, tata letak `panel`/`tengah`, sorotan fitur), sidebar bawaan (`lebar`/`ringkas`). |
 | reCAPTCHA | `admin.pengaturan-recaptcha` | Google reCAPTCHA v2 kotak centang di halaman masuk: sakelar aktif (bawaan mati), site key, secret key (terenkripsi, tidak pernah dikirim ke browser). Saat dinyalakan atau kuncinya diganti, admin wajib lolos captcha uji di halaman itu (diverifikasi ke Google) agar kunci salah tidak mengunci semua pengguna. Bila aktif, `LoginRequest` memverifikasi `g-recaptcha-response` ke Google sebelum mencocokkan kata sandi; gagal terhubung ke Google = ditolak. Darurat: `UPDATE pengaturan_recaptcha SET aktif = 0`. |
+| Maintenance | `admin.pengaturan-maintenance` | Mode maintenance per jenis pengguna: sakelar aktif + centang Dosen/Mahasiswa (minimal satu), pesan (bawaan `PengaturanMaintenance::PESAN_BAWAAN`), perkiraan selesai (info saja, tidak mati otomatis). Yang terkena ditolak saat masuk (sesudah kata sandi cocok) dan sesi terbukanya melihat halaman `Maintenance` (503, `Retry-After`) lewat middleware `TahanSaatMaintenance`; keluar tetap bisa. Tidak pernah kena: jenis Admin/Karyawan, role developer, dan siapa pun pemegang izin `admin.pengaturan-maintenance`. Halaman masuk menampilkan pesannya; admin melihat spanduk kuning. Status di-cache (`pengaturan-maintenance`), dibuang otomatis saat disimpan — bila diubah langsung di DB, jalankan `php artisan cache:clear`. |
 
 **Delapan formulir di tab Akademik:**
 

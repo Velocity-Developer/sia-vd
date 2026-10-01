@@ -12,6 +12,8 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 - **Template Email** di Pengaturan Sistem > Email: admin bisa mengubah subjek, sapaan, isi, teks tombol, dan penutup
   surel atur ulang kata sandi, verifikasi email, dan surel uji, dengan variabel (`{nama}`, `{tautan}`, …), pratinjau,
   dan tombol Kembalikan Bawaan.
+- Tab **Maintenance** di Pengaturan Sistem (izin `admin.pengaturan-maintenance`): menutup sementara sistem untuk dosen
+  dan/atau mahasiswa dengan pesan dan perkiraan selesai. Admin/karyawan tetap bisa masuk dan melihat spanduk pengingat.
 
 ### Diubah
 - README dilengkapi **Alur pemakaian dari awal** (persiapan, siklus per semester, akhir studi).

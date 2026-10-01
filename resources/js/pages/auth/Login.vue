@@ -6,9 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { type SharedData } from '@/types';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { Eye, EyeOff, LoaderCircle, Lock, User } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 defineProps<{
     status?: string;
@@ -24,6 +25,9 @@ const form = useForm({
 });
 
 const lihatSandi = ref(false);
+
+const maintenance = computed(() => usePage<SharedData>().props.maintenance);
+const labelMaintenance = computed(() => (maintenance.value?.untuk ?? []).map((jenis) => (jenis === 'dosen' ? 'dosen' : 'mahasiswa')).join(' dan '));
 const captcha = ref<InstanceType<typeof RecaptchaWidget> | null>(null);
 
 const submit = () => {
@@ -43,6 +47,12 @@ const submit = () => {
         description="Masuk dengan NIM (mahasiswa), NIDN (dosen), atau username, beserta kata sandi yang diberikan kampus."
     >
         <Head title="Masuk" />
+
+        <div v-if="maintenance?.aktif" class="alert-info mb-5" role="status">
+            <p class="font-medium">Sistem sedang dalam pemeliharaan untuk {{ labelMaintenance }}.</p>
+            <p class="mt-1 whitespace-pre-line">{{ maintenance.pesan }}</p>
+            <p v-if="maintenance.perkiraan_selesai" class="mt-1">Perkiraan selesai: {{ maintenance.perkiraan_selesai }}</p>
+        </div>
 
         <div v-if="status" class="alert-sukses mb-5" role="status">
             {{ status }}
