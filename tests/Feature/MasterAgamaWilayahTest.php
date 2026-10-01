@@ -9,6 +9,8 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 it('mengelola data agama', function () {
     $admin = User::factory()->admin()->create();
+    // Migrasi PMB mengisi agama berkode Feeder; tes ini mulai dari daftar kosong.
+    Agama::query()->delete();
 
     $this->actingAs($admin)->post(route('admin.agama.store'), ['kode' => '1', 'nama' => 'Islam'])
         ->assertRedirect(route('admin.agama.index'));

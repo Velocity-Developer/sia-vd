@@ -66,6 +66,8 @@ class PermissionCatalog
             ['key' => 'admin.agama', 'name' => 'Agama', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola data agama.', 'defaults' => $admin],
             ['key' => 'admin.provinsi', 'name' => 'Provinsi', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola data provinsi.', 'defaults' => $admin],
             ['key' => 'admin.kota', 'name' => 'Kota/Kabupaten', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola data kota/kabupaten per provinsi.', 'defaults' => $admin],
+            ['key' => 'admin.periode-pmb', 'name' => 'Periode PMB', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengatur periode penerimaan mahasiswa baru (PMB).', 'defaults' => $admin],
+            ['key' => 'admin.pendaftar-pmb', 'name' => 'Data Pendaftar PMB', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Melihat pendaftar PMB serta mengisi nilai dan status kelulusannya.', 'defaults' => $admin],
             ['key' => 'admin.badan-hukum', 'name' => 'Badan Hukum', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola data badan hukum penyelenggara perguruan tinggi.', 'defaults' => $admin],
             ['key' => 'admin.kelas-kuliah', 'name' => 'Kelas Kuliah', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola kelas kuliah beserta jadwal, materi, tugas, quiz, dan nilai.', 'defaults' => $admin],
             ['key' => 'admin.jadwal', 'name' => 'Jadwal Kelas', 'group' => 'Administrasi', 'user_type' => null, 'description' => 'Mengelola jadwal seluruh kelas kuliah.', 'defaults' => $admin],

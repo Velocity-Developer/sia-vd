@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { Eye, EyeOff, LoaderCircle, Lock, User } from 'lucide-vue-next';
+import { Eye, EyeOff, LoaderCircle, Lock, User, UserPlus } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 defineProps<{
@@ -128,6 +128,10 @@ const submit = () => {
             <Button type="submit" tabindex="4" :disabled="form.processing" class="w-full">
                 <LoaderCircle v-if="form.processing" class="animate-spin" />
                 {{ form.processing ? 'Memproses…' : 'Masuk' }}
+            </Button>
+
+            <Button as-child variant="outline" class="w-full">
+                <Link :href="route('pmb.daftar')"><UserPlus /> Link Pendaftaran Mahasiswa Baru</Link>
             </Button>
 
             <p class="text-center text-sm text-[#615d59] dark:text-muted-foreground">

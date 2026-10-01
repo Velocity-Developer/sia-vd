@@ -6,6 +6,23 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Ditambahkan
+- **Formulir PMB publik** `/pmb/daftar` (tabel `cmb`): tanpa pilihan tahun pendaftaran, pendaftar otomatis masuk ke
+  periode yang sedang dibuka (Atur Periode PMB menolak dua periode dibuka dengan tanggal bertumpuk). Isian disamakan
+  dengan pmb.stikesyapika.ac.id (data diri, NIK,
+  kewarganegaraan, alamat + kecamatan berkode Feeder, transportasi, jenis tinggal/masuk, KPS, pembiayaan, kelas,
+  program studi, status baru/pindahan beserta asal sekolah atau asal PT, agen, info). Formulir hanya terbuka selama ada
+  periode di **Atur Periode PMB** yang `is_open` dan hari ini di antara tanggal buka–tutup; kuota mengikuti kapasitas,
+  NIK unik per periode, nomor pendaftaran `<kode periode>-0001`. Captcha formulir dinyalakan terpisah lewat sakelar
+  baru **Tampilkan captcha di form pendaftaran PMB** di Pengaturan Sistem → reCAPTCHA (kolom `aktif_pmb`, kunci sama). Halaman
+  masuk punya tombol **Link Pendaftaran Mahasiswa Baru**. Tabel baru `wilayah_kecamatan` (7.608 kecamatan Feeder,
+  diisi migrasi) dan agama berkode Feeder (1–6, 99) ditambahkan ke master Agama bila belum ada.
+- Menu **PMB → Data Pendaftar** (izin `admin.pendaftar-pmb`): daftar + filter periode/status, detail, isi **nilai**
+  (0–100) dan **status pendaftaran** (Lulus/Ditolak; kosong = Menunggu), hapus pendaftar. Periode yang sudah punya
+  pendaftar tidak bisa dihapus.
+- **Atur Periode PMB** (menu PMB → Konfigurasi; tabel `pengaturan_pmb`, izin `admin.periode-pmb`): kode unik, tahun angkatan,
+  tanggal buka/tutup pendaftaran, tanggal USM mulai/selesai, tanggal her-registrasi, nilai minimal (0–100), kapasitas,
+  biaya pendaftaran, tanggal pembayaran mulai/selesai, dan status dibuka (`is_open`). Seksi sidebar bisa diberi
+  `tetap: true` agar tidak diratakan walau isinya satu menu.
 - Master **Agama**, **Provinsi**, dan **Kota/Kabupaten** (tabel `agamas`, `provinsis`, `kotas`, masing-masing dengan
   `kode` unik) beserta CRUD di menu Master Akademik (izin `admin.agama`, `admin.provinsi`, `admin.kota`). Kota/kabupaten
   milik satu provinsi (nama unik per provinsi, filter per provinsi); provinsi yang masih punya kota tidak bisa dihapus.

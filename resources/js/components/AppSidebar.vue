@@ -37,6 +37,7 @@ import {
     SlidersHorizontal,
     Table2,
     UserCheck,
+    UserPlus,
     Users,
     Wallet,
 } from 'lucide-vue-next';
@@ -52,7 +53,8 @@ const tampil = (item: MenuItem): boolean => can(item.permission) && (!item.fitur
 // untuk pengguna yang tidak punya izin itu.
 // `fitur`: menu hanya tampil selama fitur per klien itu aktif (config/client.php), selain izinnya.
 type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: NamaFitur };
-type MenuSeksi = { title: string; icon?: NavItem['icon']; items: (MenuItem | MenuSeksi)[] };
+// `tetap`: seksi tetap tampil sebagai dropdown walau isinya tinggal satu menu.
+type MenuSeksi = { title: string; icon?: NavItem['icon']; tetap?: boolean; items: (MenuItem | MenuSeksi)[] };
 type MenuEntry = MenuItem | MenuSeksi;
 
 const adalahSeksi = (entry: MenuEntry): entry is MenuSeksi => 'items' in entry && Array.isArray(entry.items);
@@ -135,6 +137,22 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     },
                     { title: 'Periode Wisuda', routeName: 'admin.periode-wisuda.index', icon: CalendarRange, permission: 'admin.pengajuan-akademik' },
                     { title: 'Pengajuan Cuti', routeName: 'admin.pengajuan-cuti.index', icon: PauseCircle, permission: 'admin.pengajuan-cuti' },
+                ],
+            },
+            {
+                title: 'PMB',
+                icon: UserPlus,
+                tetap: true,
+                items: [
+                    { title: 'Data Pendaftar', routeName: 'admin.pendaftar-pmb.index', icon: ClipboardList, permission: 'admin.pendaftar-pmb' },
+                    {
+                        title: 'Konfigurasi',
+                        icon: Settings2,
+                        tetap: true,
+                        items: [
+                            { title: 'Atur Periode PMB', routeName: 'admin.periode-pmb.index', icon: CalendarRange, permission: 'admin.periode-pmb' },
+                        ],
+                    },
                 ],
             },
             {
@@ -252,7 +270,7 @@ const filterEntries = (entries: MenuEntry[]): NavEntry[] =>
         const items = filterEntries(entry.items);
 
         if (items.length === 0) return [];
-        if (items.length === 1) return [items[0]];
+        if (items.length === 1 && !entry.tetap) return [items[0]];
 
         return [{ title: entry.title, icon: entry.icon, items }];
     });

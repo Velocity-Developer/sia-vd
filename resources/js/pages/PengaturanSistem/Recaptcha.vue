@@ -13,6 +13,7 @@ import { computed, ref } from 'vue';
 
 interface Pengaturan {
     aktif: boolean;
+    aktif_pmb: boolean;
     site_key: string | null;
     secret_key_tersimpan: boolean;
 }
@@ -21,6 +22,7 @@ const props = defineProps<{ pengaturan: Pengaturan }>();
 
 const form = useForm({
     aktif: props.pengaturan.aktif,
+    aktif_pmb: props.pengaturan.aktif_pmb,
     site_key: props.pengaturan.site_key ?? '',
     secret_key: '',
     token_uji: '',
@@ -30,11 +32,13 @@ const widget = ref<InstanceType<typeof RecaptchaWidget> | null>(null);
 
 // Site key reCAPTCHA v2 berupa 40 karakter; widget uji baru dipasang bila isiannya masuk akal.
 const siteKeyUji = computed(() => form.site_key.trim());
-const tampilkanUji = computed(() => form.aktif && siteKeyUji.value.length >= 30);
+// Kunci dipakai bersama halaman masuk dan formulir PMB.
+const adaYangAktif = computed(() => form.aktif || form.aktif_pmb);
+const tampilkanUji = computed(() => adaYangAktif.value && siteKeyUji.value.length >= 30);
 
 const simpan = () =>
     form
-        .transform((data) => ({ ...data, aktif: data.aktif ? 1 : 0 }))
+        .transform((data) => ({ ...data, aktif: data.aktif ? 1 : 0, aktif_pmb: data.aktif_pmb ? 1 : 0 }))
         .put(route('pengaturan-recaptcha.update'), {
             preserveScroll: true,
             onSuccess: () => form.reset('secret_key'),
@@ -49,7 +53,7 @@ const simpan = () =>
         <form class="kartu grid gap-6 p-6" @submit.prevent="simpan">
             <HeadingSmall
                 title="Google reCAPTCHA v2"
-                description='Kotak centang "Saya bukan robot" di halaman masuk untuk menahan percobaan masuk otomatis'
+                description='Kotak centang "Saya bukan robot" untuk menahan percobaan masuk dan pendaftaran PMB otomatis'
             />
 
             <Label for="aktif" class="label-isian flex w-fit items-center gap-2.5 font-normal">
@@ -57,6 +61,12 @@ const simpan = () =>
                 <span>Tampilkan captcha di halaman masuk</span>
             </Label>
             <InputError :message="form.errors.aktif" />
+
+            <Label for="aktif_pmb" class="label-isian -mt-3 flex w-fit items-center gap-2.5 font-normal">
+                <Checkbox id="aktif_pmb" v-model="form.aktif_pmb" />
+                <span>Tampilkan captcha di form pendaftaran PMB</span>
+            </Label>
+            <InputError :message="form.errors.aktif_pmb" />
 
             <div class="grid content-start gap-4 sm:grid-cols-2">
                 <div class="grid content-start gap-2">
@@ -90,11 +100,11 @@ const simpan = () =>
                 dengan jenis <strong>reCAPTCHA v2 → Kotak centang "Saya bukan robot"</strong>, lalu daftarkan domain situs ini.
             </p>
 
-            <div v-if="form.aktif" class="grid gap-2 rounded-lg border border-[#e6e6e6] p-4 dark:border-border">
+            <div v-if="adaYangAktif" class="grid gap-2 rounded-lg border border-[#e6e6e6] p-4 dark:border-border">
                 <Label class="label-isian">Captcha Uji</Label>
                 <p class="teks-bantu">
-                    Wajib dicentang saat menyalakan captcha atau mengganti kunci. Kunci yang salah akan membuat semua pengguna tidak bisa masuk, jadi
-                    sistem memeriksanya ke Google lebih dulu.
+                    Wajib dicentang saat menyalakan captcha atau mengganti kunci. Kunci yang salah akan membuat semua pengguna tidak bisa masuk atau
+                    mendaftar, jadi sistem memeriksanya ke Google lebih dulu.
                 </p>
                 <RecaptchaWidget v-if="tampilkanUji" :key="siteKeyUji" ref="widget" v-model="form.token_uji" :site-key="siteKeyUji" />
                 <p v-else class="teks-bantu">Isi site key terlebih dahulu.</p>

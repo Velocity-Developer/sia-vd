@@ -8,8 +8,10 @@ use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JenisBiayaController;
 use App\Http\Controllers\Admin\KotaController;
 use App\Http\Controllers\Admin\MataKuliahController;
+use App\Http\Controllers\Admin\PendaftarPmbController;
 use App\Http\Controllers\Admin\PengajuanAkademikController as AdminPengajuanAkademikController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
+use App\Http\Controllers\Admin\PengaturanPmbController;
 use App\Http\Controllers\Admin\PerguruanTinggiController;
 use App\Http\Controllers\Admin\PeriodeWisudaController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
@@ -304,6 +306,14 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::resource('agama', AgamaController::class)->except('show')->parameters(['agama' => 'agama'])->names('admin.agama');
     });
 
+    Route::middleware('can:admin.periode-pmb')->group(function (): void {
+        Route::resource('periode-pmb', PengaturanPmbController::class)->except('show')->parameters(['periode-pmb' => 'pengaturanPmb'])->names('admin.periode-pmb');
+    });
+
+    Route::middleware('can:admin.pendaftar-pmb')->group(function (): void {
+        Route::resource('pendaftar-pmb', PendaftarPmbController::class)->only(['index', 'show', 'update', 'destroy'])->parameters(['pendaftar-pmb' => 'cmb'])->names('admin.pendaftar-pmb');
+    });
+
     Route::middleware('can:admin.provinsi')->group(function (): void {
         Route::resource('provinsi', ProvinsiController::class)->except('show')->parameters(['provinsi' => 'provinsi'])->names('admin.provinsi');
     });
@@ -550,5 +560,6 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
 
 });
 
+require __DIR__.'/pmb.php';
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

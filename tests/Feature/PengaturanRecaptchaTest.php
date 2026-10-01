@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\PengaturanPmb;
 use App\Models\PengaturanRecaptcha;
 use App\Models\Role;
 use App\Models\User;
@@ -122,4 +123,39 @@ it('tidak memanggil google saat captcha mati', function () {
 
     $this->assertAuthenticated();
     Http::assertNothingSent();
+});
+
+it('menyalakan captcha formulir PMB terpisah dari halaman masuk', function () {
+    $admin = User::factory()->admin()->create();
+    $isian = ['aktif' => 0, 'aktif_pmb' => 1, 'site_key' => str_repeat('s', 40), 'secret_key' => 'rahasia-captcha'];
+
+    // Kunci tetap wajib lolos uji walau hanya formulir PMB yang dinyalakan.
+    $this->actingAs($admin)->put('/pengaturan-sistem/recaptcha', $isian)->assertSessionHasErrors('token_uji');
+
+    googleMenjawab(true);
+    $this->actingAs($admin)->put('/pengaturan-sistem/recaptcha', [...$isian, 'token_uji' => 'token-benar'])->assertSessionHasNoErrors();
+
+    $pengaturan = PengaturanRecaptcha::current();
+    expect($pengaturan->aktif)->toBeFalse()->and($pengaturan->aktif_pmb)->toBeTrue();
+    expect(PengaturanRecaptcha::siteKeyLogin())->toBeNull()
+        ->and(PengaturanRecaptcha::siteKeyPmb())->toBe(str_repeat('s', 40));
+
+    $this->actingAs($admin)->get('/pengaturan-sistem/recaptcha')->assertInertia(fn ($page) => $page->where('pengaturan.aktif_pmb', true));
+});
+
+it('memakai sakelar PMB, bukan sakelar halaman masuk, di formulir pendaftaran', function () {
+    aktifkanRecaptcha();
+    PengaturanPmb::query()->create([
+        'kode' => 'REG-CAPTCHA', 'tahun_angkatan' => 2027, 'tanggal_buka' => today()->subDay(), 'tanggal_tutup' => today()->addMonth(),
+        'tanggal_usm_mulai' => today()->addMonths(2), 'tanggal_usm_selesai' => today()->addMonths(2), 'tanggal_her' => today()->addMonths(3),
+        'nilai_minimal' => 60, 'kapasitas' => 10, 'biaya_pendaftaran' => 0, 'tanggal_pembayaran_mulai' => today(),
+        'tanggal_pembayaran_selesai' => today()->addMonth(), 'is_open' => true,
+    ]);
+
+    $this->get(route('pmb.daftar'))->assertInertia(fn ($page) => $page->where('recaptchaSiteKey', null));
+    $this->post(route('pmb.daftar.store'), [])->assertSessionDoesntHaveErrors('captcha');
+
+    PengaturanRecaptcha::current()->update(['aktif_pmb' => true]);
+
+    $this->get(route('pmb.daftar'))->assertInertia(fn ($page) => $page->where('recaptchaSiteKey', str_repeat('s', 40)));
 });

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Pengaturan Google reCAPTCHA v2 (kotak centang "Saya bukan robot") di halaman masuk.
+ * Pengaturan Google reCAPTCHA v2 (kotak centang "Saya bukan robot") di halaman masuk dan formulir PMB.
  */
 class PengaturanRecaptcha extends Model
 {
@@ -26,11 +26,12 @@ class PengaturanRecaptcha extends Model
 
     protected $table = 'pengaturan_recaptcha';
 
-    protected $fillable = ['aktif', 'site_key', 'secret_key', 'updated_by'];
+    protected $fillable = ['aktif', 'aktif_pmb', 'site_key', 'secret_key', 'updated_by'];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
         'aktif' => false,
+        'aktif_pmb' => false,
     ];
 
     /** Secret key tidak pernah ikut terkirim ke browser. */
@@ -40,6 +41,7 @@ class PengaturanRecaptcha extends Model
     {
         return [
             'aktif' => 'boolean',
+            'aktif_pmb' => 'boolean',
             'secret_key' => 'encrypted',
         ];
     }
@@ -64,9 +66,33 @@ class PengaturanRecaptcha extends Model
         return $pengaturan?->dipakai() ? $pengaturan->site_key : null;
     }
 
+    /**
+     * Site key untuk formulir PMB, atau null bila captcha PMB mati / kuncinya belum lengkap.
+     */
+    public static function siteKeyPmb(): ?string
+    {
+        try {
+            $pengaturan = static::query()->find(self::SINGLETON_ID);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $pengaturan?->dipakaiPmb() ? $pengaturan->site_key : null;
+    }
+
     public function dipakai(): bool
     {
-        return $this->aktif && filled($this->site_key) && filled($this->secret_key);
+        return $this->aktif && $this->kunciLengkap();
+    }
+
+    public function dipakaiPmb(): bool
+    {
+        return $this->aktif_pmb && $this->kunciLengkap();
+    }
+
+    private function kunciLengkap(): bool
+    {
+        return filled($this->site_key) && filled($this->secret_key);
     }
 
     /**
