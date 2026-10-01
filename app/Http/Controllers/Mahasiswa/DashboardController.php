@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\BerandaMahasiswa;
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\TahunAkademik;
 use App\PengingatCuti;
@@ -47,9 +48,9 @@ class DashboardController extends Controller
             'pengingat' => $pengingat,
             'peringatanPresensi' => $bisa('mahasiswa.presensi') ? PeringatanPresensi::untukMahasiswa($mahasiswa) : null,
             'remidiMahasiswa' => PengingatRemidi::untukMahasiswa($mahasiswa, $bisa('mahasiswa.info-biaya'), $bisa('mahasiswa.ujian')),
-            'susulanMahasiswa' => PengingatSusulan::untukMahasiswa($mahasiswa, $bisa('mahasiswa.info-biaya'), $bisa('mahasiswa.ujian')),
+            'susulanMahasiswa' => Feature::aktif('ujian_susulan') ? PengingatSusulan::untukMahasiswa($mahasiswa, $bisa('mahasiswa.info-biaya'), $bisa('mahasiswa.ujian')) : null,
             'kuliahHariIni' => $tahunAkademik && $bisa('mahasiswa.jadwal-kuliah') ? BerandaMahasiswa::kuliahHariIni($mahasiswa, $tahunAkademik) : null,
-            'tugasMendatang' => $tahunAkademik && $bisa('mahasiswa.jadwal-kuliah') ? BerandaMahasiswa::tugasMendatang($mahasiswa, $tahunAkademik) : null,
+            'tugasMendatang' => $tahunAkademik && $bisa('mahasiswa.jadwal-kuliah') && Feature::aktif('tugas') ? BerandaMahasiswa::tugasMendatang($mahasiswa, $tahunAkademik) : null,
         ]);
     }
 }

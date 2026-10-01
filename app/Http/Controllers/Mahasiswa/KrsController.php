@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\Jadwal;
 use App\Models\KelasKuliah;
@@ -101,7 +102,7 @@ class KrsController extends Controller
         }
 
         if (KrsSemester::tersimpan($mahasiswa->id, $kelasKuliah->tahun_akademik_id)) {
-            return back()->with('krs_error', 'KRS Anda sudah disimpan dan terkunci. Gunakan form pindah kelas, atau hubungi admin bila perlu membukanya.');
+            return back()->with('krs_error', 'KRS Anda sudah disimpan dan terkunci. '.(Feature::aktif('pindah_kelas') ? 'Gunakan form pindah kelas, atau hubungi' : 'Hubungi').' admin bila perlu membukanya.');
         }
 
         if (! in_array($mahasiswa->status, Krs::STATUS_MAHASISWA_BOLEH_KRS, true)) {

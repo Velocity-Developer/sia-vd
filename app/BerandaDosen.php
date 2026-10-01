@@ -76,7 +76,7 @@ class BerandaDosen
         $kelas = self::kelasAktif($dosen, $tahunAkademik)->keyBy('id');
         $label = fn (int $kelasId): string => trim(($kelas[$kelasId]->mataKuliah?->nama_matkul ?? '').' · '.$kelas[$kelasId]->kode_kelas, ' ·');
 
-        $tugas = PengumpulanTugas::query()
+        $tugas = ! Feature::aktif('tugas') ? collect() : PengumpulanTugas::query()
             ->whereNull('nilai')
             ->join('tugas', 'tugas.id', '=', 'pengumpulan_tugas.tugas_id')
             ->whereIn('tugas.kelas_id', $kelas->keys())
@@ -86,7 +86,7 @@ class BerandaDosen
             ->map(fn ($t): array => ['jenis' => 'Tugas', 'judul' => $t->judul, 'kelas' => $label($t->kelas_id), 'jumlah' => (int) $t->jumlah,
                 'tautan' => route('dosen.kelas-kuliah.tugas.show', [$t->kelas_id, $t->id])]);
 
-        $quiz = QuizAttempt::query()
+        $quiz = ! Feature::aktif('quiz') ? collect() : QuizAttempt::query()
             ->whereNotNull('quiz_attempts.submitted_at')
             ->join('quizzes', 'quizzes.id', '=', 'quiz_attempts.quiz_id')
             ->whereNull('quizzes.ujian_id')

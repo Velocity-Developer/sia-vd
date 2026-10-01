@@ -68,7 +68,7 @@ class UjianController extends Controller
             'belumAda' => $belumAda,
             // Kelas yang daftar remidinya sudah dikunci dan punya peserta lunas, tetapi belum dijadwalkan.
             'remidiSiap' => $this->kelasRemidiSiap($filter['tahun_akademik_id'])->count(),
-            'susulanSiap' => collect(Ujian::JENIS)->mapWithKeys(fn (string $j): array => [$j => UjianSusulan::ujianUtamaSiapSusulan($filter['tahun_akademik_id'], $j)->count()]),
+            'susulanSiap' => collect(Ujian::JENIS)->mapWithKeys(fn (string $j): array => [$j => Feature::aktif('ujian_susulan') ? UjianSusulan::ujianUtamaSiapSusulan($filter['tahun_akademik_id'], $j)->count() : 0]),
             'jumlahDraf' => Ujian::query()->where('status', Ujian::DRAF)->whereHas('kelasKuliah', fn (Builder $k) => $k->where('tahun_akademik_id', $filter['tahun_akademik_id']))->count(),
             'tahunAkademikOptions' => $tahunAkademiks->map(fn (TahunAkademik $t): array => ['id' => $t->id, 'name' => $t->tahun.' '.$t->semester]),
             'prodiOptions' => ProgramStudi::orderBy('nama_prodi')->get(['id', 'nama_prodi'])->map(fn (ProgramStudi $p): array => ['id' => $p->id, 'name' => $p->nama_prodi]),
@@ -140,7 +140,7 @@ class UjianController extends Controller
 
         $awal = $ta->awalRemidi();
         $data = $request->validate([
-            'mode' => ['required', Rule::in(Ujian::MODE)],
+            'mode' => ['required', Rule::in(Ujian::modeTersedia())],
             'tanggal' => ['required', 'date_format:Y-m-d', 'after:'.$awal['tanggal']->toDateString(), 'before_or_equal:'.$ta->batas_input_nilai_remidi->toDateString()],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_akhir' => ['required', 'date_format:H:i', 'after:jam_mulai'],
@@ -171,7 +171,7 @@ class UjianController extends Controller
         $data = $request->validate([
             'tahun_akademik_id' => ['required', 'integer', 'exists:tahun_akademik,id'],
             'jenis' => ['required', Rule::in(Ujian::JENIS_SUSULAN)],
-            'mode' => ['required', Rule::in(Ujian::MODE)],
+            'mode' => ['required', Rule::in(Ujian::modeTersedia())],
             'tanggal' => ['required', 'date_format:Y-m-d'],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_akhir' => ['required', 'date_format:H:i', 'after:jam_mulai'],
@@ -209,7 +209,7 @@ class UjianController extends Controller
 
         return Inertia::render('Admin/UjianForm', [
             'ujian' => null,
-            'jenisAwal' => in_array($request->query('jenis'), Ujian::SEMUA_JENIS, true) ? $request->query('jenis') : null,
+            'jenisAwal' => in_array($request->query('jenis'), Ujian::jenisTersedia(), true) ? $request->query('jenis') : null,
             ...$this->opsiForm($tahunId),
         ]);
     }
@@ -318,6 +318,10 @@ class UjianController extends Controller
             $this->pastikanKelasSiapRemidi($kelas);
         }
 
+        if ($susulan && ! Feature::aktif('ujian_susulan')) {
+            throw ValidationException::withMessages(['jenis' => 'Ujian susulan tidak digunakan di sistem ini.']);
+        }
+
         if ($susulan && $kelas !== null) {
             $utama = $this->pastikanKelasSiapSusulan($kelas, $jenis);
         }
@@ -338,8 +342,8 @@ class UjianController extends Controller
 
         $data = $request->validate([
             'kelas_id' => [$ujian ? 'prohibited' : 'required', 'exists:kelas_kuliah,id'],
-            'jenis' => [$ujian ? 'prohibited' : 'required', Rule::in(Ujian::SEMUA_JENIS), Rule::unique('ujians')->where('kelas_id', $kelasId)],
-            'mode' => ['required', Rule::in(Ujian::MODE)],
+            'jenis' => [$ujian ? 'prohibited' : 'required', Rule::in(Ujian::jenisTersedia()), Rule::unique('ujians')->where('kelas_id', $kelasId)],
+            'mode' => ['required', Rule::in(Ujian::modeTersedia())],
             'tanggal' => ['required', 'date_format:Y-m-d', ...$rentangTanggal],
             'jam_mulai' => ['required', 'date_format:H:i'],
             'jam_akhir' => ['required', 'date_format:H:i', 'after:jam_mulai'],

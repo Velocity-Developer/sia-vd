@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
-import { JENIS_UJIAN, MODE_UJIAN, type JenisUjian, type ModeUjian } from '@/lib/ujian';
+import { JENIS_UJIAN, useOpsiUjian, type JenisUjian, type ModeUjian } from '@/lib/ujian';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
 
@@ -41,10 +41,13 @@ const props = defineProps<{
     jenisAwal: JenisUjian | null;
 }>();
 
+const { modeTersedia, jenisTersedia, modeAwal } = useOpsiUjian();
+
 const form = useForm({
     kelas_id: '' as number | string,
     jenis: (props.jenisAwal ?? 'uts') as JenisUjian,
-    mode: props.ujian?.mode ?? ('tatap_muka' as ModeUjian),
+    // Jadwal online lama yang diubah saat fitur ujian online mati otomatis menjadi tatap muka.
+    mode: modeAwal(props.ujian?.mode),
     tanggal: props.ujian?.tanggal.slice(0, 10) ?? '',
     jam_mulai: jam(props.ujian?.jam_mulai),
     jam_akhir: jam(props.ujian?.jam_akhir),
@@ -140,7 +143,7 @@ const judul = computed(() => (props.ujian ? 'Ubah Jadwal Ujian' : 'Tambah Jadwal
                             <div class="grid gap-2">
                                 <Label class="label-isian">Jenis ujian</Label>
                                 <div class="flex min-h-10 flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                                    <label v-for="(label, j) in JENIS_UJIAN" :key="j" class="flex items-center gap-2">
+                                    <label v-for="(label, j) in jenisTersedia" :key="j" class="flex items-center gap-2">
                                         <input v-model="form.jenis" type="radio" :value="j" class="size-4 accent-[#0075de]" /> {{ label }}
                                     </label>
                                 </div>
@@ -149,11 +152,11 @@ const judul = computed(() => (props.ujian ? 'Ubah Jadwal Ujian' : 'Tambah Jadwal
                         </div>
                     </section>
 
-                    <section class="kartu p-6">
+                    <section v-if="modeTersedia.length > 1" class="kartu p-6">
                         <h2 class="judul-bagian">Mode ujian</h2>
                         <div class="mt-4 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Mode ujian">
                             <label
-                                v-for="m in MODE_UJIAN"
+                                v-for="m in modeTersedia"
                                 :key="m.value"
                                 class="flex cursor-pointer gap-3 rounded-lg border p-3"
                                 :class="form.mode === m.value ? 'border-[#0075de] bg-[#0075de]/5' : 'border-[#e6e6e6] dark:border-border'"

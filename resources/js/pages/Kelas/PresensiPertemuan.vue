@@ -4,6 +4,7 @@ import LayarPresensiMandiri from '@/components/LayarPresensiMandiri.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     JENIS_PERTEMUAN,
@@ -203,7 +204,8 @@ const simpanPengganti = () =>
         }))
         .put(rute('presensi.pertemuan.update', props.pertemuan.id), { preserveScroll: true, onSuccess: () => penggantiForm.reset('alasan') });
 
-// Presensi mandiri (QR/PIN).
+// Presensi mandiri (QR/PIN), hanya bila fitur presensi_qr aktif.
+const presensiQr = useFitur().aktif('presensi_qr');
 const mandiriForm = useForm({ menit: props.durasiMandiri });
 const bukaMandiri = () => mandiriForm.post(rute('presensi.pertemuan.mandiri.buka', props.pertemuan.id), { preserveScroll: true });
 const tutupMandiri = () => router.delete(rute('presensi.pertemuan.mandiri.tutup', props.pertemuan.id), { preserveScroll: true });
@@ -413,7 +415,7 @@ const infoMulai = computed(() => {
                 </section>
 
                 <!-- Presensi mandiri -->
-                <section v-if="status === 'berlangsung' && !props.terkunci && props.bisaKelola" class="kartu p-6">
+                <section v-if="presensiQr && status === 'berlangsung' && !props.terkunci && props.bisaKelola" class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <h2 class="judul-bagian">Presensi mandiri (QR / PIN)</h2>

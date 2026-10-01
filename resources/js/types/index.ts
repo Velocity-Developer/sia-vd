@@ -66,7 +66,7 @@ export interface SharedData {
     institusi: Institusi;
     tampilan: Tampilan;
     /** Fitur per klien dari config/client.php (lihat App\\Feature). */
-    fitur: Record<'kelola_role' | 'keuangan', boolean>;
+    fitur: Record<NamaFitur, boolean>;
     auth: Auth;
     ziggy: {
         location: string;
@@ -89,3 +89,5 @@ export interface User {
 }
 
 export type BreadcrumbItemType = BreadcrumbItem;
+
+export type NamaFitur = 'kelola_role' | 'keuangan' | 'materi' | 'tugas' | 'quiz' | 'ujian_online' | 'presensi_qr' | 'pindah_kelas' | 'ujian_susulan';

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
 use App\Models\KelasKuliah;
@@ -133,7 +134,7 @@ class DashboardController extends Controller
                 ->map(fn (TagihanSemester $t) => $baris('Semester', $t, $t->tahunAkademik?->label(), 'admin.tagihan.index', $t->tahun_akademik_id)))
             ->concat($terbaru(TagihanRemidi::query()->with([...$mhs, ...$kelas]))
                 ->map(fn (TagihanRemidi $t) => $baris('Remidi', $t, $t->kelasKuliah?->mataKuliah?->nama_matkul, 'admin.tagihan-remidi.index', $t->kelasKuliah?->tahun_akademik_id)))
-            ->concat($terbaru(TagihanSusulan::query()->with([...$mhs, ...$kelas]))
+            ->concat(! Feature::aktif('ujian_susulan') ? [] : $terbaru(TagihanSusulan::query()->with([...$mhs, ...$kelas]))
                 ->map(fn (TagihanSusulan $t) => $baris('Susulan', $t, $t->kelasKuliah?->mataKuliah?->nama_matkul, 'admin.tagihan-susulan.index', $t->kelasKuliah?->tahun_akademik_id)))
             ->sortByDesc('diunggah')->take(5)->values()->all();
     }
@@ -157,7 +158,8 @@ class DashboardController extends Controller
             $this->perTahun(TagihanRemidi::query()->where('tagihan_remidi.status', TagihanRemidi::MENUNGGU)->join('kelas_kuliah', 'kelas_kuliah.id', '=', 'tagihan_remidi.kelas_id'))
                 ->each(fn (int $jumlah, int|string $taId) => $daftar->push($this->butir('Bukti bayar tagihan remidi', $label($taId), $jumlah,
                     route('admin.tagihan-remidi.index', ['tahun_akademik_id' => $taId, 'status' => TagihanRemidi::MENUNGGU]), true)));
-            $this->perTahun(TagihanSusulan::query()->where('tagihan_susulan.status', TagihanSusulan::MENUNGGU)->join('kelas_kuliah', 'kelas_kuliah.id', '=', 'tagihan_susulan.kelas_id'))
+            $susulan = Feature::aktif('ujian_susulan') ? TagihanSusulan::query() : TagihanSusulan::query()->whereRaw('1 = 0');
+            $this->perTahun($susulan->where('tagihan_susulan.status', TagihanSusulan::MENUNGGU)->join('kelas_kuliah', 'kelas_kuliah.id', '=', 'tagihan_susulan.kelas_id'))
                 ->each(fn (int $jumlah, int|string $taId) => $daftar->push($this->butir('Bukti bayar tagihan susulan', $label($taId), $jumlah,
                     route('admin.tagihan-susulan.index', ['tahun_akademik_id' => $taId, 'status' => TagihanSusulan::MENUNGGU]), true)));
 
@@ -188,7 +190,7 @@ class DashboardController extends Controller
             }
         }
 
-        if ($user->hasPermission('admin.ujian')) {
+        if ($user->hasPermission('admin.ujian') && Feature::aktif('ujian_susulan')) {
             $this->perTahun(PengajuanSusulan::query()->where('pengajuan_susulan.status', PengajuanSusulan::MENUNGGU)
                 ->join('ujians', 'ujians.id', '=', 'pengajuan_susulan.ujian_id')
                 ->join('kelas_kuliah', 'kelas_kuliah.id', '=', 'ujians.kelas_id'))

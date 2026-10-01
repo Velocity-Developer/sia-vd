@@ -3,6 +3,7 @@ import InputError from '@/components/InputError.vue';
 import PemindaiQr from '@/components/PemindaiQr.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import {
     formatJamDari,
@@ -139,6 +140,8 @@ const kirimIzin = () =>
 const errorLampiran = computed(() => Object.entries(izinForm.errors).find(([k]) => k.startsWith('lampiran'))?.[1]);
 const labelPengajuan = { menunggu: 'menunggu persetujuan', disetujui: 'disetujui', ditolak: 'ditolak' } as const;
 
+// Tanpa fitur presensi_qr, presensi dicatat dosen/admin; mahasiswa hanya melihat riwayat dan mengajukan izin.
+const presensiQr = useFitur().aktif('presensi_qr');
 const muatUlang = () => router.reload({ only: ['terbuka'] });
 const gantiTahun = (event: Event) =>
     router.get(route('mahasiswa.presensi'), { tahun_akademik_id: (event.target as HTMLSelectElement).value }, { preserveScroll: true });
@@ -156,8 +159,11 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                     <div>
                         <h1 class="judul-halaman">Presensi</h1>
                         <p class="deskripsi-halaman">
-                            Pindai QR di layar kelas (tombol Pindai QR atau aplikasi kamera HP), atau ketik PIN dari dosen. Minimal kehadiran untuk
-                            ujian {{ props.minKehadiran }}%; izin dan sakit dihitung tidak hadir.
+                            <template v-if="presensiQr"
+                                >Pindai QR di layar kelas (tombol Pindai QR atau aplikasi kamera HP), atau ketik PIN dari dosen.</template
+                            >
+                            <template v-else>Kehadiran dicatat oleh dosen atau admin.</template>
+                            Minimal kehadiran untuk ujian {{ props.minKehadiran }}%; izin dan sakit dihitung tidak hadir.
                         </p>
                     </div>
                 </div>
@@ -166,7 +172,7 @@ const dibawahBatas = (rekap: Rekap | null) => rekap?.persen != null && rekap.per
                     <CircleCheck class="size-4 shrink-0" /> {{ page.props.flash.success }}
                 </div>
 
-                <section class="kartu p-6">
+                <section v-if="presensiQr" class="kartu p-6">
                     <div class="flex items-center justify-between gap-2">
                         <h2 class="judul-bagian">Presensi sekarang</h2>
                         <Button type="button" variant="ghost" size="sm" @click="muatUlang"><RefreshCw class="size-4" /> Muat ulang</Button>

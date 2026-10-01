@@ -1,4 +1,4 @@
-import { type SharedData } from '@/types';
+import { type NamaFitur, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/vue3';
 
 /**
@@ -7,7 +7,7 @@ import { usePage } from '@inertiajs/vue3';
 export function useFitur() {
     const page = usePage<SharedData>();
 
-    const aktif = (nama: keyof SharedData['fitur']): boolean => page.props.fitur?.[nama] ?? false;
+    const aktif = (nama: NamaFitur): boolean => page.props.fitur?.[nama] ?? false;
 
     return { aktif };
 }

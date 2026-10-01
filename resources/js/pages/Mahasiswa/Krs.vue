@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import { Button } from '@/components/ui/button';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Download } from 'lucide-vue-next';
@@ -182,6 +183,8 @@ const jadwal = (kelas: KelasKuliah) =>
     kelas.jadwals?.map(
         (item) => `${item.hari}, ${jam(item.jam_mulai)}-${jam(item.jam_akhir)}${item.ruang?.kode_ruang ? ` (${item.ruang.kode_ruang})` : ''}`,
     ) || [];
+
+const pindahKelas = useFitur().aktif('pindah_kelas');
 </script>
 
 <template>
@@ -243,7 +246,7 @@ const jadwal = (kelas: KelasKuliah) =>
 
                     <div v-if="krsTersimpan" class="alert-sukses mt-4" role="status">
                         KRS sudah disimpan dan terkunci{{ krsDisimpanPada ? ` pada ${formatTanggal(krsDisimpanPada)}` : '' }}. Perubahan kelas hanya
-                        bisa lewat form pindah kelas, atau minta admin membuka kuncinya.
+                        bisa {{ pindahKelas ? 'lewat form pindah kelas, atau ' : 'dengan ' }}minta admin membuka kuncinya.
                     </div>
 
                     <div

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -163,6 +164,19 @@ class KelasKuliah extends Model
     public function jadwals(): HasMany
     {
         return $this->hasMany(Jadwal::class, 'kelas_id');
+    }
+
+    /**
+     * Relasi materi/tugas/quiz (beserta pengunggahnya) yang fiturnya aktif, untuk halaman detail kelas.
+     * Relasi fitur yang mati diisi koleksi kosong agar bentuk data ke halaman tetap sama.
+     */
+    public function muatKontenAktif(): static
+    {
+        foreach (['materi' => 'materis', 'tugas' => 'tugas', 'quiz' => 'quizzes'] as $fitur => $relasi) {
+            Feature::aktif($fitur) ? $this->load("{$relasi}.uploader:id,name") : $this->setRelation($relasi, $this->newCollection());
+        }
+
+        return $this;
     }
 
     public function materis(): HasMany

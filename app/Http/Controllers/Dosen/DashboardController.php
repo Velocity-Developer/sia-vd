@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dosen;
 
 use App\BerandaDosen;
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\TahunAkademik;
 use App\PengingatRemidi;
@@ -36,10 +37,10 @@ class DashboardController extends Controller
             'ringkasan' => BerandaDosen::ringkasan($dosen, $tahunAkademik),
             'tahunAkademik' => $tahunAkademik?->label(),
             'presensiDosen' => $bisa('dosen.presensi') ? PeringatanPresensi::untukDosen($dosen) : null,
-            'perluDinilai' => $kelas ? BerandaDosen::perluDinilai($dosen, $tahunAkademik) : null,
+            'perluDinilai' => $kelas && (Feature::aktif('tugas') || Feature::aktif('quiz')) ? BerandaDosen::perluDinilai($dosen, $tahunAkademik) : null,
             'pengingatNilai' => $kelas ? BerandaDosen::pengingatNilai($dosen, $tahunAkademik) : null,
             'remidiDosen' => $bisa('dosen.kelas-kuliah') ? PengingatRemidi::untukDosen($dosen) : null,
-            'susulanDosen' => $bisa('dosen.ujian') ? PengingatSusulan::untukDosen($dosen) : null,
+            'susulanDosen' => $bisa('dosen.ujian') && Feature::aktif('ujian_susulan') ? PengingatSusulan::untukDosen($dosen) : null,
             'pengingatTugasAkhir' => $bisa('dosen.bimbingan') ? PengingatTugasAkhir::untukDosen($dosen) : null,
             'kelas' => $kelas ? BerandaDosen::kelas($dosen, $tahunAkademik) : null,
         ]);

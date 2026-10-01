@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\AllowedUpload;
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Kelas\PresensiController as KelasPresensiController;
 use App\Models\KelasKuliah;
@@ -291,6 +292,10 @@ class PresensiController extends Controller
      */
     private function pertemuanTerbuka(MahasiswaProfile $mahasiswa): array
     {
+        if (! Feature::aktif('presensi_qr')) {
+            return [];
+        }
+
         return Pertemuan::query()
             ->where('status', Pertemuan::BERLANGSUNG)
             ->where('mandiri_sampai', '>', now())

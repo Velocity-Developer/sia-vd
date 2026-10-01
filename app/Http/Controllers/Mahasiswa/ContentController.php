@@ -51,10 +51,7 @@ class ContentController extends Controller
             'dosen:id,user_id',
             'dosen.user:id,name',
             'jadwals.ruang',
-            'materis.uploader:id,name',
-            'tugas.uploader:id,name',
-            'quizzes.uploader:id,name',
-        ]);
+        ])->muatKontenAktif();
 
         return Inertia::render('Mahasiswa/KelasKuliahShow', ['kelasKuliah' => $kelasKuliah]);
     }

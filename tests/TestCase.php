@@ -17,6 +17,10 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         config(['client.fitur.keuangan.default' => true, 'client.fitur.kelola_role.default' => true]);
+        // Fitur yang bawaannya nyala dikunci nyala di tes, supaya FEATURE_* di .env mesin pengembang tidak ikut terbaca.
+        foreach (['materi', 'tugas', 'quiz', 'ujian_online', 'presensi_qr', 'pindah_kelas', 'ujian_susulan'] as $fitur) {
+            config(["client.fitur.{$fitur}.default" => true]);
+        }
     }
 
     /**

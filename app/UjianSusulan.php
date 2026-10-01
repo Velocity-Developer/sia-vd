@@ -132,7 +132,8 @@ class UjianSusulan
     {
         $uas = $kelas->ujianTerbit(Pertemuan::UAS);
 
-        if ($uas === null) {
+        // Selama fitur susulan mati, finalisasi nilai tidak menunggu susulan apa pun.
+        if ($uas === null || ! Feature::aktif('ujian_susulan')) {
             return collect();
         }
 

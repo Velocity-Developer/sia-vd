@@ -3,20 +3,25 @@
 use App\Feature;
 use Illuminate\Support\Env;
 
+/** Fitur tambahan bawaannya mati; fitur yang sudah lama ada bawaannya nyala agar instalasi lama tidak berubah. */
+const FITUR_BAWAAN_NYALA = ['materi', 'tugas', 'quiz', 'ujian_online', 'presensi_qr', 'pindah_kelas', 'ujian_susulan'];
+
 it('registers the client features and lists their env keys in .env.example', function () {
-    expect(array_keys(config('client.fitur')))->toBe(['kelola_role', 'keuangan']);
+    expect(array_keys(config('client.fitur')))->toBe(['kelola_role', 'keuangan', ...FITUR_BAWAAN_NYALA]);
 
     $contoh = file_get_contents(base_path('.env.example'));
-    foreach (['KELOLA_ROLE', 'KEUANGAN'] as $kunci) {
-        expect($contoh)->toContain("FEATURE_{$kunci}=false")->toContain("LOCK_{$kunci}=false");
+    foreach (array_keys(config('client.fitur')) as $nama) {
+        $kunci = strtoupper($nama);
+        $bawaan = in_array($nama, FITUR_BAWAAN_NYALA, true) ? 'true' : 'false';
+        expect($contoh)->toContain("FEATURE_{$kunci}={$bawaan}")->toContain("LOCK_{$kunci}=false");
     }
 });
 
-it('keeps every feature off and unlocked when the env keys are not set', function () {
+it('uses the documented default and leaves every feature unlocked when the env keys are not set', function () {
     // Kosongkan sementara FEATURE_*/LOCK_* yang mungkin diisi .env mesin ini, lalu baca config dari berkasnya
     // (TestCase menyalakan sebagian fitur untuk tes lama).
     $repo = Env::getRepository();
-    $kunci = collect(['KELOLA_ROLE', 'KEUANGAN'])->flatMap(fn (string $k): array => ["FEATURE_{$k}", "LOCK_{$k}"]);
+    $kunci = collect(array_keys(config('client.fitur')))->map(fn (string $n): string => strtoupper($n))->flatMap(fn (string $k): array => ["FEATURE_{$k}", "LOCK_{$k}"]);
     $asli = $kunci->mapWithKeys(fn (string $k): array => [$k => $repo->get($k)]);
     $kunci->each(fn (string $k) => $repo->clear($k));
 
@@ -27,10 +32,11 @@ it('keeps every feature off and unlocked when the env keys are not set', functio
     }
 
     foreach (config('client.fitur') as $nama => $fitur) {
-        expect($fitur['default'])->toBeFalse()
+        $nyala = in_array($nama, FITUR_BAWAAN_NYALA, true);
+        expect($fitur['default'])->toBe($nyala)
             ->and($fitur['locked'])->toBeFalse()
             ->and($fitur['butuh'])->toBe([])
-            ->and(Feature::aktif($nama))->toBeFalse();
+            ->and(Feature::aktif($nama))->toBe($nyala);
     }
 });
 

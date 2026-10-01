@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -206,8 +207,8 @@ class Pertemuan extends Model
 
     public function mandiriTerbuka(): bool
     {
-        // Presensi mandiri berhenti paling lambat di jam akhir pertemuan.
-        return $this->status === self::BERLANGSUNG && $this->mandiri_sampai !== null && $this->mandiri_sampai->isFuture() && $this->akhirAt()->isFuture();
+        // Presensi mandiri berhenti paling lambat di jam akhir pertemuan, dan tidak ada sama sekali tanpa fitur presensi_qr.
+        return Feature::aktif('presensi_qr') && $this->status === self::BERLANGSUNG && $this->mandiri_sampai !== null && $this->mandiri_sampai->isFuture() && $this->akhirAt()->isFuture();
     }
 
     public static function periodeKode(?Carbon $waktu = null): int

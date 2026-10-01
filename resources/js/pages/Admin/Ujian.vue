@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, jam } from '@/lib/presensi';
-import { JENIS_UJIAN, MODE_UJIAN, STATUS_UJIAN, labelMode, type JenisUjian, type ModeUjian } from '@/lib/ujian';
+import { JENIS_UJIAN, labelMode, STATUS_UJIAN, useOpsiUjian, type JenisUjian, type ModeUjian } from '@/lib/ujian';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { CalendarPlus, Eye, Pencil, Plus, Search, Send, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
@@ -52,7 +52,8 @@ const search = ref(props.filter.search);
 // Satu modal untuk jadwal massal remidi dan susulan (UTS/UAS).
 type JenisMassal = 'remidi' | 'uts_susulan' | 'uas_susulan';
 const massalJenis = ref<JenisMassal | null>(null);
-const formMassal = useForm({ tanggal: '', jam_mulai: '', jam_akhir: '', mode: 'online_berkas' });
+const { modeTersedia, jenisTersedia, modeAwal } = useOpsiUjian();
+const formMassal = useForm({ tanggal: '', jam_mulai: '', jam_akhir: '', mode: modeAwal('online_berkas') });
 const jumlahSiap = (jenis: JenisMassal) => (jenis === 'remidi' ? props.remidiSiap : props.susulanSiap[jenis === 'uts_susulan' ? 'uts' : 'uas']);
 const buatMassalKhusus = () => {
     const jenis = massalJenis.value;
@@ -181,11 +182,7 @@ const hapus = () => {
                     </SelectFilter>
                     <SelectFilter v-model="jenis" label="Jenis ujian" @change="kirim">
                         <option value="all">Semua jenis</option>
-                        <option value="uts">UTS</option>
-                        <option value="uas">UAS</option>
-                        <option value="uts_susulan">UTS Susulan</option>
-                        <option value="uas_susulan">UAS Susulan</option>
-                        <option value="remidi">Remidi</option>
+                        <option v-for="(label, j) in jenisTersedia" :key="j" :value="j">{{ label }}</option>
                     </SelectFilter>
                     <SelectFilter v-model="status" label="Status" @change="kirim">
                         <option value="all">Semua status</option>
@@ -306,13 +303,14 @@ const hapus = () => {
                     <label class="grid gap-2"
                         ><span class="label-isian">Jam selesai</span><Input v-model="formMassal.jam_akhir" type="time" required
                     /></label>
-                    <label class="grid gap-2 sm:col-span-3">
+                    <label v-if="modeTersedia.length > 1" class="grid gap-2 sm:col-span-3">
                         <span class="label-isian">Mode</span>
                         <select v-model="formMassal.mode" class="isian isian-pilih">
-                            <option v-for="m in MODE_UJIAN" :key="m.value" :value="m.value">{{ m.label }}</option>
+                            <option v-for="m in modeTersedia" :key="m.value" :value="m.value">{{ m.label }}</option>
                         </select>
                         <span v-if="formMassal.mode === 'tatap_muka'" class="teks-bantu">Ruang diisi per kelas sebelum diterbitkan.</span>
                     </label>
+                    <p v-else class="teks-bantu sm:col-span-3">Ujian tatap muka; ruang diisi per kelas sebelum diterbitkan.</p>
                 </div>
                 <p v-for="(pesan, k) in formMassal.errors" :key="k" class="mt-2 text-xs text-[#dd5b00]">{{ pesan }}</p>
                 <div class="mt-6 flex justify-end gap-2">

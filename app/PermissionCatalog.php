@@ -23,6 +23,14 @@ class PermissionCatalog
     public const FITUR = [
         'admin.tagihan' => 'keuangan',
         'mahasiswa.info-biaya' => 'keuangan',
+        'admin.materi' => 'materi',
+        'dosen.materi' => 'materi',
+        'admin.tugas' => 'tugas',
+        'dosen.tugas' => 'tugas',
+        'admin.quiz' => 'quiz',
+        'dosen.quiz' => 'quiz',
+        'admin.pindah-kelas' => 'pindah_kelas',
+        'mahasiswa.pindah-kelas' => 'pindah_kelas',
     ];
 
     public static function fiturAktif(string $key): bool

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\AllowedUpload;
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\KelasKuliah;
 use App\Models\MahasiswaProfile;
@@ -206,7 +207,7 @@ class UjianController extends Controller
             ->each(fn (Ujian $u) => $u->setRelation('kelasKuliah', $k))
             ->reject(fn (Ujian $u): bool => $u->khusus() && ! $u->termasukPesertaKhusus($mahasiswa->id))->values()));
 
-        $ujianDisusul = PengajuanSusulan::query()->where('mahasiswa_id', $mahasiswa->id)->where('status', PengajuanSusulan::DISETUJUI)->pluck('ujian_id')->all();
+        $ujianDisusul = ! Feature::aktif('ujian_susulan') ? [] : PengajuanSusulan::query()->where('mahasiswa_id', $mahasiswa->id)->where('status', PengajuanSusulan::DISETUJUI)->pluck('ujian_id')->all();
         $pertemuan = Pertemuan::query()->whereIn('kelas_id', $kelas->pluck('id'))->get()->groupBy('kelas_id');
         $syarat = SyaratUjian::untukMahasiswa(
             $mahasiswa->id,
@@ -243,6 +244,10 @@ class UjianController extends Controller
      */
     private function infoSusulan(Ujian $ujian, MahasiswaProfile $mahasiswa): ?array
     {
+        if (! Feature::aktif('ujian_susulan')) {
+            return null;
+        }
+
         if (! in_array($ujian->jenis, Ujian::JENIS, true)) {
             return null;
         }

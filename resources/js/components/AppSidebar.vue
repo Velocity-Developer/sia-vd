@@ -5,7 +5,7 @@ import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { useFitur } from '@/composables/useFitur';
 import { usePermissions } from '@/composables/usePermissions';
-import { type NavEntry, type NavItem } from '@/types';
+import { type NamaFitur, type NavEntry, type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeftRight,
@@ -44,7 +44,7 @@ const tampil = (item: MenuItem): boolean => can(item.permission) && (!item.fitur
 // route milik peran pengguna (lihat config/ziggy.php), jadi route('admin…') tidak boleh dipanggil
 // untuk pengguna yang tidak punya izin itu.
 // `fitur`: menu hanya tampil selama fitur per klien itu aktif (config/client.php), selain izinnya.
-type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: 'kelola_role' | 'keuangan' };
+type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: NamaFitur };
 type MenuSeksi = { title: string; icon?: NavItem['icon']; items: MenuItem[] };
 type MenuEntry = MenuItem | MenuSeksi;
 
@@ -74,12 +74,18 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 items: [
                     { title: 'Kelas Kuliah', routeName: 'admin.kelas-kuliah.index', icon: ClipboardList, permission: 'admin.kelas-kuliah' },
                     { title: 'Jadwal Kelas', routeName: 'admin.jadwal.index', icon: CalendarDays, permission: 'admin.jadwal' },
-                    { title: 'Materi', routeName: 'admin.materi.index', icon: BookMarked, permission: 'admin.materi' },
-                    { title: 'Tugas', routeName: 'admin.tugas.index', icon: ClipboardList, permission: 'admin.tugas' },
-                    { title: 'Quiz', routeName: 'admin.quiz.index', icon: FileText, permission: 'admin.quiz' },
+                    { title: 'Materi', routeName: 'admin.materi.index', icon: BookMarked, permission: 'admin.materi', fitur: 'materi' },
+                    { title: 'Tugas', routeName: 'admin.tugas.index', icon: ClipboardList, permission: 'admin.tugas', fitur: 'tugas' },
+                    { title: 'Quiz', routeName: 'admin.quiz.index', icon: FileText, permission: 'admin.quiz', fitur: 'quiz' },
                     { title: 'Presensi', routeName: 'admin.presensi.index', icon: UserCheck, permission: 'admin.presensi' },
                     { title: 'Jadwal Ujian', routeName: 'admin.ujian.index', icon: NotebookPen, permission: 'admin.ujian' },
-                    { title: 'Ujian Susulan', routeName: 'admin.ujian-susulan.index', icon: NotebookPen, permission: 'admin.ujian' },
+                    {
+                        title: 'Ujian Susulan',
+                        routeName: 'admin.ujian-susulan.index',
+                        icon: NotebookPen,
+                        permission: 'admin.ujian',
+                        fitur: 'ujian_susulan',
+                    },
                 ],
             },
             {
@@ -87,7 +93,13 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 icon: Inbox,
                 items: [
                     { title: 'Info Kuliah', routeName: 'admin.info-kuliah.index', icon: FileText, permission: 'admin.info-kuliah' },
-                    { title: 'Pindah Kelas', routeName: 'admin.pindah-kelas.index', icon: ArrowLeftRight, permission: 'admin.pindah-kelas' },
+                    {
+                        title: 'Pindah Kelas',
+                        routeName: 'admin.pindah-kelas.index',
+                        icon: ArrowLeftRight,
+                        permission: 'admin.pindah-kelas',
+                        fitur: 'pindah_kelas',
+                    },
                     {
                         title: 'TA & Wisuda',
                         routeName: 'admin.pengajuan-akademik.index',
@@ -105,7 +117,13 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Jenis Biaya', routeName: 'admin.jenis-biaya.index', icon: Receipt, permission: 'admin.jenis-biaya' },
                     { title: 'Tagihan Mahasiswa', routeName: 'admin.tagihan.index', icon: Wallet, permission: 'admin.tagihan' },
                     { title: 'Tagihan Remidi', routeName: 'admin.tagihan-remidi.index', icon: Receipt, permission: 'admin.tagihan' },
-                    { title: 'Tagihan Susulan', routeName: 'admin.tagihan-susulan.index', icon: Receipt, permission: 'admin.tagihan' },
+                    {
+                        title: 'Tagihan Susulan',
+                        routeName: 'admin.tagihan-susulan.index',
+                        icon: Receipt,
+                        permission: 'admin.tagihan',
+                        fitur: 'ujian_susulan',
+                    },
                 ],
             },
             {
@@ -140,9 +158,9 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 title: 'Konten Kelas',
                 icon: BookMarked,
                 items: [
-                    { title: 'Materi', routeName: 'dosen.materi.index', icon: BookMarked, permission: 'dosen.materi' },
-                    { title: 'Tugas', routeName: 'dosen.tugas.index', icon: ClipboardList, permission: 'dosen.tugas' },
-                    { title: 'Quiz', routeName: 'dosen.quiz.index', icon: FileText, permission: 'dosen.quiz' },
+                    { title: 'Materi', routeName: 'dosen.materi.index', icon: BookMarked, permission: 'dosen.materi', fitur: 'materi' },
+                    { title: 'Tugas', routeName: 'dosen.tugas.index', icon: ClipboardList, permission: 'dosen.tugas', fitur: 'tugas' },
+                    { title: 'Quiz', routeName: 'dosen.quiz.index', icon: FileText, permission: 'dosen.quiz', fitur: 'quiz' },
                 ],
             },
         ],
@@ -169,7 +187,13 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 icon: Inbox,
                 items: [
                     { title: 'Info Kuliah', routeName: 'mahasiswa.info-kuliah', icon: FileText, permission: 'mahasiswa.info-kuliah' },
-                    { title: 'Pindah Kelas', routeName: 'mahasiswa.pindah-kelas', icon: ArrowLeftRight, permission: 'mahasiswa.pindah-kelas' },
+                    {
+                        title: 'Pindah Kelas',
+                        routeName: 'mahasiswa.pindah-kelas',
+                        icon: ArrowLeftRight,
+                        permission: 'mahasiswa.pindah-kelas',
+                        fitur: 'pindah_kelas',
+                    },
                     { title: 'Biaya Kuliah', routeName: 'mahasiswa.info-biaya-kuliah', icon: Wallet, permission: 'mahasiswa.info-biaya' },
                     { title: 'Pengajuan Cuti', routeName: 'mahasiswa.pengajuan-cuti', icon: PauseCircle, permission: 'mahasiswa.pengajuan-cuti' },
                 ],

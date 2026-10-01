@@ -69,18 +69,21 @@ Route::get('/', function () {
 // Detail ujian (soal, pengumpulan, nilai) sama untuk admin dan dosen pengampu.
 $ruteUjianKelas = function (string $peran): void {
     Route::get('ujian/{ujian}', [UjianKelasController::class, 'show'])->name($peran.'.ujian.show');
-    Route::post('ujian/{ujian}/soal', [UjianKelasController::class, 'unggahSoal'])->name($peran.'.ujian.soal.unggah');
-    Route::delete('ujian/{ujian}/soal/{index}', [UjianKelasController::class, 'hapusSoal'])->whereNumber('index')->name($peran.'.ujian.soal.hapus');
+    Route::middleware('fitur:ujian_online')->group(function () use ($peran): void {
+        Route::post('ujian/{ujian}/soal', [UjianKelasController::class, 'unggahSoal'])->name($peran.'.ujian.soal.unggah');
+        Route::delete('ujian/{ujian}/soal/{index}', [UjianKelasController::class, 'hapusSoal'])->whereNumber('index')->name($peran.'.ujian.soal.hapus');
+        Route::post('ujian/{ujian}/lembar-soal', [UjianKelasController::class, 'buatSoal'])->name($peran.'.ujian.lembar-soal');
+    });
     Route::put('ujian/{ujian}/nilai/{mahasiswa}', [UjianKelasController::class, 'nilai'])->name($peran.'.ujian.nilai');
     Route::put('ujian/{ujian}/rilis-nilai', [UjianKelasController::class, 'rilisNilai'])->name($peran.'.ujian.rilis-nilai');
-    Route::post('ujian/{ujian}/lembar-soal', [UjianKelasController::class, 'buatSoal'])->name($peran.'.ujian.lembar-soal');
     Route::get('ujian/{ujian}/daftar-hadir', [UjianKelasController::class, 'daftarHadir'])->name($peran.'.ujian.daftar-hadir');
 };
 
 // Menu Jadwal Kelas/Materi/Tugas/Quiz sama untuk admin dan dosen: daftar lintas kelas + tambah dengan isian Kelas Kuliah.
 $ruteMenuKonten = function (string $peran): void {
     foreach (['jadwal' => JadwalController::class, 'materi' => MateriController::class, 'tugas' => TugasController::class, 'quiz' => QuizController::class] as $menu => $controller) {
-        Route::middleware("can:{$peran}.{$menu}")->group(function () use ($peran, $menu, $controller): void {
+        // Jadwal tidak punya flag; materi/tugas/quiz ikut fitur per klien dengan nama yang sama.
+        Route::middleware($menu === 'jadwal' ? ["can:{$peran}.{$menu}"] : ["fitur:{$menu}", "can:{$peran}.{$menu}"])->group(function () use ($peran, $menu, $controller): void {
             Route::get($menu, [$controller, 'index'])->name("{$peran}.{$menu}.index");
             Route::get("{$menu}/create", [$controller, 'createDariMenu'])->name("{$peran}.{$menu}.create");
             Route::post($menu, [$controller, 'storeDariMenu'])->name("{$peran}.{$menu}.store");
@@ -105,9 +108,11 @@ $rutePresensi = function (string $peran): void {
     Route::post('presensi/pertemuan/{pertemuan}/selesai', [PertemuanController::class, 'selesai'])->name($peran.'.presensi.pertemuan.selesai');
     Route::put('presensi/pertemuan/{pertemuan}/jurnal', [PertemuanController::class, 'jurnal'])->name($peran.'.presensi.pertemuan.jurnal');
     Route::put('presensi/pertemuan/{pertemuan}/mahasiswa', [PertemuanController::class, 'simpanPresensi'])->name($peran.'.presensi.pertemuan.mahasiswa');
-    Route::post('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'bukaMandiri'])->name($peran.'.presensi.pertemuan.mandiri.buka');
-    Route::delete('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'tutupMandiri'])->name($peran.'.presensi.pertemuan.mandiri.tutup');
-    Route::get('presensi/pertemuan/{pertemuan}/kode', [PertemuanController::class, 'kode'])->name($peran.'.presensi.pertemuan.kode');
+    Route::middleware('fitur:presensi_qr')->group(function () use ($peran): void {
+        Route::post('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'bukaMandiri'])->name($peran.'.presensi.pertemuan.mandiri.buka');
+        Route::delete('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'tutupMandiri'])->name($peran.'.presensi.pertemuan.mandiri.tutup');
+        Route::get('presensi/pertemuan/{pertemuan}/kode', [PertemuanController::class, 'kode'])->name($peran.'.presensi.pertemuan.kode');
+    });
 };
 
 // `/dashboard` bukan halaman sendiri: mengalihkan ke beranda peran (admin/dosen/mahasiswa). Halaman umum hanya untuk
@@ -124,18 +129,20 @@ Route::get('admin', AdminDashboardController::class)
 
 // Berkas kuliah disimpan di disk privat; hak akses dicek di BerkasController.
 Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('materi/{materi}/{index}', [BerkasController::class, 'materi'])->whereNumber('index')->name('berkas.materi');
-    Route::get('tugas/{tugas}/{index}', [BerkasController::class, 'tugas'])->whereNumber('index')->name('berkas.tugas');
-    Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
+    Route::get('materi/{materi}/{index}', [BerkasController::class, 'materi'])->whereNumber('index')->middleware('fitur:materi')->name('berkas.materi');
+    Route::middleware('fitur:tugas')->group(function (): void {
+        Route::get('tugas/{tugas}/{index}', [BerkasController::class, 'tugas'])->whereNumber('index')->name('berkas.tugas');
+        Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
+    });
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
     Route::middleware('fitur:keuangan')->group(function (): void {
         Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
-        Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->name('berkas.bukti-susulan');
+        Route::get('bukti-susulan/{tagihanSusulan}', [BerkasController::class, 'buktiSusulan'])->middleware('fitur:ujian_susulan')->name('berkas.bukti-susulan');
         Route::get('bukti-semester/{tagihanSemester}', [BerkasController::class, 'buktiSemester'])->name('berkas.bukti-semester');
     });
     Route::get('pengajuan-akademik/{pengajuanAkademik}/{kunci}', [BerkasController::class, 'pengajuanAkademik'])->where('kunci', '[a-z_]+')->name('berkas.pengajuan-akademik');
-    Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->name('berkas.lampiran-susulan');
+    Route::get('lampiran-susulan/{pengajuanSusulan}/{index}', [BerkasController::class, 'lampiranSusulan'])->whereNumber('index')->middleware('fitur:ujian_susulan')->name('berkas.lampiran-susulan');
     Route::get('surat-pendadaran/{pendadaran}', [PendadaranBerkasController::class, 'surat'])->name('berkas.surat-pendadaran');
     Route::get('naskah-revisi/{pendadaran}', [PendadaranBerkasController::class, 'naskahRevisi'])->name('berkas.naskah-revisi');
     Route::get('skl/{wisuda}', [PendadaranBerkasController::class, 'skl'])->name('berkas.skl');
@@ -204,10 +211,12 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::delete('tagihan/{mahasiswa}/kunci-krs', [TagihanController::class, 'bukaKunciKrs'])->name('admin.tagihan.buka-kunci-krs');
         Route::get('tagihan-remidi', [TagihanRemidiController::class, 'index'])->name('admin.tagihan-remidi.index');
         Route::post('tagihan-remidi/terbitkan', [TagihanRemidiController::class, 'terbitkan'])->name('admin.tagihan-remidi.terbitkan');
-        Route::get('tagihan-susulan', [TagihanSusulanController::class, 'index'])->name('admin.tagihan-susulan.index');
-        Route::post('tagihan-susulan/terbitkan', [TagihanSusulanController::class, 'terbitkan'])->name('admin.tagihan-susulan.terbitkan');
-        Route::post('tagihan-susulan/{tagihanSusulan}/lunas', [TagihanSusulanController::class, 'lunas'])->name('admin.tagihan-susulan.lunas');
-        Route::post('tagihan-susulan/{tagihanSusulan}/tolak', [TagihanSusulanController::class, 'tolak'])->name('admin.tagihan-susulan.tolak');
+        Route::middleware('fitur:ujian_susulan')->group(function (): void {
+            Route::get('tagihan-susulan', [TagihanSusulanController::class, 'index'])->name('admin.tagihan-susulan.index');
+            Route::post('tagihan-susulan/terbitkan', [TagihanSusulanController::class, 'terbitkan'])->name('admin.tagihan-susulan.terbitkan');
+            Route::post('tagihan-susulan/{tagihanSusulan}/lunas', [TagihanSusulanController::class, 'lunas'])->name('admin.tagihan-susulan.lunas');
+            Route::post('tagihan-susulan/{tagihanSusulan}/tolak', [TagihanSusulanController::class, 'tolak'])->name('admin.tagihan-susulan.tolak');
+        });
         Route::post('tagihan-remidi/kunci-massal', [TagihanRemidiController::class, 'kunciMassal'])->name('admin.tagihan-remidi.kunci-massal');
         Route::post('tagihan-remidi/{tagihanRemidi}/lunas', [TagihanRemidiController::class, 'lunas'])->name('admin.tagihan-remidi.lunas');
         Route::post('tagihan-remidi/{tagihanRemidi}/tolak', [TagihanRemidiController::class, 'tolak'])->name('admin.tagihan-remidi.tolak');
@@ -215,14 +224,16 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:admin.ujian')->group(function () use ($ruteUjianKelas): void {
         Route::get('ujian', [AdminUjianController::class, 'index'])->name('admin.ujian.index');
-        Route::get('ujian-susulan', [AdminUjianSusulanController::class, 'index'])->name('admin.ujian-susulan.index');
-        Route::post('ujian-susulan/{pengajuanSusulan}/setujui', [AdminUjianSusulanController::class, 'setujui'])->name('admin.ujian-susulan.setujui');
-        Route::post('ujian-susulan/{pengajuanSusulan}/tolak', [AdminUjianSusulanController::class, 'tolak'])->name('admin.ujian-susulan.tolak');
+        Route::middleware('fitur:ujian_susulan')->group(function (): void {
+            Route::get('ujian-susulan', [AdminUjianSusulanController::class, 'index'])->name('admin.ujian-susulan.index');
+            Route::post('ujian-susulan/{pengajuanSusulan}/setujui', [AdminUjianSusulanController::class, 'setujui'])->name('admin.ujian-susulan.setujui');
+            Route::post('ujian-susulan/{pengajuanSusulan}/tolak', [AdminUjianSusulanController::class, 'tolak'])->name('admin.ujian-susulan.tolak');
+            Route::post('ujian/susulan-massal', [AdminUjianController::class, 'buatSusulanMassal'])->name('admin.ujian.susulan-massal');
+        });
         Route::get('ujian/create', [AdminUjianController::class, 'create'])->name('admin.ujian.create');
         Route::post('ujian', [AdminUjianController::class, 'store'])->name('admin.ujian.store');
         Route::post('ujian/buat-massal', [AdminUjianController::class, 'buatMassal'])->name('admin.ujian.buat-massal');
         Route::post('ujian/remidi-massal', [AdminUjianController::class, 'buatRemidiMassal'])->name('admin.ujian.remidi-massal');
-        Route::post('ujian/susulan-massal', [AdminUjianController::class, 'buatSusulanMassal'])->name('admin.ujian.susulan-massal');
         Route::put('ujian/terbitkan', [AdminUjianController::class, 'terbitkan'])->name('admin.ujian.terbitkan');
         Route::get('ujian/{ujian}/edit', [AdminUjianController::class, 'edit'])->name('admin.ujian.edit');
         Route::put('ujian/{ujian}', [AdminUjianController::class, 'update'])->name('admin.ujian.update');
@@ -230,7 +241,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         $ruteUjianKelas('admin');
     });
 
-    Route::middleware('can:admin.pindah-kelas')->group(function (): void {
+    Route::middleware(['fitur:pindah_kelas', 'can:admin.pindah-kelas'])->group(function (): void {
         Route::get('pindah-kelas', [AdminPindahKelasController::class, 'index'])->name('admin.pindah-kelas.index');
         Route::put('pindah-kelas/{pengajuan}/approve', [AdminPindahKelasController::class, 'approve'])->name('admin.pindah-kelas.approve');
         Route::put('pindah-kelas/{pengajuan}/reject', [AdminPindahKelasController::class, 'reject'])->name('admin.pindah-kelas.reject');
@@ -301,32 +312,32 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::get('kelas-kuliah/{kelasKuliah}/jadwal/{jadwal}/edit', [JadwalController::class, 'edit'])->name('admin.kelas-kuliah.jadwal.edit');
         Route::put('kelas-kuliah/{kelasKuliah}/jadwal/{jadwal}', [JadwalController::class, 'update'])->name('admin.kelas-kuliah.jadwal.update');
         Route::delete('kelas-kuliah/{kelasKuliah}/jadwal/{jadwal}', [JadwalController::class, 'destroy'])->name('admin.kelas-kuliah.jadwal.destroy');
-        Route::get('kelas-kuliah/{kelasKuliah}/materi/create', [MateriController::class, 'create'])->name('admin.kelas-kuliah.materi.create');
-        Route::post('kelas-kuliah/{kelasKuliah}/materi', [MateriController::class, 'store'])->name('admin.kelas-kuliah.materi.store');
-        Route::get('kelas-kuliah/{kelasKuliah}/materi/{materi}/edit', [MateriController::class, 'edit'])->name('admin.kelas-kuliah.materi.edit');
-        Route::put('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'update'])->name('admin.kelas-kuliah.materi.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'destroy'])->name('admin.kelas-kuliah.materi.destroy');
-        Route::post('kelas-kuliah/{kelasKuliah}/materi/{materi}/duplicate', [MateriController::class, 'duplicate'])->name('admin.kelas-kuliah.materi.duplicate');
-        Route::get('kelas-kuliah/{kelasKuliah}/tugas/create', [TugasController::class, 'create'])->name('admin.kelas-kuliah.tugas.create');
-        Route::post('kelas-kuliah/{kelasKuliah}/tugas', [TugasController::class, 'store'])->name('admin.kelas-kuliah.tugas.store');
-        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'show'])->name('admin.kelas-kuliah.tugas.show');
-        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/pengumpulan/{pengumpulanTugas}/nilai', [TugasController::class, 'updateSubmissionGrade'])->name('admin.kelas-kuliah.tugas.pengumpulan.nilai');
-        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/edit', [TugasController::class, 'edit'])->name('admin.kelas-kuliah.tugas.edit');
-        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'update'])->name('admin.kelas-kuliah.tugas.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'destroy'])->name('admin.kelas-kuliah.tugas.destroy');
-        Route::post('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/duplicate', [TugasController::class, 'duplicate'])->name('admin.kelas-kuliah.tugas.duplicate');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/create', [QuizController::class, 'create'])->name('admin.kelas-kuliah.quiz.create');
-        Route::post('kelas-kuliah/{kelasKuliah}/quiz', [QuizController::class, 'store'])->name('admin.kelas-kuliah.quiz.store');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'show'])->name('admin.kelas-kuliah.quiz.show');
-        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions', [QuizController::class, 'storeQuestions'])->name('admin.kelas-kuliah.quiz.questions.store');
-        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'updateQuestion'])->name('admin.kelas-kuliah.quiz.questions.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'destroyQuestion'])->name('admin.kelas-kuliah.quiz.questions.destroy');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/edit', [QuizController::class, 'edit'])->name('admin.kelas-kuliah.quiz.edit');
-        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'update'])->name('admin.kelas-kuliah.quiz.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'destroy'])->name('admin.kelas-kuliah.quiz.destroy');
-        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/duplicate', [QuizController::class, 'duplicate'])->name('admin.kelas-kuliah.quiz.duplicate');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}', [QuizPenilaianController::class, 'show'])->name('admin.kelas-kuliah.quiz.attempts.show');
-        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}/nilai', [QuizPenilaianController::class, 'grade'])->name('admin.kelas-kuliah.quiz.attempts.grade');
+        Route::get('kelas-kuliah/{kelasKuliah}/materi/create', [MateriController::class, 'create'])->middleware('fitur:materi')->name('admin.kelas-kuliah.materi.create');
+        Route::post('kelas-kuliah/{kelasKuliah}/materi', [MateriController::class, 'store'])->middleware('fitur:materi')->name('admin.kelas-kuliah.materi.store');
+        Route::get('kelas-kuliah/{kelasKuliah}/materi/{materi}/edit', [MateriController::class, 'edit'])->middleware('fitur:materi')->name('admin.kelas-kuliah.materi.edit');
+        Route::put('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'update'])->middleware('fitur:materi')->name('admin.kelas-kuliah.materi.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'destroy'])->middleware('fitur:materi')->name('admin.kelas-kuliah.materi.destroy');
+        Route::post('kelas-kuliah/{kelasKuliah}/materi/{materi}/duplicate', [MateriController::class, 'duplicate'])->middleware('fitur:materi')->name('admin.kelas-kuliah.materi.duplicate');
+        Route::get('kelas-kuliah/{kelasKuliah}/tugas/create', [TugasController::class, 'create'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.create');
+        Route::post('kelas-kuliah/{kelasKuliah}/tugas', [TugasController::class, 'store'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.store');
+        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'show'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.show');
+        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/pengumpulan/{pengumpulanTugas}/nilai', [TugasController::class, 'updateSubmissionGrade'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.pengumpulan.nilai');
+        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/edit', [TugasController::class, 'edit'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.edit');
+        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'update'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'destroy'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.destroy');
+        Route::post('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/duplicate', [TugasController::class, 'duplicate'])->middleware('fitur:tugas')->name('admin.kelas-kuliah.tugas.duplicate');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/create', [QuizController::class, 'create'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.create');
+        Route::post('kelas-kuliah/{kelasKuliah}/quiz', [QuizController::class, 'store'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.store');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'show'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.show');
+        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions', [QuizController::class, 'storeQuestions'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.questions.store');
+        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'updateQuestion'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.questions.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'destroyQuestion'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.questions.destroy');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/edit', [QuizController::class, 'edit'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.edit');
+        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'update'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'destroy'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.destroy');
+        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/duplicate', [QuizController::class, 'duplicate'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.duplicate');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}', [QuizPenilaianController::class, 'show'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.attempts.show');
+        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}/nilai', [QuizPenilaianController::class, 'grade'])->middleware('fitur.quiz')->name('admin.kelas-kuliah.quiz.attempts.grade');
     });
 });
 
@@ -352,32 +363,32 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
         Route::post('kelas-kuliah/{kelasKuliah}/finalisasi-nilai', [KelasKuliahController::class, 'finalisasiNilai'])->name('dosen.kelas-kuliah.finalisasi-nilai');
         Route::post('kelas-kuliah/{kelasKuliah}/remidi/kunci', [RemidiController::class, 'kunci'])->name('dosen.kelas-kuliah.remidi.kunci');
         Route::post('kelas-kuliah/{kelasKuliah}/remidi/finalisasi', [RemidiController::class, 'finalisasi'])->name('dosen.kelas-kuliah.remidi.finalisasi');
-        Route::get('kelas-kuliah/{kelasKuliah}/materi/create', [MateriController::class, 'create'])->name('dosen.kelas-kuliah.materi.create');
-        Route::post('kelas-kuliah/{kelasKuliah}/materi', [MateriController::class, 'store'])->name('dosen.kelas-kuliah.materi.store');
-        Route::get('kelas-kuliah/{kelasKuliah}/materi/{materi}/edit', [MateriController::class, 'edit'])->name('dosen.kelas-kuliah.materi.edit');
-        Route::put('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'update'])->name('dosen.kelas-kuliah.materi.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'destroy'])->name('dosen.kelas-kuliah.materi.destroy');
-        Route::post('kelas-kuliah/{kelasKuliah}/materi/{materi}/duplicate', [MateriController::class, 'duplicate'])->name('dosen.kelas-kuliah.materi.duplicate');
-        Route::get('kelas-kuliah/{kelasKuliah}/tugas/create', [TugasController::class, 'create'])->name('dosen.kelas-kuliah.tugas.create');
-        Route::post('kelas-kuliah/{kelasKuliah}/tugas', [TugasController::class, 'store'])->name('dosen.kelas-kuliah.tugas.store');
-        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'show'])->name('dosen.kelas-kuliah.tugas.show');
-        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/pengumpulan/{pengumpulanTugas}/nilai', [TugasController::class, 'updateSubmissionGrade'])->name('dosen.kelas-kuliah.tugas.pengumpulan.nilai');
-        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/edit', [TugasController::class, 'edit'])->name('dosen.kelas-kuliah.tugas.edit');
-        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'update'])->name('dosen.kelas-kuliah.tugas.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'destroy'])->name('dosen.kelas-kuliah.tugas.destroy');
-        Route::post('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/duplicate', [TugasController::class, 'duplicate'])->name('dosen.kelas-kuliah.tugas.duplicate');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/create', [QuizController::class, 'create'])->name('dosen.kelas-kuliah.quiz.create');
-        Route::post('kelas-kuliah/{kelasKuliah}/quiz', [QuizController::class, 'store'])->name('dosen.kelas-kuliah.quiz.store');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'show'])->name('dosen.kelas-kuliah.quiz.show');
-        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions', [QuizController::class, 'storeQuestions'])->name('dosen.kelas-kuliah.quiz.questions.store');
-        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'updateQuestion'])->name('dosen.kelas-kuliah.quiz.questions.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'destroyQuestion'])->name('dosen.kelas-kuliah.quiz.questions.destroy');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/edit', [QuizController::class, 'edit'])->name('dosen.kelas-kuliah.quiz.edit');
-        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'update'])->name('dosen.kelas-kuliah.quiz.update');
-        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'destroy'])->name('dosen.kelas-kuliah.quiz.destroy');
-        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/duplicate', [QuizController::class, 'duplicate'])->name('dosen.kelas-kuliah.quiz.duplicate');
-        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}', [QuizPenilaianController::class, 'show'])->name('dosen.kelas-kuliah.quiz.attempts.show');
-        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}/nilai', [QuizPenilaianController::class, 'grade'])->name('dosen.kelas-kuliah.quiz.attempts.grade');
+        Route::get('kelas-kuliah/{kelasKuliah}/materi/create', [MateriController::class, 'create'])->middleware('fitur:materi')->name('dosen.kelas-kuliah.materi.create');
+        Route::post('kelas-kuliah/{kelasKuliah}/materi', [MateriController::class, 'store'])->middleware('fitur:materi')->name('dosen.kelas-kuliah.materi.store');
+        Route::get('kelas-kuliah/{kelasKuliah}/materi/{materi}/edit', [MateriController::class, 'edit'])->middleware('fitur:materi')->name('dosen.kelas-kuliah.materi.edit');
+        Route::put('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'update'])->middleware('fitur:materi')->name('dosen.kelas-kuliah.materi.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/materi/{materi}', [MateriController::class, 'destroy'])->middleware('fitur:materi')->name('dosen.kelas-kuliah.materi.destroy');
+        Route::post('kelas-kuliah/{kelasKuliah}/materi/{materi}/duplicate', [MateriController::class, 'duplicate'])->middleware('fitur:materi')->name('dosen.kelas-kuliah.materi.duplicate');
+        Route::get('kelas-kuliah/{kelasKuliah}/tugas/create', [TugasController::class, 'create'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.create');
+        Route::post('kelas-kuliah/{kelasKuliah}/tugas', [TugasController::class, 'store'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.store');
+        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'show'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.show');
+        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/pengumpulan/{pengumpulanTugas}/nilai', [TugasController::class, 'updateSubmissionGrade'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.pengumpulan.nilai');
+        Route::get('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/edit', [TugasController::class, 'edit'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.edit');
+        Route::put('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'update'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/tugas/{tugas}', [TugasController::class, 'destroy'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.destroy');
+        Route::post('kelas-kuliah/{kelasKuliah}/tugas/{tugas}/duplicate', [TugasController::class, 'duplicate'])->middleware('fitur:tugas')->name('dosen.kelas-kuliah.tugas.duplicate');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/create', [QuizController::class, 'create'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.create');
+        Route::post('kelas-kuliah/{kelasKuliah}/quiz', [QuizController::class, 'store'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.store');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'show'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.show');
+        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions', [QuizController::class, 'storeQuestions'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.questions.store');
+        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'updateQuestion'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.questions.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/questions/{question}', [QuizController::class, 'destroyQuestion'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.questions.destroy');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/edit', [QuizController::class, 'edit'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.edit');
+        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'update'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.update');
+        Route::delete('kelas-kuliah/{kelasKuliah}/quiz/{quiz}', [QuizController::class, 'destroy'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.destroy');
+        Route::post('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/duplicate', [QuizController::class, 'duplicate'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.duplicate');
+        Route::get('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}', [QuizPenilaianController::class, 'show'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.attempts.show');
+        Route::put('kelas-kuliah/{kelasKuliah}/quiz/{quiz}/attempts/{attempt}/nilai', [QuizPenilaianController::class, 'grade'])->middleware('fitur.quiz')->name('dosen.kelas-kuliah.quiz.attempts.grade');
         Route::redirect('jadwal-kuliah', '/dosen/kelas-kuliah', 301)->name('dosen.jadwal-kuliah');
     });
 
@@ -418,7 +429,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::get('info-biaya-kuliah', [InfoBiayaKuliahController::class, 'index'])->name('mahasiswa.info-biaya-kuliah');
         Route::post('tagihan-semester/{tagihanSemester}/bukti', [MahasiswaTagihanSemesterController::class, 'unggahBukti'])->name('mahasiswa.tagihan-semester.bukti');
         Route::post('tagihan-remidi/{tagihanRemidi}/bukti', [MahasiswaTagihanRemidiController::class, 'unggahBukti'])->name('mahasiswa.tagihan-remidi.bukti');
-        Route::post('tagihan-susulan/{tagihanSusulan}/bukti', [MahasiswaTagihanSusulanController::class, 'unggahBukti'])->name('mahasiswa.tagihan-susulan.bukti');
+        Route::post('tagihan-susulan/{tagihanSusulan}/bukti', [MahasiswaTagihanSusulanController::class, 'unggahBukti'])->middleware('fitur:ujian_susulan')->name('mahasiswa.tagihan-susulan.bukti');
     });
 
     Route::middleware('can:mahasiswa.info-kuliah')->group(function (): void {
@@ -444,18 +455,22 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
 
     Route::middleware('can:mahasiswa.presensi')->group(function (): void {
         Route::get('presensi', [MahasiswaPresensiController::class, 'index'])->name('mahasiswa.presensi');
-        Route::get('presensi/masuk/{pertemuan}', [MahasiswaPresensiController::class, 'masuk'])->name('mahasiswa.presensi.masuk');
-        Route::post('presensi', [MahasiswaPresensiController::class, 'checkIn'])->middleware('throttle:10,1')->name('mahasiswa.presensi.check-in');
+        Route::middleware('fitur:presensi_qr')->group(function (): void {
+            Route::get('presensi/masuk/{pertemuan}', [MahasiswaPresensiController::class, 'masuk'])->name('mahasiswa.presensi.masuk');
+            Route::post('presensi', [MahasiswaPresensiController::class, 'checkIn'])->middleware('throttle:10,1')->name('mahasiswa.presensi.check-in');
+        });
         Route::post('presensi/izin', [MahasiswaPresensiController::class, 'ajukanIzin'])->name('mahasiswa.presensi.izin');
     });
 
     Route::middleware('can:mahasiswa.ujian')->group(function (): void {
         Route::get('ujian', [MahasiswaUjianController::class, 'index'])->name('mahasiswa.ujian');
         Route::get('ujian/kartu', [MahasiswaUjianController::class, 'kartu'])->name('mahasiswa.ujian.kartu');
-        Route::post('ujian/{ujian}/susulan', [MahasiswaUjianSusulanController::class, 'ajukan'])->middleware('throttle:10,1')->name('mahasiswa.ujian.susulan');
-        Route::delete('ujian-susulan/{pengajuanSusulan}', [MahasiswaUjianSusulanController::class, 'batalkan'])->name('mahasiswa.ujian-susulan.batalkan');
+        Route::middleware('fitur:ujian_susulan')->group(function (): void {
+            Route::post('ujian/{ujian}/susulan', [MahasiswaUjianSusulanController::class, 'ajukan'])->middleware('throttle:10,1')->name('mahasiswa.ujian.susulan');
+            Route::delete('ujian-susulan/{pengajuanSusulan}', [MahasiswaUjianSusulanController::class, 'batalkan'])->name('mahasiswa.ujian-susulan.batalkan');
+        });
         Route::get('ujian/{ujian}', [MahasiswaUjianController::class, 'show'])->name('mahasiswa.ujian.show');
-        Route::post('ujian/{ujian}/jawaban', [MahasiswaUjianController::class, 'kumpulkan'])->middleware('throttle:20,1')->name('mahasiswa.ujian.kumpulkan');
+        Route::post('ujian/{ujian}/jawaban', [MahasiswaUjianController::class, 'kumpulkan'])->middleware(['fitur:ujian_online', 'throttle:20,1'])->name('mahasiswa.ujian.kumpulkan');
     });
 
     Route::middleware('can:mahasiswa.pengajuan-cuti')->group(function (): void {
@@ -471,19 +486,24 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::post('tugas-akhir/revisi', [MahasiswaTugasAkhirController::class, 'unggahRevisi'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.revisi');
     });
 
-    Route::middleware('can:mahasiswa.pindah-kelas')->group(function (): void {
+    Route::middleware(['fitur:pindah_kelas', 'can:mahasiswa.pindah-kelas'])->group(function (): void {
         Route::get('pindah-kelas', [MahasiswaPindahKelasController::class, 'index'])->name('mahasiswa.pindah-kelas');
         Route::post('pindah-kelas', [MahasiswaPindahKelasController::class, 'store'])->name('mahasiswa.pindah-kelas.store');
     });
 
     Route::middleware('can:mahasiswa.jadwal-kuliah')->group(function (): void {
-        Route::get('tugas/{tugas}', [PengumpulanTugasController::class, 'show'])->name('mahasiswa.tugas.show');
-        Route::post('tugas/{tugas}/pengumpulan', [PengumpulanTugasController::class, 'store'])->name('mahasiswa.tugas.pengumpulan.store');
-        Route::get('materi/{materi}', fn (Request $request, Materi $materi) => app(MahasiswaContentController::class)->materiShow($request, $materi))->name('mahasiswa.materi.show');
-        Route::get('quiz/{quiz}', fn (Request $request, Quiz $quiz) => app(MahasiswaContentController::class)->quizShow($request, $quiz))->name('mahasiswa.quiz.show');
-        Route::post('quiz/{quiz}/start', [QuizAttemptController::class, 'start'])->name('mahasiswa.quiz.start');
-        Route::post('quiz/{quiz}/answers', [QuizAttemptController::class, 'saveAnswers'])->middleware('throttle:60,1')->name('mahasiswa.quiz.answers');
-        Route::post('quiz/{quiz}/submit', [QuizAttemptController::class, 'submit'])->name('mahasiswa.quiz.submit');
+        Route::middleware('fitur:tugas')->group(function (): void {
+            Route::get('tugas/{tugas}', [PengumpulanTugasController::class, 'show'])->name('mahasiswa.tugas.show');
+            Route::post('tugas/{tugas}/pengumpulan', [PengumpulanTugasController::class, 'store'])->name('mahasiswa.tugas.pengumpulan.store');
+        });
+        Route::get('materi/{materi}', fn (Request $request, Materi $materi) => app(MahasiswaContentController::class)->materiShow($request, $materi))->middleware('fitur:materi')->name('mahasiswa.materi.show');
+        // Lembar soal ujian online memakai rute quiz yang sama (lihat PastikanFiturQuiz).
+        Route::middleware('fitur.quiz')->group(function (): void {
+            Route::get('quiz/{quiz}', fn (Request $request, Quiz $quiz) => app(MahasiswaContentController::class)->quizShow($request, $quiz))->name('mahasiswa.quiz.show');
+            Route::post('quiz/{quiz}/start', [QuizAttemptController::class, 'start'])->name('mahasiswa.quiz.start');
+            Route::post('quiz/{quiz}/answers', [QuizAttemptController::class, 'saveAnswers'])->middleware('throttle:60,1')->name('mahasiswa.quiz.answers');
+            Route::post('quiz/{quiz}/submit', [QuizAttemptController::class, 'submit'])->name('mahasiswa.quiz.submit');
+        });
         Route::get('jadwal', fn (Request $request) => app(MahasiswaContentController::class)->jadwalKuliah($request))
             ->name('mahasiswa.jadwal-kuliah');
         Route::get('jadwal/{kelasKuliah}', fn (Request $request, KelasKuliah $kelasKuliah) => app(MahasiswaContentController::class)->show($request, $kelasKuliah))

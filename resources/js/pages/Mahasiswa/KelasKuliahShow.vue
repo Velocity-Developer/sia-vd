@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
@@ -65,6 +66,14 @@ const formatTenggat = (value: string | null | undefined): string => {
 
     return `${day} ${months[Number(month) - 1]} ${year}, ${hour}:${minute}`;
 };
+
+// Bagian konten hanya untuk fitur per klien yang aktif.
+const fitur = useFitur();
+const bagianKonten = [
+    { title: 'Materi', fitur: 'materi' as const, items: props.kelasKuliah.materis ?? [] },
+    { title: 'Tugas', fitur: 'tugas' as const, items: props.kelasKuliah.tugas ?? [] },
+    { title: 'Quiz', fitur: 'quiz' as const, items: props.kelasKuliah.quizzes ?? [] },
+].filter((b) => fitur.aktif(b.fitur));
 </script>
 
 <template>
@@ -128,15 +137,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                     <p v-else class="mt-4 text-sm text-[#615d59] dark:text-muted-foreground">Belum ada jadwal.</p>
                 </section>
-                <section
-                    v-for="section in [
-                        { title: 'Materi', items: props.kelasKuliah.materis ?? [] },
-                        { title: 'Tugas', items: props.kelasKuliah.tugas ?? [] },
-                        { title: 'Quiz', items: props.kelasKuliah.quizzes ?? [] },
-                    ]"
-                    :key="section.title"
-                    class="kartu p-6"
-                >
+                <section v-for="section in bagianKonten" :key="section.title" class="kartu p-6">
                     <h2 class="judul-bagian">
                         {{ section.title }}
                     </h2>

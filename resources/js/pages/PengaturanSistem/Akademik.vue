@@ -61,7 +61,8 @@ const dipakai = (huruf: string) => props.skalaNilai.find((row) => row.huruf === 
 const errorOf = (form: { errors: object }, key: string) => (form.errors as Record<string, string | undefined>)[key];
 
 // Penguncian KRS dan batas bayar susulan hanya berlaku selama fitur keuangan aktif.
-const keuangan = useFitur().aktif('keuangan');
+const fitur = useFitur();
+const keuangan = fitur.aktif('keuangan');
 const kunciForm = useForm({ kunci_krs_aktif: props.kunciKrsAktif });
 
 const susulanForm = useForm({ ...props.susulan });
@@ -84,12 +85,16 @@ const simpanPresensi = () => presensiForm.put(route('admin.pengaturan-akademik.p
 const pindahKelasForm = useForm({ is_active: props.pindahKelasAktif });
 const simpanPindahKelas = () => pindahKelasForm.put(route('admin.pengaturan-akademik.pindah-kelas'), { preserveScroll: true });
 
+// Bagian milik fitur per klien yang mati tidak ditampilkan.
+const fiturPindahKelas = fitur.aktif('pindah_kelas');
+const susulanAktif = fitur.aktif('ujian_susulan');
+const presensiQr = fitur.aktif('presensi_qr');
 const daftarBagian = [
     { id: 'krs', judul: 'KRS & SKS' },
-    { id: 'pindah-kelas', judul: 'Pindah Kelas' },
+    ...(fiturPindahKelas ? [{ id: 'pindah-kelas', judul: 'Pindah Kelas' }] : []),
     { id: 'nilai', judul: 'Nilai' },
     { id: 'remidi', judul: 'Remidi' },
-    { id: 'susulan', judul: 'Ujian Susulan' },
+    ...(susulanAktif ? [{ id: 'susulan', judul: 'Ujian Susulan' }] : []),
     { id: 'tugas-akhir', judul: 'Tugas Akhir' },
     { id: 'cuti', judul: 'Cuti' },
     { id: 'presensi', judul: 'Presensi' },
@@ -200,7 +205,7 @@ const saveNilai = () =>
             </form>
         </section>
 
-        <section id="pindah-kelas" class="flex scroll-mt-4 flex-col gap-4">
+        <section v-if="fiturPindahKelas" id="pindah-kelas" class="flex scroll-mt-4 flex-col gap-4">
             <h2 class="teks-bantu font-semibold uppercase tracking-[0.06em]">Pindah Kelas</h2>
             <form class="kartu p-6" @submit.prevent="simpanPindahKelas">
                 <h3 class="judul-bagian">Form Pindah Kelas</h3>
@@ -336,7 +341,7 @@ const saveNilai = () =>
             </form>
         </section>
 
-        <section id="susulan" class="flex scroll-mt-4 flex-col gap-4">
+        <section v-if="susulanAktif" id="susulan" class="flex scroll-mt-4 flex-col gap-4">
             <h2 class="teks-bantu font-semibold uppercase tracking-[0.06em]">Ujian Susulan</h2>
             <form class="kartu p-6" @submit.prevent="simpanSusulan">
                 <h3 class="judul-bagian">Batas Waktu Ujian Susulan</h3>
@@ -438,7 +443,7 @@ const saveNilai = () =>
                         <p class="teks-bantu">Lewat dari jam mulai + toleransi, presensi mandiri tercatat Terlambat.</p>
                         <InputError :message="presensiForm.errors.toleransi_terlambat_menit" />
                     </div>
-                    <div class="grid content-start gap-2">
+                    <div v-if="presensiQr" class="grid content-start gap-2">
                         <Label for="durasi_presensi_mandiri_menit" class="label-isian">Durasi presensi mandiri (menit)</Label>
                         <Input
                             id="durasi_presensi_mandiri_menit"

@@ -288,7 +288,8 @@ const finalisasiRemidi = () =>
 const bukaFinalRemidi = () => router.post(route('admin.kelas-kuliah.remidi.buka-finalisasi', props.kelasKuliah.id), {}, { preserveScroll: true });
 // Huruf akhir peserta remidi yang lunas dibuka setelah ujian remidi selesai, walau nilai kelas sudah final.
 // Tanpa fitur keuangan, remidi tidak bersyarat bayar dan kolom tagihan tidak ditampilkan.
-const keuangan = useFitur().aktif('keuangan');
+const fitur = useFitur();
+const keuangan = fitur.aktif('keuangan');
 // Huruf peserta remidi hanya berubah lewat remidi, walau admin membuka kembali kunci nilai kelas.
 const jalurRemidi = (krs: KrsShow) => props.remidiTerbuka.includes(krs.mahasiswa_id);
 const menungguRemidi = (krs: KrsShow) => props.pesertaRemidi.includes(krs.mahasiswa_id) && !jalurRemidi(krs);
@@ -627,6 +628,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </BagianLipat>
 
                     <BagianLipat
+                        v-if="fitur.aktif('materi')"
                         v-model:open="terbuka.materi"
                         judul="Materi"
                         :jumlah="(props.kelasKuliah.materis ?? []).length"
@@ -737,6 +739,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </BagianLipat>
 
                     <BagianLipat
+                        v-if="fitur.aktif('tugas')"
                         v-model:open="terbuka.tugas"
                         judul="Tugas"
                         :jumlah="(props.kelasKuliah.tugas ?? []).length"
@@ -855,6 +858,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </BagianLipat>
 
                     <BagianLipat
+                        v-if="fitur.aktif('quiz')"
                         v-model:open="terbuka.quiz"
                         judul="Quiz"
                         :jumlah="(props.kelasKuliah.quizzes ?? []).length"

@@ -1,3 +1,5 @@
+import { useFitur } from '@/composables/useFitur';
+
 export type ModeUjian = 'tatap_muka' | 'online_berkas' | 'online_soal';
 export type JenisUjian = 'uts' | 'uas' | 'remidi' | 'uts_susulan' | 'uas_susulan';
 
@@ -16,6 +18,22 @@ export const JENIS_UJIAN: Record<JenisUjian, string> = {
     uts_susulan: 'UTS Susulan',
     uas_susulan: 'UAS Susulan',
 };
+
+/**
+ * Pilihan mode dan jenis ujian sesuai fitur per klien: tanpa ujian_online hanya tatap muka,
+ * tanpa ujian_susulan jenis susulan tidak ditawarkan. Server memvalidasi hal yang sama.
+ */
+export function useOpsiUjian() {
+    const fitur = useFitur();
+    const modeTersedia = MODE_UJIAN.filter((m) => fitur.aktif('ujian_online') || m.value === 'tatap_muka');
+    const susulanAktif = fitur.aktif('ujian_susulan');
+    const jenisTersedia = Object.fromEntries(
+        Object.entries(JENIS_UJIAN).filter(([j]) => susulanAktif || (j !== 'uts_susulan' && j !== 'uas_susulan')),
+    ) as Partial<Record<JenisUjian, string>>;
+    const modeAwal = (mode?: ModeUjian | null): ModeUjian => (mode && modeTersedia.some((m) => m.value === mode) ? mode : 'tatap_muka');
+
+    return { modeTersedia, jenisTersedia, susulanAktif, modeAwal };
+}
 
 /** Remidi dan susulan hanya untuk pesertanya sendiri. */
 export const jenisKhusus = (jenis: JenisUjian): boolean => jenis !== 'uts' && jenis !== 'uas';

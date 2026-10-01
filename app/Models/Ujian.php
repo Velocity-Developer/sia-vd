@@ -52,6 +52,26 @@ class Ujian extends Model
 
     public const MODE = [self::TATAP_MUKA, self::ONLINE_BERKAS, self::ONLINE_SOAL];
 
+    /**
+     * Mode yang boleh dipilih untuk jadwal baru atau yang diubah: tanpa fitur ujian_online hanya tatap muka.
+     *
+     * @return list<string>
+     */
+    public static function modeTersedia(): array
+    {
+        return Feature::aktif('ujian_online') ? self::MODE : [self::TATAP_MUKA];
+    }
+
+    /**
+     * Jenis yang boleh dijadwalkan: tanpa fitur ujian_susulan, jenis susulan tidak tersedia.
+     *
+     * @return list<string>
+     */
+    public static function jenisTersedia(): array
+    {
+        return Feature::aktif('ujian_susulan') ? self::SEMUA_JENIS : array_values(array_diff(self::SEMUA_JENIS, self::JENIS_SUSULAN));
+    }
+
     public const DRAF = 'draf';
 
     public const TERBIT = 'terbit';

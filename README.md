@@ -39,7 +39,16 @@ Fitur yang bisa berbeda antarklien terdaftar di [config/client.php](config/clien
 | `kelola_role` | `FEATURE_KELOLA_ROLE`, `LOCK_KELOLA_ROLE` | mati | Admin punya menu **Kelola Role**. | Menu dan rute Kelola Role admin 404. Role disusun developer di panel `/dev/roles`; admin tetap bisa memberi role itu ke user. |
 | `keuangan` | `FEATURE_KEUANGAN`, `LOCK_KEUANGAN` | mati | Jenis biaya, tagihan semester/remidi/susulan, bukti bayar, Info Biaya Kuliah, kunci KRS sampai lunas. | Menu tagihan & info biaya disembunyikan (404), KRS tidak dikunci tagihan, remidi dan ujian susulan **gratis**. Bukti bayar cuti/pendadaran/wisuda tetap wajib. |
 
-Fitur lain (presensi, pindah kelas, remidi, ujian susulan) **bukan** flag: selalu ada di semua klien.
+| `materi` | `FEATURE_MATERI`, `LOCK_MATERI` | **nyala** | Materi per kelas untuk admin, dosen, dan mahasiswa. | Menu, bagian di halaman kelas, berkas, dan rutenya 404. |
+| `tugas` | `FEATURE_TUGAS`, `LOCK_TUGAS` | **nyala** | Tugas per kelas, pengumpulan, dan penilaiannya. | Seperti materi; Beranda tanpa tugas bertenggat dan tanpa pengumpulan yang perlu dinilai. |
+| `quiz` | `FEATURE_QUIZ`, `LOCK_QUIZ` | **nyala** | Quiz per kelas. | Quiz kelas 404. Lembar soal ujian online tetap jalan bila `ujian_online` nyala (middleware `fitur.quiz`). |
+| `ujian_online` | `FEATURE_UJIAN_ONLINE`, `LOCK_UJIAN_ONLINE` | **nyala** | Mode ujian unggah berkas dan soal di sistem. | Semua ujian (UTS/UAS/remidi/susulan) **tatap muka**: pilihan mode disembunyikan dan ditolak server, rute soal/jawaban online 404. |
+| `presensi_qr` | `FEATURE_PRESENSI_QR`, `LOCK_PRESENSI_QR` | **nyala** | Presensi mandiri mahasiswa lewat QR/PIN. | Presensi hanya dicatat manual oleh dosen/admin; tombol dan rute QR/PIN 404. |
+| `pindah_kelas` | `FEATURE_PINDAH_KELAS`, `LOCK_PINDAH_KELAS` | **nyala** | Pengajuan pindah kelas paralel dan persetujuannya. | Menu, pengaturan, dan rutenya 404. Admin tetap bisa membuka kunci KRS dari detail mahasiswa. |
+| `ujian_susulan` | `FEATURE_UJIAN_SUSULAN`, `LOCK_UJIAN_SUSULAN` | **nyala** | Pengajuan susulan UTS/UAS, jadwal, dan tagihannya. | Menu, pengaturan, dan rutenya 404; jenis susulan tidak bisa dijadwalkan; finalisasi nilai tidak menunggu susulan. |
+
+Bawaan `materi` s.d. `ujian_susulan` sengaja **nyala** karena fiturnya sudah lama ada: instalasi yang tidak
+mengisi `.env`-nya tidak berubah. Presensi manual dan remidi **bukan** flag: selalu ada di semua klien.
 
 ### Urutan penentuan status
 
@@ -56,7 +65,8 @@ Pakai `LOCK_*=true` untuk fitur yang sudah dipastikan di kontrak klien, supaya t
 ### Menambah flag baru
 
 1. Daftarkan di `config/client.php` (`label`, `keterangan`, `default`, `locked`, `butuh`).
-2. Tambahkan `FEATURE_<NAMA>=false` dan `LOCK_<NAMA>=false` ke `.env.example` (dicek oleh `FeatureFlagTest`).
+2. Tambahkan `FEATURE_<NAMA>=<bawaan>` dan `LOCK_<NAMA>=false` ke `.env.example` (dicek oleh `FeatureFlagTest`;
+   fitur baru bawaan `false`, fitur lama yang dijadikan flag `true` dan didaftarkan di `FITUR_BAWAAN_NYALA` tes itu).
 3. Pasang di kode: middleware rute `fitur:<nama>`, kunci `fitur` di menu `AppSidebar.vue`,
    `useFitur().aktif('<nama>')` di Vue, `Feature::aktif('<nama>')` di PHP. Izin menu milik fitur didaftarkan di
    `PermissionCatalog::FITUR` agar disembunyikan dari role selama fitur mati.
