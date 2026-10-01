@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
+import RecaptchaWidget from '@/components/RecaptchaWidget.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -12,19 +13,26 @@ import { ref } from 'vue';
 defineProps<{
     status?: string;
     canResetPassword: boolean;
+    recaptchaSiteKey?: string | null;
 }>();
 
 const form = useForm({
     username: '',
     password: '',
     remember: false,
+    'g-recaptcha-response': '',
 });
 
 const lihatSandi = ref(false);
+const captcha = ref<InstanceType<typeof RecaptchaWidget> | null>(null);
 
 const submit = () => {
     form.post(route('login'), {
-        onFinish: () => form.reset('password'),
+        onFinish: () => {
+            form.reset('password');
+            // Token captcha sekali pakai; sesudah gagal masuk pengguna harus mencentang ulang.
+            captcha.value?.reset();
+        },
     });
 };
 </script>
@@ -101,6 +109,11 @@ const submit = () => {
                 <Checkbox id="remember" v-model="form.remember" tabindex="3" />
                 <span>Ingat saya di perangkat ini</span>
             </Label>
+
+            <div v-if="recaptchaSiteKey" class="grid gap-2">
+                <RecaptchaWidget ref="captcha" v-model="form['g-recaptcha-response']" :site-key="recaptchaSiteKey" />
+                <InputError :message="(form.errors as Record<string, string>).captcha" />
+            </div>
 
             <Button type="submit" tabindex="4" :disabled="form.processing" class="w-full">
                 <LoaderCircle v-if="form.processing" class="animate-spin" />

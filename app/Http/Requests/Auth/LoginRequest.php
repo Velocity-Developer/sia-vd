@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\PengaturanRecaptcha;
 use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -10,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Validator;
 
 class LoginRequest extends FormRequest
 {
@@ -31,6 +33,35 @@ class LoginRequest extends FormRequest
         return [
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'g-recaptcha-response' => ['nullable', 'string'],
+        ];
+    }
+
+    /**
+     * Captcha diperiksa ke Google sesudah username & kata sandi terisi, bila diaktifkan di Pengaturan Sistem.
+     *
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                $pengaturan = PengaturanRecaptcha::query()->find(PengaturanRecaptcha::SINGLETON_ID);
+                if (! $pengaturan?->dipakai()) {
+                    return;
+                }
+
+                $token = $this->input('g-recaptcha-response');
+                if (blank($token)) {
+                    $validator->errors()->add('captcha', 'Centang kotak "Saya bukan robot" terlebih dahulu.');
+                } elseif (! PengaturanRecaptcha::verifikasi($pengaturan->secret_key, $token, $this->ip())) {
+                    $validator->errors()->add('captcha', 'Verifikasi captcha gagal. Silakan centang ulang.');
+                }
+            },
         ];
     }
 

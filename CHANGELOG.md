@@ -5,6 +5,11 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 
 ## [Belum dirilis]
 
+### Ditambahkan
+- Tab **reCAPTCHA** di Pengaturan Sistem (izin `admin.pengaturan-recaptcha`): site key & secret key Google reCAPTCHA v2.
+  Bila aktif, halaman masuk menampilkan kotak centang "Saya bukan robot" yang diverifikasi di server. Captcha uji wajib
+  lolos saat menyalakan atau mengganti kunci.
+
 ### Diubah
 - README dilengkapi **Alur pemakaian dari awal** (persiapan, siklus per semester, akhir studi).
 - Isian **Program Studi** pada form dosen kini opsional, sehingga instalasi baru bisa membuat dosen calon

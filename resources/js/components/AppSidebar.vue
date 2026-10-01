@@ -243,7 +243,9 @@ const footerNavItems: NavItem[] = [];
 // pengguna boleh membuka minimal satu tab-nya.
 const page = usePage();
 const bisaPengaturanSistem = computed(() =>
-    ['admin.institusi', 'admin.pengaturan-email', 'admin.pengaturan-akademik', 'admin.pengaturan-tampilan'].some((izin) => can(izin)),
+    ['admin.institusi', 'admin.pengaturan-email', 'admin.pengaturan-akademik', 'admin.pengaturan-tampilan', 'admin.pengaturan-recaptcha'].some(
+        (izin) => can(izin),
+    ),
 );
 const pengaturanSistemAktif = computed(() => page.url.startsWith('/pengaturan-sistem'));
 

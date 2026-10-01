@@ -33,6 +33,7 @@ it('renders every settings tab for admin', function (string $tab, string $kompon
     ['email', 'PengaturanSistem/Email'],
     ['akademik', 'PengaturanSistem/Akademik'],
     ['tampilan', 'PengaturanSistem/Tampilan'],
+    ['recaptcha', 'PengaturanSistem/Recaptcha'],
 ]);
 
 it('redirects the old settings addresses', function (string $lama, string $baru) {

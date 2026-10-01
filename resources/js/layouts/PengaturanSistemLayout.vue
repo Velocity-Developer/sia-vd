@@ -2,7 +2,7 @@
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, GraduationCap, Mail, Palette } from 'lucide-vue-next';
+import { Building2, GraduationCap, Mail, Palette, ShieldCheck } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 // Satu halaman Pengaturan Sistem dengan tab; tiap tab punya alamat sendiri dan hanya tampil bila diizinkan.
@@ -11,6 +11,7 @@ const semuaTab = [
     { nama: 'email', judul: 'Email', izin: 'admin.pengaturan-email', ikon: Mail },
     { nama: 'akademik', judul: 'Akademik', izin: 'admin.pengaturan-akademik', ikon: GraduationCap },
     { nama: 'tampilan', judul: 'Tampilan', izin: 'admin.pengaturan-tampilan', ikon: Palette },
+    { nama: 'recaptcha', judul: 'reCAPTCHA', izin: 'admin.pengaturan-recaptcha', ikon: ShieldCheck },
 ] as const;
 
 const { can } = usePermissions();

@@ -62,7 +62,7 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 | Administrasi | `admin.dashboard`, `admin.info-kuliah`, `admin.tahun-akademik`, `admin.fakultas`, `admin.program-studi`, `admin.mata-kuliah`, `admin.ruang`, `admin.kelas-kuliah`, `admin.jadwal`, `admin.materi`, `admin.tugas`, `admin.quiz`, `admin.presensi`, `admin.ujian`, `admin.pindah-kelas`, `admin.pengajuan-akademik` (TA & Wisuda, Periode Wisuda) |
 | Keuangan | `admin.jenis-biaya`, `admin.tagihan` (termasuk Tagihan Remidi) |
 | Manajemen pengguna | `admin.users.dosen`, `admin.users.mahasiswa`, `admin.users.karyawan`, `admin.roles` |
-| Pengaturan sistem | `admin.institusi`, `admin.pengaturan-email`, `admin.pengaturan-akademik`, `admin.pengaturan-tampilan` |
+| Pengaturan sistem | `admin.institusi`, `admin.pengaturan-email`, `admin.pengaturan-akademik`, `admin.pengaturan-tampilan`, `admin.pengaturan-recaptcha` |
 | Dosen | `dosen.dashboard`, `dosen.kelas-kuliah`, `dosen.jadwal`, `dosen.materi`, `dosen.tugas`, `dosen.quiz`, `dosen.presensi`, `dosen.ujian`, `dosen.mahasiswa-kelas`, `dosen.bimbingan` (Bimbingan TA) |
 | Mahasiswa | `mahasiswa.dashboard`, `mahasiswa.info-kuliah`, `mahasiswa.krs`, `mahasiswa.hasil-studi`, `mahasiswa.jadwal-kuliah`, `mahasiswa.presensi`, `mahasiswa.ujian`, `mahasiswa.pindah-kelas`, `mahasiswa.tugas-akhir`, `mahasiswa.info-biaya` |
 
@@ -244,6 +244,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 | Email | `admin.pengaturan-email` | Mailer `log` atau `smtp`. Kata sandi SMTP disimpan terenkripsi dan tidak pernah dikirim ke browser. Ada tombol kirim surel uji (`throttle:6,1`). Nilai di database menimpa `.env`. |
 | Akademik | `admin.pengaturan-akademik` | Delapan formulir, dijelaskan di bawah tabel ini. |
 | Tampilan | `admin.pengaturan-tampilan` | Nama aplikasi, favicon (png/ico/webp, SVG ditolak), halaman masuk (judul, teks, gambar, tata letak `panel`/`tengah`, sorotan fitur), sidebar bawaan (`lebar`/`ringkas`). |
+| reCAPTCHA | `admin.pengaturan-recaptcha` | Google reCAPTCHA v2 kotak centang di halaman masuk: sakelar aktif (bawaan mati), site key, secret key (terenkripsi, tidak pernah dikirim ke browser). Saat dinyalakan atau kuncinya diganti, admin wajib lolos captcha uji di halaman itu (diverifikasi ke Google) agar kunci salah tidak mengunci semua pengguna. Bila aktif, `LoginRequest` memverifikasi `g-recaptcha-response` ke Google sebelum mencocokkan kata sandi; gagal terhubung ke Google = ditolak. Darurat: `UPDATE pengaturan_recaptcha SET aktif = 0`. |
 
 **Delapan formulir di tab Akademik:**
 
