@@ -2,6 +2,7 @@
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
+import TemplateEmailEditor, { type Template } from '@/components/TemplateEmailEditor.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +22,7 @@ interface Pengaturan {
     password_tersimpan: boolean;
 }
 
-const props = defineProps<{ pengaturan: Pengaturan }>();
+const props = defineProps<{ pengaturan: Pengaturan; template: Template[] }>();
 
 const form = useForm({
     mailer: props.pengaturan.mailer ?? 'log',
@@ -138,5 +139,7 @@ const kirimUji = () => formUji.post(route('pengaturan-email.uji'), { preserveScr
                 </Button>
             </form>
         </div>
+
+        <TemplateEmailEditor :template="props.template" />
     </PengaturanSistemLayout>
 </template>

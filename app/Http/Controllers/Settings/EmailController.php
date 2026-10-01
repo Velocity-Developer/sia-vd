@@ -34,6 +34,7 @@ class EmailController extends Controller
                 // Kata sandi SMTP tidak pernah dikirim ke browser, hanya status tersimpan atau belum.
                 'password_tersimpan' => filled($pengaturan->password),
             ],
+            'template' => TemplateEmailController::untukHalaman(),
         ]);
     }
 
@@ -90,7 +91,7 @@ class EmailController extends Controller
         PengaturanEmail::terapkan();
 
         try {
-            Mail::to($data['email_tujuan'])->send(new SurelUji);
+            Mail::to($data['email_tujuan'])->send(new SurelUji($data['email_tujuan']));
         } catch (Throwable $e) {
             return back()->with('error', 'Surel uji gagal dikirim: '.$e->getMessage());
         }

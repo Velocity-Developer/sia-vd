@@ -9,6 +9,9 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 - Tab **reCAPTCHA** di Pengaturan Sistem (izin `admin.pengaturan-recaptcha`): site key & secret key Google reCAPTCHA v2.
   Bila aktif, halaman masuk menampilkan kotak centang "Saya bukan robot" yang diverifikasi di server. Captcha uji wajib
   lolos saat menyalakan atau mengganti kunci.
+- **Template Email** di Pengaturan Sistem > Email: admin bisa mengubah subjek, sapaan, isi, teks tombol, dan penutup
+  surel atur ulang kata sandi, verifikasi email, dan surel uji, dengan variabel (`{nama}`, `{tautan}`, …), pratinjau,
+  dan tombol Kembalikan Bawaan.
 
 ### Diubah
 - README dilengkapi **Alur pemakaian dari awal** (persiapan, siklus per semester, akhir studi).

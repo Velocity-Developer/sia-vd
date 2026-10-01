@@ -8,6 +8,7 @@ use App\Http\Controllers\Settings\PengaturanSistemController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\RecaptchaController;
 use App\Http\Controllers\Settings\TampilanController;
+use App\Http\Controllers\Settings\TemplateEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -34,6 +35,9 @@ Route::middleware('auth')->group(function () {
             Route::post('email/uji', [EmailController::class, 'uji'])
                 ->middleware('throttle:6,1')
                 ->name('pengaturan-email.uji');
+            Route::put('email/template/{jenis}', [TemplateEmailController::class, 'update'])->name('pengaturan-email.template.update');
+            Route::delete('email/template/{jenis}', [TemplateEmailController::class, 'destroy'])->name('pengaturan-email.template.destroy');
+            Route::post('email/template/{jenis}/pratinjau', [TemplateEmailController::class, 'pratinjau'])->name('pengaturan-email.template.pratinjau');
         });
 
         Route::middleware('can:admin.pengaturan-akademik')->group(function (): void {
