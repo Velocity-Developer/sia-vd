@@ -77,6 +77,14 @@ class Pendadaran extends Model
         return $this->belongsTo(MahasiswaProfile::class, 'mahasiswa_id');
     }
 
+    /**
+     * Prodi yang skala nilainya dipakai mengubah nilai angka pendadaran menjadi huruf: prodi mahasiswanya.
+     */
+    public function prodiNilai(): ?int
+    {
+        return $this->mahasiswa?->prodi_id;
+    }
+
     public function ruang(): BelongsTo
     {
         return $this->belongsTo(Ruang::class);

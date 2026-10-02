@@ -100,7 +100,7 @@ class PengajuanCutiController extends Controller
             $tahun = TahunAkademik::query()->find($pengajuan->isian['tahun_akademik_id'] ?? 0);
             $maks = PengaturanAkademik::current()->maks_cuti;
             $galat = match (true) {
-                $mahasiswa->status !== 'Aktif' => "Status {$nama} kini {$mahasiswa->status}, bukan Aktif.",
+                ! $mahasiswa->isAktif() => "Status {$nama} kini {$mahasiswa->status}, bukan Aktif.",
                 PengajuanCuti::disetujui($mahasiswa->id)->count() >= $maks => "{$nama} sudah mencapai batas cuti {$maks} semester.",
                 $tahun === null || $tahun->tanggal_akhir->lt(today()) => 'Semester yang dipilih sudah berakhir.',
                 default => null,

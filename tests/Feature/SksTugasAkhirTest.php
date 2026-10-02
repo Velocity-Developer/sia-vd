@@ -1,5 +1,7 @@
 <?php
 
+use App\BerandaMahasiswa;
+use App\Models\BobotNilai;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
@@ -9,6 +11,7 @@ use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
 use App\Models\User;
 use App\PengingatTugasAkhir;
+use App\SyaratTugasAkhir;
 
 /**
  * Kelas Skripsi (tanpa dosen, kapasitas 1) di tahun akademik aktif yang periode KRS-nya berjalan, satu tahun akademik
@@ -178,4 +181,49 @@ it('reminds the student to take an unfinished Skripsi again', function () {
 
     Krs::create(['mahasiswa_id' => $profil->id, 'kelas_id' => $kelasTa->id, 'status' => 'Aktif']);
     expect(PengingatTugasAkhir::untukMahasiswa($profil))->toBeNull();
+});
+
+it('menghitung SKS diakui mahasiswa pindahan untuk syarat mengambil Skripsi', function () {
+    [$mahasiswa, $kelasTa, $lama] = skripsiSetup();
+    $profil = $mahasiswa->mahasiswaProfile;
+    $profil->update(['status' => 'Pindahan', 'sks_diakui' => 100]);
+    nilaiMatkulBiasa($profil, $lama, 19);
+
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelasTa))
+        ->assertSessionHas('krs_error', fn (string $pesan): bool => str_contains($pesan, 'baru 119 SKS, termasuk 100 SKS diakui'));
+
+    nilaiMatkulBiasa($profil, $lama, 1);
+    $this->actingAs($mahasiswa)->post(route('mahasiswa.krs.store', $kelasTa))->assertSessionHas('krs_success');
+    expect(BerandaMahasiswa::ringkasan($profil->fresh(), $kelasTa->tahunAkademik)['sks_lulus'])->toBe(120);
+});
+
+it('memakai SKS Lulus prodi untuk syarat pendadaran, atau pengaturan global bila kosong', function () {
+    [$mahasiswa, , $lama] = skripsiSetup();
+    $profil = $mahasiswa->mahasiswaProfile;
+    $profil->update(['sks_diakui' => 4]);
+    nilaiMatkulBiasa($profil, $lama, 6);
+    $syaratSks = fn (): array => SyaratTugasAkhir::nilai($profil->fresh(), false)[0];
+
+    expect($syaratSks())->label->toBe('Menempuh minimal 138 SKS (di luar TA/Skripsi)')->terpenuhi->toBeFalse()
+        ->keterangan->toBe('Sudah 10 SKS bernilai (termasuk 4 SKS diakui).');
+
+    $profil->prodi->update(['sks_lulus' => 10]);
+    expect($syaratSks())->label->toBe('Menempuh minimal 10 SKS (di luar TA/Skripsi)')->terpenuhi->toBeTrue();
+
+    $profil->prodi->update(['sks_lulus' => 11]);
+    expect($syaratSks())->terpenuhi->toBeFalse();
+});
+
+it('memakai huruf tidak lulus skala prodi untuk syarat nilai pendadaran', function () {
+    $kelas = createMateriKelasKuliah();
+    foreach ([['A', 4, true], ['F', 0, false]] as [$huruf, $bobot, $lulus]) {
+        BobotNilai::create(['prodi_id' => $kelas->mataKuliah->prodi_id, 'huruf' => $huruf, 'bobot' => $bobot, 'lulus' => $lulus, 'boleh_diulang' => ! $lulus]);
+    }
+    $mahasiswa = User::factory()->mahasiswa()->create()->mahasiswaProfile;
+    Krs::create(['mahasiswa_id' => $mahasiswa->id, 'kelas_id' => $kelas->id, 'status' => 'Aktif', 'nilai' => 'F']);
+
+    expect(SyaratTugasAkhir::nilai($mahasiswa, false)[1])
+        ->label->toBe('Tidak ada nilai tidak lulus')
+        ->terpenuhi->toBeFalse()
+        ->keterangan->toBe('Nilai tidak lulus: Algoritma dan Pemrograman (F).');
 });

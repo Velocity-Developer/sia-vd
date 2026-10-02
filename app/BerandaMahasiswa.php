@@ -40,7 +40,8 @@ class BerandaMahasiswa
             'status' => $mahasiswa->status,
             'dosen_wali' => $mahasiswa->dosenWali?->user?->name,
             'ipk' => $transkrip['ipk'],
-            'sks_lulus' => $transkrip['sks_lulus'],
+            // SKS diakui (pindahan) ikut dihitung; transkrip & IPK tetap hanya dari mata kuliah di sini.
+            'sks_lulus' => $transkrip['sks_lulus'] + $mahasiswa->sksDiakui(),
             'sks_semester' => $tahunAkademik === null ? 0 : (int) self::krsSemester($mahasiswa, $tahunAkademik)
                 ->sum(fn (Krs $krs): int => $krs->kelasKuliah?->mataKuliah?->sks ?? 0),
             'krs_tersimpan' => $tahunAkademik !== null && KrsSemester::tersimpan($mahasiswa->id, $tahunAkademik->id),
@@ -54,7 +55,7 @@ class BerandaMahasiswa
      */
     public static function pengingatSemester(MahasiswaProfile $mahasiswa, ?TahunAkademik $tahunAkademik, bool $lihatKrs, bool $lihatTagihan): ?array
     {
-        if ($tahunAkademik === null || $mahasiswa->status !== 'Aktif') {
+        if ($tahunAkademik === null || ! $mahasiswa->isAktif()) {
             return null;
         }
 

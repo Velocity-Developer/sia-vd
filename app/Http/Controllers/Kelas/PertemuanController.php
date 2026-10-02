@@ -62,7 +62,13 @@ class PertemuanController extends Controller
                 : null,
             'mandiriTerbuka' => fn () => $pertemuan->mandiriTerbuka(),
             'durasiMandiri' => fn () => PengaturanAkademik::current()->durasi_presensi_mandiri_menit,
-            'terkunci' => fn () => $this->tahunAkademikTerkunci($kelas),
+            'terkunci' => fn () => $this->tahunAkademikTerkunci($kelas) || $pertemuan->terverifikasi(),
+            'verifikasi' => fn () => [
+                'status' => $pertemuan->verifikasi,
+                'catatan' => $pertemuan->catatan_verifikasi,
+                'oleh' => $pertemuan->pemverifikasi?->name,
+                'waktu' => $pertemuan->diverifikasi_at?->toIso8601String(),
+            ],
             'dosenOptions' => fn () => $this->peran() === 'admin'
                 ? DosenProfile::pilihan($pertemuan->dosen_id)->with('user:id,name')->orderBy('nidn')->get(['id', 'user_id', 'nidn'])
                     ->map(fn (DosenProfile $dosen): array => ['id' => $dosen->id, 'name' => ($dosen->user?->name ?? '-').' — '.$dosen->nidn])
@@ -245,6 +251,7 @@ class PertemuanController extends Controller
 
         $pertemuan->update([
             'status' => Pertemuan::SELESAI,
+            'status_dosen' => Pertemuan::statusHadirUntuk($pertemuan->dosen_id, $pertemuan->kelasKuliah->dosen_id),
             'topik' => $data['topik'],
             'mandiri_sampai' => null,
             'dosen_keluar_at' => $this->peran() === 'dosen' ? now() : $pertemuan->dosen_keluar_at,
@@ -333,6 +340,7 @@ class PertemuanController extends Controller
         }
 
         $pertemuan->update(['topik' => $data['topik']]);
+        $pertemuan->kembaliMenungguVerifikasi();
 
         return back()->with('success', 'Jurnal pertemuan disimpan.');
     }
@@ -385,6 +393,10 @@ class PertemuanController extends Controller
             }
         });
 
+        if ($diubah > 0) {
+            $pertemuan->kembaliMenungguVerifikasi();
+        }
+
         return back()->with('success', $diubah > 0 ? "Presensi {$diubah} mahasiswa disimpan." : 'Tidak ada perubahan presensi.');
     }
 
@@ -403,5 +415,6 @@ class PertemuanController extends Controller
     private function pastikanTidakTerkunci(Pertemuan $pertemuan): void
     {
         abort_if($this->tahunAkademikTerkunci($pertemuan->kelasKuliah), 403, 'Tahun akademik kelas ini sudah tidak aktif, presensi tidak dapat diubah lagi.');
+        abort_if($pertemuan->terverifikasi(), 403, 'Presensi pertemuan ini sudah diverifikasi. Batalkan verifikasinya di menu Verifikasi Presensi Dosen untuk mengubah.');
     }
 }

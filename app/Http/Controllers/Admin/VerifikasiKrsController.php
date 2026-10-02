@@ -139,7 +139,7 @@ class VerifikasiKrsController extends Controller
                     ->map(fn ($j): string => $j->hari.', '.substr($j->jam_mulai, 0, 5).'–'.substr($j->jam_akhir, 0, 5).($j->ruang ? ' ('.$j->ruang->kode_ruang.')' : ''))
                     ->all() ?? [],
             ]),
-            'maksSks' => PengaturanAkademik::maksSksUntuk($ips['ips'] ?? null),
+            'maksSks' => PengaturanAkademik::maksSksUntuk($ips['ips'] ?? null, $mahasiswa->prodi_id),
             'ipsSebelumnya' => $ips === null ? null : ['ips' => $ips['ips'], 'tahun_akademik' => $ips['tahun_akademik']->label()],
             'masaRevisiBerjalan' => KrsSemester::masaRevisiBerjalan($tahun),
         ]);

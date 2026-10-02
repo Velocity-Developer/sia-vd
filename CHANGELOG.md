@@ -6,6 +6,78 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Ditambahkan
+- **Presensi Dosen, Verifikasi Presensi Dosen, dan BAP** (migrasi `2026_10_02_120000_add_presensi_dosen_to_pertemuans`:
+  kolom `pertemuans.status_dosen`, `verifikasi`, `catatan_verifikasi`, `diverifikasi_oleh`, `diverifikasi_at` + tabel
+  `riwayat_presensi_dosens`; izin `admin.presensi-dosen` dan `admin.verifikasi-presensi-dosen`, bawaan Admin). Presensi dosen
+  tetap diambil dari pertemuan yang dibuka–ditutup dosen. Menu **Akademik → Perkuliahan → Presensi Dosen** berisi tab Daftar
+  Pertemuan (koreksi admin: status Hadir/Digantikan/Tidak Hadir/Kuliah Diganti/Sakit/Izin/Alpa, dosen pengajar, jam
+  masuk–keluar, topik; alasan wajib dan tercatat di riwayat; pertemuan terlewat bisa dicatat sebagai susulan lengkap dengan
+  jamnya), Rekap per Dosen (terlaksana, total jam, total SKS, terlambat, ketidakhadiran per bulan/semester, CSV; bawaan hanya
+  yang terverifikasi), dan Per Kelas (Laporan Kehadiran Dosen lama, kini `admin/presensi-dosen/per-kelas`; alamat lama
+  dialihkan). Menu **Verifikasi Presensi Dosen**: setujui massal (jurnal kosong dilewati), tolak dengan catatan (dosen melihat
+  catatannya dan pertemuan kembali menunggu setelah jurnal/presensi diperbaiki), batal verifikasi beralasan. Pertemuan yang
+  disetujui terkunci bagi dosen dan admin (termasuk proses izin mahasiswa). **BAP PDF** per pertemuan dan rekap per kelas
+  (tanda tangan Kaprodi, Petugas Akademik pemverifikasi, dan Dosen): dosen hanya untuk pertemuan terverifikasi, admin boleh
+  mencetak draf bertanda air DRAF.
+- **Set Penasehat Akademik** di menu baru **Akademik → Perkuliahan → Set Penasehat Akademik** (izin
+  `admin.penasehat-akademik`, bawaan Admin; migrasi `2026_10_02_110000_add_izin_penasehat_akademik`): pilih NIM awal,
+  NIM akhir (pilihan hanya mahasiswa berstatus Aktif/Pindahan) dan Pembimbing Akademik (dosen Aktif), lalu dosen wali
+  semua mahasiswa Aktif/Pindahan dalam rentang NIM itu diganti sekaligus. Halaman menampilkan pratinjau mahasiswa dalam
+  rentang beserta dosen wali lamanya; rentang terbalik ditolak.
+- **Batas SKS per Semester per prodi** (migrasi `2026_10_02_100000_create_batas_sks_prodis_table`: tabel
+  `batas_sks_prodis` (prodi, IPS minimal, maks SKS) + kolom `program_studis.maks_sks_tanpa_ips`) di menu **Akademik →
+  Konfigurasi → Batas SKS per Semester** (izin `admin.batas-sks`, bawaan Admin): pilih prodi, atur tingkatan dan maks
+  SKS tanpa IPS, atau hapus agar kembali ke global. `PengaturanAkademik::maksSksUntuk($ips, $prodiId)` memakai batas
+  prodi lebih dulu, lalu batas global; berlaku di KRS mahasiswa, verifikasi KRS, kuota SKS tagihan, dan DemoSeeder.
+  Validasi dipakai bersama dengan Batas SKS global (`App\ValidasiBatasSks`). Worker antrean kini mengosongkan cache
+  `once()` tiap job (`Queue::after`), agar perubahan Bobot Nilai tidak tertahan di worker yang berjalan lama.
+- **Predikat kelulusan** (migrasi `2026_10_02_090000_create_predikats_table`, tabel `predikats`: nama, bobot_minimal,
+  bobot_maksimal = rentang IPK) di menu **Akademik → Konfigurasi → Predikat** (izin `admin.predikat`, bawaan Admin):
+  tambah, ubah, hapus; rentang tidak boleh beririsan. Isi awal = aturan lama (Cum Laude 3,51–4,00, Sangat Memuaskan
+  3,01–3,50, Memuaskan 2,76–3,00, Cukup 0,00–2,75). `Wisuda::predikat()` kini membaca tabel ini (`Predikat::untuk()`),
+  null bila IPK di luar semua rentang; predikat SKL yang sudah terbit tidak berubah.
+- Menu **Akademik → Konfigurasi** kini berisi Tahun Akademik, Mata Kuliah, **Mata Kuliah Prasyarat** (baru), Ruang, dan
+  Bobot Nilai. Mata Kuliah Prasyarat (`/admin/mata-kuliah-prasyarat`, rute `admin.prasyarat.*`, izin `admin.prasyarat`
+  bawaan Admin lewat migrasi `2026_10_02_080000_add_izin_mata_kuliah_prasyarat`, model `MataKuliahPrasyarat` di tabel
+  `mata_kuliah_prasyarat` yang sudah ada) mengelola pasangan mata kuliah ↔ prasyarat: cari, filter prodi, tambah, edit,
+  hapus. Aturannya sama dengan isian Prasyarat di form Mata Kuliah (tetap ada): prodi sama, semester prasyarat lebih
+  kecil, tidak boleh diri sendiri atau ganda.
+- **Bobot Nilai per prodi** (migrasi `2026_10_02_070000_create_bobot_nilais_table`, tabel `bobot_nilais`, unik per
+  prodi + huruf): kolom sama dengan Skala Nilai (huruf, bobot, angka minimal, lulus, boleh diulang). Dikelola admin di
+  menu **Akademik → Konfigurasi → Bobot Nilai** (izin `admin.bobot-nilai`, bawaan Admin); prodi yang belum diatur terisi
+  awal dari Skala Nilai umum. Aturan validasinya dipakai bersama Skala Nilai (`App\ValidasiSkalaNilai`).
+  Nilai KRS dihitung dengan Bobot Nilai **prodi mata kuliahnya** (`Krs::bobotNilai()/nilaiLulus()/nilaiBolehDiulang()`,
+  `SkalaNilai::semua($prodiId)`); prodi tanpa Bobot Nilai tetap memakai Skala Nilai umum. Berlaku untuk IP/IPS/IPK, KHS,
+  transkrip, SKS lulus, batas SKS, prasyarat & mengulang di KRS, IPK SKL wisuda, pilihan huruf dosen + batas huruf
+  remidi, usulan remidi, dan konversi angka pendadaran (prodi mahasiswa). Huruf yang dipakai KRS prodi tidak bisa
+  dihapus dari bobot prodi; bobot prodi tidak bisa dihapus bila hurufnya tidak ada di Skala Nilai umum; Skala Nilai
+  umum hanya menjaga huruf yang dipakai prodi tanpa bobot sendiri.
+- Menu **PMB** kini **Mahasiswa Baru**, dan **Data Pendaftar** menjadi **Calon Maba** (izin `admin.pendaftar-pmb` bernama
+  "Calon Maba (PMB)"). Nilai dan status (Menunggu/Lulus/Ditolak) bisa diubah langsung di tabel. Aksi **Salin ke Master
+  Mahasiswa** (calon maba Lulus, perlu juga izin `admin.users.mahasiswa`) membuat akun mahasiswa: username = nomor
+  pendaftaran, sandi acak, lalu tautan atur sandi + verifikasi email dikirim. Profil diisi dari formulir PMB: L/P →
+  Laki-laki/Perempuan, agama master (Kristen → Kristen Protestan, Katolik → Kristen Katolik), kode negara → nama negara,
+  HP → no. telepon, jalan → alamat, angkatan dari periode, status **Aktif** (peserta baru) atau **Pindahan** (pindahan);
+  foto, ijazah, dan transkrip disalin ke folder mahasiswa. Pendaftar yang sudah disalin tidak bisa disalin ulang, dihapus,
+  atau diubah statusnya dari Lulus.
+- **Biodata PDDIKTI** di Data Mahasiswa (migrasi `2026_10_02_050000_add_biodata_pmb_to_mahasiswa_profiles`): `cmb_id`,
+  NIK (unik), NPWP, status perkawinan, HP wali, dusun, RT/RW, kelurahan, kecamatan Feeder, kode pos, alat transportasi,
+  jenis tinggal, jenis masuk, KPS, jenis/jumlah pembiayaan, `jalur_kelas`, nilai UN, asal pindahan (PT, jenjang, prodi,
+  NIM, SKS diakui), berkas ijazah/transkrip (unduh lewat `berkas.mahasiswa`: pemilik atau izin Data Mahasiswa). Tampil
+  di form dan detail mahasiswa.
+- Status mahasiswa baru **Pindahan**, diperlakukan sama dengan Aktif (`MahasiswaProfile::STATUS_AKTIF`, scope `aktif()`):
+  bisa KRS, ditagih, bisa cuti, ikut dihitung mahasiswa aktif di dashboard, beranda dosen wali, dan ringkasan tagihan.
+  Agama **Lainnya** ditambahkan ke pilihan agama mahasiswa.
+- **Semester Masuk** di Data Mahasiswa (migrasi `2026_10_02_060000`, kolom `semester_masuk` + `tahun_akademik_masuk_id`):
+  untuk mahasiswa pindahan, diisi admin dan dicatat pada tahun akademik yang aktif saat itu. Semester berikutnya dihitung
+  dari situ (bukan dari angkatan). Paritasnya harus sesuai semester aktif (Ganjil → 1, 3, 5…; Genap → 2, 4, 6…); bila
+  tidak, simpan ditolak dengan anjuran menurunkan satu semester. Mengosongkan isian kembali memakai hitungan angkatan.
+
+- **Unggah berkas di formulir PMB**: seksi baru *Unggah Berkas* berisi **Pas Foto** (jpg/png), **Ijazah**, dan
+  **Transkrip Nilai** (pdf/jpg/png), ketiganya wajib, maksimal 2 MB per berkas. Berkas disimpan di disk privat
+  (`pmb/<id periode>/`, kolom `foto`, `berkas_ijazah`, `berkas_transkrip` di tabel `cmb`) dan dihapus lagi bila
+  pendaftaran gagal tersimpan atau pendaftar dihapus. Detail pendaftar admin menampilkan pratinjau/tautan berkas lewat
+  rute `berkas.pmb` (hanya izin `admin.pendaftar-pmb`).
 - **Formulir PMB publik** `/pmb/daftar` (tabel `cmb`): tanpa pilihan tahun pendaftaran, pendaftar otomatis masuk ke
   periode yang sedang dibuka (Atur Periode PMB menolak dua periode dibuka dengan tanggal bertumpuk). Isian disamakan
   dengan pmb.stikesyapika.ac.id (data diri, NIK,
@@ -31,7 +103,7 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   nomor/tanggal pengesahan, alamat jalan, provinsi, kota/kabupaten (harus di provinsi terpilih), kode pos, telepon,
   faximili, email, website. Provinsi/kota yang dipakai badan hukum tidak bisa dihapus.
 
-- Isian baru **Program Studi**: gelar akademik, singkatan gelar, SKS lulus (baru disimpan, belum dipakai perhitungan),
+- Isian baru **Program Studi**: gelar akademik, singkatan gelar, SKS lulus (dipakai sebagai syarat SKS pendadaran prodi),
   status prodi (Aktif/Pembinaan/Alih Bentuk/Alih Kelola/Tutup), nomor kaprodi, operator, nomor operator, nomor/tanggal/
   tanggal berakhir SK Dikti, alamat, provinsi, kota/kabupaten, kode pos, telepon, faximili, email, website.
 - **Foto** di data mahasiswa, dosen, dan karyawan (kolom `foto` di `mahasiswa_profiles`, `dosen_profiles`,
@@ -40,6 +112,13 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   pengguna itu); foto lama terhapus saat diganti atau akun dihapus.
 
 ### Diubah
+- **Syarat SKS** ikut menghitung **SKS diakui** mahasiswa pindahan (syarat ambil TA/Skripsi di KRS, syarat SKS
+  pendadaran, dan SKS lulus di beranda mahasiswa; transkrip & IPK tetap hanya dari mata kuliah di sistem). Syarat SKS
+  pendadaran memakai **SKS Lulus program studi** bila diisi, selain itu Pengaturan Akademik (`min_sks_pendadaran`).
+- Syarat pendadaran/wisuda "Tidak ada nilai E" menjadi **"Tidak ada nilai tidak lulus"**: huruf tidak lulus mengikuti
+  skala nilai prodi mata kuliahnya (Bobot Nilai), keterangan menyebut hurufnya, mis. "Statistika (E)".
+- Form Data Mahasiswa: **NIM**, dosen wali, sekolah asal, NISN, email alternatif, dan data ayah/ibu (selain nama ibu)
+  kini opsional; kolom `nim` boleh kosong (tetap unik bila diisi).
 - Tab **Institusi** di Pengaturan Sistem pindah ke **Master Akademik → Perguruan Tinggi** (`/admin/perguruan-tinggi`,
   izin tetap `admin.institusi`, kini bernama "Perguruan Tinggi"); alamat lama dialihkan. Isian baru: badan hukum,
   nomor/tanggal akta terakhir, nomor/tanggal pengesahan, akreditasi, alamat lain, provinsi, kota/kabupaten, kode pos,

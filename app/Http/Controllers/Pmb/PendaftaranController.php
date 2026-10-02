@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Pmb;
 
+use App\AllowedUpload;
 use App\Http\Controllers\Controller;
 use App\Models\Agama;
 use App\Models\Cmb;
@@ -13,11 +14,15 @@ use App\Pmb\OpsiPmb;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
+use Throwable;
 
 class PendaftaranController extends Controller
 {
@@ -48,7 +53,33 @@ class PendaftaranController extends Controller
         $data = $this->validasi($request, $aktif);
         $this->periksaCaptcha($request);
 
-        $cmb = DB::transaction(function () use ($data, $aktif): Cmb {
+        // Berkas disimpan sebelum transaksi; bila pendaftaran gagal disimpan, berkasnya dihapus lagi.
+        $data = Arr::except($data, array_keys(Cmb::BERKAS));
+        $berkas = [];
+        try {
+            foreach (array_keys(Cmb::BERKAS) as $kolom) {
+                $berkas[$kolom] = $request->file($kolom)->store('pmb/'.$aktif->id, AllowedUpload::DISK)
+                    ?: throw new RuntimeException("Berkas {$kolom} gagal disimpan.");
+            }
+            $cmb = $this->simpan($data, $berkas, $aktif);
+        } catch (Throwable $e) {
+            Storage::disk(AllowedUpload::DISK)->delete(array_values($berkas));
+
+            throw $e;
+        }
+
+        $request->session()->put('pmb_terakhir', $cmb->id);
+
+        return to_route('pmb.selesai');
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, string>  $berkas  path per kolom
+     */
+    private function simpan(array $data, array $berkas, PengaturanPmb $aktif): Cmb
+    {
+        return DB::transaction(function () use ($data, $berkas, $aktif): Cmb {
             // Kunci baris periode agar nomor urut dan kapasitas tidak bentrok saat pendaftar bersamaan.
             $periode = PengaturanPmb::query()->menerimaPendaftaran()->lockForUpdate()->find($aktif->id);
             if (! $periode) {
@@ -60,6 +91,7 @@ class PendaftaranController extends Controller
             }
 
             $cmb = new Cmb($data);
+            $cmb->forceFill($berkas);
             $cmb->pengaturan_pmb_id = $periode->id;
             $cmb->nomor_pendaftaran = $periode->kode.'-'.str_pad((string) ($jumlah + 1), 4, '0', STR_PAD_LEFT);
             // Nomor urut bisa bergeser bila ada pendaftar yang dihapus; lompati yang sudah terpakai.
@@ -70,10 +102,6 @@ class PendaftaranController extends Controller
 
             return $cmb;
         });
-
-        $request->session()->put('pmb_terakhir', $cmb->id);
-
-        return to_route('pmb.selesai');
     }
 
     public function selesai(Request $request): Response|RedirectResponse
@@ -159,12 +187,25 @@ class PendaftaranController extends Controller
             'sks_diakui' => [$pindahan ? 'nullable' : 'exclude', 'integer', 'min:0', 'max:200'],
             'agen' => ['nullable', 'string', 'max:255'],
             'info' => ['nullable', 'string', 'max:255'],
+
+            'foto' => ['required', 'file', 'image', 'extensions:jpg,jpeg,png', 'mimes:jpg,jpeg,png', 'max:2048'],
+            'berkas_ijazah' => ['required', 'file', 'extensions:pdf,jpg,jpeg,png', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'berkas_transkrip' => ['required', 'file', 'extensions:pdf,jpg,jpeg,png', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
         ], [
             'nik.unique' => 'NIK ini sudah terdaftar di periode yang sama.',
             'nik.digits' => 'NIK harus 16 digit angka.',
             'hp.regex' => 'Nomor HP hanya berisi angka (8–15 digit).',
             'telepon_wali.regex' => 'Nomor HP wali/ortu hanya berisi angka (8–15 digit).',
             'tanggal_lahir.before' => 'Tanggal lahir harus sebelum hari ini.',
+            'foto.image' => 'Pas foto harus berupa gambar.',
+            'foto.extensions' => 'Pas foto harus berformat jpg, jpeg, atau png.',
+            'foto.mimes' => 'Pas foto harus berformat jpg, jpeg, atau png.',
+            'berkas_ijazah.extensions' => 'Ijazah harus berformat pdf, jpg, jpeg, atau png.',
+            'berkas_ijazah.mimes' => 'Ijazah harus berformat pdf, jpg, jpeg, atau png.',
+            'berkas_transkrip.extensions' => 'Transkrip nilai harus berformat pdf, jpg, jpeg, atau png.',
+            'berkas_transkrip.mimes' => 'Transkrip nilai harus berformat pdf, jpg, jpeg, atau png.',
+            '*.max' => ':attribute maksimal 2 MB.',
+            '*.uploaded' => ':attribute gagal diunggah (maksimal 2 MB).',
         ], [
             'nama' => 'Nama lengkap',
             'tempat_lahir' => 'Tempat lahir',
@@ -192,6 +233,9 @@ class PendaftaranController extends Controller
             'status_masuk' => 'Status calon mahasiswa baru',
             'nisn' => 'NISN',
             'sks_diakui' => 'SKS diakui',
+            'foto' => 'Pas foto',
+            'berkas_ijazah' => 'Ijazah',
+            'berkas_transkrip' => 'Transkrip nilai',
         ]);
     }
 

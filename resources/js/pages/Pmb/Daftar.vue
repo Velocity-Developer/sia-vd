@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
+import PilihBerkas from '@/components/PilihBerkas.vue';
 import PilihKecamatan from '@/components/PilihKecamatan.vue';
 import RecaptchaWidget from '@/components/RecaptchaWidget.vue';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,9 @@ const form = useForm({
     sks_diakui: '',
     agen: '',
     info: '',
+    foto: null as File | null,
+    berkas_ijazah: null as File | null,
+    berkas_transkrip: null as File | null,
     'g-recaptcha-response': '',
 });
 
@@ -382,6 +386,38 @@ const submit = () =>
                         <Input id="info" v-model="form.info" placeholder="Brosur, baliho, Google, Instagram, saudara, dll." />
                         <InputError class="pesan-galat" :message="form.errors.info" />
                     </div>
+                </div>
+            </section>
+
+            <section class="kartu p-6 sm:p-8">
+                <h2 class="judul-bagian">Unggah Berkas</h2>
+                <p class="deskripsi-halaman">Pindai atau foto dokumen asli dengan jelas. Setiap berkas maksimal 2 MB.</p>
+                <div class="mt-4 grid items-start gap-6 sm:grid-cols-3">
+                    <PilihBerkas
+                        id="foto"
+                        v-model="form.foto"
+                        label="Pas Foto *"
+                        accept="image/jpeg,image/png"
+                        bantuan="Foto terbaru latar polos, format jpg/png."
+                        :error="form.errors.foto"
+                        foto
+                    />
+                    <PilihBerkas
+                        id="berkas_ijazah"
+                        v-model="form.berkas_ijazah"
+                        label="Ijazah *"
+                        accept="application/pdf,image/jpeg,image/png"
+                        bantuan="Ijazah terakhir, format pdf/jpg/png."
+                        :error="form.errors.berkas_ijazah"
+                    />
+                    <PilihBerkas
+                        id="berkas_transkrip"
+                        v-model="form.berkas_transkrip"
+                        label="Transkrip Nilai *"
+                        accept="application/pdf,image/jpeg,image/png"
+                        bantuan="Transkrip/daftar nilai, format pdf/jpg/png."
+                        :error="form.errors.berkas_transkrip"
+                    />
                 </div>
             </section>
 

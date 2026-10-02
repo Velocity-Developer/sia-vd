@@ -11,15 +11,17 @@ import {
     STATUS_PRESENSI,
     formatJamDari,
     formatTanggal,
+    infoVerifikasi,
     jam,
     statusTampil,
     type JenisPertemuan,
     type StatusPertemuan,
     type StatusPresensi,
+    type VerifikasiPresensi,
 } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { CheckCheck, Play, QrCode, Square, TriangleAlert } from 'lucide-vue-next';
+import { CheckCheck, FileText, Play, QrCode, Square, TriangleAlert } from 'lucide-vue-next';
 import { computed, onUnmounted, ref, watch } from 'vue';
 
 type Pertemuan = {
@@ -91,7 +93,9 @@ const props = defineProps<{
     detikSampaiMulai: number | null;
     mandiriTerbuka: boolean;
     durasiMandiri: number;
+    /** Tahun akademik tidak aktif (dosen) atau presensi sudah diverifikasi. */
     terkunci: boolean;
+    verifikasi: { status: VerifikasiPresensi; catatan: string | null; oleh: string | null; waktu: string | null };
     dosenOptions: { id: number; name: string }[];
     riwayatJadwal: RiwayatJadwal[];
 }>();
@@ -317,11 +321,39 @@ const infoMulai = computed(() => {
                 <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
-                <div v-if="props.terkunci" class="alert-info">Tahun akademik kelas ini sudah tidak aktif. Presensi hanya bisa diubah admin.</div>
+                <div v-if="props.verifikasi.status === 'disetujui'" class="alert-info">
+                    Presensi pertemuan ini sudah diverifikasi{{ props.verifikasi.oleh ? ` oleh ${props.verifikasi.oleh}` : '' }} dan terkunci.
+                    <template v-if="isAdmin">Batalkan verifikasinya di menu Verifikasi Presensi Dosen untuk mengubah.</template>
+                </div>
+                <div v-else-if="props.terkunci" class="alert-info">Tahun akademik kelas ini sudah tidak aktif. Presensi hanya bisa diubah admin.</div>
+                <div v-if="props.verifikasi.status === 'ditolak'" class="alert-gagal" role="alert">
+                    Presensi ditolak admin: {{ props.verifikasi.catatan }}. Perbaiki jurnal atau presensi mahasiswa; setelah disimpan, pertemuan
+                    kembali menunggu verifikasi.
+                </div>
 
                 <!-- Presensi dosen -->
                 <section class="kartu p-6">
-                    <h2 class="judul-bagian">Presensi dosen &amp; jurnal</h2>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="judul-bagian flex flex-wrap items-center gap-2">
+                            Presensi dosen &amp; jurnal
+                            <span
+                                v-if="status === 'selesai'"
+                                class="rounded-full px-2.5 py-0.5 text-xs font-medium tracking-normal"
+                                :class="infoVerifikasi(props.verifikasi.status).kelas"
+                                >{{ infoVerifikasi(props.verifikasi.status).label }}</span
+                            >
+                        </h2>
+                        <Button
+                            v-if="status === 'selesai' && (isAdmin || props.verifikasi.status === 'disetujui')"
+                            as-child
+                            size="sm"
+                            variant="outline"
+                        >
+                            <a :href="rute('presensi.pertemuan.bap', props.pertemuan.id)" target="_blank" rel="noopener">
+                                <FileText /> {{ props.verifikasi.status === 'disetujui' ? 'Cetak BAP' : 'Cetak BAP (draf)' }}
+                            </a>
+                        </Button>
+                    </div>
 
                     <dl class="mt-4 grid gap-4 text-sm sm:grid-cols-3">
                         <div>
@@ -357,7 +389,7 @@ const infoMulai = computed(() => {
                         </div>
                         <p v-if="isAdmin && props.bisaDimulai && props.pertemuan.terlewat" class="teks-bantu">
                             Pertemuan ini terlewat. Admin bisa membukanya untuk mencatat presensi susulan secara manual (tanpa QR/PIN); jam masuk
-                            dosen tidak tercatat.
+                            dosen tidak tercatat. Untuk mencatat jam masuk dan keluar dosen, pakai Koreksi di menu Presensi Dosen.
                         </p>
                     </div>
 

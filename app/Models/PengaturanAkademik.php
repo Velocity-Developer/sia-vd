@@ -80,19 +80,25 @@ class PengaturanAkademik extends Model
 
     /**
      * Batas SKS untuk IPS semester sebelumnya; null berarti belum ada IPS (mis. mahasiswa baru).
+     * Prodi yang punya Batas SKS sendiri (Akademik → Konfigurasi → Batas SKS) memakai batas prodinya,
+     * selain itu batas global di sini.
      */
-    public static function maksSksUntuk(?float $ips): int
+    public static function maksSksUntuk(?float $ips, ?int $prodiId = null): int
     {
+        $prodi = $prodiId !== null && BatasSksProdi::query()->where('prodi_id', $prodiId)->exists();
+        $tanpaIps = ($prodi ? ProgramStudi::query()->whereKey($prodiId)->value('maks_sks_tanpa_ips') : null)
+            ?? static::current()->maks_sks_tanpa_ips;
+
         if ($ips === null) {
-            return static::current()->maks_sks_tanpa_ips;
+            return $tanpaIps;
         }
 
-        $tingkat = BatasSks::query()
+        $tingkat = ($prodi ? BatasSksProdi::query()->where('prodi_id', $prodiId) : BatasSks::query())
             ->where('ips_minimal', '<=', round($ips, 2))
             ->orderByDesc('ips_minimal')
             ->first();
 
-        return $tingkat?->maks_sks ?? static::current()->maks_sks_tanpa_ips;
+        return $tingkat?->maks_sks ?? $tanpaIps;
     }
 
     public function updater(): BelongsTo

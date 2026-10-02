@@ -16,7 +16,7 @@ import {
 } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { CalendarPlus, Download, Pencil } from 'lucide-vue-next';
+import { CalendarPlus, Download, FileText, Pencil } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Pertemuan = {
@@ -210,6 +210,9 @@ const jumlahBerisiko = computed(() => props.peserta.filter((item) => dibawahBata
                         </Button>
                         <Button as-child variant="outline">
                             <a :href="rute('presensi.ekspor', { kelasKuliah: props.kelasKuliah.id, format: 'csv' })"><Download /> CSV</a>
+                        </Button>
+                        <Button as-child variant="outline" title="Berita Acara Perkuliahan: dosen hanya memuat pertemuan yang sudah diverifikasi">
+                            <a :href="rute('presensi.bap', props.kelasKuliah.id)" target="_blank" rel="noopener"><FileText /> BAP</a>
                         </Button>
                         <Button v-if="kurang > 0 && bisaUbah" :disabled="generating" @click="generate">
                             <CalendarPlus /> Buat {{ kurang }} pertemuan

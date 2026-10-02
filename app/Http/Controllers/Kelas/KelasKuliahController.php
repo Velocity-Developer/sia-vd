@@ -87,7 +87,7 @@ class KelasKuliahController extends Controller
                 ->orderBy('kode_kelas')
                 ->get(['id', 'kode_kelas', 'matkul_id'])
                 ->map(fn (KelasKuliah $kelas): array => ['id' => $kelas->id, 'kode_kelas' => $kelas->kode_kelas, 'nama_matkul' => $kelas->mataKuliah?->nama_matkul]),
-            'skalaNilai' => SkalaNilai::huruf(),
+            'skalaNilai' => SkalaNilai::huruf($kelasKuliah->mataKuliah?->prodi_id),
             'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
             'kelasTugasAkhir' => $kelasKuliah->tugasAkhir(),
             'statusNilai' => $this->statusNilai($kelasKuliah),
@@ -173,7 +173,7 @@ class KelasKuliahController extends Controller
 
         $maks = $jalurRemidi ? PengaturanAkademik::current()->huruf_maks_remidi : null;
         $krs->update($request->validate(
-            ['nilai' => [$jalurRemidi ? 'required' : 'nullable', Rule::in(SkalaNilai::hurufSampai($maks))]],
+            ['nilai' => [$jalurRemidi ? 'required' : 'nullable', Rule::in(SkalaNilai::hurufSampai($maks, $kelasKuliah->mataKuliah?->prodi_id))]],
             ['nilai.in' => $maks !== null ? "Huruf akhir setelah remidi paling tinggi {$maks}." : 'Huruf nilai tidak dikenal.', 'nilai.required' => 'Pilih huruf akhir setelah remidi.'],
         ));
 
@@ -209,7 +209,7 @@ class KelasKuliahController extends Controller
         return [
             'remidiTerbuka' => $dosen && ! $this->tahunAkademikTerkunci($kelas) ? $kelas->mahasiswaRemidiTerbuka() : [],
             'pesertaRemidi' => $dosen ? $kelas->remidiPesertas()->pluck('mahasiswa_id')->all() : [],
-            'hurufRemidi' => SkalaNilai::hurufSampai($pengaturan->huruf_maks_remidi),
+            'hurufRemidi' => SkalaNilai::hurufSampai($pengaturan->huruf_maks_remidi, $kelas->mataKuliah?->prodi_id),
         ];
     }
 

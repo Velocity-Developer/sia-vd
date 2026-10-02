@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\AllowedUpload;
+use App\Models\Cmb;
 use App\Models\InfoKuliah;
 use App\Models\KelasKuliah;
+use App\Models\MahasiswaProfile;
 use App\Models\Materi;
 use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
@@ -235,6 +237,28 @@ class BerkasController extends Controller
         abort_unless($request->user()->is($user) || ($izin !== null && $request->user()->hasPermission($izin)), 403);
 
         return $this->kirim($user->profile?->foto);
+    }
+
+    /**
+     * Ijazah/transkrip mahasiswa (salinan dari PMB): pemilik akun dan pengelola Data Mahasiswa.
+     */
+    public function mahasiswa(Request $request, User $user, string $jenis): StreamedResponse
+    {
+        abort_unless($user->type() === UserType::Mahasiswa && array_key_exists($jenis, MahasiswaProfile::BERKAS), 404);
+        abort_unless($request->user()->is($user) || $request->user()->hasPermission('admin.users.mahasiswa'), 403);
+
+        return $this->kirim($user->mahasiswaProfile?->getAttribute($jenis));
+    }
+
+    /**
+     * Berkas unggahan pendaftar PMB (pas foto, ijazah, transkrip): hanya pengelola Calon Maba.
+     */
+    public function pmb(Request $request, Cmb $cmb, string $jenis): StreamedResponse
+    {
+        abort_unless($request->user()->hasPermission('admin.pendaftar-pmb'), 403);
+        abort_unless(array_key_exists($jenis, Cmb::BERKAS), 404);
+
+        return $this->kirim($cmb->getAttribute($jenis));
     }
 
     private function kirim(?string $path): StreamedResponse

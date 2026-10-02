@@ -1,14 +1,26 @@
 <?php
 
+use App\AllowedUpload;
 use App\Models\Agama;
 use App\Models\Cmb;
+use App\Models\MahasiswaProfile;
 use App\Models\PengaturanPmb;
 use App\Models\PengaturanRecaptcha;
+use App\Models\Permission;
 use App\Models\ProgramStudi;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\WilayahKecamatan;
+use App\Notifications\AturUlangKataSandi;
+use App\Notifications\VerifikasiEmail;
+use App\UserType;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(fn () => Storage::fake(AllowedUpload::DISK));
 
 function periodePmbAktif(array $ubah = []): PengaturanPmb
 {
@@ -59,6 +71,9 @@ function isianPmb(array $ubah = []): array
         'status_masuk' => 'B',
         'asal_sekolah' => 'SMA 1 Makassar',
         'nisn' => '0081234567',
+        'foto' => UploadedFile::fake()->image('foto.jpg', 300, 400),
+        'berkas_ijazah' => UploadedFile::fake()->create('ijazah.pdf', 300, 'application/pdf'),
+        'berkas_transkrip' => UploadedFile::fake()->image('transkrip.png'),
         ...$ubah,
     ];
 }
@@ -119,6 +134,30 @@ it('menolak pendaftaran saat kuota penuh atau isian pindahan tidak lengkap', fun
         ->assertSessionHasErrors(['nik', 'nomor_kps', 'kewarganegaraan']);
 });
 
+it('mewajibkan pas foto, ijazah, dan transkrip dengan format yang benar', function () {
+    periodePmbAktif();
+
+    $this->post(route('pmb.daftar.store'), isianPmb(['foto' => null, 'berkas_ijazah' => null, 'berkas_transkrip' => null]))
+        ->assertSessionHasErrors(['foto', 'berkas_ijazah', 'berkas_transkrip']);
+
+    $this->post(route('pmb.daftar.store'), isianPmb([
+        'foto' => UploadedFile::fake()->create('foto.pdf', 100, 'application/pdf'),
+        'berkas_ijazah' => UploadedFile::fake()->create('ijazah.html', 10, 'text/html'),
+        'berkas_transkrip' => UploadedFile::fake()->create('transkrip.pdf', 3000, 'application/pdf'),
+    ]))->assertSessionHasErrors(['foto', 'berkas_ijazah', 'berkas_transkrip' => 'Transkrip nilai maksimal 2 MB.']);
+
+    expect(Cmb::query()->count())->toBe(0)
+        ->and(Storage::disk(AllowedUpload::DISK)->allFiles())->toBe([]);
+});
+
+it('menghapus berkas yang sudah tersimpan bila pendaftaran gagal', function () {
+    periodePmbAktif(['kapasitas' => 0]);
+
+    $this->post(route('pmb.daftar.store'), isianPmb())->assertSessionHasErrors('periode');
+
+    expect(Storage::disk(AllowedUpload::DISK)->allFiles())->toBe([]);
+});
+
 it('mewajibkan captcha di formulir bila captcha PMB dinyalakan', function () {
     Http::fake([PengaturanRecaptcha::URL_VERIFIKASI => Http::response(['success' => true])]);
     PengaturanRecaptcha::current()->update(['aktif_pmb' => true, 'site_key' => str_repeat('s', 40), 'secret_key' => 'rahasia']);
@@ -144,7 +183,21 @@ it('admin mengisi nilai dan status pendaftar', function () {
     $this->actingAs($admin)->get(route('admin.pendaftar-pmb.index', ['status' => 'menunggu']))
         ->assertInertia(fn (Assert $page) => $page->component('Admin/PendaftarPmb')->where('pendaftar.total', 1));
     $this->actingAs($admin)->get(route('admin.pendaftar-pmb.show', $cmb))
-        ->assertInertia(fn (Assert $page) => $page->component('Admin/PendaftarPmbShow')->where('pendaftar.kecamatan.kode', $cmb->kecamatan->kode));
+        ->assertInertia(fn (Assert $page) => $page->component('Admin/PendaftarPmbShow')
+            ->where('pendaftar.kecamatan.kode', $cmb->kecamatan->kode)
+            ->missing('pendaftar.foto')
+            ->has('berkas', 3)
+            ->where('berkas.1.label', 'Ijazah')
+            ->where('berkas.1.gambar', false)
+            ->where('berkas.0.gambar', true));
+
+    // Berkas tersimpan di disk privat dan hanya bisa diunduh pengelola data pendaftar.
+    $berkas = array_values($cmb->only(array_keys(Cmb::BERKAS)));
+    Storage::disk(AllowedUpload::DISK)->assertExists($berkas);
+    $this->actingAs($admin)->get(route('berkas.pmb', [$cmb, 'berkas_ijazah']))
+        ->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    $this->actingAs($admin)->get(route('berkas.pmb', [$cmb, 'nik']))->assertNotFound();
+    $this->actingAs(User::factory()->mahasiswa()->create())->get(route('berkas.pmb', [$cmb, 'foto']))->assertForbidden();
 
     $this->actingAs($admin)->put(route('admin.pendaftar-pmb.update', $cmb), ['nilai' => 75.5, 'status_pendaftaran' => 'lulus'])->assertSessionHasNoErrors();
     expect($cmb->fresh())->nilai->toBe(75.5)->status_pendaftaran->toBe('lulus');
@@ -160,8 +213,130 @@ it('admin mengisi nilai dan status pendaftar', function () {
 
     $this->actingAs($admin)->delete(route('admin.pendaftar-pmb.destroy', $cmb))->assertRedirect(route('admin.pendaftar-pmb.index'));
     expect(Cmb::query()->count())->toBe(0);
+    Storage::disk(AllowedUpload::DISK)->assertMissing($berkas);
 });
 
 it('membatasi data pendaftar untuk pemegang izin', function () {
     $this->actingAs(User::factory()->mahasiswa()->create())->get(route('admin.pendaftar-pmb.index'))->assertForbidden();
+});
+
+function calonMabaLulus(array $ubah = []): Cmb
+{
+    PengaturanPmb::aktif() ?? periodePmbAktif();
+    test()->post(route('pmb.daftar.store'), isianPmb($ubah))->assertRedirect(route('pmb.selesai'));
+    $cmb = Cmb::query()->latest('id')->firstOrFail();
+    $cmb->forceFill(['status_pendaftaran' => Cmb::STATUS_LULUS, 'nilai' => 80])->save();
+
+    return $cmb;
+}
+
+it('menyalin calon maba lulus ke data mahasiswa sesuai pemetaan biodata', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    $cmb = calonMabaLulus(['agama_id' => Agama::query()->where('kode', '2')->value('id'), 'penerima_kps' => true, 'nomor_kps' => 'KPS-1']);
+
+    $this->actingAs($admin)->get(route('admin.pendaftar-pmb.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('bolehSalin', true)->where('pendaftar.data.0.mahasiswa_url', null));
+
+    $this->actingAs($admin)->post(route('admin.pendaftar-pmb.salin', $cmb))->assertSessionHas('success');
+
+    $user = User::query()->where('username', $cmb->nomor_pendaftaran)->firstOrFail();
+    $profil = $user->mahasiswaProfile;
+    expect($user)->email->toBe('andi@example.com')->name->toBe('Andi Calon')
+        ->and($user->type())->toBe(UserType::Mahasiswa)
+        ->and($profil)->cmb_id->toBe($cmb->id)->nim->toBeNull()->dosen_wali_id->toBeNull()
+        ->status->toBe('Aktif')->angkatan->toBe(2027)->prodi_id->toBe($cmb->program_studi_id)->jalur_kelas->toBe('R')
+        ->jenis_kelamin->toBe('Laki-laki')->agama->toBe('Kristen Protestan')->kewarganegaraan->toBe('Indonesia')
+        ->no_telepon->toBe('081234567890')->alamat->toBe('Jl. Sultan Alauddin')->rt->toBe('1')->kelurahan->toBe('Gunung Sari')
+        ->wilayah_kecamatan_id->toBe($cmb->wilayah_kecamatan_id)->nik->toBe($cmb->nik)->penerima_kps->toBeTrue()->nomor_kps->toBe('KPS-1')
+        ->sekolah_asal->toBe('SMA 1 Makassar')->nisn->toBe('0081234567')->nama_ibu_kandung->toBe('Siti');
+
+    // Berkas disalin ke folder mahasiswa; berkas pendaftar tetap ada.
+    $disk = Storage::disk(AllowedUpload::DISK);
+    expect($profil->foto)->toStartWith('foto/mahasiswa/')->and($profil->berkas_ijazah)->toStartWith('berkas/mahasiswa/')
+        ->and($profil->berkas_ijazah)->not->toBe($cmb->berkas_ijazah);
+    $disk->assertExists([$profil->foto, $profil->berkas_ijazah, $profil->berkas_transkrip, $cmb->berkas_ijazah]);
+
+    Notification::assertSentTo($user, VerifikasiEmail::class);
+    Notification::assertSentTo($user, AturUlangKataSandi::class);
+
+    // Sudah disalin: tidak bisa disalin ulang, status terkunci Lulus, pendaftar tidak bisa dihapus.
+    $this->actingAs($admin)->post(route('admin.pendaftar-pmb.salin', $cmb))->assertSessionHas('error', 'Pendaftar ini sudah disalin ke Data Mahasiswa.');
+    $this->actingAs($admin)->put(route('admin.pendaftar-pmb.update', $cmb), ['nilai' => 80, 'status_pendaftaran' => 'ditolak'])
+        ->assertSessionHasErrors('status_pendaftaran');
+    $this->actingAs($admin)->delete(route('admin.pendaftar-pmb.destroy', $cmb))->assertSessionHas('error');
+    expect(User::query()->where('email', 'andi@example.com')->count())->toBe(1)->and($cmb->fresh())->not->toBeNull();
+
+    $this->actingAs($admin)->get(route('admin.pendaftar-pmb.show', $cmb))
+        ->assertInertia(fn (Assert $page) => $page->where('pendaftar.mahasiswa_url', route('admin.users.mahasiswa.show', $user)));
+
+    // Berkas mahasiswa: pemilik dan pengelola Data Mahasiswa.
+    $user->markEmailAsVerified();
+    // Sesi terikat hash sandi (AuthenticateSession), jadi kosongkan sesi tiap berganti akun.
+    $this->flushSession()->actingAs($user)->get(route('berkas.mahasiswa', [$user, 'berkas_ijazah']))->assertOk();
+    $this->flushSession()->actingAs($admin)->get(route('berkas.mahasiswa', [$user, 'berkas_transkrip']))->assertOk();
+    $this->flushSession()->actingAs(User::factory()->mahasiswa()->create())->get(route('berkas.mahasiswa', [$user, 'berkas_ijazah']))->assertForbidden();
+});
+
+it('menyalin pindahan berstatus Pindahan dan menolak yang belum lulus atau emailnya terpakai', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    $cmb = calonMabaLulus(['status_masuk' => 'P', 'asal_perguruan_tinggi' => 'Univ Lama', 'nim_asal' => 'L-01', 'sks_diakui' => 40, 'jenjang_asal' => 'E']);
+
+    $this->actingAs($admin)->post(route('admin.pendaftar-pmb.salin', $cmb))->assertSessionHas('success');
+    $profil = $cmb->mahasiswa()->firstOrFail();
+    expect($profil)->status->toBe('Pindahan')->asal_perguruan_tinggi->toBe('Univ Lama')->sks_diakui->toBe(40)->sekolah_asal->toBeNull()
+        ->and(MahasiswaProfile::STATUS_BOLEH_MASUK)->toContain('Pindahan');
+
+    $menunggu = calonMabaLulus(['nik' => '7371010101080005', 'email' => 'lain@example.com']);
+    $menunggu->forceFill(['status_pendaftaran' => null])->save();
+    $this->actingAs($admin)->post(route('admin.pendaftar-pmb.salin', $menunggu))->assertSessionHas('error');
+
+    User::factory()->create(['email' => 'dipakai@example.com']);
+    $bentrok = calonMabaLulus(['nik' => '7371010101080006', 'email' => 'dipakai@example.com']);
+    $this->actingAs($admin)->post(route('admin.pendaftar-pmb.salin', $bentrok))->assertSessionHas('error');
+    expect($menunggu->mahasiswa()->exists())->toBeFalse()->and($bentrok->mahasiswa()->exists())->toBeFalse();
+});
+
+it('mengubah nilai dan status calon maba dari tabel dan membatasi salin tanpa izin data mahasiswa', function () {
+    $admin = User::factory()->admin()->create();
+    $cmb = calonMabaLulus();
+
+    $this->actingAs($admin)->put(route('admin.pendaftar-pmb.update', $cmb), ['nilai' => '55', 'status_pendaftaran' => 'ditolak'])->assertSessionHasNoErrors();
+    expect($cmb->fresh())->nilai->toBe(55.0)->status_pendaftaran->toBe('ditolak');
+
+    $role = Role::create(['name' => 'Panitia PMB', 'slug' => 'panitia-pmb', 'user_type' => UserType::Admin, 'is_system' => false]);
+    $role->permissions()->sync(Permission::query()->where('key', 'admin.pendaftar-pmb')->pluck('id'));
+    $panitia = User::factory()->admin()->create(['role_id' => $role->id]);
+    $cmb->forceFill(['status_pendaftaran' => 'lulus'])->save();
+
+    $this->actingAs($panitia)->get(route('admin.pendaftar-pmb.index'))->assertInertia(fn (Assert $page) => $page->where('bolehSalin', false));
+    $this->actingAs($panitia)->post(route('admin.pendaftar-pmb.salin', $cmb))->assertForbidden();
+});
+
+it('mahasiswa tanpa NIM, dosen wali, dan data orang tua bisa disimpan dari form admin', function () {
+    Notification::fake();
+    $admin = User::factory()->admin()->create();
+    $cmb = calonMabaLulus();
+    $this->actingAs($admin)->post(route('admin.pendaftar-pmb.salin', $cmb));
+    $user = $cmb->mahasiswa()->firstOrFail()->user;
+
+    $this->actingAs($admin)->get(route('admin.users.mahasiswa.edit', $user))
+        ->assertInertia(fn (Assert $page) => $page->where('user.kecamatan_label', $cmb->kecamatan->nama)->missing('user.berkas_ijazah')->has('opsi.kelas'));
+
+    $this->actingAs($admin)->put(route('admin.users.mahasiswa.update', $user), [
+        'role_id' => $user->role_id, 'name' => $user->name, 'username' => $user->username, 'email' => $user->email,
+        'tempat_lahir' => 'Makassar', 'tanggal_lahir' => '2008-05-17', 'jenis_kelamin' => 'Laki-laki', 'agama' => 'Lainnya',
+        'no_telepon' => '0812', 'alamat' => 'Jl. A', 'kewarganegaraan' => 'Indonesia', 'angkatan' => 2027, 'status' => 'Pindahan',
+        'prodi_id' => $cmb->program_studi_id, 'nama_ibu_kandung' => 'Siti', 'jalur_kelas' => 'K', 'penerima_kps' => '0', 'nik' => '123',
+    ])->assertSessionHasErrors('nik');
+
+    $this->actingAs($admin)->put(route('admin.users.mahasiswa.update', $user), [
+        'role_id' => $user->role_id, 'name' => $user->name, 'username' => $user->username, 'email' => $user->email,
+        'tempat_lahir' => 'Makassar', 'tanggal_lahir' => '2008-05-17', 'jenis_kelamin' => 'Laki-laki', 'agama' => 'Lainnya',
+        'no_telepon' => '0812', 'alamat' => 'Jl. A', 'kewarganegaraan' => 'Indonesia', 'angkatan' => 2027, 'status' => 'Pindahan',
+        'prodi_id' => $cmb->program_studi_id, 'nama_ibu_kandung' => 'Siti', 'jalur_kelas' => 'K', 'penerima_kps' => '0',
+    ])->assertSessionHasNoErrors();
+
+    expect($user->mahasiswaProfile->fresh())->nim->toBeNull()->status->toBe('Pindahan')->jalur_kelas->toBe('K')->agama->toBe('Lainnya');
 });

@@ -5,10 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Feature;
 use App\Http\Controllers\Controller;
 use App\Models\BatasSks;
-use App\Models\Krs;
 use App\Models\PengaturanAkademik;
 use App\Models\PengaturanPindahKelas;
 use App\Models\SkalaNilai;
+use App\ValidasiBatasSks;
+use App\ValidasiSkalaNilai;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +22,7 @@ class PengaturanAkademikController extends Controller
 {
     public function index(): Response
     {
-        $dipakai = $this->jumlahNilaiDipakai();
+        $dipakai = SkalaNilai::jumlahDipakai();
         $pengaturan = PengaturanAkademik::current();
 
         return Inertia::render('PengaturanSistem/Akademik', [
@@ -122,32 +123,14 @@ class PengaturanAkademikController extends Controller
 
     public function updateBatasSks(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'maks_sks_tanpa_ips' => ['required', 'integer', 'min:1', 'max:40'],
-            'batas_sks' => ['required', 'array', 'min:1'],
-            'batas_sks.*.ips_minimal' => ['required', 'numeric', 'min:0', 'max:4', 'distinct'],
-            'batas_sks.*.maks_sks' => ['required', 'integer', 'min:1', 'max:40'],
-        ], [
-            'distinct' => 'IPS minimal tidak boleh sama di dua baris.',
-            'max' => ':attribute maksimal :max.',
-        ], [
-            'maks_sks_tanpa_ips' => 'Maks SKS tanpa IPS',
-            'batas_sks.*.ips_minimal' => 'IPS minimal',
-            'batas_sks.*.maks_sks' => 'Maks SKS',
-        ]);
-
-        if (! collect($data['batas_sks'])->contains(fn (array $row): bool => (float) $row['ips_minimal'] === 0.0)) {
-            throw ValidationException::withMessages([
-                'batas_sks' => 'Harus ada baris dengan IPS minimal 0 agar semua IPS mendapat batas SKS.',
-            ]);
-        }
+        $data = ValidasiBatasSks::validasi($request);
 
         DB::transaction(function () use ($data, $request): void {
             PengaturanAkademik::current()->update(['maks_sks_tanpa_ips' => $data['maks_sks_tanpa_ips'], 'updated_by' => $request->user()->id]);
             BatasSks::query()->delete();
 
             foreach ($data['batas_sks'] as $row) {
-                BatasSks::create(['ips_minimal' => round((float) $row['ips_minimal'], 2), 'maks_sks' => $row['maks_sks']]);
+                BatasSks::create($row);
             }
         });
 
@@ -156,56 +139,10 @@ class PengaturanAkademikController extends Controller
 
     public function updateSkalaNilai(Request $request): RedirectResponse
     {
-        $request->merge([
-            'skala_nilai' => collect($request->input('skala_nilai', []))
-                ->map(fn ($row): array => is_array($row) ? [...$row, 'huruf' => strtoupper(trim((string) ($row['huruf'] ?? '')))] : [])
-                ->all(),
-        ]);
-
-        $data = $request->validate([
-            'skala_nilai' => ['required', 'array', 'min:1'],
-            'skala_nilai.*.huruf' => ['required', 'string', 'max:2', 'regex:/^[A-Z][+-]?$/', 'distinct'],
-            'skala_nilai.*.bobot' => ['required', 'numeric', 'min:0', 'max:4'],
-            'skala_nilai.*.angka_minimal' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'skala_nilai.*.lulus' => ['required', 'boolean'],
-            'skala_nilai.*.boleh_diulang' => ['required', 'boolean'],
-        ], [
-            'distinct' => 'Huruf nilai tidak boleh sama di dua baris.',
-            'regex' => 'Huruf nilai berupa satu huruf, boleh diikuti + atau - (mis. A, B+, A-).',
-            'max' => ':attribute maksimal :max.',
-        ], [
-            'skala_nilai.*.huruf' => 'Huruf',
-            'skala_nilai.*.bobot' => 'Bobot',
-            'skala_nilai.*.angka_minimal' => 'Angka minimal',
-        ]);
-
-        // Harus ada huruf lulus dan huruf tidak lulus. Huruf tidak lulus wajib boleh diulang, kalau tidak
-        // mahasiswa yang gagal tidak akan pernah bisa mengambil mata kuliah itu lagi.
-        $skala = collect($data['skala_nilai']);
-        if (! $skala->contains(fn (array $row): bool => (bool) $row['lulus']) || ! $skala->contains(fn (array $row): bool => ! $row['lulus'])) {
-            throw ValidationException::withMessages([
-                'skala_nilai' => 'Skala nilai harus punya minimal satu huruf lulus dan satu huruf tidak lulus.',
-            ]);
-        }
-        $tidakBisaDiulang = $skala->filter(fn (array $row): bool => ! $row['lulus'] && ! $row['boleh_diulang'])->pluck('huruf');
-        if ($tidakBisaDiulang->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'skala_nilai' => 'Huruf tidak lulus harus boleh diulang: '.$tidakBisaDiulang->implode(', ').'.',
-            ]);
-        }
-
-        // Huruf berbobot lebih tinggi harus berangka minimal lebih tinggi, agar konversi angka → huruf tidak rancu.
-        $berangka = collect($data['skala_nilai'])->filter(fn (array $row): bool => ($row['angka_minimal'] ?? null) !== null)->sortByDesc('bobot')->values();
-        foreach ($berangka as $i => $row) {
-            if ($i > 0 && (float) $row['angka_minimal'] >= (float) $berangka[$i - 1]['angka_minimal']) {
-                throw ValidationException::withMessages([
-                    'skala_nilai' => "Angka minimal {$row['huruf']} harus lebih rendah dari angka minimal {$berangka[$i - 1]['huruf']}.",
-                ]);
-            }
-        }
+        $data = ['skala_nilai' => ValidasiSkalaNilai::validasi($request, 'skala_nilai')];
 
         // Huruf yang sudah dipakai di nilai mahasiswa tidak boleh hilang, agar nilai lama tetap punya bobot.
-        $hilang = collect($this->jumlahNilaiDipakai())->keys()->diff(collect($data['skala_nilai'])->pluck('huruf'));
+        $hilang = collect(SkalaNilai::jumlahDipakai())->keys()->diff(collect($data['skala_nilai'])->pluck('huruf'));
 
         if ($hilang->isNotEmpty()) {
             throw ValidationException::withMessages([
@@ -223,13 +160,7 @@ class PengaturanAkademikController extends Controller
             SkalaNilai::query()->delete();
 
             foreach ($data['skala_nilai'] as $row) {
-                SkalaNilai::create([
-                    'huruf' => $row['huruf'],
-                    'bobot' => round((float) $row['bobot'], 2),
-                    'angka_minimal' => isset($row['angka_minimal']) ? round((float) $row['angka_minimal'], 2) : null,
-                    'lulus' => (bool) $row['lulus'],
-                    'boleh_diulang' => (bool) $row['boleh_diulang'],
-                ]);
+                SkalaNilai::create(ValidasiSkalaNilai::kolom($row));
             }
         });
 
@@ -284,19 +215,5 @@ class PengaturanAkademikController extends Controller
         PengaturanAkademik::current()->update(['huruf_maks_remidi' => $data['huruf_maks_remidi'] ?? null, 'updated_by' => $request->user()->id]);
 
         return back()->with('success', 'Pengaturan remidi disimpan.');
-    }
-
-    /**
-     * @return array<string, int> huruf => jumlah KRS yang memakai nilai tersebut
-     */
-    private function jumlahNilaiDipakai(): array
-    {
-        return Krs::query()
-            ->whereNotNull('nilai')
-            ->selectRaw('UPPER(nilai) as huruf, COUNT(*) as jumlah')
-            ->groupByRaw('UPPER(nilai)')
-            ->pluck('jumlah', 'huruf')
-            ->map(fn ($jumlah): int => (int) $jumlah)
-            ->all();
     }
 }

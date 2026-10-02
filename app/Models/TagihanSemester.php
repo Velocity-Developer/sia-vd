@@ -103,10 +103,10 @@ class TagihanSemester extends Model
      */
     public static function ringkasan(?int $tahunAkademikId): array
     {
-        $total = MahasiswaProfile::query()->where('status', 'Aktif')->whereHas('user')->count();
+        $total = MahasiswaProfile::query()->aktif()->whereHas('user')->count();
         $perStatus = self::query()
             ->where('tahun_akademik_id', $tahunAkademikId)
-            ->whereHas('mahasiswa', fn (Builder $query) => $query->where('status', 'Aktif')->whereHas('user'))
+            ->whereHas('mahasiswa', fn (Builder $query) => $query->whereIn('status', MahasiswaProfile::STATUS_AKTIF)->whereHas('user'))
             ->selectRaw('status, count(*) as jumlah, coalesce(sum(total), 0) as nominal')
             ->groupBy('status')
             ->get()
@@ -149,7 +149,7 @@ class TagihanSemester extends Model
     public static function kuotaSks(MahasiswaProfile $mahasiswa, ?TahunAkademik $tahunAkademik): int
     {
         return self::sksTinggalTa($mahasiswa)
-            ?? PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null);
+            ?? PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null, $mahasiswa->prodi_id);
     }
 
     /**

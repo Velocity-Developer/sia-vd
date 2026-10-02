@@ -105,7 +105,7 @@ class TagihanController extends Controller
 
         DB::transaction(function () use ($tahunAkademik, $jenisBiaya, $request, &$hasil): void {
             MahasiswaProfile::query()
-                ->where('status', 'Aktif')
+                ->aktif()
                 ->with(['tagihan' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademik->id)])
                 ->chunkById(100, function ($mahasiswas) use ($tahunAkademik, $jenisBiaya, $request, &$hasil): void {
                     foreach ($mahasiswas as $mahasiswa) {
@@ -298,8 +298,8 @@ class TagihanController extends Controller
             ['status' => TagihanSemester::BELUM_BAYAR],
         );
 
-        // Tagihan hanya untuk mahasiswa Aktif (Cuti, Lulus, dst. tidak ditagih); yang sudah terbit tetap bisa diubah.
-        if (! $tagihan->exists && $mahasiswa->status !== 'Aktif') {
+        // Tagihan hanya untuk mahasiswa Aktif/Pindahan (Cuti, Lulus, dst. tidak ditagih); yang sudah terbit tetap bisa diubah.
+        if (! $tagihan->exists && ! $mahasiswa->isAktif()) {
             return back()->with('error', 'Mahasiswa berstatus '.$mahasiswa->status.' tidak ditagih.');
         }
 
@@ -347,7 +347,7 @@ class TagihanController extends Controller
             ->whereHas('kelasKuliah', fn (Builder $query) => $query->where('tahun_akademik_id', $sebelumnya->id))
             // TA/Skripsi yang belum dinilai memang berlanjut ke semester berikutnya, bukan nilai yang tertinggal.
             ->whereHas('kelasKuliah.mataKuliah', fn (Builder $query) => $query->where('tugas_akhir', false))
-            ->whereHas('mahasiswa', fn (Builder $query) => $query->where('status', 'Aktif'))
+            ->whereHas('mahasiswa', fn (Builder $query) => $query->whereIn('status', MahasiswaProfile::STATUS_AKTIF))
             ->count();
     }
 
@@ -363,7 +363,7 @@ class TagihanController extends Controller
     private function kueriMahasiswa(?int $tahunAkademikId): Builder
     {
         return MahasiswaProfile::query()
-            ->where('status', 'Aktif')
+            ->aktif()
             ->with(['user:id,name', 'prodi:id,nama_prodi,jenjang'])
             ->with(['tagihan' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)->with(['editor:id,name', 'verifikator:id,name'])])
             ->with(['krsSemester' => fn ($query) => $query->where('tahun_akademik_id', $tahunAkademikId)->whereIn('status', KrsSemester::STATUS_TERKUNCI)])

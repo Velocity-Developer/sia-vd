@@ -1,59 +1,69 @@
 <?php
 
 use App\Models\MataKuliah;
+use App\Models\MataKuliahPrasyarat;
 use App\Models\User;
 
-function matkulPrasyarat(int $semester, ?int $prodiId = null): MataKuliah
+/**
+ * Mata kuliah semester $semester di prodi yang sama dengan $acuan.
+ */
+function matkulSeprodi(MataKuliah $acuan, int $semester): MataKuliah
 {
-    $prodiId ??= createMateriKelasKuliah()->mataKuliah->prodi_id;
-    $suffix = bin2hex(random_bytes(3));
+    $kode = 'PR'.bin2hex(random_bytes(3));
 
-    return MataKuliah::create(['kode_matkul' => "MK{$suffix}", 'nama_matkul' => "Matkul {$suffix}", 'sks' => 3, 'semester' => $semester, 'jenis' => 'Wajib', 'prodi_id' => $prodiId]);
+    return MataKuliah::create(['kode_matkul' => $kode, 'nama_matkul' => "Mata Kuliah {$kode}", 'sks' => 2, 'semester' => $semester, 'jenis' => 'Wajib', 'prodi_id' => $acuan->prodi_id]);
 }
 
-function payloadMatkul(MataKuliah $contoh, array $ubah = []): array
-{
-    return array_replace(['kode_matkul' => 'MK-BARU', 'nama_matkul' => 'Basis Data Lanjut', 'sks' => 3, 'semester' => 4, 'jenis' => 'Wajib', 'prodi_id' => $contoh->prodi_id, 'prasyarat_ids' => []], $ubah);
-}
-
-it('saves prerequisites from an earlier semester of the same study program', function () {
+it('lets admin add, list, edit, and delete a prerequisite pair', function () {
+    $dasar = createMateriKelasKuliah()->mataKuliah; // semester 1
+    $lanjut = matkulSeprodi($dasar, 3);
+    $lain = matkulSeprodi($dasar, 2);
     $admin = User::factory()->admin()->create();
-    $dasar = matkulPrasyarat(2);
 
-    $this->actingAs($admin)->post(route('admin.mata-kuliah.store'), payloadMatkul($dasar, ['prasyarat_ids' => [$dasar->id]]))
-        ->assertSessionHasNoErrors();
+    $this->actingAs($admin)->post(route('admin.prasyarat.store'), ['mata_kuliah_id' => $lanjut->id, 'prasyarat_id' => $dasar->id])
+        ->assertRedirect(route('admin.prasyarat.index'));
+    expect($lanjut->prasyarat()->pluck('mata_kuliahs.id')->all())->toBe([$dasar->id]);
+    $pasangan = MataKuliahPrasyarat::firstOrFail();
 
-    $baru = MataKuliah::where('kode_matkul', 'MK-BARU')->firstOrFail();
-    expect($baru->prasyarat->pluck('id')->all())->toBe([$dasar->id]);
+    $this->actingAs($admin)->get(route('admin.prasyarat.index', ['search' => $dasar->kode_matkul]))
+        ->assertInertia(fn ($page) => $page->component('Admin/Prasyarat')->has('prasyarat.data', 1)
+            ->where('prasyarat.data.0.mata_kuliah.id', $lanjut->id)->where('prasyarat.data.0.prasyarat.id', $dasar->id));
 
-    $this->actingAs($admin)->get(route('admin.mata-kuliah.show', $dasar))
-        ->assertInertia(fn ($page) => $page->where('mataKuliah.menjadi_prasyarat.0.id', $baru->id));
+    $this->actingAs($admin)->get(route('admin.prasyarat.edit', $pasangan))->assertOk();
+    $this->actingAs($admin)->put(route('admin.prasyarat.update', $pasangan), ['mata_kuliah_id' => $lanjut->id, 'prasyarat_id' => $lain->id])
+        ->assertSessionHas('success');
+    expect($pasangan->fresh()->prasyarat_id)->toBe($lain->id);
 
-    $this->actingAs($admin)->put(route('admin.mata-kuliah.update', $baru), payloadMatkul($dasar))->assertSessionHasNoErrors();
-    expect($baru->prasyarat()->count())->toBe(0);
+    $this->actingAs($admin)->delete(route('admin.prasyarat.destroy', $pasangan))->assertSessionHas('success');
+    expect(MataKuliahPrasyarat::count())->toBe(0);
 });
 
-it('rejects prerequisites that are not from an earlier semester or another study program', function () {
-    $admin = User::factory()->admin()->create();
-    $sama = matkulPrasyarat(4);
-    $prodiLain = matkulPrasyarat(1);
+it('rejects invalid prerequisite pairs', function (string $kasus, string $pesan) {
+    $dasar = createMateriKelasKuliah()->mataKuliah; // semester 1
+    $lanjut = matkulSeprodi($dasar, 3);
+    $prodiLain = createMateriKelasKuliah()->mataKuliah;
+    MataKuliahPrasyarat::create(['mata_kuliah_id' => $lanjut->id, 'prasyarat_id' => $dasar->id]);
 
-    $this->actingAs($admin)->post(route('admin.mata-kuliah.store'), payloadMatkul($sama, ['prasyarat_ids' => [$sama->id]]))
-        ->assertSessionHasErrors('prasyarat_ids');
-    $this->actingAs($admin)->post(route('admin.mata-kuliah.store'), payloadMatkul($sama, ['prasyarat_ids' => [$prodiLain->id]]))
-        ->assertSessionHasErrors('prasyarat_ids.0');
+    [$mk, $pra] = match ($kasus) {
+        'diri sendiri' => [$lanjut, $lanjut],
+        'ganda' => [$lanjut, $dasar],
+        'prodi lain' => [$lanjut, $prodiLain],
+        'semester terbalik' => [$dasar, $lanjut],
+    };
 
-    expect(MataKuliah::where('kode_matkul', 'MK-BARU')->exists())->toBeFalse();
-});
+    $this->actingAs(User::factory()->admin()->create())
+        ->post(route('admin.prasyarat.store'), ['mata_kuliah_id' => $mk->id, 'prasyarat_id' => $pra->id])
+        ->assertSessionHasErrors(['prasyarat_id' => str_replace(':pra', $pra->nama_matkul, $pesan)]);
 
-it('keeps prerequisites acyclic when the semester of a required course changes', function () {
-    $admin = User::factory()->admin()->create();
-    $dasar = matkulPrasyarat(2);
-    $lanjutan = matkulPrasyarat(4, $dasar->prodi_id);
-    $lanjutan->prasyarat()->attach($dasar->id);
+    expect(MataKuliahPrasyarat::count())->toBe(1);
+})->with([
+    ['diri sendiri', 'Mata kuliah tidak bisa menjadi prasyarat dirinya sendiri.'],
+    ['ganda', 'Prasyarat ini sudah terdaftar untuk mata kuliah tersebut.'],
+    ['prodi lain', 'Prasyarat harus mata kuliah dari program studi yang sama.'],
+    ['semester terbalik', 'Prasyarat harus dari semester sebelum semester 1: :pra (smt 3).'],
+]);
 
-    $this->actingAs($admin)->put(route('admin.mata-kuliah.update', $dasar), payloadMatkul($dasar, ['kode_matkul' => $dasar->kode_matkul, 'semester' => 4]))
-        ->assertSessionHasErrors('semester');
-
-    expect($dasar->fresh()->semester)->toBe(2);
+it('keeps the prerequisite menu admin-only', function () {
+    $this->actingAs(User::factory()->dosen()->create())->get(route('admin.prasyarat.index'))->assertForbidden();
+    $this->actingAs(User::factory()->mahasiswa()->create())->get(route('admin.prasyarat.create'))->assertForbidden();
 });

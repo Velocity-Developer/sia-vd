@@ -3,7 +3,6 @@
 namespace App;
 
 use App\Models\Krs;
-use App\Models\SkalaNilai;
 use Illuminate\Support\Collection;
 
 /**
@@ -20,7 +19,7 @@ class Transkrip
     {
         return Krs::query()
             ->where('mahasiswa_id', $mahasiswaId)
-            ->with(['kelasKuliah:id,matkul_id', 'kelasKuliah.mataKuliah:id,kode_matkul,nama_matkul,jenis,sks,tugas_akhir'])
+            ->with(['kelasKuliah:id,matkul_id', 'kelasKuliah.mataKuliah:id,prodi_id,kode_matkul,nama_matkul,jenis,sks,tugas_akhir'])
             ->get(['id', 'kelas_id', 'nilai']);
     }
 
@@ -32,9 +31,9 @@ class Transkrip
      */
     public static function terbaik(Collection $krs): Collection
     {
-        return $krs->filter(fn (Krs $item): bool => SkalaNilai::bobot($item->nilai) !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0)
+        return $krs->filter(fn (Krs $item): bool => $item->bobotNilai() !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0)
             ->groupBy(fn (Krs $item): int => $item->kelasKuliah->matkul_id)
-            ->map(fn (Collection $percobaan): Krs => $percobaan->sortByDesc(fn (Krs $item): float => SkalaNilai::bobot($item->nilai))->first());
+            ->map(fn (Collection $percobaan): Krs => $percobaan->sortByDesc(fn (Krs $item): float => $item->bobotNilai())->first());
     }
 
     /**
@@ -61,12 +60,12 @@ class Transkrip
     {
         $terbaik = self::terbaik(self::krs($mahasiswaId)->whereNotNull('nilai'));
         $sks = (int) $terbaik->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
-        $mutu = $terbaik->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($item->nilai));
+        $mutu = $terbaik->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * $item->bobotNilai());
 
         return [
             'ipk' => $sks > 0 ? round($mutu / $sks, 2) : null,
             'sks' => $sks,
-            'sks_lulus' => (int) $terbaik->filter(fn (Krs $item): bool => SkalaNilai::lulus($item->nilai))->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks),
+            'sks_lulus' => (int) $terbaik->filter(fn (Krs $item): bool => $item->nilaiLulus())->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks),
         ];
     }
 }

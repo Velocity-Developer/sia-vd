@@ -49,7 +49,7 @@ class PengajuanCuti
         $jumlah = self::disetujui($mahasiswa->id)->count();
 
         return match (true) {
-            $mahasiswa->status !== 'Aktif' => 'Hanya mahasiswa berstatus Aktif yang dapat mengajukan cuti (status Anda: '.($mahasiswa->status ?? 'belum diisi').').',
+            ! $mahasiswa->isAktif() => 'Hanya mahasiswa berstatus Aktif atau Pindahan yang dapat mengajukan cuti (status Anda: '.($mahasiswa->status ?? 'belum diisi').').',
             $jumlah >= $maks => "Anda sudah mengambil cuti {$jumlah} semester, batas cuti selama studi {$maks} semester.",
             self::tahunDibuka($mahasiswa->id)->isEmpty() => 'Periode pengajuan cuti sedang tidak dibuka.',
             default => null,
@@ -73,7 +73,7 @@ class PengajuanCuti
             return false;
         }
 
-        return MahasiswaProfile::query()->whereKey($pengajuan->mahasiswa_id)->where('status', 'Aktif')->update(['status' => 'Cuti']) > 0;
+        return MahasiswaProfile::query()->whereKey($pengajuan->mahasiswa_id)->aktif()->update(['status' => 'Cuti']) > 0;
     }
 
     /**
@@ -87,6 +87,6 @@ class PengajuanCuti
             ->pluck('mahasiswa_id');
 
         return $mahasiswaIds->isEmpty() ? 0
-            : MahasiswaProfile::query()->whereKey($mahasiswaIds)->where('status', 'Aktif')->update(['status' => 'Cuti']);
+            : MahasiswaProfile::query()->whereKey($mahasiswaIds)->aktif()->update(['status' => 'Cuti']);
     }
 }

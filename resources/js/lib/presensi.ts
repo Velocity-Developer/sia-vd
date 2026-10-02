@@ -43,3 +43,24 @@ export const formatTanggal = (nilai?: string | null, denganHari = true): string 
 export const formatJamDari = (nilai?: string | null): string => (nilai ? nilai.slice(11, 16) : '-');
 
 export const jam = (nilai?: string | null): string => (nilai ?? '').slice(0, 5);
+
+/** Warna label status kehadiran dosen (Pertemuan::STATUS_DOSEN); "Terlewat"/"Belum" = belum ada status. */
+export const kelasStatusDosen = (status: string | null): string =>
+    ({
+        hadir: 'bg-[#e8f7ec] text-[#1a7f37]',
+        digantikan: 'bg-[#eaf3fd] text-[#0b62b5]',
+        izin: 'bg-[#fff6e0] text-[#8a5a00]',
+        sakit: 'bg-[#f3ecfb] text-[#6b3fa0]',
+        kuliah_diganti: 'bg-[#f6f5f4] text-[#615d59]',
+        tidak_hadir: 'bg-[#fdecea] text-[#b42318]',
+        alpa: 'bg-[#fdecea] text-[#b42318]',
+    })[status ?? ''] ?? 'bg-[#fff6e0] text-[#8a5a00]';
+
+export type VerifikasiPresensi = 'disetujui' | 'ditolak' | null;
+
+export const infoVerifikasi = (status: VerifikasiPresensi): { label: string; kelas: string } =>
+    status === 'disetujui'
+        ? { label: 'Terverifikasi', kelas: 'bg-[#e8f7ec] text-[#1a7f37]' }
+        : status === 'ditolak'
+          ? { label: 'Ditolak', kelas: 'bg-[#fdecea] text-[#b42318]' }
+          : { label: 'Menunggu verifikasi', kelas: 'bg-[#f6f5f4] text-[#615d59]' };

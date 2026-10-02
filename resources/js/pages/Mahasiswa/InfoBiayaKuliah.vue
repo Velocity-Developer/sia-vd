@@ -155,7 +155,7 @@ const statusTagihan = (tagihan: Tagihan | null) => STATUS_TAGIHAN_REMIDI[tagihan
                         v-else
                         class="mt-4 rounded-lg border border-dashed border-[#e6e6e6] px-4 py-6 text-center text-sm text-[#615d59] dark:border-border dark:text-muted-foreground"
                     >
-                        <template v-if="props.statusMahasiswa && props.statusMahasiswa !== 'Aktif'">
+                        <template v-if="props.statusMahasiswa && !['Aktif', 'Pindahan'].includes(props.statusMahasiswa)">
                             Tidak ada tagihan semester ini karena status Anda {{ props.statusMahasiswa }}.
                         </template>
                         <template v-else>

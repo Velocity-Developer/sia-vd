@@ -152,7 +152,10 @@ const submit = () =>
                             <div class="grid gap-2">
                                 <Label for="sks_lulus" class="label-isian">SKS Lulus</Label>
                                 <Input id="sks_lulus" v-model="form.sks_lulus" type="number" min="1" max="1000" />
-                                <p class="teks-bantu">Belum dipakai perhitungan apa pun; batas lulus masih dari Pengaturan Akademik.</p>
+                                <p class="teks-bantu">
+                                    Syarat SKS bernilai (di luar TA/Skripsi) untuk mendaftar pendadaran mahasiswa prodi ini. Kosongkan untuk memakai
+                                    Pengaturan Akademik.
+                                </p>
                                 <InputError :message="form.errors.sks_lulus" />
                             </div>
                         </div>

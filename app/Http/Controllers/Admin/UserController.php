@@ -15,6 +15,8 @@ use App\Models\ProgramStudi;
 use App\Models\Role;
 use App\Models\TahunAkademik;
 use App\Models\User;
+use App\Pmb\BiodataPddiktiRules;
+use App\Pmb\OpsiPmb;
 use App\UserType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +31,8 @@ use Throwable;
 
 class UserController extends Controller
 {
+    public const AGAMA = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu', 'Lainnya'];
+
     private const COMMON_PROFILE_FIELDS = ['tempat_lahir', 'tanggal_lahir', 'jenis_kelamin', 'agama', 'no_telepon', 'alamat', 'kewarganegaraan'];
 
     private const PEKERJAAN_OPTIONS = ['Tidak Bekerja', 'Karyawan Swasta', 'Pegawai Negeri Sipil (PNS)', 'TNI / Polri', 'Wiraswasta / Pengusaha', 'Profesional', 'Guru / Dosen', 'Tenaga Kesehatan', 'Petani', 'Peternak', 'Nelayan', 'Pedagang', 'Ibu Rumah Tangga', 'Freelancer', 'Pensiunan', 'Sudah Meninggal', 'Lainnya'];
@@ -81,6 +85,7 @@ class UserController extends Controller
             'roles' => $this->roleOptions($role), 'defaultRoleId' => Role::system($role)->id,
             'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions(null) : [],
             'programStudi' => $type !== 'karyawan' ? $this->programStudiOptions() : [],
+            'opsi' => $type === 'mahasiswa' ? OpsiPmb::untukForm() : [],
         ]);
     }
 
@@ -100,6 +105,7 @@ class UserController extends Controller
             $extra['fakultas_name'] = $user->mahasiswaProfile->prodi?->fakultas?->nama_fakultas;
             $extra['fakultas_kode'] = $user->mahasiswaProfile->prodi?->fakultas?->kode_fakultas;
             $extra['semester'] = $user->mahasiswaProfile->semesterPada(TahunAkademik::aktif());
+            $extra += $this->biodataTambahan($user->mahasiswaProfile);
         }
         $kunciKrs = null;
         if ($role === UserType::Mahasiswa && $user->mahasiswaProfile && ($tahunAktif = TahunAkademik::aktif())) {
@@ -128,6 +134,7 @@ class UserController extends Controller
             'user' => $user->only(['id', 'name', 'username', 'email', 'email_verified_at']) + ['role_name' => $user->role?->name] + $this->denganFotoUrl($user, $profile) + $extra,
             'bolehKelola' => request()->user()->canManage($user),
             'kunciKrs' => $kunciKrs,
+            'opsi' => $role === UserType::Mahasiswa ? OpsiPmb::untukForm() : [],
         ]);
     }
 
@@ -171,10 +178,12 @@ class UserController extends Controller
 
         return Inertia::render('Admin/UserForm', [
             'title' => 'Edit User - '.ucfirst($type), 'type' => $type,
-            'user' => $user->only(['id', 'name', 'username', 'email', 'role_id']) + $this->denganFotoUrl($user, $profile),
+            'user' => $user->only(['id', 'name', 'username', 'email', 'role_id']) + $this->denganFotoUrl($user, $profile)
+                + ($user->mahasiswaProfile ? $this->biodataTambahan($user->mahasiswaProfile) : []),
             'roles' => $this->roleOptions($role), 'defaultRoleId' => $user->role_id,
             'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions($user->mahasiswaProfile?->dosen_wali_id) : [],
             'programStudi' => $type !== 'karyawan' ? $this->programStudiOptions() : [],
+            'opsi' => $type === 'mahasiswa' ? OpsiPmb::untukForm() : [],
         ]);
     }
 
@@ -217,6 +226,7 @@ class UserController extends Controller
     {
         $role = $this->role($type);
         $data = $request->validate($this->rules(null, $role), $this->messages(), $this->attributes());
+        $data = $this->semesterMasuk($data, $role, null);
         $this->ensureCanAssignRole($request, (int) $data['role_id']);
         $label = $this->roleLabel($type);
         $foto = $this->simpanFoto($request->file('foto'), $type);
@@ -252,6 +262,7 @@ class UserController extends Controller
             ]);
         }
         $data = $request->validate($this->rules($user, $role), $this->messages(), $this->attributes());
+        $data = $this->semesterMasuk($data, $role, $user->mahasiswaProfile);
         if (blank($data['password'] ?? null)) {
             unset($data['password'], $data['password_confirmation']);
         }
@@ -411,6 +422,60 @@ class UserController extends Controller
         return ($profile ?? []) + ['foto_url' => $foto ? route('berkas.foto', ['user' => $user->id, 'v' => substr(md5($foto), 0, 8)]) : null];
     }
 
+    /**
+     * Semester masuk (mis. mahasiswa pindahan) dicatat pada tahun akademik aktif saat diisi atau diubah, dan
+     * paritasnya harus sesuai semester aktif. Nilai yang tidak berubah tetap memakai tahun akademik lamanya.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function semesterMasuk(array $data, UserType $role, ?MahasiswaProfile $lama): array
+    {
+        if ($role !== UserType::Mahasiswa) {
+            return $data;
+        }
+
+        $semester = $data['semester_masuk'] ?? null;
+        if ($semester === null) {
+            return [...$data, 'tahun_akademik_masuk_id' => null];
+        }
+        if ($lama !== null && $lama->semester_masuk === (int) $semester && $lama->tahun_akademik_masuk_id !== null) {
+            return $data;
+        }
+
+        $aktif = TahunAkademik::aktif();
+        $galat = $aktif === null
+            ? 'Belum ada tahun akademik aktif. Aktifkan tahun akademik dulu sebelum mengisi semester masuk.'
+            : MahasiswaProfile::galatSemesterMasuk((int) $semester, $aktif);
+        if ($galat !== null) {
+            throw ValidationException::withMessages(['semester_masuk' => $galat]);
+        }
+
+        return [...$data, 'tahun_akademik_masuk_id' => $aktif->id];
+    }
+
+    /**
+     * Label kecamatan, asal pendaftaran PMB, dan tautan berkas mahasiswa (path berkas tidak dikirim).
+     *
+     * @return array<string, mixed>
+     */
+    private function biodataTambahan(MahasiswaProfile $profil): array
+    {
+        $profil->loadMissing(['kecamatan:id,kode,nama', 'cmb:id,nomor_pendaftaran', 'tahunAkademikMasuk:id,tahun,semester']);
+
+        return [
+            'semester_masuk_pada' => $pada = $profil->tahunAkademikMasuk ? $profil->tahunAkademikMasuk->tahun.' '.$profil->tahunAkademikMasuk->semester : null,
+            'semester_masuk_label' => $profil->semester_masuk ? "Semester {$profil->semester_masuk}".($pada ? " ({$pada})" : '') : null,
+            'kecamatan_label' => $profil->kecamatan?->nama,
+            'nomor_pendaftaran' => $profil->cmb?->nomor_pendaftaran,
+            'cmb_url' => $profil->cmb && request()->user()->hasPermission('admin.pendaftar-pmb') ? route('admin.pendaftar-pmb.show', $profil->cmb_id) : null,
+            'berkas' => collect(MahasiswaProfile::BERKAS)
+                ->filter(fn (string $label, string $kolom): bool => filled($profil->getAttribute($kolom)))
+                ->map(fn (string $label, string $kolom): array => ['label' => $label, 'url' => route('berkas.mahasiswa', ['user' => $profil->user_id, 'jenis' => $kolom])])
+                ->values()->all(),
+        ];
+    }
+
     private function role(string $type): UserType
     {
         return match ($type) {
@@ -443,7 +508,7 @@ class UserController extends Controller
             $fields = [...$fields, 'jabatan_fungsional', 'pendidikan_terakhir', 'status_kepegawaian', 'status', 'prodi_id'];
         }
         if ($role === UserType::Mahasiswa) {
-            $fields = [...$fields, 'angkatan', 'status', 'dosen_wali_id', 'prodi_id', 'sekolah_asal', 'nisn', 'email_alternatif', 'nama_ayah_kandung', 'nama_ibu_kandung', 'tanggal_lahir_ayah', 'tanggal_lahir_ibu', 'pendidikan_terakhir_ayah', 'pendidikan_terakhir_ibu', 'pekerjaan_ayah', 'pekerjaan_ibu', 'penghasilan_ayah', 'penghasilan_ibu', 'no_telepon_ayah', 'no_telepon_ibu', 'email_ayah', 'email_ibu', 'alamat_ayah', 'alamat_ibu'];
+            $fields = [...$fields, 'angkatan', 'status', 'dosen_wali_id', 'prodi_id', 'sekolah_asal', 'nisn', 'email_alternatif', 'nama_ayah_kandung', 'nama_ibu_kandung', 'tanggal_lahir_ayah', 'tanggal_lahir_ibu', 'pendidikan_terakhir_ayah', 'pendidikan_terakhir_ibu', 'pekerjaan_ayah', 'pekerjaan_ibu', 'penghasilan_ayah', 'penghasilan_ibu', 'no_telepon_ayah', 'no_telepon_ibu', 'email_ayah', 'email_ibu', 'alamat_ayah', 'alamat_ibu', 'semester_masuk', 'tahun_akademik_masuk_id', ...BiodataPddiktiRules::FIELDS];
         }
 
         return array_intersect_key($data, array_flip(array_filter($fields)));
@@ -458,7 +523,7 @@ class UserController extends Controller
         $rules['foto'] = ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'];
         $rules['hapus_foto'] = ['nullable', 'boolean'];
         $rules['jenis_kelamin'] = ['required', 'in:Laki-laki,Perempuan'];
-        $rules['agama'] = ['required', 'in:Islam,Kristen Protestan,Kristen Katolik,Hindu,Buddha,Konghucu'];
+        $rules['agama'] = ['required', Rule::in(self::AGAMA)];
         // Karyawan: nomor_induk wajib agar detail tidak tampil "-".
         if ($role === UserType::Admin) {
             $rules['nomor_induk'] = ['required', 'string', 'max:50', Rule::unique('admin_profiles')->ignore($user?->adminProfile?->id)];
@@ -467,7 +532,37 @@ class UserController extends Controller
             $rules += ['nidn' => ['required', 'string', 'max:50', Rule::unique('dosen_profiles')->ignore($user?->dosenProfile?->id)], 'jabatan_fungsional' => ['required', 'string', 'max:100'], 'pendidikan_terakhir' => ['required', 'string', 'max:100'], 'status_kepegawaian' => ['required', 'string', 'max:100'], 'status' => ['required', Rule::in(DosenProfile::STATUS)], 'prodi_id' => ['nullable', 'exists:program_studis,id']];
         }
         if ($role === UserType::Mahasiswa) {
-            $rules += ['nim' => ['required', 'string', 'max:50', Rule::unique('mahasiswa_profiles')->ignore($user?->mahasiswaProfile?->id)], 'angkatan' => ['required', 'integer', 'digits:4'], 'status' => ['required', 'in:Aktif,Nonaktif,Lulus,Dropout,Cuti,Mengundurkan Diri,Meninggal'], 'dosen_wali_id' => ['required', DosenProfile::rulePilihan($user?->mahasiswaProfile?->dosen_wali_id)], 'prodi_id' => ['required', 'exists:program_studis,id'], 'sekolah_asal' => ['required', 'string', 'max:255'], 'nisn' => ['required', 'string', 'digits:10', Rule::unique('mahasiswa_profiles', 'nisn')->ignore($user?->mahasiswaProfile?->id)], 'email_alternatif' => ['required', 'email', 'max:255', 'different:email', Rule::unique('mahasiswa_profiles', 'email_alternatif')->ignore($user?->mahasiswaProfile?->id)], 'nama_ayah_kandung' => ['required', 'string', 'max:255'], 'nama_ibu_kandung' => ['required', 'string', 'max:255'], 'tanggal_lahir_ayah' => ['required', 'date'], 'tanggal_lahir_ibu' => ['required', 'date'], 'pendidikan_terakhir_ayah' => ['required', 'string', 'max:100'], 'pendidikan_terakhir_ibu' => ['required', 'string', 'max:100'], 'pekerjaan_ayah' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'pekerjaan_ibu' => ['required', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)], 'penghasilan_ayah' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'penghasilan_ibu' => ['required', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)], 'no_telepon_ayah' => ['required', 'string', 'max:50'], 'no_telepon_ibu' => ['required', 'string', 'max:50'], 'email_ayah' => ['required', 'email', 'max:255'], 'email_ibu' => ['required', 'email', 'max:255'], 'alamat_ayah' => ['required', 'string', 'max:1000'], 'alamat_ibu' => ['required', 'string', 'max:1000']];
+            // Mahasiswa hasil salinan calon maba belum punya NIM, dosen wali, dan data orang tua lengkap,
+            // jadi isian itu opsional; NIM tetap unik bila diisi.
+            $profilId = $user?->mahasiswaProfile?->id;
+            $rules += [
+                'nim' => ['nullable', 'string', 'max:50', Rule::unique('mahasiswa_profiles')->ignore($profilId)],
+                'angkatan' => ['required', 'integer', 'digits:4'],
+                'status' => ['required', Rule::in(MahasiswaProfile::STATUS)],
+                'dosen_wali_id' => ['nullable', DosenProfile::rulePilihan($user?->mahasiswaProfile?->dosen_wali_id)],
+                'prodi_id' => ['required', 'exists:program_studis,id'],
+                'semester_masuk' => ['nullable', 'integer', 'min:1', 'max:14'],
+                'sekolah_asal' => ['nullable', 'string', 'max:255'],
+                'nisn' => ['nullable', 'string', 'digits:10', Rule::unique('mahasiswa_profiles', 'nisn')->ignore($profilId)],
+                'email_alternatif' => ['nullable', 'email', 'max:255', 'different:email', Rule::unique('mahasiswa_profiles', 'email_alternatif')->ignore($profilId)],
+                'nama_ayah_kandung' => ['nullable', 'string', 'max:255'],
+                'nama_ibu_kandung' => ['required', 'string', 'max:255'],
+                'tanggal_lahir_ayah' => ['nullable', 'date'],
+                'tanggal_lahir_ibu' => ['nullable', 'date'],
+                'pendidikan_terakhir_ayah' => ['nullable', 'string', 'max:100'],
+                'pendidikan_terakhir_ibu' => ['nullable', 'string', 'max:100'],
+                'pekerjaan_ayah' => ['nullable', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)],
+                'pekerjaan_ibu' => ['nullable', 'in:'.implode(',', self::PEKERJAAN_OPTIONS)],
+                'penghasilan_ayah' => ['nullable', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)],
+                'penghasilan_ibu' => ['nullable', 'in:'.implode(',', self::PENGHASILAN_OPTIONS)],
+                'no_telepon_ayah' => ['nullable', 'string', 'max:50'],
+                'no_telepon_ibu' => ['nullable', 'string', 'max:50'],
+                'email_ayah' => ['nullable', 'email', 'max:255'],
+                'email_ibu' => ['nullable', 'email', 'max:255'],
+                'alamat_ayah' => ['nullable', 'string', 'max:1000'],
+                'alamat_ibu' => ['nullable', 'string', 'max:1000'],
+                ...BiodataPddiktiRules::rules($profilId),
+            ];
         }
         $rules['tanggal_lahir'] = ['required', 'date'];
 
@@ -555,6 +650,8 @@ class UserController extends Controller
             'email_ibu' => 'Email Ibu',
             'alamat_ayah' => 'Alamat Ayah',
             'alamat_ibu' => 'Alamat Ibu',
+            'semester_masuk' => 'Semester Masuk',
+            ...BiodataPddiktiRules::attributes(),
         ];
     }
 }

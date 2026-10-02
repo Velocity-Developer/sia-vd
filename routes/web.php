@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Admin\AgamaController;
 use App\Http\Controllers\Admin\BadanHukumController;
+use App\Http\Controllers\Admin\BatasSksController;
+use App\Http\Controllers\Admin\BobotNilaiController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\FakultasController;
 use App\Http\Controllers\Admin\InfoKuliahController;
 use App\Http\Controllers\Admin\JenisBiayaController;
 use App\Http\Controllers\Admin\KotaController;
 use App\Http\Controllers\Admin\MataKuliahController;
+use App\Http\Controllers\Admin\PenasehatAkademikController;
 use App\Http\Controllers\Admin\PendaftarPmbController;
 use App\Http\Controllers\Admin\PengajuanAkademikController as AdminPengajuanAkademikController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
@@ -15,6 +18,9 @@ use App\Http\Controllers\Admin\PengaturanPmbController;
 use App\Http\Controllers\Admin\PerguruanTinggiController;
 use App\Http\Controllers\Admin\PeriodeWisudaController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
+use App\Http\Controllers\Admin\PrasyaratController;
+use App\Http\Controllers\Admin\PredikatController;
+use App\Http\Controllers\Admin\PresensiDosenController;
 use App\Http\Controllers\Admin\ProgramStudiController;
 use App\Http\Controllers\Admin\ProvinsiController;
 use App\Http\Controllers\Admin\RoleController;
@@ -27,12 +33,14 @@ use App\Http\Controllers\Admin\UjianController as AdminUjianController;
 use App\Http\Controllers\Admin\UjianSusulanController as AdminUjianSusulanController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VerifikasiKrsController;
+use App\Http\Controllers\Admin\VerifikasiPresensiDosenController;
 use App\Http\Controllers\BerkasController;
 use App\Http\Controllers\Dosen\BimbinganController;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
 use App\Http\Controllers\Dosen\PendadaranController as DosenPendadaranController;
 use App\Http\Controllers\Dosen\UjianController as DosenUjianController;
+use App\Http\Controllers\Kelas\BapController;
 use App\Http\Controllers\Kelas\JadwalController;
 use App\Http\Controllers\Kelas\KelasKuliahController;
 use App\Http\Controllers\Kelas\MateriController;
@@ -116,6 +124,8 @@ $rutePresensi = function (string $peran): void {
     Route::post('presensi/pertemuan/{pertemuan}/selesai', [PertemuanController::class, 'selesai'])->name($peran.'.presensi.pertemuan.selesai');
     Route::put('presensi/pertemuan/{pertemuan}/jurnal', [PertemuanController::class, 'jurnal'])->name($peran.'.presensi.pertemuan.jurnal');
     Route::put('presensi/pertemuan/{pertemuan}/mahasiswa', [PertemuanController::class, 'simpanPresensi'])->name($peran.'.presensi.pertemuan.mahasiswa');
+    Route::get('presensi/pertemuan/{pertemuan}/bap', [BapController::class, 'pertemuan'])->name($peran.'.presensi.pertemuan.bap');
+    Route::get('presensi/kelas/{kelasKuliah}/bap', [BapController::class, 'kelas'])->name($peran.'.presensi.bap');
     Route::middleware('fitur:presensi_qr')->group(function () use ($peran): void {
         Route::post('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'bukaMandiri'])->name($peran.'.presensi.pertemuan.mandiri.buka');
         Route::delete('presensi/pertemuan/{pertemuan}/mandiri', [PertemuanController::class, 'tutupMandiri'])->name($peran.'.presensi.pertemuan.mandiri.tutup');
@@ -144,6 +154,8 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     });
     Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
     Route::get('foto/{user}', [BerkasController::class, 'foto'])->name('berkas.foto');
+    Route::get('mahasiswa/{user}/{jenis}', [BerkasController::class, 'mahasiswa'])->where('jenis', '[a-z_]+')->name('berkas.mahasiswa');
+    Route::get('pmb/{cmb}/{jenis}', [BerkasController::class, 'pmb'])->where('jenis', '[a-z_]+')->name('berkas.pmb');
     Route::get('izin/{pengajuanIzin}/{index}', [BerkasController::class, 'izin'])->whereNumber('index')->name('berkas.izin');
     Route::middleware('fitur:keuangan')->group(function (): void {
         Route::get('bukti-remidi/{tagihanRemidi}', [BerkasController::class, 'buktiRemidi'])->name('berkas.bukti-remidi');
@@ -298,6 +310,45 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::resource('mata-kuliah', MataKuliahController::class)->parameters(['mata_kuliah' => 'mataKuliah'])->names('admin.mata-kuliah');
     });
 
+    Route::middleware('can:admin.bobot-nilai')->group(function (): void {
+        Route::get('bobot-nilai', [BobotNilaiController::class, 'index'])->name('admin.bobot-nilai.index');
+        Route::put('bobot-nilai/{programStudi}', [BobotNilaiController::class, 'update'])->name('admin.bobot-nilai.update');
+        Route::delete('bobot-nilai/{programStudi}', [BobotNilaiController::class, 'destroy'])->name('admin.bobot-nilai.destroy');
+    });
+
+    Route::middleware('can:admin.prasyarat')->group(function (): void {
+        Route::resource('mata-kuliah-prasyarat', PrasyaratController::class)->except('show')->parameters(['mata-kuliah-prasyarat' => 'prasyarat'])->names('admin.prasyarat');
+    });
+
+    Route::middleware('can:admin.predikat')->group(function (): void {
+        Route::resource('predikat', PredikatController::class)->except('show')->parameters(['predikat' => 'predikat'])->names('admin.predikat');
+    });
+
+    Route::middleware('can:admin.batas-sks')->group(function (): void {
+        Route::get('batas-sks', [BatasSksController::class, 'index'])->name('admin.batas-sks.index');
+        Route::put('batas-sks/{programStudi}', [BatasSksController::class, 'update'])->name('admin.batas-sks.update');
+        Route::delete('batas-sks/{programStudi}', [BatasSksController::class, 'destroy'])->name('admin.batas-sks.destroy');
+    });
+
+    Route::middleware('can:admin.presensi-dosen')->group(function (): void {
+        Route::get('presensi-dosen', [PresensiDosenController::class, 'index'])->name('admin.presensi-dosen.index');
+        Route::get('presensi-dosen/rekap', [PresensiDosenController::class, 'rekap'])->name('admin.presensi-dosen.rekap');
+        Route::get('presensi-dosen/per-kelas', [PresensiController::class, 'laporanDosen'])->name('admin.presensi.laporan-dosen');
+        Route::put('presensi-dosen/{pertemuan}', [PresensiDosenController::class, 'update'])->name('admin.presensi-dosen.update');
+    });
+
+    Route::middleware('can:admin.verifikasi-presensi-dosen')->group(function (): void {
+        Route::get('verifikasi-presensi-dosen', [VerifikasiPresensiDosenController::class, 'index'])->name('admin.verifikasi-presensi-dosen.index');
+        Route::post('verifikasi-presensi-dosen/setujui', [VerifikasiPresensiDosenController::class, 'setujui'])->name('admin.verifikasi-presensi-dosen.setujui');
+        Route::post('verifikasi-presensi-dosen/tolak', [VerifikasiPresensiDosenController::class, 'tolak'])->name('admin.verifikasi-presensi-dosen.tolak');
+        Route::post('verifikasi-presensi-dosen/batal', [VerifikasiPresensiDosenController::class, 'batal'])->name('admin.verifikasi-presensi-dosen.batal');
+    });
+
+    Route::middleware('can:admin.penasehat-akademik')->group(function (): void {
+        Route::get('penasehat-akademik', [PenasehatAkademikController::class, 'index'])->name('admin.penasehat-akademik.index');
+        Route::put('penasehat-akademik', [PenasehatAkademikController::class, 'update'])->name('admin.penasehat-akademik.update');
+    });
+
     Route::middleware('can:admin.ruang')->group(function (): void {
         Route::resource('ruang', RuangController::class)->parameters(['ruang' => 'ruang'])->names('admin.ruang');
     });
@@ -312,6 +363,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:admin.pendaftar-pmb')->group(function (): void {
         Route::resource('pendaftar-pmb', PendaftarPmbController::class)->only(['index', 'show', 'update', 'destroy'])->parameters(['pendaftar-pmb' => 'cmb'])->names('admin.pendaftar-pmb');
+        Route::post('pendaftar-pmb/{cmb}/salin', [PendaftarPmbController::class, 'salin'])->name('admin.pendaftar-pmb.salin');
     });
 
     Route::middleware('can:admin.provinsi')->group(function (): void {
@@ -342,7 +394,8 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
     Route::middleware('can:admin.presensi')->group(function () use ($rutePresensi): void {
         $rutePresensi('admin');
         Route::put('presensi/kelas/{kelasKuliah}/jumlah', [PresensiController::class, 'ubahJumlah'])->name('admin.presensi.jumlah');
-        Route::get('presensi/laporan-dosen', [PresensiController::class, 'laporanDosen'])->name('admin.presensi.laporan-dosen');
+        // Laporan per kelas kini tab "Per Kelas" di menu Presensi Dosen.
+        Route::permanentRedirect('presensi/laporan-dosen', '/admin/presensi-dosen/per-kelas');
     });
 
     Route::middleware('can:admin.kelas-kuliah')->group(function (): void {

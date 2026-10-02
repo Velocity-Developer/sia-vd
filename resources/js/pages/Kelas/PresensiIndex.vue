@@ -2,6 +2,7 @@
 import FilterKonten, { type NilaiFilter, type Opsi } from '@/components/FilterKonten.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { JENIS_PERTEMUAN, jam, statusTampil, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
@@ -49,6 +50,7 @@ const props = defineProps<{
 
 const rute = rutePeran(props.peran);
 const isAdmin = computed(() => props.peran === 'admin');
+const { can } = usePermissions();
 // Kolom dosen perlu terlihat bila daftar tidak hanya berisi kelas sendiri.
 const tampilDosen = computed(() => isAdmin.value || props.lingkup === 'prodi');
 </script>
@@ -78,8 +80,8 @@ const tampilDosen = computed(() => isAdmin.value || props.lingkup === 'prodi');
                                 }}</span>
                             </Link>
                         </Button>
-                        <Button v-if="isAdmin" as-child variant="outline">
-                            <Link :href="route('admin.presensi.laporan-dosen')">Laporan kehadiran dosen</Link>
+                        <Button v-if="isAdmin && can('admin.presensi-dosen')" as-child variant="outline">
+                            <Link :href="route('admin.presensi-dosen.index')">Presensi dosen</Link>
                         </Button>
                     </div>
                 </div>

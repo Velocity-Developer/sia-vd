@@ -17,7 +17,7 @@ class ProgramStudi extends Model
     public const STATUS_PRODI = ['Aktif', 'Pembinaan', 'Alih Bentuk', 'Alih Kelola', 'Tutup'];
 
     protected $fillable = [
-        'fakultas_id', 'kode_prodi', 'nama_prodi', 'jenjang', 'gelar_akademik', 'singkatan_gelar', 'sks_lulus', 'status_prodi',
+        'fakultas_id', 'kode_prodi', 'nama_prodi', 'jenjang', 'gelar_akademik', 'singkatan_gelar', 'sks_lulus', 'maks_sks_tanpa_ips', 'status_prodi',
         'status_akreditasi', 'no_sk_akreditasi', 'tanggal_akreditasi_mulai', 'tanggal_akreditasi_akhir', 'kaprodi', 'nomor_kaprodi',
         'operator', 'nomor_operator', 'no_sk_dikti', 'tanggal_sk_dikti', 'tanggal_berakhir_sk_dikti', 'tahun_berdiri', 'alamat',
         'provinsi_id', 'kota_id', 'kode_pos', 'telepon', 'faximili', 'email', 'website',
@@ -31,6 +31,7 @@ class ProgramStudi extends Model
             'tanggal_sk_dikti' => 'date',
             'tanggal_berakhir_sk_dikti' => 'date',
             'sks_lulus' => 'integer',
+            'maks_sks_tanpa_ips' => 'integer',
         ];
     }
 
@@ -68,6 +69,16 @@ class ProgramStudi extends Model
     public function mataKuliah(): HasMany
     {
         return $this->hasMany(MataKuliah::class, 'prodi_id');
+    }
+
+    public function batasSks(): HasMany
+    {
+        return $this->hasMany(BatasSksProdi::class, 'prodi_id');
+    }
+
+    public function bobotNilai(): HasMany
+    {
+        return $this->hasMany(BobotNilai::class, 'prodi_id');
     }
 
     public function mahasiswa(): HasMany

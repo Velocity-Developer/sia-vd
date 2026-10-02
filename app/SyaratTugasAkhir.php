@@ -5,7 +5,6 @@ namespace App;
 use App\Models\Krs;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
-use App\Models\PengaturanAkademik;
 use App\Models\PeriodeWisuda;
 use App\Models\TugasAkhir;
 use Illuminate\Contracts\Database\Eloquent\Builder;
@@ -83,20 +82,23 @@ class SyaratTugasAkhir
     }
 
     /**
-     * Syarat nilai dari transkrip: SKS minimal (di luar TA), tidak ada E, dan semua mata kuliah sudah dinilai.
+     * Syarat nilai dari transkrip: SKS minimal (di luar TA), tidak ada nilai tidak lulus, dan semua mata kuliah sudah dinilai.
      * Mata kuliah TA/Skripsi boleh belum dinilai kecuali $termasukTa.
      *
      * @return list<array{label: string, terpenuhi: bool, keterangan: ?string}>
      */
     public static function nilai(MahasiswaProfile $mahasiswa, bool $termasukTa): array
     {
-        $minSks = PengaturanAkademik::current()->min_sks_pendadaran;
+        $mahasiswa->loadMissing('prodi');
+        $minSks = $mahasiswa->minSksPendadaran();
+        $diakui = $mahasiswa->sksDiakui();
         $semua = Transkrip::krs($mahasiswa->id);
         $tanpaTa = $semua->reject(fn (Krs $k): bool => (bool) $k->kelasKuliah?->mataKuliah?->tugas_akhir);
         $dicek = $termasukTa ? $semua : $tanpaTa;
 
-        $sks = Transkrip::terbaik($tanpaTa)->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks);
-        $nilaiE = Transkrip::terbaik($dicek)->filter(fn (Krs $k): bool => strtoupper((string) $k->nilai) === 'E');
+        $sks = Transkrip::terbaik($tanpaTa)->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks) + $diakui;
+        // Huruf tidak lulus mengikuti skala nilai prodi mata kuliahnya (Bobot Nilai), bukan selalu E.
+        $tidakLulus = Transkrip::terbaik($dicek)->reject(fn (Krs $k): bool => $k->nilaiLulus());
         $belumDinilai = Transkrip::belumDinilai($dicek);
         $nama = fn ($daftar): string => $daftar->map(fn (Krs $k): string => $k->kelasKuliah->mataKuliah->nama_matkul)->sort()->join(', ');
 
@@ -104,12 +106,13 @@ class SyaratTugasAkhir
             [
                 'label' => "Menempuh minimal {$minSks} SKS (di luar TA/Skripsi)",
                 'terpenuhi' => $sks >= $minSks,
-                'keterangan' => "Sudah {$sks} SKS bernilai.",
+                'keterangan' => "Sudah {$sks} SKS bernilai".($diakui > 0 ? " (termasuk {$diakui} SKS diakui)." : '.'),
             ],
             [
-                'label' => 'Tidak ada nilai E',
-                'terpenuhi' => $nilaiE->isEmpty(),
-                'keterangan' => $nilaiE->isEmpty() ? null : 'Nilai E: '.$nama($nilaiE).'.',
+                'label' => 'Tidak ada nilai tidak lulus',
+                'terpenuhi' => $tidakLulus->isEmpty(),
+                'keterangan' => $tidakLulus->isEmpty() ? null : 'Nilai tidak lulus: '.$tidakLulus
+                    ->map(fn (Krs $k): string => $k->kelasKuliah->mataKuliah->nama_matkul.' ('.strtoupper((string) $k->nilai).')')->sort()->join(', ').'.',
             ],
             [
                 'label' => 'Semua mata kuliah sudah dinilai',

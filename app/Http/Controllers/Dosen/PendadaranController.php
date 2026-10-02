@@ -64,10 +64,10 @@ class PendadaranController extends Controller
             if (($rata = $pendadaran->rataRata()) === null) {
                 return back()->with('error', 'Belum semua penguji mengisi nilai.');
             }
-            if (($huruf = SkalaNilai::dariAngka($rata)) === null) {
-                return back()->with('error', 'Angka minimal skala nilai belum diatur di Pengaturan Akademik, jadi nilai tidak bisa dikonversi ke huruf.');
+            if (($huruf = SkalaNilai::dariAngka($rata, $pendadaran->prodiNilai())) === null) {
+                return back()->with('error', 'Angka minimal skala nilai belum diatur (Bobot Nilai prodi atau Skala Nilai di Pengaturan Akademik), jadi nilai tidak bisa dikonversi ke huruf.');
             }
-            if (! SkalaNilai::lulus($huruf) && $data['hasil'] !== Pendadaran::HASIL_TIDAK_LULUS) {
+            if (! SkalaNilai::lulus($huruf, $pendadaran->prodiNilai()) && $data['hasil'] !== Pendadaran::HASIL_TIDAK_LULUS) {
                 return back()->with('error', "Rata-rata {$rata} bernilai {$huruf} (tidak lulus), jadi hasilnya harus Tidak lulus.");
             }
 

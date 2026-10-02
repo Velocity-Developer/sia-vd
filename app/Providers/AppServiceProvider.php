@@ -7,6 +7,7 @@ use App\Models\PengaturanInstitusi;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Once;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -34,5 +35,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Job antrean (mis. surel notifikasi) memakai zona waktu institusi seperti permintaan web.
         Queue::before(fn () => PengaturanInstitusi::terapkanZonaWaktu());
+        // Hasil once() (mis. skala nilai per prodi) jangan terbawa ke job berikutnya di worker yang berjalan lama.
+        Queue::after(fn () => Once::flush());
     }
 }

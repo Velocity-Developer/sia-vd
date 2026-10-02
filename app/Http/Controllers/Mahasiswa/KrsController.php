@@ -76,7 +76,7 @@ class KrsController extends Controller
                 ->mapWithKeys(fn (MataKuliah $mataKuliah): array => [$mataKuliah->id => $tawaran->alasanPrasyarat($mataKuliah)])
                 ->filter(),
             'sksDiambil' => $krsTahunIni->sum(fn (Krs $krs): int => $krs->kelasKuliah?->mataKuliah?->sks ?? 0),
-            'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null),
+            'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null, $mahasiswa->prodi_id),
             'ipsSebelumnya' => $ipsSebelumnya === null ? null : [
                 'ips' => $ipsSebelumnya['ips'],
                 'tahun_akademik' => $ipsSebelumnya['tahun_akademik']->tahun.' '.$ipsSebelumnya['tahun_akademik']->semester,
@@ -134,7 +134,7 @@ class KrsController extends Controller
                 ->where('kelas_kuliah.tahun_akademik_id', $kelas->tahun_akademik_id)
                 ->sum('mata_kuliahs.sks');
 
-            $maksSks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($kelasKuliah->tahunAkademik)['ips'] ?? null);
+            $maksSks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($kelasKuliah->tahunAkademik)['ips'] ?? null, $mahasiswa->prodi_id);
 
             if ($sksDiambil + $kelasKuliah->mataKuliah->sks > $maksSks) {
                 return "Total SKS melebihi batas maksimal {$maksSks} SKS untuk Anda (sudah diambil {$sksDiambil} SKS).";
@@ -194,7 +194,7 @@ class KrsController extends Controller
         }
 
         $sksDiambil = $krsTahunIni->sum(fn (Krs $krs): int => $krs->kelasKuliah?->mataKuliah?->sks ?? 0);
-        $maksSks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null);
+        $maksSks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahunAkademik)['ips'] ?? null, $mahasiswa->prodi_id);
 
         // Mengambil SKS di bawah batas boleh saja (mis. semester akhir), tetapi harus disadari
         // karena sesudah disimpan KRS tidak bisa ditambah sendiri.
@@ -245,7 +245,7 @@ class KrsController extends Controller
             'tahunAkademik' => $tahunAkademik,
             'krs' => $krs,
             'ipsSebelumnya' => $ipsSebelumnya['ips'] ?? null,
-            'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null),
+            'maksSks' => PengaturanAkademik::maksSksUntuk($ipsSebelumnya['ips'] ?? null, $mahasiswa->prodi_id),
             'kunci' => KrsSemester::untuk($mahasiswa->id, $tahunAkademik->id),
         ])->download('krs-'.$mahasiswa->nim.'-'.Str::slug($tahunAkademik->tahun.'-'.$tahunAkademik->semester).'.pdf');
     }
@@ -287,7 +287,7 @@ class KrsController extends Controller
         return $mahasiswa->krs()
             ->with([
                 'kelasKuliah:id,matkul_id,tahun_akademik_id',
-                'kelasKuliah.mataKuliah:id,sks,tugas_akhir',
+                'kelasKuliah.mataKuliah:id,prodi_id,sks,tugas_akhir',
                 'kelasKuliah.tahunAkademik:id,tahun,semester,tanggal_mulai,status',
             ])
             ->get();

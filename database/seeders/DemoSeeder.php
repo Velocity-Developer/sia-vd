@@ -556,7 +556,7 @@ class DemoSeeder extends Seeder
                     continue;
                 }
 
-                $maksSks = PengaturanAkademik::maksSksUntuk($profil->ipsSemesterSebelum($tahun)['ips'] ?? null);
+                $maksSks = PengaturanAkademik::maksSksUntuk($profil->ipsSemesterSebelum($tahun)['ips'] ?? null, $profil->prodi_id);
                 $terpakai = 0;
 
                 // Bila satu mata kuliah punya kelas paralel, mahasiswa hanya masuk ke salah satunya.
@@ -1256,7 +1256,7 @@ class DemoSeeder extends Seeder
      */
     private function beriRuangSkripsi(MahasiswaProfile $mahasiswa, TahunAkademik $tahun, int $sksSkripsi): void
     {
-        $maks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahun)['ips'] ?? null);
+        $maks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($tahun)['ips'] ?? null, $mahasiswa->prodi_id);
         $krs = Krs::query()->where('mahasiswa_id', $mahasiswa->id)->whereHas('kelasKuliah', fn ($q) => $q->where('tahun_akademik_id', $tahun->id))
             ->with('kelasKuliah.mataKuliah:id,sks,jenis')->get()
             ->sortBy(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->jenis === 'Pilihan' ? 0 : 1)->values();

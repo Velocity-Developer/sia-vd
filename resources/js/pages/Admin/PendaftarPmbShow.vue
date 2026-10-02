@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import InputError from '@/components/InputError.vue';
+import SalinCalonMaba from '@/components/SalinCalonMaba.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,12 +9,15 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { labelStatusPmb } from '@/lib/pmb';
 import { rupiah } from '@/lib/tagihanRemidi';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { FileText, GraduationCap } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 type Opsi = { value: string | number; label: string };
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
-const props = defineProps<{ pendaftar: Record<string, any>; opsi: Record<string, Opsi[]> }>();
+type Berkas = { jenis: string; label: string; url: string; gambar: boolean };
+
+const props = defineProps<{ pendaftar: Record<string, any>; berkas: Berkas[]; opsi: Record<string, Opsi[]>; bolehSalin: boolean }>();
 const p = computed(() => props.pendaftar);
 
 const label = (jenis: string, nilai: unknown) =>
@@ -100,7 +104,7 @@ const hapus = () => router.delete(route('admin.pendaftar-pmb.destroy', p.value.i
     <Head :title="`Pendaftar ${p.nomor_pendaftaran}`" />
     <AppLayout
         :breadcrumbs="[
-            { title: 'Data Pendaftar PMB', href: route('admin.pendaftar-pmb.index') },
+            { title: 'Calon Maba', href: route('admin.pendaftar-pmb.index') },
             { title: p.nomor_pendaftaran, href: route('admin.pendaftar-pmb.show', p.id) },
         ]"
     >
@@ -118,11 +122,20 @@ const hapus = () => router.delete(route('admin.pendaftar-pmb.destroy', p.value.i
                             >
                         </p>
                     </div>
-                    <Button as-child variant="outline"><Link :href="route('admin.pendaftar-pmb.index')">Kembali</Link></Button>
+                    <div class="flex flex-wrap gap-2">
+                        <Button v-if="p.mahasiswa_url" as-child variant="outline"
+                            ><Link :href="p.mahasiswa_url"><GraduationCap /> Lihat di Data Mahasiswa</Link></Button
+                        >
+                        <SalinCalonMaba v-else-if="props.bolehSalin && p.status_pendaftaran === 'lulus'" :id="p.id" :nama="p.nama" />
+                        <Button as-child variant="outline"><Link :href="route('admin.pendaftar-pmb.index')">Kembali</Link></Button>
+                    </div>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
                     {{ page.props.flash.success }}
+                </div>
+                <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
+                    {{ page.props.flash.error }}
                 </div>
 
                 <form class="kartu p-6" @submit.prevent="simpan">
@@ -138,11 +151,12 @@ const hapus = () => router.delete(route('admin.pendaftar-pmb.destroy', p.value.i
                         </div>
                         <div class="grid gap-2">
                             <Label for="status_pendaftaran" class="label-isian">Status Pendaftaran</Label>
-                            <select id="status_pendaftaran" v-model="form.status_pendaftaran" class="isian isian-pilih">
+                            <select id="status_pendaftaran" v-model="form.status_pendaftaran" class="isian isian-pilih" :disabled="!!p.mahasiswa_url">
                                 <option value="">Menunggu</option>
                                 <option value="lulus">Lulus</option>
                                 <option value="ditolak">Ditolak</option>
                             </select>
+                            <span v-if="p.mahasiswa_url" class="teks-bantu">Sudah disalin ke Data Mahasiswa, status terkunci Lulus.</span>
                             <InputError :message="form.errors.status_pendaftaran" />
                         </div>
                     </div>
@@ -150,6 +164,27 @@ const hapus = () => router.delete(route('admin.pendaftar-pmb.destroy', p.value.i
                         <Button type="submit" :disabled="form.processing">Simpan Hasil</Button>
                     </div>
                 </form>
+
+                <section class="kartu p-6">
+                    <h2 class="judul-bagian">Berkas Pendaftar</h2>
+                    <p v-if="!props.berkas.length" class="mt-4 text-sm text-[#615d59]">Pendaftar ini tidak mengunggah berkas.</p>
+                    <div v-else class="mt-4 grid gap-4 sm:grid-cols-3">
+                        <a
+                            v-for="b in props.berkas"
+                            :key="b.jenis"
+                            :href="b.url"
+                            target="_blank"
+                            rel="noopener"
+                            class="group grid gap-2 rounded-xl border border-[#e6e6e6] p-3 text-sm transition-colors hover:bg-[#f6f5f4] dark:border-border dark:hover:bg-muted"
+                        >
+                            <div class="flex h-36 items-center justify-center overflow-hidden rounded-lg bg-[#f6f5f4] dark:bg-muted">
+                                <img v-if="b.gambar" :src="b.url" :alt="b.label" class="size-full object-contain" />
+                                <FileText v-else class="size-10 text-[#a39e98]" />
+                            </div>
+                            <span class="font-medium text-black group-hover:underline dark:text-foreground">{{ b.label }}</span>
+                        </a>
+                    </div>
+                </section>
 
                 <section v-for="b in bagian" :key="b.judul" class="kartu p-6">
                     <h2 class="judul-bagian">{{ b.judul }}</h2>
@@ -161,7 +196,7 @@ const hapus = () => router.delete(route('admin.pendaftar-pmb.destroy', p.value.i
                     </dl>
                 </section>
 
-                <div class="flex justify-end">
+                <div v-if="!p.mahasiswa_url" class="flex justify-end">
                     <Button variant="outline" class="text-[#dd5b00]" @click="konfirmasiHapus = true">Hapus Pendaftar</Button>
                 </div>
 

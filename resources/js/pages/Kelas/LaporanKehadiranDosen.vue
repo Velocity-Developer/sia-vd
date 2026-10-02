@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import SelectFilter from '@/components/SelectFilter.vue';
+import TabPresensiDosen from '@/components/TabPresensiDosen.vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -61,18 +62,18 @@ const perDosen = computed(() => {
 </script>
 
 <template>
-    <Head title="Laporan Kehadiran Dosen" />
+    <Head title="Presensi Dosen per Kelas" />
     <AppLayout
         :breadcrumbs="[
-            { title: 'Presensi', href: route('admin.presensi.index') },
-            { title: 'Laporan Kehadiran Dosen', href: route('admin.presensi.laporan-dosen') },
+            { title: 'Presensi Dosen', href: route('admin.presensi-dosen.index') },
+            { title: 'Per Kelas', href: route('admin.presensi.laporan-dosen') },
         ]"
     >
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Laporan Kehadiran Dosen</h1>
+                        <h1 class="judul-halaman">Presensi Dosen</h1>
                         <p class="deskripsi-halaman">
                             Pertemuan terlaksana dibanding rencana per kelas. Terlambat = jam masuk lewat {{ props.toleransi }} menit dari jam mulai;
                             tanpa jurnal = pertemuan selesai tanpa topik.
@@ -82,6 +83,8 @@ const perDosen = computed(() => {
                         <a :href="urlCsv"><Download /> Unduh CSV</a>
                     </Button>
                 </div>
+
+                <TabPresensiDosen aktif="kelas" />
 
                 <div class="bilah-filter">
                     <SelectFilter

@@ -82,6 +82,7 @@ class PengajuanIzinController extends Controller
         $kelas = $pengajuanIzin->pertemuan->kelasKuliah;
         $this->pastikanPengampu($kelas);
         abort_if($this->tahunAkademikTerkunci($kelas), 403, 'Tahun akademik kelas ini sudah tidak aktif.');
+        abort_if($pengajuanIzin->pertemuan->terverifikasi(), 403, 'Presensi pertemuan ini sudah diverifikasi; batalkan verifikasinya dulu.');
 
         $data = $request->validate([
             'keputusan' => ['required', Rule::in([PengajuanIzin::DISETUJUI, PengajuanIzin::DITOLAK])],

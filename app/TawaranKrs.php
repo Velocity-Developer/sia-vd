@@ -6,7 +6,6 @@ use App\Models\Krs;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
 use App\Models\PengaturanAkademik;
-use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use Illuminate\Support\Collection;
 
@@ -40,16 +39,19 @@ class TawaranKrs
     /**
      * @param  Collection<int, Krs>  $semuaKrs  seluruh KRS mahasiswa, dengan relasi kelasKuliah
      */
-    /** SKS lulus di luar TA/Skripsi, untuk syarat mengambil TA/Skripsi. */
+    /** SKS lulus di luar TA/Skripsi (termasuk SKS diakui pindahan), untuk syarat mengambil TA/Skripsi. */
     private readonly int $sksLulusTanpaTa;
+
+    private readonly int $sksDiakui;
 
     public function __construct(MahasiswaProfile $mahasiswa, private readonly ?TahunAkademik $tahunAkademik, Collection $semuaKrs)
     {
         $this->semester = $mahasiswa->semesterPada($tahunAkademik);
         $semuaKrs = $semuaKrs->filter(fn (Krs $krs): bool => $krs->kelasKuliah !== null);
         $this->riwayat = $semuaKrs->groupBy(fn (Krs $krs): int => $krs->kelasKuliah->matkul_id);
-        $this->sksLulusTanpaTa = (int) Transkrip::terbaik($semuaKrs->reject(fn (Krs $krs): bool => (bool) $krs->kelasKuliah->mataKuliah?->tugas_akhir))
-            ->filter(fn (Krs $krs): bool => SkalaNilai::lulus($krs->nilai))
+        $this->sksDiakui = $mahasiswa->sksDiakui();
+        $this->sksLulusTanpaTa = $this->sksDiakui + (int) Transkrip::terbaik($semuaKrs->reject(fn (Krs $krs): bool => (bool) $krs->kelasKuliah->mataKuliah?->tugas_akhir))
+            ->filter(fn (Krs $krs): bool => $krs->nilaiLulus())
             ->sum(fn (Krs $krs): int => $krs->kelasKuliah->mataKuliah->sks);
     }
 
@@ -155,12 +157,14 @@ class TawaranKrs
     public function alasanPrasyarat(MataKuliah $mataKuliah): ?string
     {
         if ($mataKuliah->tugas_akhir && $this->sksLulusTanpaTa < ($minSks = PengaturanAkademik::current()->min_sks_ambil_ta)) {
-            return "Minimal {$minSks} SKS lulus di luar TA/Skripsi (Anda baru {$this->sksLulusTanpaTa} SKS)";
+            $diakui = $this->sksDiakui > 0 ? ", termasuk {$this->sksDiakui} SKS diakui" : '';
+
+            return "Minimal {$minSks} SKS lulus di luar TA/Skripsi (Anda baru {$this->sksLulusTanpaTa} SKS{$diakui})";
         }
 
         $belumLulus = $mataKuliah->prasyarat
             ->reject(fn (MataKuliah $prasyarat): bool => $this->riwayat->get($prasyarat->id, collect())
-                ->contains(fn (Krs $krs): bool => filled($krs->nilai) && SkalaNilai::lulus($krs->nilai)));
+                ->contains(fn (Krs $krs): bool => filled($krs->nilai) && $krs->nilaiLulus()));
 
         return $belumLulus->isEmpty() ? null : 'Prasyarat: '.$belumLulus->pluck('nama_matkul')->implode(', ').' belum lulus';
     }
@@ -185,7 +189,7 @@ class TawaranKrs
                 return 'Mata kuliah ini masih menunggu nilai dari pengambilan sebelumnya.';
             }
 
-            if (! SkalaNilai::bolehDiulang($krs->nilai)) {
+            if (! $krs->nilaiBolehDiulang()) {
                 return "Anda sudah lulus mata kuliah ini dengan nilai {$krs->nilai}.";
             }
         }

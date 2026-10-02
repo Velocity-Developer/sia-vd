@@ -30,6 +30,18 @@ class Pertemuan extends Model
 
     public const SELESAI = 'selesai';
 
+    /** Status kehadiran dosen per pertemuan. Hadir/Digantikan = pertemuan terlaksana; sisanya tidak terlaksana. */
+    public const STATUS_DOSEN = [
+        'hadir' => 'Hadir', 'digantikan' => 'Digantikan', 'tidak_hadir' => 'Tidak Hadir', 'kuliah_diganti' => 'Kuliah Diganti',
+        'sakit' => 'Sakit', 'izin' => 'Izin', 'alpa' => 'Alpa',
+    ];
+
+    public const DOSEN_HADIR = ['hadir', 'digantikan'];
+
+    public const DISETUJUI = 'disetujui';
+
+    public const DITOLAK = 'ditolak';
+
     public const NAMA_HARI = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
 
     /** Pertemuan yang lupa ditutup dianggap selesai sekian menit sesudah jam akhir. */
@@ -47,6 +59,7 @@ class Pertemuan extends Model
     protected $fillable = [
         'kelas_id', 'jadwal_id', 'pertemuan_ke', 'tanggal', 'jam_mulai', 'jam_akhir', 'ruang_id', 'jenis', 'status',
         'dosen_id', 'dosen_masuk_at', 'dosen_keluar_at', 'topik', 'catatan', 'kode_rahasia', 'mandiri_sampai',
+        'status_dosen', 'verifikasi', 'catatan_verifikasi', 'diverifikasi_oleh', 'diverifikasi_at',
     ];
 
     protected $hidden = ['kode_rahasia'];
@@ -61,6 +74,7 @@ class Pertemuan extends Model
             'dosen_masuk_at' => 'datetime',
             'dosen_keluar_at' => 'datetime',
             'mandiri_sampai' => 'datetime',
+            'diverifikasi_at' => 'datetime',
         ];
     }
 
@@ -87,6 +101,72 @@ class Pertemuan extends Model
     public function presensiMahasiswas(): HasMany
     {
         return $this->hasMany(PresensiMahasiswa::class);
+    }
+
+    public function pemverifikasi(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'diverifikasi_oleh');
+    }
+
+    /**
+     * Riwayat koreksi dan verifikasi presensi dosen, terbaru dulu.
+     */
+    public function riwayatPresensiDosen(): HasMany
+    {
+        return $this->hasMany(RiwayatPresensiDosen::class)->latest('id');
+    }
+
+    /**
+     * Status kehadiran dosen yang tersimpan; pertemuan selesai tanpa status (data lama) dianggap hadir, atau
+     * digantikan bila diajar selain pengampu. Null = belum ada (dijadwalkan/terlewat).
+     */
+    public function statusDosen(?int $pengampuId = null): ?string
+    {
+        if ($this->status_dosen !== null || $this->status !== self::SELESAI) {
+            return $this->status_dosen;
+        }
+
+        return $this->statusHadirUntuk($this->dosen_id, $pengampuId ?? $this->kelasKuliah?->dosen_id);
+    }
+
+    public static function statusHadirUntuk(?int $dosenId, ?int $pengampuId): string
+    {
+        return $dosenId !== null && $dosenId !== $pengampuId ? 'digantikan' : 'hadir';
+    }
+
+    public function terverifikasi(): bool
+    {
+        return $this->verifikasi === self::DISETUJUI;
+    }
+
+    /**
+     * Menit keterlambatan dosen masuk dari jam mulai, bila melewati toleransi; null bila tepat waktu/tanpa jam masuk.
+     */
+    public function menitTerlambat(int $toleransi): ?int
+    {
+        if ($this->dosen_masuk_at === null || $this->dosen_masuk_at->lte($this->mulaiAt()->addMinutes($toleransi))) {
+            return null;
+        }
+
+        return (int) $this->mulaiAt()->diffInMinutes($this->dosen_masuk_at);
+    }
+
+    /**
+     * Pertemuan yang ditolak verifikasinya kembali menunggu verifikasi setelah diperbaiki.
+     */
+    public function kembaliMenungguVerifikasi(): void
+    {
+        if ($this->verifikasi === self::DITOLAK) {
+            $this->update(['verifikasi' => null, 'diverifikasi_oleh' => null, 'diverifikasi_at' => null]);
+        }
+    }
+
+    /**
+     * Durasi terjadwal dalam jam (untuk rekap honor).
+     */
+    public function durasiJam(): float
+    {
+        return round($this->mulaiAt()->diffInMinutes($this->akhirAt()) / 60, 2);
     }
 
     /**
@@ -200,6 +280,7 @@ class Pertemuan extends Model
             ->filter(fn (self $pertemuan): bool => $pertemuan->akhirAt()->lt($batas))
             ->each(fn (self $pertemuan) => $pertemuan->update([
                 'status' => self::SELESAI,
+                'status_dosen' => $pertemuan->status_dosen ?? self::statusHadirUntuk($pertemuan->dosen_id, $pertemuan->kelasKuliah?->dosen_id),
                 'dosen_keluar_at' => $pertemuan->dosen_keluar_at ?? $pertemuan->akhirAt(),
                 'mandiri_sampai' => null,
             ]));

@@ -39,7 +39,7 @@ class BerandaDosen
             'jabatan' => $dosen->jabatan_fungsional,
             'kelas_diampu' => $kelasIds->count(),
             'mahasiswa_diajar' => Krs::query()->whereIn('kelas_id', $kelasIds)->distinct()->count('mahasiswa_id'),
-            'mahasiswa_wali' => MahasiswaProfile::query()->where('dosen_wali_id', $dosen->id)->where('status', 'Aktif')->count(),
+            'mahasiswa_wali' => MahasiswaProfile::query()->where('dosen_wali_id', $dosen->id)->aktif()->count(),
             'bimbingan_ta' => TugasAkhir::query()->dibimbing($dosen->id)->where('status', TugasAkhir::BERJALAN)->count(),
         ];
     }

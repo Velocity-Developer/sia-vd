@@ -46,16 +46,11 @@ class Wisuda extends Model
     }
 
     /**
-     * Predikat kelulusan dari IPK.
+     * Predikat kelulusan dari IPK, menurut tabel Predikat (null bila IPK tidak masuk rentang mana pun).
      */
-    public static function predikat(float $ipk): string
+    public static function predikat(float $ipk): ?string
     {
-        return match (true) {
-            $ipk > 3.50 => 'Dengan Pujian (Cum Laude)',
-            $ipk > 3.00 => 'Sangat Memuaskan',
-            $ipk >= 2.76 => 'Memuaskan',
-            default => 'Cukup',
-        };
+        return Predikat::untuk($ipk);
     }
 
     /**
@@ -67,7 +62,7 @@ class Wisuda extends Model
         DB::transaction(function () use ($oleh): void {
             $terbaik = Transkrip::terbaik(Transkrip::krs($this->mahasiswa_id));
             $sks = $terbaik->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks);
-            $mutu = $terbaik->sum(fn (Krs $k): float => $k->kelasKuliah->mataKuliah->sks * SkalaNilai::bobot($k->nilai));
+            $mutu = $terbaik->sum(fn (Krs $k): float => $k->kelasKuliah->mataKuliah->sks * $k->bobotNilai());
             $ipk = $sks > 0 ? round($mutu / $sks, 2) : 0.0;
             $pendadaran = Pendadaran::query()->where('tugas_akhir_id', $this->tugas_akhir_id)->where('status', Pendadaran::SELESAI)->latest('id')->first();
 

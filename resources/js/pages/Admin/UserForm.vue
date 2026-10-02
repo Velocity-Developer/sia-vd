@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BiodataPddikti from '@/components/BiodataPddikti.vue';
 import DatePicker from '@/components/DatePicker.vue';
 import InputError from '@/components/InputError.vue';
 import UnggahFoto from '@/components/UnggahFoto.vue';
@@ -20,7 +21,35 @@ const props = defineProps<{
     defaultRoleId: number | null;
     dosenWali: { id: number; name: string }[];
     programStudi: { id: number; nama_prodi: string; jenjang: string; fakultas: string | null }[];
+    opsi: Record<string, { value: string | number; label: string }[]>;
 }>();
+// Biodata PDDIKTI (asal formulir PMB), sama dengan BiodataPddiktiRules::FIELDS.
+const biodataFields = [
+    'nik',
+    'npwp',
+    'status_sipil',
+    'telepon_wali',
+    'dusun',
+    'rt',
+    'rw',
+    'kelurahan',
+    'wilayah_kecamatan_id',
+    'kode_pos',
+    'alat_transportasi',
+    'jenis_tinggal',
+    'jenis_masuk',
+    'penerima_kps',
+    'nomor_kps',
+    'jenis_pembiayaan',
+    'jumlah_pembiayaan',
+    'jalur_kelas',
+    'nilai_un',
+    'asal_perguruan_tinggi',
+    'jenjang_asal',
+    'prodi_asal',
+    'nim_asal',
+    'sks_diakui',
+];
 const common = ['name', 'username', 'email', 'tempat_lahir', 'tanggal_lahir', 'no_telepon', 'kewarganegaraan'];
 const roleFields =
     props.type === 'karyawan'
@@ -31,6 +60,7 @@ const roleFields =
             ? [
                   'nim',
                   'angkatan',
+                  'semester_masuk',
                   'status',
                   'dosen_wali_id',
                   'prodi_id',
@@ -53,6 +83,7 @@ const roleFields =
                   'no_telepon_ibu',
                   'email_ibu',
                   'alamat_ibu',
+                  ...biodataFields,
               ]
             : [];
 const labels: Record<string, string> = {
@@ -70,6 +101,7 @@ const labels: Record<string, string> = {
     status_kepegawaian: 'Status Kepegawaian',
     nim: 'NIM',
     angkatan: 'Angkatan',
+    semester_masuk: 'Semester Masuk',
     status: 'Status',
     dosen_wali_id: 'Dosen Wali',
     prodi_id: 'Program Studi',
@@ -97,9 +129,10 @@ const labels: Record<string, string> = {
     password: 'Kata Sandi',
     password_confirmation: 'Konfirmasi Kata Sandi',
 };
-const agama = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu'];
-// Dosen hanya Aktif/Nonaktif; mahasiswa berstatus selain Aktif juga tidak dapat masuk.
-const statuses = props.type === 'dosen' ? ['Aktif', 'Nonaktif'] : ['Aktif', 'Nonaktif', 'Lulus', 'Dropout', 'Cuti', 'Mengundurkan Diri', 'Meninggal'];
+const agama = ['Islam', 'Kristen Protestan', 'Kristen Katolik', 'Hindu', 'Buddha', 'Konghucu', 'Lainnya'];
+// Dosen hanya Aktif/Nonaktif. Mahasiswa Pindahan (dari PMB) diperlakukan sama dengan Aktif.
+const statuses =
+    props.type === 'dosen' ? ['Aktif', 'Nonaktif'] : ['Aktif', 'Pindahan', 'Nonaktif', 'Lulus', 'Dropout', 'Cuti', 'Mengundurkan Diri', 'Meninggal'];
 const pekerjaanOptions = [
     'Tidak Bekerja',
     'Karyawan Swasta',
@@ -161,7 +194,15 @@ const form = useForm<Record<string, string>>({
     ...Object.fromEntries(
         [...common, ...roleFields, 'jenis_kelamin', 'agama', 'alamat', 'password', 'password_confirmation'].map((field) => [
             field,
-            props.user?.[field] == null ? (field === 'status' && props.type === 'dosen' ? 'Aktif' : '') : String(props.user[field]),
+            field === 'penerima_kps'
+                ? props.user?.[field]
+                    ? '1'
+                    : '0'
+                : props.user?.[field] == null
+                  ? field === 'status' && props.type === 'dosen'
+                      ? 'Aktif'
+                      : ''
+                  : String(props.user[field]),
         ]),
     ),
 });
@@ -222,7 +263,8 @@ const submit = () => {
                     <div>
                         <h1 class="judul-halaman">{{ title }}</h1>
                         <p v-if="isMahasiswa" class="deskripsi-halaman">
-                            Lengkapi data akun, pribadi, akademik, dan orang tua. Semua field wajib diisi.
+                            Lengkapi data akun, pribadi, akademik, dan orang tua. NIM, dosen wali, email alternatif, dan data orang tua (selain nama
+                            ibu) boleh dilengkapi belakangan.
                         </p>
                     </div>
                     <Button as-child variant="outline"><Link :href="route(`admin.users.${props.type}`)">Kembali</Link></Button>
@@ -328,12 +370,30 @@ const submit = () => {
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="nim" class="label-isian">{{ labels.nim }}</Label
-                                ><Input id="nim" v-model="form.nim" required /><InputError :message="form.errors.nim" />
+                                ><Input id="nim" v-model="form.nim" /><InputError :message="form.errors.nim" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="angkatan" class="label-isian">{{ labels.angkatan }}</Label
                                 ><Input id="angkatan" v-model="form.angkatan" type="number" required /><InputError :message="form.errors.angkatan" />
                                 <p class="teks-bantu">Tahun masuk, misalnya 2026. Semester mahasiswa dihitung otomatis dari angkatan.</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
+                            <div class="grid gap-2">
+                                <Label for="semester_masuk" class="label-isian">{{ labels.semester_masuk }}</Label
+                                ><Input
+                                    id="semester_masuk"
+                                    v-model="form.semester_masuk"
+                                    type="number"
+                                    min="1"
+                                    max="14"
+                                    placeholder="Kosongkan bila dari semester 1"
+                                /><InputError :message="form.errors.semester_masuk" />
+                                <p class="teks-bantu">
+                                    Untuk mahasiswa pindahan: semester pada tahun akademik aktif sesuai hasil konversi SKS. Ganjil = 1, 3, 5…; Genap =
+                                    2, 4, 6….
+                                    <template v-if="props.user?.semester_masuk_pada">Tercatat pada {{ props.user.semester_masuk_pada }}.</template>
+                                </p>
                             </div>
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
@@ -398,38 +458,36 @@ const submit = () => {
                                         <p v-if="filteredDosen.length === 0" class="px-2 py-2 text-sm text-[#615d59]">Dosen tidak ditemukan</p>
                                     </div>
                                 </div>
-                                <input id="dosen_wali_id-value" v-model="form.dosen_wali_id" type="hidden" required />
+                                <input id="dosen_wali_id-value" v-model="form.dosen_wali_id" type="hidden" />
                             </div>
                             <InputError :message="form.errors.dosen_wali_id" />
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="sekolah_asal" class="label-isian">{{ labels.sekolah_asal }}</Label
-                                ><Input id="sekolah_asal" v-model="form.sekolah_asal" required /><InputError :message="form.errors.sekolah_asal" />
+                                ><Input id="sekolah_asal" v-model="form.sekolah_asal" /><InputError :message="form.errors.sekolah_asal" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="nisn" class="label-isian">{{ labels.nisn }}</Label
-                                ><Input id="nisn" type="text" inputmode="numeric" v-model="form.nisn" required /><InputError
-                                    :message="form.errors.nisn"
-                                />
+                                ><Input id="nisn" type="text" inputmode="numeric" v-model="form.nisn" /><InputError :message="form.errors.nisn" />
                             </div>
                         </div>
                         <div class="mt-4 grid gap-2">
                             <Label for="email_alternatif" class="label-isian">{{ labels.email_alternatif }}</Label
-                            ><Input id="email_alternatif" type="email" v-model="form.email_alternatif" required /><InputError
+                            ><Input id="email_alternatif" type="email" v-model="form.email_alternatif" /><InputError
                                 :message="form.errors.email_alternatif"
                             />
                         </div>
                     </section>
+
+                    <BiodataPddikti :form="form" :opsi="props.opsi" :kecamatan-label="props.user?.kecamatan_label" />
 
                     <!-- Data Ayah Kandung -->
                     <section class="kartu p-6">
                         <h2 class="judul-bagian">Data Ayah Kandung</h2>
                         <div class="mt-4 grid gap-2">
                             <Label for="nama_ayah_kandung" class="label-isian">{{ labels.nama_ayah_kandung }}</Label
-                            ><Input id="nama_ayah_kandung" v-model="form.nama_ayah_kandung" required /><InputError
-                                :message="form.errors.nama_ayah_kandung"
-                            />
+                            ><Input id="nama_ayah_kandung" v-model="form.nama_ayah_kandung" /><InputError :message="form.errors.nama_ayah_kandung" />
                         </div>
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
@@ -442,7 +500,7 @@ const submit = () => {
                             </div>
                             <div class="grid gap-2">
                                 <Label for="pendidikan_terakhir_ayah" class="label-isian">{{ labels.pendidikan_terakhir_ayah }}</Label
-                                ><Input id="pendidikan_terakhir_ayah" v-model="form.pendidikan_terakhir_ayah" required /><InputError
+                                ><Input id="pendidikan_terakhir_ayah" v-model="form.pendidikan_terakhir_ayah" /><InputError
                                     :message="form.errors.pendidikan_terakhir_ayah"
                                 />
                             </div>
@@ -450,14 +508,14 @@ const submit = () => {
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="pekerjaan_ayah" class="label-isian">{{ labels.pekerjaan_ayah }}</Label
-                                ><select id="pekerjaan_ayah" v-model="form.pekerjaan_ayah" class="isian isian-pilih" required>
+                                ><select id="pekerjaan_ayah" v-model="form.pekerjaan_ayah" class="isian isian-pilih">
                                     <option value="">Pilih pekerjaan</option>
                                     <option v-for="item in pekerjaanAyahOptions" :key="item" :value="item">{{ item }}</option></select
                                 ><InputError :message="form.errors.pekerjaan_ayah" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="penghasilan_ayah" class="label-isian">{{ labels.penghasilan_ayah }}</Label
-                                ><select id="penghasilan_ayah" v-model="form.penghasilan_ayah" class="isian isian-pilih" required>
+                                ><select id="penghasilan_ayah" v-model="form.penghasilan_ayah" class="isian isian-pilih">
                                     <option value="">Pilih penghasilan</option>
                                     <option v-for="item in penghasilanAyahOptions" :key="item" :value="item">{{ item }}</option></select
                                 ><InputError :message="form.errors.penghasilan_ayah" />
@@ -466,20 +524,16 @@ const submit = () => {
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="no_telepon_ayah" class="label-isian">{{ labels.no_telepon_ayah }}</Label
-                                ><Input id="no_telepon_ayah" v-model="form.no_telepon_ayah" required /><InputError
-                                    :message="form.errors.no_telepon_ayah"
-                                />
+                                ><Input id="no_telepon_ayah" v-model="form.no_telepon_ayah" /><InputError :message="form.errors.no_telepon_ayah" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="email_ayah" class="label-isian">{{ labels.email_ayah }}</Label
-                                ><Input id="email_ayah" type="email" v-model="form.email_ayah" required /><InputError
-                                    :message="form.errors.email_ayah"
-                                />
+                                ><Input id="email_ayah" type="email" v-model="form.email_ayah" /><InputError :message="form.errors.email_ayah" />
                             </div>
                         </div>
                         <div class="mt-4 grid gap-2">
                             <Label for="alamat_ayah" class="label-isian">{{ labels.alamat_ayah }}</Label
-                            ><textarea id="alamat_ayah" v-model="form.alamat_ayah" class="isian isian-area min-h-20" required /><InputError
+                            ><textarea id="alamat_ayah" v-model="form.alamat_ayah" class="isian isian-area min-h-20" /><InputError
                                 :message="form.errors.alamat_ayah"
                             />
                         </div>
@@ -505,7 +559,7 @@ const submit = () => {
                             </div>
                             <div class="grid gap-2">
                                 <Label for="pendidikan_terakhir_ibu" class="label-isian">{{ labels.pendidikan_terakhir_ibu }}</Label
-                                ><Input id="pendidikan_terakhir_ibu" v-model="form.pendidikan_terakhir_ibu" required /><InputError
+                                ><Input id="pendidikan_terakhir_ibu" v-model="form.pendidikan_terakhir_ibu" /><InputError
                                     :message="form.errors.pendidikan_terakhir_ibu"
                                 />
                             </div>
@@ -513,14 +567,14 @@ const submit = () => {
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="pekerjaan_ibu" class="label-isian">{{ labels.pekerjaan_ibu }}</Label
-                                ><select id="pekerjaan_ibu" v-model="form.pekerjaan_ibu" class="isian isian-pilih" required>
+                                ><select id="pekerjaan_ibu" v-model="form.pekerjaan_ibu" class="isian isian-pilih">
                                     <option value="">Pilih pekerjaan</option>
                                     <option v-for="item in pekerjaanIbuOptions" :key="item" :value="item">{{ item }}</option></select
                                 ><InputError :message="form.errors.pekerjaan_ibu" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="penghasilan_ibu" class="label-isian">{{ labels.penghasilan_ibu }}</Label
-                                ><select id="penghasilan_ibu" v-model="form.penghasilan_ibu" class="isian isian-pilih" required>
+                                ><select id="penghasilan_ibu" v-model="form.penghasilan_ibu" class="isian isian-pilih">
                                     <option value="">Pilih penghasilan</option>
                                     <option v-for="item in penghasilanIbuOptions" :key="item" :value="item">{{ item }}</option></select
                                 ><InputError :message="form.errors.penghasilan_ibu" />
@@ -529,20 +583,16 @@ const submit = () => {
                         <div class="mt-4 grid items-start gap-4 sm:grid-cols-2">
                             <div class="grid gap-2">
                                 <Label for="no_telepon_ibu" class="label-isian">{{ labels.no_telepon_ibu }}</Label
-                                ><Input id="no_telepon_ibu" v-model="form.no_telepon_ibu" required /><InputError
-                                    :message="form.errors.no_telepon_ibu"
-                                />
+                                ><Input id="no_telepon_ibu" v-model="form.no_telepon_ibu" /><InputError :message="form.errors.no_telepon_ibu" />
                             </div>
                             <div class="grid gap-2">
                                 <Label for="email_ibu" class="label-isian">{{ labels.email_ibu }}</Label
-                                ><Input id="email_ibu" type="email" v-model="form.email_ibu" required /><InputError
-                                    :message="form.errors.email_ibu"
-                                />
+                                ><Input id="email_ibu" type="email" v-model="form.email_ibu" /><InputError :message="form.errors.email_ibu" />
                             </div>
                         </div>
                         <div class="mt-4 grid gap-2">
                             <Label for="alamat_ibu" class="label-isian">{{ labels.alamat_ibu }}</Label
-                            ><textarea id="alamat_ibu" v-model="form.alamat_ibu" class="isian isian-area min-h-20" required /><InputError
+                            ><textarea id="alamat_ibu" v-model="form.alamat_ibu" class="isian isian-area min-h-20" /><InputError
                                 :message="form.errors.alamat_ibu"
                             />
                         </div>

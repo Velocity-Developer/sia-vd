@@ -166,7 +166,7 @@ const saveNilai = () =>
                 <h3 class="judul-bagian">Batas SKS per Semester</h3>
                 <p class="teks-bantu mt-1">
                     Ditentukan dari IPS semester terakhir mahasiswa yang sudah bernilai. Baris dengan IPS minimal tertinggi yang terpenuhi yang
-                    dipakai.
+                    dipakai. Berlaku untuk prodi yang belum mengatur Batas SKS sendiri (Akademik → Konfigurasi → Batas SKS per Semester).
                 </p>
 
                 <div class="tabel-wadah mt-4 shadow-none">
@@ -252,9 +252,10 @@ const saveNilai = () =>
             <form class="kartu p-6" @submit.prevent="saveNilai">
                 <h3 class="judul-bagian">Skala Nilai</h3>
                 <p class="teks-bantu mt-1">
-                    Dipakai untuk pilihan nilai di kelas, IP/IPK, KHS, dan transkrip. Mengubah bobot akan mengubah IP/IPK semua mahasiswa yang
-                    memiliki nilai tersebut. Angka minimal (0–100) dipakai mengubah nilai angka pendadaran menjadi huruf. Wajib ada minimal satu huruf
-                    lulus dan satu huruf tidak lulus, dan huruf tidak lulus harus boleh diulang.
+                    Dipakai untuk pilihan nilai di kelas, IP/IPK, KHS, dan transkrip pada prodi yang belum mengatur Bobot Nilai sendiri (Akademik →
+                    Konfigurasi → Bobot Nilai). Mengubah bobot akan mengubah IP/IPK semua mahasiswa yang memiliki nilai tersebut. Angka minimal
+                    (0–100) dipakai mengubah nilai angka pendadaran menjadi huruf. Wajib ada minimal satu huruf lulus dan satu huruf tidak lulus, dan
+                    huruf tidak lulus harus boleh diulang.
                 </p>
 
                 <div class="tabel-wadah mt-4 shadow-none">
@@ -396,7 +397,8 @@ const saveNilai = () =>
             <form class="kartu p-6" @submit.prevent="simpanTugasAkhir">
                 <h3 class="judul-bagian">Syarat SKS</h3>
                 <p class="teks-bantu mt-1">
-                    Dihitung dari transkrip tanpa mata kuliah TA/Skripsi. Mata kuliah TA/Skripsi ditandai di Master Akademik → Mata Kuliah.
+                    Dihitung dari transkrip tanpa mata kuliah TA/Skripsi, ditambah SKS diakui mahasiswa pindahan. Mata kuliah TA/Skripsi ditandai di
+                    Akademik → Konfigurasi → Mata Kuliah. Syarat pendadaran memakai SKS Lulus program studi bila diisi.
                 </p>
                 <div class="mt-4 grid content-start gap-4 sm:grid-cols-2">
                     <div class="grid content-start gap-2">
@@ -421,8 +423,8 @@ const saveNilai = () =>
             <form class="kartu p-6" @submit.prevent="simpanCuti">
                 <h3 class="judul-bagian">Batas Cuti</h3>
                 <p class="teks-bantu mt-1">
-                    Jumlah semester cuti yang boleh disetujui selama studi. Periode pengajuan cuti diatur per semester di Master Akademik → Tahun
-                    Akademik.
+                    Jumlah semester cuti yang boleh disetujui selama studi. Periode pengajuan cuti diatur per semester di Akademik → Konfigurasi →
+                    Tahun Akademik.
                 </p>
                 <div class="mt-4 grid content-start gap-4 sm:grid-cols-2">
                     <div class="grid content-start gap-2">

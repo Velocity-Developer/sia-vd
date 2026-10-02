@@ -43,7 +43,7 @@ class BimbinganController extends Controller
 
         $jadwal = Pendadaran::query()
             ->where(fn (Builder $q) => $q->diuji($dosen->id)->orWhereIn('tugas_akhir_id', $bimbingan->pluck('id')))
-            ->with(['mahasiswa:id,user_id,nim', 'mahasiswa.user:id,name', 'tugasAkhir:id,judul', 'ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name', 'pengajuan:id,lampiran', 'nilai'])
+            ->with(['mahasiswa:id,user_id,nim,prodi_id', 'mahasiswa.user:id,name', 'tugasAkhir:id,judul', 'ruang', 'penguji1.user:id,name', 'penguji2.user:id,name', 'penguji3.user:id,name', 'pengajuan:id,lampiran', 'nilai'])
             // Yang masih perlu ditindaklanjuti (dinilai/direvisi) di atas.
             ->orderByRaw('status in (?, ?) desc', Pendadaran::AKTIF)
             ->orderBy('tanggal')
@@ -91,8 +91,8 @@ class BimbinganController extends Controller
                 ])->values() : [],
                 'usulan' => $ketua && ($rata = $p->rataRata()) !== null ? [
                     'rata_rata' => $rata,
-                    'huruf' => $huruf = SkalaNilai::dariAngka($rata),
-                    'lulus' => $huruf !== null && SkalaNilai::lulus($huruf),
+                    'huruf' => $huruf = SkalaNilai::dariAngka($rata, $p->prodiNilai()),
+                    'lulus' => $huruf !== null && SkalaNilai::lulus($huruf, $p->prodiNilai()),
                 ] : null,
             ]),
         ]);

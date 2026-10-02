@@ -102,7 +102,7 @@ it('lists the defence requirements and locks the form until they are met', funct
     Krs::create(['mahasiswa_id' => $m->id, 'kelas_id' => $kelasE->id, 'status' => 'Aktif', 'nilai' => 'E']);
     $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page
         ->where('pendaftaranPendadaran.keadaan', 'belum_memenuhi')
-        ->where('pendaftaranPendadaran.syarat.3.keterangan', 'Nilai E: Statistika.'));
+        ->where('pendaftaranPendadaran.syarat.3.keterangan', 'Nilai tidak lulus: Statistika (E).'));
     $ulang = KelasKuliah::create(['kode_kelas' => 'STAT-U', 'tahun_akademik_id' => $kelasTa->tahun_akademik_id, 'kapasitas' => 30, 'dosen_id' => $kelasE->dosen_id, 'matkul_id' => $kelasE->matkul_id]);
     Krs::create(['mahasiswa_id' => $m->id, 'kelas_id' => $ulang->id, 'status' => 'Aktif', 'nilai' => 'B']);
     $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page->where('pendaftaranPendadaran.syarat.3.terpenuhi', true));

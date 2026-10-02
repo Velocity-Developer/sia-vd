@@ -101,7 +101,7 @@ class DashboardController extends Controller
             : MahasiswaProfile::query()->whereHas('user')->selectRaw('status, count(*) as jumlah')->groupBy('status')->pluck('jumlah', 'status');
 
         return collect($kunci)->mapWithKeys(fn (string $k): array => [$k => match ($k) {
-            'mahasiswa_aktif' => (int) ($mahasiswa['Aktif'] ?? 0),
+            'mahasiswa_aktif' => (int) collect(MahasiswaProfile::STATUS_AKTIF)->sum(fn (string $status): int => (int) ($mahasiswa[$status] ?? 0)),
             'mahasiswa_cuti' => (int) ($mahasiswa['Cuti'] ?? 0),
             'mahasiswa_lulus' => (int) ($mahasiswa['Lulus'] ?? 0),
             'dosen_aktif' => DosenProfile::query()->whereHas('user')->where('status', 'Aktif')->count(),
@@ -269,7 +269,7 @@ class DashboardController extends Controller
     private function mahasiswaPerProdi(): array
     {
         return ProgramStudi::query()
-            ->withCount(['mahasiswa' => fn (Builder $q) => $q->where('status', 'Aktif')->whereHas('user')])
+            ->withCount(['mahasiswa' => fn (Builder $q) => $q->whereIn('status', MahasiswaProfile::STATUS_AKTIF)->whereHas('user')])
             ->orderByDesc('mahasiswa_count')->orderBy('nama_prodi')
             ->get(['id', 'jenjang', 'nama_prodi'])
             ->map(fn (ProgramStudi $prodi): array => ['nama' => trim($prodi->jenjang.' '.$prodi->nama_prodi), 'jumlah' => (int) $prodi->mahasiswa_count])

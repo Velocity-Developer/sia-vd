@@ -21,9 +21,9 @@ use Illuminate\Support\Facades\DB;
  */
 class UsulanRemidi
 {
-    public static function hurufRemidi(?string $nilai): bool
+    public static function hurufRemidi(?string $nilai, ?int $prodiId = null): bool
     {
-        return filled($nilai) && (! SkalaNilai::lulus($nilai) || SkalaNilai::bolehDiulang($nilai));
+        return filled($nilai) && (! SkalaNilai::lulus($nilai, $prodiId) || SkalaNilai::bolehDiulang($nilai, $prodiId));
     }
 
     /**
@@ -68,19 +68,20 @@ class UsulanRemidi
         $kelas->loadMissing(['krs.mahasiswa:id,user_id,nim', 'krs.mahasiswa.user:id,name']);
         $pesertaUas = self::pesertaUas($kelas)?->flip();
         $tersimpan = RemidiPeserta::query()->where('kelas_id', $kelas->id)->pluck('mahasiswa_id')->flip();
+        $prodiId = $kelas->mataKuliah?->prodi_id;
 
         $mahasiswa = $kelas->krs
             ->sortBy(fn (Krs $krs): string => (string) $krs->mahasiswa?->nim)
-            ->map(function (Krs $krs) use ($pesertaUas, $tersimpan): array {
+            ->map(function (Krs $krs) use ($pesertaUas, $tersimpan, $prodiId): array {
                 $ikutUas = $pesertaUas === null ? null : $pesertaUas->has($krs->mahasiswa_id);
-                $diusulkan = self::hurufRemidi($krs->nilai) && $ikutUas !== false;
+                $diusulkan = self::hurufRemidi($krs->nilai, $prodiId) && $ikutUas !== false;
 
                 return [
                     'mahasiswa_id' => $krs->mahasiswa_id,
                     'nama' => $krs->mahasiswa?->user?->name,
                     'nim' => $krs->mahasiswa?->nim,
                     'nilai' => $krs->nilai,
-                    'huruf_remidi' => self::hurufRemidi($krs->nilai),
+                    'huruf_remidi' => self::hurufRemidi($krs->nilai, $prodiId),
                     'ikut_uas' => $ikutUas,
                     'diusulkan' => $diusulkan,
                     'terpilih' => $tersimpan->isEmpty() ? $diusulkan : $tersimpan->has($krs->mahasiswa_id),

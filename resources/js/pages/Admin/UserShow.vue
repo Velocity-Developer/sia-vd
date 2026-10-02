@@ -5,7 +5,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { STATUS_KRS, type RingkasanKrs } from '@/lib/krs';
 import { formatTanggal } from '@/lib/presensi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { UserRound } from 'lucide-vue-next';
+import { FileText, UserRound } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const props = defineProps<{
@@ -22,6 +22,7 @@ const props = defineProps<{
               verifikasi: boolean;
           })
         | null;
+    opsi?: Record<string, { value: string | number; label: string }[]>;
 }>();
 
 const page = usePage<{ flash?: { success?: string | null; error?: string | null } }>();
@@ -47,6 +48,7 @@ const v = (val: unknown): string => {
 };
 
 const isMahasiswa = props.type === 'mahasiswa';
+
 const isDosen = props.type === 'dosen';
 
 const detailTitle = isMahasiswa ? 'Detail Mahasiswa' : isDosen ? 'Detail Dosen' : 'Detail Karyawan';
@@ -77,6 +79,7 @@ const akademik = [
     { label: 'NIM', key: 'nim' },
     { label: 'Angkatan', key: 'angkatan' },
     { label: 'Semester (tahun aktif)', key: 'semester' },
+    { label: 'Semester Masuk', key: 'semester_masuk_label' },
     { label: 'Status', key: 'status' },
     { label: 'Program Studi', key: 'prodi_name' },
     { label: 'Jenjang', key: 'prodi_jenjang' },
@@ -85,7 +88,44 @@ const akademik = [
     { label: 'Sekolah Asal', key: 'sekolah_asal' },
     { label: 'NISN', key: 'nisn' },
     { label: 'Email Alternatif', key: 'email_alternatif' },
+    { label: 'Jalur Kelas', key: 'jalur_kelas', opsi: 'kelas' },
 ];
+
+// Biodata PDDIKTI (asal formulir PMB); kode ditampilkan sebagai labelnya.
+const label = (opsi: string | undefined, nilai: unknown) =>
+    opsi && nilai !== null && nilai !== undefined && nilai !== ''
+        ? (props.opsi?.[opsi]?.find((o) => String(o.value) === String(nilai))?.label ?? String(nilai))
+        : v(nilai);
+const biodata: { label: string; key: string; opsi?: string }[] = [
+    { label: 'NIK', key: 'nik' },
+    { label: 'NPWP', key: 'npwp' },
+    { label: 'Status Perkawinan', key: 'status_sipil', opsi: 'status_sipil' },
+    { label: 'Dusun', key: 'dusun' },
+    { label: 'RT / RW', key: 'rt_rw' },
+    { label: 'Kelurahan', key: 'kelurahan' },
+    { label: 'Kecamatan', key: 'kecamatan_label' },
+    { label: 'Kode Pos', key: 'kode_pos' },
+    { label: 'No. HP Wali/Ortu', key: 'telepon_wali' },
+    { label: 'Jenis Masuk', key: 'jenis_masuk', opsi: 'jenis_masuk' },
+    { label: 'Alat Transportasi', key: 'alat_transportasi', opsi: 'alat_transportasi' },
+    { label: 'Jenis Tinggal', key: 'jenis_tinggal', opsi: 'jenis_tinggal' },
+    { label: 'Penerima KPS', key: 'kps' },
+    { label: 'Jenis Pembiayaan', key: 'jenis_pembiayaan', opsi: 'jenis_pembiayaan' },
+    { label: 'Jumlah Pembiayaan', key: 'jumlah_pembiayaan' },
+    { label: 'Nilai UN', key: 'nilai_un' },
+    { label: 'Asal Perguruan Tinggi', key: 'asal_perguruan_tinggi' },
+    { label: 'Jenjang Asal', key: 'jenjang_asal', opsi: 'jenjang' },
+    { label: 'Program Studi Asal', key: 'prodi_asal' },
+    { label: 'NIM Asal', key: 'nim_asal' },
+    { label: 'SKS Diakui', key: 'sks_diakui' },
+];
+const nilaiBiodata = (key: string, opsi?: string) => {
+    const u = props.user;
+    if (key === 'rt_rw') return u.rt || u.rw ? `${u.rt ?? '-'} / ${u.rw ?? '-'}` : '-';
+    if (key === 'kps') return u.penerima_kps ? `Ya${u.nomor_kps ? ` (${u.nomor_kps})` : ''}` : 'Tidak';
+    if (key === 'jumlah_pembiayaan' && u[key] !== null && u[key] !== undefined) return `Rp${Number(u[key]).toLocaleString('id-ID')}`;
+    return label(opsi, u[key]);
+};
 
 const akademikDosen = [
     { label: 'NIDN', key: 'nidn' },
@@ -201,9 +241,35 @@ const ibu = [
                         <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             <div v-for="f in akademik" :key="f.key" class="space-y-1">
                                 <dt class="teks-bantu">{{ f.label }}</dt>
-                                <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ v(props.user[f.key]) }}</dd>
+                                <dd class="break-words text-sm font-medium text-black dark:text-foreground">
+                                    {{ 'opsi' in f ? label(f.opsi, props.user[f.key]) : v(props.user[f.key]) }}
+                                </dd>
                             </div>
                         </dl>
+                        <p v-if="props.user.nomor_pendaftaran" class="teks-bantu mt-4">
+                            Disalin dari Calon Maba
+                            <Link v-if="props.user.cmb_url" :href="props.user.cmb_url" class="font-medium text-[#0075de] hover:underline">{{
+                                props.user.nomor_pendaftaran
+                            }}</Link>
+                            <template v-else>{{ props.user.nomor_pendaftaran }}</template
+                            >.
+                        </p>
+                    </section>
+
+                    <!-- Biodata PDDIKTI -->
+                    <section class="kartu p-6">
+                        <h2 class="judul-bagian">Biodata PDDIKTI</h2>
+                        <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                            <div v-for="f in biodata" :key="f.key" class="space-y-1">
+                                <dt class="teks-bantu">{{ f.label }}</dt>
+                                <dd class="break-words text-sm font-medium text-black dark:text-foreground">{{ nilaiBiodata(f.key, f.opsi) }}</dd>
+                            </div>
+                        </dl>
+                        <div v-if="props.user.berkas?.length" class="mt-5 flex flex-wrap gap-2">
+                            <Button v-for="b in props.user.berkas" :key="b.url" as-child variant="outline" size="sm"
+                                ><a :href="b.url" target="_blank" rel="noopener"><FileText /> {{ b.label }}</a></Button
+                            >
+                        </div>
                     </section>
 
                     <section v-if="props.kunciKrs" class="kartu p-6">
