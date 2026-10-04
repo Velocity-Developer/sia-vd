@@ -6,6 +6,10 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Ditambahkan
+- **sitemap.xml & robots.txt dinamis** (`SeoController`, rute `sitemap`/`robots`): sitemap hanya halaman publik
+  (Informasi PMB dengan lastmod dari `informasi_pmb`, Formulir PMB, Login); robots.txt menutup /admin, /dosen,
+  /mahasiswa, /pengaturan-sistem, /dev, /berkas, /settings, /pmb/selesai, /pmb/kecamatan dan menunjuk ke sitemap.
+  Alamat memakai APP_URL. `public/robots.txt` statis dihapus.
 - **Impor Kelas Kuliah dari Excel** (`admin/impor/kelas-kuliah`, izin `admin.kelas-kuliah`, juga role Prodi untuk MK
   prodinya; tombol "Impor Excel" di Kelas Kuliah). Kolom: Kode Kelas, Tahun Akademik (mis. `2025/2026 Ganjil`, kosong =
   TA aktif), Kode MK, NIDN Dosen (wajib kecuali MK TA/Skripsi), Kapasitas, Jumlah Pertemuan (kosong = bawaan). Kode kelas

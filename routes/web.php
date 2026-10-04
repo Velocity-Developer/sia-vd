@@ -95,6 +95,7 @@ use App\Http\Controllers\Mahasiswa\TugasAkhirController as MahasiswaTugasAkhirCo
 use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
 use App\Http\Controllers\Mahasiswa\UjianSusulanController as MahasiswaUjianSusulanController;
 use App\Http\Controllers\PendadaranBerkasController;
+use App\Http\Controllers\SeoController;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
 use App\Models\Quiz;
@@ -106,6 +107,10 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
+
+// Untuk mesin pencari: hanya halaman publik (PMB, login). public/robots.txt statis dihapus agar Sitemap: ikut APP_URL.
+Route::get('sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+Route::get('robots.txt', [SeoController::class, 'robots'])->name('robots');
 
 // Detail ujian (soal, pengumpulan, nilai) sama untuk admin dan dosen pengampu.
 $ruteUjianKelas = function (string $peran): void {
