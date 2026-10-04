@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\BatasiAksiProdi;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PastikanAkunAktif;
 use App\Http\Middleware\PastikanDeveloper;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             // sesi lain yang masih terbuka ikut berakhir.
             AuthenticateSession::class,
             PastikanAkunAktif::class,
+            BatasiAksiProdi::class,
             HandleInertiaRequests::class,
             TahanSaatMaintenance::class,
             AddLinkHeadersForPreloadedAssets::class,

@@ -32,7 +32,7 @@ class MataKuliahController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/MataKuliahForm', ['mataKuliah' => null, 'programStudis' => $this->programStudis(), 'pilihanPrasyarat' => $this->pilihanPrasyarat()]);
+        return Inertia::render('Admin/MataKuliahForm', ['mataKuliah' => null, 'programStudis' => $this->programStudis(), 'pilihanPrasyarat' => $this->pilihanPrasyarat(), 'jenisPenilaian' => MataKuliah::JENIS_PENILAIAN]);
     }
 
     public function show(MataKuliah $mataKuliah): Response
@@ -52,6 +52,7 @@ class MataKuliahController extends Controller
             'mataKuliah' => $mataKuliah->toArray() + ['prasyarat_ids' => $mataKuliah->prasyarat()->pluck('mata_kuliahs.id')->all()],
             'programStudis' => $this->programStudis(),
             'pilihanPrasyarat' => $this->pilihanPrasyarat(),
+            'jenisPenilaian' => MataKuliah::JENIS_PENILAIAN,
         ]);
     }
 
@@ -113,7 +114,7 @@ class MataKuliahController extends Controller
             'sks' => ['required', 'integer', 'min:1', 'max:6'],
             'semester' => ['required', 'integer', 'min:1', 'max:14'],
             'jenis' => ['required', 'in:Wajib,Pilihan'],
-            'tugas_akhir' => ['boolean'],
+            'jenis_penilaian' => ['required', Rule::in(array_keys(MataKuliah::JENIS_PENILAIAN))],
             'prodi_id' => ['required', 'exists:program_studis,id'],
             'prasyarat_ids' => ['array'],
             'prasyarat_ids.*' => ['integer', 'distinct', Rule::exists('mata_kuliahs', 'id')->where('prodi_id', $request->integer('prodi_id')), Rule::notIn(array_filter([$model->id]))],
@@ -122,8 +123,8 @@ class MataKuliahController extends Controller
         unset($data['prasyarat_ids']);
         $this->pastikanUrutanPrasyarat($model, $data, $prasyaratIds);
 
-        DB::transaction(function () use ($model, $data, $prasyaratIds, $request): void {
-            $model->fill([...$data, 'tugas_akhir' => $request->boolean('tugas_akhir')])->save();
+        DB::transaction(function () use ($model, $data, $prasyaratIds): void {
+            $model->fill($data)->save();
             $model->prasyarat()->sync($prasyaratIds);
         });
     }
@@ -190,7 +191,7 @@ class MataKuliahController extends Controller
             'sks' => 'SKS',
             'semester' => 'Semester',
             'jenis' => 'Jenis',
-            'tugas_akhir' => 'Mata kuliah TA/Skripsi',
+            'jenis_penilaian' => 'Jenis penilaian',
             'prodi_id' => 'Program Studi',
             'prasyarat_ids' => 'Prasyarat',
         ];

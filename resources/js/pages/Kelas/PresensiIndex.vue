@@ -53,16 +53,18 @@ const isAdmin = computed(() => props.peran === 'admin');
 const { can } = usePermissions();
 // Kolom dosen perlu terlihat bila daftar tidak hanya berisi kelas sendiri.
 const tampilDosen = computed(() => isAdmin.value || props.lingkup === 'prodi');
+// Admin juga punya menu Presensi Dosen, jadi menu ini diberi nama lengkap.
+const judul = computed(() => (isAdmin.value ? 'Presensi Mahasiswa' : 'Presensi'));
 </script>
 
 <template>
-    <Head title="Presensi" />
-    <AppLayout :breadcrumbs="[{ title: 'Presensi', href: rute('presensi.index') }]">
+    <Head :title="judul" />
+    <AppLayout :breadcrumbs="[{ title: judul, href: rute('presensi.index') }]">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Presensi</h1>
+                        <h1 class="judul-halaman">{{ judul }}</h1>
                         <p class="deskripsi-halaman">
                             {{
                                 isAdmin

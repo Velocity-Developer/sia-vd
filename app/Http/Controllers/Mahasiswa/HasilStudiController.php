@@ -2,16 +2,11 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\HasilStudi;
 use App\Http\Controllers\Controller;
-use App\Models\Krs;
 use App\Models\MahasiswaProfile;
-use App\Models\PengaturanInstitusi;
-use App\Models\TahunAkademik;
-use App\Transkrip;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,55 +14,22 @@ class HasilStudiController extends Controller
 {
     public function transkrip(Request $request): Response
     {
-        return Inertia::render('Mahasiswa/TranskripNilai', $this->dataTranskrip($this->mahasiswa($request)));
+        return Inertia::render('Mahasiswa/TranskripNilai', HasilStudi::transkrip($this->mahasiswa($request)));
     }
 
     public function downloadTranskrip(Request $request): HttpResponse
     {
-        $mahasiswa = $this->mahasiswa($request)->muatPengesahan();
-        $institusi = PengaturanInstitusi::current();
-
-        return Pdf::loadView('pdf.transkrip', [
-            'institusi' => $institusi,
-            'logoSrc' => $institusi->logoDataUri(),
-            'kontak' => $institusi->kontakKop(),
-            'mahasiswa' => $mahasiswa,
-            ...$this->dataTranskrip($mahasiswa),
-        ])->download("transkrip-{$mahasiswa->nim}.pdf");
+        return HasilStudi::unduhTranskrip($this->mahasiswa($request));
     }
 
     public function index(Request $request): Response
     {
-        $mahasiswa = $this->mahasiswa($request);
-        $data = $this->dataKhs($mahasiswa, $request->integer('tahun_akademik_id'));
-
-        return Inertia::render('Mahasiswa/HasilStudi', [
-            'krs' => $data['krs'],
-            'tahunAkademiks' => $data['tahunAkademiks'],
-            'tahunAkademikTerpilih' => $data['tahunAkademik']?->id,
-            'ringkasan' => $data['ringkasan'],
-        ]);
+        return Inertia::render('Mahasiswa/HasilStudi', HasilStudi::propsKhs($this->mahasiswa($request), $request->integer('tahun_akademik_id')));
     }
 
     public function downloadKhs(Request $request): HttpResponse
     {
-        $mahasiswa = $this->mahasiswa($request);
-        $data = $this->dataKhs($mahasiswa, $request->integer('tahun_akademik_id'));
-        $institusi = PengaturanInstitusi::current();
-
-        $pdf = Pdf::loadView('pdf.khs', [
-            'institusi' => $institusi,
-            'logoSrc' => $institusi->logoDataUri(),
-            'kontak' => $institusi->kontakKop(),
-            'mahasiswa' => $mahasiswa->muatPengesahan(),
-            'tahunAkademik' => $data['tahunAkademik'],
-            'krs' => $data['krs'],
-            'ringkasan' => $data['ringkasan'],
-        ]);
-
-        $tahun = str_replace('/', '-', (string) $data['tahunAkademik']?->tahun);
-
-        return $pdf->download("khs-{$mahasiswa->nim}-{$tahun}-{$data['tahunAkademik']?->semester}.pdf");
+        return HasilStudi::unduhKhs($this->mahasiswa($request), $request->integer('tahun_akademik_id'));
     }
 
     private function mahasiswa(Request $request): MahasiswaProfile
@@ -76,81 +38,5 @@ class HasilStudiController extends Controller
         abort_if($mahasiswa === null, 403);
 
         return $mahasiswa;
-    }
-
-    /**
-     * @return array{transkrip: Collection<int, array<string, mixed>>, ringkasan: array{totalMatkul: int, totalSks: int, totalSksLulus: int, totalMutu: float, ipk: float|null}}
-     */
-    private function dataTranskrip(MahasiswaProfile $mahasiswa): array
-    {
-        $krs = Transkrip::krs($mahasiswa->id)->whereNotNull('nilai');
-        $jumlahPengambilan = $krs->countBy(fn (Krs $item): ?int => $item->kelasKuliah?->matkul_id);
-        // Mata kuliah yang diulang hanya dihitung sekali, memakai nilai terbaiknya.
-        $transkrip = Transkrip::terbaik($krs)
-            ->map(fn (Krs $item): array => [
-                'id' => $item->id,
-                'kode' => $item->kelasKuliah->mataKuliah->kode_matkul,
-                'nama' => $item->kelasKuliah->mataKuliah->nama_matkul,
-                'jenis' => $item->kelasKuliah->mataKuliah->jenis,
-                'sks' => $item->kelasKuliah->mataKuliah->sks,
-                'nilai' => strtoupper($item->nilai),
-                'bobot' => $item->bobotNilai(),
-                'mutu' => $item->kelasKuliah->mataKuliah->sks * $item->bobotNilai(),
-                'lulus' => $item->nilaiLulus(),
-                'diambil' => $jumlahPengambilan[$item->kelasKuliah->matkul_id] ?? 1,
-            ])
-            ->sortBy('kode')
-            ->values();
-        $totalSks = $transkrip->sum('sks');
-        $totalMutu = $transkrip->sum('mutu');
-        $totalSksLulus = $transkrip->filter(fn (array $item): bool => $item['lulus'])->sum('sks');
-
-        return [
-            'transkrip' => $transkrip,
-            'ringkasan' => ['totalMatkul' => $transkrip->count(), 'totalSks' => $totalSks, 'totalSksLulus' => $totalSksLulus, 'totalMutu' => $totalMutu, 'ipk' => $totalSks > 0 ? round($totalMutu / $totalSks, 2) : null],
-        ];
-    }
-
-    /**
-     * @return array{krs: Collection<int, Krs>, tahunAkademiks: Collection<int, TahunAkademik>, tahunAkademik: TahunAkademik|null, ringkasan: array{totalSks: int, totalSksDinilai: int, totalMutu: float, ip: float|null}}
-     */
-    private function dataKhs(MahasiswaProfile $mahasiswa, ?int $tahunAkademikId): array
-    {
-        $tahunAkademik = TahunAkademik::query()
-            ->orderByDesc('tanggal_mulai')
-            ->get(['id', 'tahun', 'semester', 'status']);
-        $tahunAkademikAktif = $tahunAkademik->firstWhere('status', true) ?? $tahunAkademik->first();
-        $tahunAkademikTerpilih = $tahunAkademikId ? $tahunAkademik->firstWhere('id', $tahunAkademikId) : $tahunAkademikAktif;
-        $tahunAkademikTerpilih ??= $tahunAkademikAktif;
-
-        $krs = Krs::query()
-            ->where('mahasiswa_id', $mahasiswa->id)
-            ->when($tahunAkademikTerpilih, fn ($query) => $query->whereHas('kelasKuliah', fn ($kelas) => $kelas->where('tahun_akademik_id', $tahunAkademikTerpilih->id)))
-            ->with(['kelasKuliah:id,matkul_id,tahun_akademik_id', 'kelasKuliah.mataKuliah:id,prodi_id,kode_matkul,nama_matkul,sks,tugas_akhir', 'kelasKuliah.tahunAkademik:id,status'])
-            ->get();
-        $krsDinilai = $krs->filter(fn (Krs $item): bool => $item->bobotNilai() !== null && ($item->kelasKuliah?->mataKuliah?->sks ?? 0) > 0);
-        $totalSksDinilai = $krsDinilai->sum(fn (Krs $item): int => $item->kelasKuliah->mataKuliah->sks);
-        $totalMutu = $krsDinilai->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * $item->bobotNilai());
-
-        return [
-            // Halaman KHS dan PDF hanya menampilkan kode, nama, SKS, dan nilai.
-            'krs' => $krs->map(fn (Krs $item): array => [
-                'id' => $item->id,
-                'kode' => $item->kelasKuliah?->mataKuliah?->kode_matkul,
-                'nama' => $item->kelasKuliah?->mataKuliah?->nama_matkul,
-                'sks' => $item->kelasKuliah?->mataKuliah?->sks,
-                'nilai' => $item->nilai,
-                // TA/Skripsi yang belum selesai di semester itu dan diambil lagi semester berikutnya.
-                'berlanjut' => $item->taBerlanjut(),
-            ])->values(),
-            'tahunAkademiks' => $tahunAkademik,
-            'tahunAkademik' => $tahunAkademikTerpilih,
-            'ringkasan' => [
-                'totalSks' => $krs->sum(fn (Krs $item): int => $item->kelasKuliah?->mataKuliah?->sks ?? 0),
-                'totalSksDinilai' => $totalSksDinilai,
-                'totalMutu' => $totalMutu,
-                'ip' => $totalSksDinilai > 0 ? round($totalMutu / $totalSksDinilai, 2) : null,
-            ],
-        ];
     }
 }

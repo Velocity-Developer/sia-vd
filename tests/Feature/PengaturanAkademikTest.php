@@ -21,7 +21,7 @@ function mahasiswaDenganNilaiLalu(?string $nilai): array
     if ($nilai !== null) {
         $lalu = TahunAkademik::create(['tahun' => '2024/2025', 'semester' => 'Genap', 'tanggal_mulai' => '2025-02-01', 'tanggal_akhir' => '2025-07-31', 'tanggal_krs_awal' => '2025-02-01', 'tanggal_krs_akhir' => '2025-02-14', 'status' => false]);
         $kelasLalu = KelasKuliah::create(['kode_kelas' => 'LALU-X', 'tahun_akademik_id' => $lalu->id, 'kapasitas' => 30, 'dosen_id' => $kelas->dosen_id, 'matkul_id' => createMateriKelasKuliah()->matkul_id]);
-        Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasLalu->id, 'nilai' => $nilai]);
+        Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasLalu->id, 'nilai' => $nilai, 'nilai_divalidasi_at' => now()]);
     }
 
     return [$mahasiswa->fresh(), $kelas];
@@ -76,9 +76,7 @@ it('lets admin add plus/minus grades that are then usable and weighted', functio
     $mahasiswa = User::factory()->mahasiswa()->create();
     $krs = Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
 
-    $this->actingAs($kelas->dosen->user)
-        ->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'A-'])
-        ->assertSessionHas('success');
+    $krs->update(['nilai' => 'A-', 'nilai_divalidasi_at' => now()]);
 
     $this->actingAs($mahasiswa)->get(route('mahasiswa.transkrip'))
         ->assertInertia(fn ($page) => $page->where('transkrip.0.bobot', 3.75)->where('ringkasan.ipk', 3.75));

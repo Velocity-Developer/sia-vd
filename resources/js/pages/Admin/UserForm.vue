@@ -17,7 +17,7 @@ const props = defineProps<{
     title: string;
     type: string;
     user: Record<string, any> | null;
-    roles: { id: number; name: string }[];
+    roles: { id: number; name: string; prodi?: boolean }[];
     defaultRoleId: number | null;
     dosenWali: { id: number; name: string }[];
     programStudi: { id: number; nama_prodi: string; jenjang: string; fakultas: string | null }[];
@@ -53,7 +53,7 @@ const biodataFields = [
 const common = ['name', 'username', 'email', 'tempat_lahir', 'tanggal_lahir', 'no_telepon', 'kewarganegaraan'];
 const roleFields =
     props.type === 'karyawan'
-        ? ['nomor_induk']
+        ? ['nomor_induk', 'prodi_id']
         : props.type === 'dosen'
           ? ['nidn', 'jabatan_fungsional', 'pendidikan_terakhir', 'status_kepegawaian', 'status', 'prodi_id']
           : props.type === 'mahasiswa'
@@ -187,7 +187,6 @@ const penghasilanIbuOptions = computed(() =>
     form.penghasilan_ibu && !penghasilanOptions.includes(form.penghasilan_ibu) ? [...penghasilanOptions, form.penghasilan_ibu] : penghasilanOptions,
 );
 const isMahasiswa = props.type === 'mahasiswa';
-const title = computed(() => `${props.user ? 'Edit' : 'Tambah'} Pengguna - ${props.type.charAt(0).toUpperCase()}${props.type.slice(1)}`);
 // Field dibangun dinamis sesuai jenis user, jadi tipenya berupa peta nama field -> nilai.
 const form = useForm<Record<string, string>>({
     role_id: props.defaultRoleId ? String(props.defaultRoleId) : '',
@@ -206,6 +205,15 @@ const form = useForm<Record<string, string>>({
         ]),
     ),
 });
+// Karyawan: Program Studi hanya diisi untuk role Prodi (akun yang datanya dibatasi ke satu prodi).
+const rolePilihanProdi = computed(() => props.roles.find((role) => String(role.id) === String(form.role_id))?.prodi === true);
+const title = computed(
+    () =>
+        `${props.user ? 'Edit' : 'Tambah'} Pengguna - ${rolePilihanProdi.value ? 'Prodi' : props.type.charAt(0).toUpperCase() + props.type.slice(1)}`,
+);
+const roleFieldsTampil = computed(() =>
+    props.type === 'karyawan' && !rolePilihanProdi.value ? roleFields.filter((field) => field !== 'prodi_id') : roleFields,
+);
 const search = ref('');
 const dosenWaliOpen = ref(false);
 const dosenWaliRef = ref<HTMLElement | null>(null);
@@ -664,7 +672,7 @@ const submit = () => {
                                 <option v-for="item in agama" :key="item" :value="item">{{ item }}</option></select
                             ><InputError :message="form.errors.agama" />
                         </div>
-                        <div v-for="field in roleFields" :key="field" class="grid gap-2">
+                        <div v-for="field in roleFieldsTampil" :key="field" class="grid gap-2">
                             <Label :for="field" class="label-isian"
                                 >{{ labels[field]
                                 }}<span v-if="field === 'prodi_id' && props.type === 'dosen'" class="font-normal text-[#a39e98]">

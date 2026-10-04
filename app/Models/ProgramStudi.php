@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProgramStudi extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     /**
      * Status program studi (mengikuti istilah PDDikti).
@@ -84,5 +86,18 @@ class ProgramStudi extends Model
     public function mahasiswa(): HasMany
     {
         return $this->hasMany(MahasiswaProfile::class, 'prodi_id');
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->whereKey($prodiId);
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return (int) $this->getKey() === $prodiId;
     }
 }

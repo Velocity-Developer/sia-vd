@@ -68,6 +68,7 @@ Dokumen ini menjelaskan alur proses bisnis Sistem Informasi Akademik (SIA VD) **
 
 - Permission berawalan `admin.` (kolom `user_type` NULL) hanya bisa diberikan ke role **Admin / Karyawan** dan **Dosen** (dosen boleh merangkap staf, mis. kaprodi). Role Mahasiswa tidak pernah mendapatkannya (`Permission::isAvailableFor`); sambungan lama dilepas migrasi `2026_09_28_100000`, dan yang tetap tersambung diabaikan `Role::permissionKeys()`.
 - Permission `dosen.*` dan `mahasiswa.*` hanya berlaku untuk role dengan jenis yang sama.
+- **Role Prodi** (role sistem `prodi`, jenis Admin / Karyawan): akun karyawan yang terikat ke satu program studi (`admin_profiles.prodi_id`, wajib untuk role ini dan dikosongkan untuk role lain). Izin bawaannya `PermissionCatalog::IZIN_PRODI`. Selama akun login ber-prodi (`App\LingkupProdi::id()`), model data akademik (`Models\Concerns\DibatasiProdi`: prodi, mata kuliah, mahasiswa, kelas, KRS, status KRS, pertemuan, jadwal, ujian, bobot nilai, batas SKS) hanya mengembalikan data prodinya, sehingga data prodi lain tidak tampil di daftar dan 404 bila dibuka lewat URL; menyimpan data prodi lain ditolak 403. Tahun Akademik, Ruang, dan Predikat hanya bisa dilihat, dan koreksi Presensi Dosen tetap milik Admin (`LingkupProdi::RUTE_TERLARANG`).
 
 ### 1.4 Aturan eskalasi hak
 
@@ -312,7 +313,7 @@ Tiga menu terpisah: **Dosen**, **Mahasiswa**, dan **Karyawan** (karyawan berjeni
 
 ### 5.3 Halaman kelas
 
-- **Admin dan dosen** (`Kelas/KelasKuliahShow`) melihat: identitas kelas, jadwal, materi, tugas, quiz, tabel **Nilai Mahasiswa** (huruf akhir), dan bagian **Daftar Remidi** (muncul setelah nilai kelas final).
+- **Admin dan dosen** (`Kelas/KelasKuliahShow`) melihat: identitas kelas, jadwal, materi, tugas, quiz, tabel **Nilai Mahasiswa** (angka per komponen → nilai akhir & huruf), dan bagian **Daftar Remidi** (muncul setelah nilai kelas final).
 - **Mahasiswa** melihat kelas hanya bila punya KRS di kelas itu. Isinya: jadwal, materi, tugas, dan quiz biasa (lembar soal ujian tidak termasuk).
 - Menu tersendiri **Jadwal**, **Materi**, **Tugas**, dan **Quiz** menampilkan data lintas kelas dengan filter tahun akademik (bawaan: tahun aktif), prodi, mata kuliah, kelas, dan dosen (khusus admin).
 - Di tiap menu itu ada tombol **Tambah** (admin dan dosen). Form tambahnya punya isian **Kelas Kuliah**: pilihannya hanya kelas di tahun akademik **aktif**, bukan kelas TA/Skripsi, dan untuk dosen hanya kelas yang diampunya; kelas di luar pilihan ditolak server (`KontenKelas::kelasDariIsian`). Sesudah simpan kembali ke menu, kecuali quiz yang langsung dibuka agar soalnya bisa ditambahkan.
@@ -696,17 +697,60 @@ Menu **Administrasi → Verifikasi KRS** (`admin.verifikasi-krs.*`, izin `admin.
 
 ### 11.1 Nilai akhir
 
-- Nilai akhir berupa **huruf** di `krs.nilai`, diisi **manual** oleh dosen pengampu atau admin di tabel **Nilai Mahasiswa** (`KelasKuliahController::updateGrade`).
-- Huruf harus ada di skala nilai. Nilai boleh dikosongkan, kecuali pada jalur remidi.
-- **Tidak ada perhitungan otomatis** huruf akhir dari tugas, quiz, UTS, UAS, atau presensi. Semua nilai komponen berdiri sendiri.
+- Nilai akhir dihitung dari **komponen nilai** global (Akademik → Penilaian → **Tambah Komponen Nilai**: nama, persen berjumlah 100%,
+  sumber manual atau **otomatis dari kehadiran**). Dosen pengampu atau admin mengisi angka 0–100 per komponen di tabel
+  **Nilai Mahasiswa** halaman kelas (`KelasKuliahController::updateNilaiKomponen`) atau di **Nilai Semester** (admin).
+- Nilai akhir angka (`krs.nilai_angka`) = rata-rata berbobot; **huruf** (`krs.nilai`) otomatis dari angka minimal skala nilai
+  prodi mata kuliah (`App\NilaiSemester`). Komponen kehadiran = hadir/terlambat ÷ presensi di pertemuan kuliah yang selesai.
+- Baris yang belum lengkap hanya menyimpan angkanya; mengosongkan komponen ikut mengosongkan nilai akhir dan huruf.
+- Sebelum komponen lengkap (100%) dan angka minimal skala prodi terisi, kelas **belum bisa dinilai** (halaman kelas
+  menampilkan alasannya).
+- Huruf **tidak bisa dipilih langsung**, kecuali huruf hasil remidi (`updateGrade`: dosen lewat jalur remidi, admin untuk
+  peserta remidi yang daftarnya sudah dikunci). Peserta remidi yang daftarnya dikunci tidak dihitung ulang dari komponen.
+- Nilai tugas, quiz, dan ujian online di menunya masing-masing **tidak** otomatis masuk ke komponen. UTS/UAS **tatap muka**
+  tidak dinilai di halaman ujian sama sekali (`Ujian::nilaiLewatKomponen`): nilainya diisi sebagai komponen di sini.
+- Komponen **Kehadiran** dihitung ulang otomatis setiap presensi atau status pertemuan berubah (`App\SegarkanKehadiran`,
+  dijalankan di akhir request): baris yang sudah punya angka komponen lain dihitung ulang nilai akhir & hurufnya; nilai
+  tervalidasi dan peserta remidi terkunci tidak disentuh.
+- **Alur penilaian (Yapika):** Nilai Semester / halaman kelas (input) → Detail Nilai (rincian komponen) → Pendataan Nilai
+  Akhir (rekap konversi) → Validasi Nilai (kunci) → KHS & transkrip. Urutan menu Penilaian mengikuti alur ini.
+- **Pendataan Nilai Akhir** (Penilaian, izin `admin.pendataan-nilai`): **hanya dilihat** — rekap per mahasiswa (semua tahun
+  akademik) berisi nilai akhir angka, huruf hasil konversi Bobot Nilai, bobot, asal huruf (konversi angka/remidi/Nilai
+  KKM), dan status (belum dinilai / menunggu validasi / tervalidasi) dengan tautan ke Validasi Nilai. Tidak ada lagi isian
+  huruf manual.
+- **Validasi nilai** (Penilaian → **Validasi Nilai**, izin `admin.validasi-nilai`): pilih mahasiswa, lalu per tahun akademik
+  tampil nilai akhir & huruf tiap mata kuliah; validasi per mata kuliah atau sekaligus (`krs.nilai_divalidasi_at/oleh`).
+  Nilai kelas yang punya dosen pengampu baru bisa divalidasi setelah dosen menekan **Kirim ke Validasi** (= `nilai_final_at`,
+  atau batas input nilai lewat); kelas TA/Skripsi tanpa pengampu dan mata kuliah KKM tidak menunggu dosen.
+  **Detail Nilai** hanya menampilkan statusnya. Nilai tervalidasi terkunci untuk dosen **dan admin** (isian komponen
+  dilewati) sampai validasinya dibatalkan — **kecuali remidi**: huruf hasil remidi boleh disimpan untuk nilai tervalidasi,
+  lalu validasinya dibuka otomatis sehingga nilai itu kembali menunggu validasi ulang.
+- **KHS, transkrip, dan SKL hanya memakai nilai tervalidasi.** Di KHS, nilai yang belum divalidasi tampil "Menunggu
+  validasi" dan belum dihitung ke IP; transkrip dan IPK/predikat SKL melewatinya. Syarat daftar wisuda ditambah "Semua nilai
+  sudah divalidasi". Migrasi `2026_10_04_110000_validasi_nilai_semester_lalu` mengesahkan nilai lama di tahun akademik
+  tidak aktif.
 - **Kecuali mata kuliah TA/Skripsi:** huruf pendadaran yang lulus ditulis otomatis ke KRS mata kuliah TA ([14.4](#144-penilaian-dan-hasil-pendadaran)).
+
+### 11.1a Jenis penilaian mata kuliah
+
+`mata_kuliahs.jenis_penilaian` menentukan cara menilai (kolom lama `tugas_akhir` selalu ikut jenis `tugas_akhir`):
+
+| Jenis | Dinilai di | Cara |
+|---|---|---|
+| `reguler` | Nilai Semester / halaman kelas | komponen nilai global (11.1) |
+| `ppl` | Nilai Semester / halaman kelas | **langsung**: satu Nilai Akhir 0–100 → huruf (`krs.nilai_angka`), tanpa `nilai_komponens` |
+| `tugas_akhir` | pendadaran (14.4), atau **langsung** seperti PPL bila fitur `pendadaran` mati | |
+| `kkm` | **Penilaian → Nilai KKM** (admin saja) | angka 0–100 → huruf ke KRS mata kuliah KKM mahasiswa yang pengajuan KKM-nya disetujui |
+
+Baris penilaian langsung yang dikosongkan menghapus nilai hanya bila hurufnya berasal dari angka; huruf lama tanpa angka
+tidak tersentuh. Semua jenis ikut Detail Nilai, Validasi Nilai, KHS, dan transkrip.
 
 ### 11.2 Kunci nilai
 
 **Untuk dosen, nilai kelas terkunci bila salah satu berlaku** (`KontenKelas::pesanNilaiTerkunci`):
 
 1. tahun akademik kelas **nonaktif**;
-2. nilai kelas **sudah difinalisasi** (`nilai_final_at` terisi);
+2. nilai kelas **sudah dikirim ke validasi** (`nilai_final_at` terisi; tombol "Kirim ke Validasi", dulu "Finalisasi Nilai");
 3. **batas input nilai sudah lewat**. Batasnya `nilai_dibuka_sampai` (batas pengganti dari admin) atau `batas_input_nilai` tahun akademik. Hari batas itu sendiri masih boleh.
 
 **Yang terkunci:**
@@ -719,9 +763,10 @@ Menu **Administrasi → Verifikasi KRS** (`admin.verifikasi-krs.*`, izin `admin.
 
 Yang **tidak** terkunci: presensi (hanya terkunci bila tahun akademik nonaktif), serta membuat atau mengubah materi, tugas, dan quiz.
 
-**Admin tidak pernah terkunci.**
+**Admin tidak pernah terkunci** oleh aturan di atas (nilai tervalidasi tetap terkunci, lihat 11.1). Admin bisa
+**Kembalikan ke Dosen** (dulu "Buka Kunci Nilai") untuk koreksi.
 
-**Finalisasi nilai** (dosen atau admin):
+**Kirim ke Validasi** (dulu Finalisasi nilai; dosen atau admin):
 
 - Ditolak bila ada **UAS terbit yang belum selesai**.
 - Ditolak selama masih ada **UAS susulan yang berjalan** (`UjianSusulan::uasSusulanTertunda`): pemohon UAS susulan yang disetujui dan tidak ikut UAS utama, yang tagihannya belum terbit, belum lunas tetapi belum gugur, atau sudah lunas tetapi UAS susulannya belum dijadwalkan atau belum selesai. Pemohon yang tagihannya gugur tidak menahan finalisasi. Halaman kelas menampilkan jumlahnya.
@@ -944,7 +989,24 @@ Status `dibatalkan`/`gugur` ini **dihitung saat ditampilkan**, bukan disimpan.
 
 ## 14. Tugas akhir, pendadaran, dan wisuda
 
-Tiga pengajuan berurutan di menu **Tugas Akhir & Wisuda** (mahasiswa, izin `mahasiswa.tugas-akhir`): pengajuan TA/Skripsi → pendaftaran pendadaran → pendaftaran wisuda. Admin memproses di **Administrasi → TA & Wisuda** (izin `admin.pengajuan-akademik`), dosen di **Bimbingan TA** (izin `dosen.bimbingan`). Syarat tiap tahap ada di `App\SyaratTugasAkhir`.
+Tiga pengajuan berurutan di menu **Pengajuan & Pendaftaran** (mahasiswa, izin `mahasiswa.tugas-akhir`): **Tugas Akhir/Skripsi → Pengajuan Judul & Upload TA** (pengajuan TA/Skripsi, unggah naskah TA, pendaftaran pendadaran) lalu **Wisuda → Pengajuan Wisuda**. Admin memproses di **Pengajuan & Pendaftaran** (izin `admin.pengajuan-akademik`): Tugas Akhir/Skripsi → Persetujuan Tugas Akhir (+ Pendaftaran Pendadaran), Wisuda → Daftar Wisuda & Periode Wisuda; dosen di **Bimbingan TA** (izin `dosen.bimbingan`). Syarat tiap tahap ada di `App\SyaratTugasAkhir`.
+
+Menu admin **Pengajuan & Pendaftaran** = satu halaman per jenis (`Admin\PengajuanAkademikController::RUTE`; alamat lama `admin/pengajuan-akademik?jenis=…` dialihkan): Status Mahasiswa (Pengajuan Cuti, **Mahasiswa Cuti** — daftar mahasiswa berstatus Cuti, izin `admin.pengajuan-cuti`), Tugas Akhir/Skripsi, Kuliah Kerja Mahasiswa (Persetujuan KKM/PKL/KKN), Praktek Pengalaman Lapangan (Daftar PPL), Ujian Komprehensif (mahasiswa: Pengajuan Ujian Komprehensif, admin: Daftar Ujian Komprehensif), Wisuda.
+
+**Naskah TA**: sesudah judul disahkan mahasiswa mengunggah naskah PDF (maks. 20 MB, kolom `tugas_akhir.naskah`, rute `mahasiswa.tugas-akhir.naskah`); naskah ini sekaligus **naskah final wisuda** (form wisuda tidak lagi meminta naskah final; syarat wisuda "Naskah TA sudah diunggah"). Boleh diganti sampai pendaftaran wisuda dikirim (terkunci selama diproses dan sesudah terdaftar). Dibuka lewat `berkas.naskah-ta` oleh pemilik, admin pengajuan, dan pembimbing; tautannya tampil di Persetujuan Tugas Akhir dan Daftar Wisuda.
+
+> **Fitur `pendadaran` mati (Yapika):** tidak ada pendaftaran pendadaran, jadwal/penguji, bimbingan dosen, maupun revisi
+> naskah (rute 404, menu disembunyikan). Pengajuan TA hanya judul, bidang, ringkasan, dan proposal (tanpa usulan
+> pembimbing); admin mengesahkan judul saja. Nilai MK TA/Skripsi diisi langsung di Nilai Semester; TA berstatus `selesai`
+> selama ada KRS TA berhuruf lulus (`TugasAkhir::sinkronDariNilai`), sehingga pendaftaran wisuda terbuka. Saat menyetujui
+> wisuda admin wajib mengisi **tanggal lulus (yudisium)**, yang dipakai SKL dan dicetak di transkrip bersama judul TA.
+>
+>
+> **Pengajuan Judul KKM/PKL/KKN (Kuliah Kerja Mahasiswa), PPL, dan Ujian Komprehensif** (mahasiswa: Pengajuan & Pendaftaran →
+> Kuliah Kerja Mahasiswa / Praktek Pengalaman Lapangan; KKM wajib memilih jenis kegiatan KKM/PKL/KKN, isian `jenis_kkm`): judul/topik,
+> keterangan, berkas syarat (+ tambahan opsional), diproses di Pengajuan & Pendaftaran (setujui/perbaikan/tolak). Sesudah
+> disetujui jenis yang sama tidak bisa diajukan lagi. KKM yang disetujui otomatis dimasukkan ke KRS kelas mata kuliah KKM
+> prodinya di tahun aktif (`App\KrsKkm`; bila mata kuliah/kelasnya belum ada, admin memasukkannya nanti dari Nilai KKM).
 
 ### 14.1 Aturan bersama pengajuan
 

@@ -12,7 +12,7 @@ class Cmb extends Model
 {
     use SerializesDatesInAppTimezone;
 
-    public const STATUS_LULUS = 'lulus';
+    public const STATUS_DITERIMA = 'diterima';
 
     public const STATUS_DITOLAK = 'ditolak';
 

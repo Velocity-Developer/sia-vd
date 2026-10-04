@@ -95,7 +95,7 @@ it('shares the role and permissions of the authenticated user with the frontend'
     $this->actingAs($dosen)->get(route('dosen.dashboard'))
         ->assertInertia(fn ($page) => $page
             ->where('auth.role.slug', 'dosen')
-            ->where('auth.permissions', ['dosen.dashboard', 'dosen.kelas-kuliah', 'dosen.jadwal', 'dosen.materi', 'dosen.tugas', 'dosen.quiz', 'dosen.presensi', 'dosen.ujian', 'dosen.mahasiswa-kelas', 'dosen.bimbingan'])
+            ->where('auth.permissions', ['dosen.dashboard', 'dosen.kelas-kuliah', 'dosen.jadwal', 'dosen.materi', 'dosen.tugas', 'dosen.quiz', 'dosen.presensi', 'dosen.ujian', 'dosen.mahasiswa-kelas', 'dosen.bimbingan', 'dosen.pengajuan-pa'])
             ->missing('auth.user.role')
         );
 });

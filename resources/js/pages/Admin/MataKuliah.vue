@@ -5,8 +5,9 @@ import SelectFilter from '@/components/SelectFilter.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { labelJenisPenilaian } from '@/lib/penilaian';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { Eye, FileSpreadsheet, Pencil, Search, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
@@ -19,6 +20,7 @@ type MataKuliah = {
     semester: number;
     jenis: string;
     tugas_akhir: boolean;
+    jenis_penilaian: string;
     prodi?: { nama_prodi?: string; fakultas?: { nama_fakultas?: string } | null } | null;
 };
 type Pagination = { data: MataKuliah[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
@@ -71,7 +73,12 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                         <h1 class="judul-halaman">Mata Kuliah</h1>
                         <p class="deskripsi-halaman">Kelola mata kuliah per program studi, SKS, dan semester.</p>
                     </div>
-                    <Button as-child><Link :href="route('admin.mata-kuliah.create')">Tambah Mata Kuliah</Link></Button>
+                    <div class="flex flex-wrap gap-2">
+                        <Button as-child variant="outline">
+                            <Link :href="route('admin.impor.index', 'mata-kuliah')"><FileSpreadsheet /> Impor Excel</Link>
+                        </Button>
+                        <Button as-child><Link :href="route('admin.mata-kuliah.create')">Tambah Mata Kuliah</Link></Button>
+                    </div>
                 </div>
 
                 <div class="bilah-filter">
@@ -131,9 +138,9 @@ const jenisBadge = (jenis: string) => (jenis === 'Wajib' ? 'bg-[#0075de]/10 text
                                             item.jenis
                                         }}</span>
                                         <span
-                                            v-if="item.tugas_akhir"
+                                            v-if="item.jenis_penilaian !== 'reguler'"
                                             class="ml-1 inline-flex rounded-full bg-[#1aae39]/10 px-2.5 py-0.5 text-xs font-medium text-[#137a2a]"
-                                            >TA/Skripsi</span
+                                            >{{ labelJenisPenilaian[item.jenis_penilaian] ?? item.jenis_penilaian }}</span
                                         >
                                     </td>
                                     <td>

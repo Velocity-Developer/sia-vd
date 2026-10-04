@@ -20,7 +20,7 @@ class Transkrip
         return Krs::query()
             ->where('mahasiswa_id', $mahasiswaId)
             ->with(['kelasKuliah:id,matkul_id', 'kelasKuliah.mataKuliah:id,prodi_id,kode_matkul,nama_matkul,jenis,sks,tugas_akhir'])
-            ->get(['id', 'kelas_id', 'nilai']);
+            ->get(['id', 'kelas_id', 'nilai', 'nilai_divalidasi_at']);
     }
 
     /**

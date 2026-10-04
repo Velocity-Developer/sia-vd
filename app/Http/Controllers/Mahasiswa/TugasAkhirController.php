@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\AllowedUpload;
+use App\Feature;
 use App\Http\Controllers\Concerns\KirimPengajuanAkademik;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
@@ -24,7 +25,11 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Halaman Tugas Akhir & Wisuda mahasiswa: tahap 1 pengajuan TA/Skripsi, tahap 2 pendaftaran pendadaran.
+ * Menu Pengajuan & Pendaftaran mahasiswa, dua halaman dari data yang sama:
+ * - Pengajuan Judul & Upload TA: pengajuan TA/Skripsi, unggah naskah TA, dan (bila fitur pendadaran nyala) pendaftaran
+ *   pendadaran;
+ * - Pengajuan Wisuda: terbuka setelah TA selesai.
+ * Tanpa fitur pendadaran: pengajuan TA tanpa usulan pembimbing, TA selesai saat nilai MK TA/Skripsi lulus, lalu wisuda.
  */
 class TugasAkhirController extends Controller
 {
@@ -51,7 +56,22 @@ class TugasAkhirController extends Controller
 
     public const UKURAN_TOGA = ['S', 'M', 'L', 'XL', 'XXL'];
 
+    /** Bagian halaman. */
+    public const BAGIAN_TA = 'tugas_akhir';
+
+    public const BAGIAN_WISUDA = 'wisuda';
+
     public function index(Request $request): Response
+    {
+        return $this->halaman($request, self::BAGIAN_TA);
+    }
+
+    public function wisuda(Request $request): Response
+    {
+        return $this->halaman($request, self::BAGIAN_WISUDA);
+    }
+
+    private function halaman(Request $request, string $bagian): Response
     {
         $mahasiswa = $this->mahasiswa($request);
         $tugasAkhir = TugasAkhir::milik($mahasiswa->id)?->load(['pembimbing1.user:id,name', 'pembimbing2.user:id,name']);
@@ -66,12 +86,17 @@ class TugasAkhirController extends Controller
         $mahasiswa->loadMissing('user:id,name');
 
         return Inertia::render('Mahasiswa/TugasAkhir', [
+            'bagian' => $bagian,
             'tugasAkhir' => $tugasAkhir ? [
+                'id' => $tugasAkhir->id,
                 'judul' => $tugasAkhir->judul,
                 'bidang' => $tugasAkhir->bidang,
                 'pembimbing' => $tugasAkhir->namaPembimbing(),
                 'status' => $tugasAkhir->status,
                 'disahkan_at' => $tugasAkhir->created_at?->toIso8601String(),
+                'naskah_diunggah_at' => $tugasAkhir->naskah !== null ? $tugasAkhir->naskah_diunggah_at?->toIso8601String() : null,
+                // Terkunci selama pendaftaran wisuda diproses dan sesudah terdaftar: naskah ini yang diperiksa admin wisuda.
+                'bisa_unggah_naskah' => $wisuda === null && $pengajuanWisuda?->sedangDiproses() !== true,
             ] : null,
             'pengajuanTa' => [
                 'keadaan' => $this->keadaanTa($tugasAkhir, $pengajuanTa, $syaratTa),
@@ -113,7 +138,8 @@ class TugasAkhirController extends Controller
                     'predikat' => $wisuda->predikat,
                 ] : null,
             ],
-            'riwayat' => PengajuanAkademik::query()->where('mahasiswa_id', $mahasiswa->id)->whereIn('jenis', PengajuanAkademik::JENIS)
+            'riwayat' => PengajuanAkademik::query()->where('mahasiswa_id', $mahasiswa->id)
+                ->whereIn('jenis', $bagian === self::BAGIAN_WISUDA ? [PengajuanAkademik::WISUDA] : [PengajuanAkademik::TUGAS_AKHIR, PengajuanAkademik::PENDADARAN])
                 ->with('riwayat.pengguna:id,name')->latest('id')->get()
                 ->map(fn (PengajuanAkademik $p): array => [
                     'id' => $p->id,
@@ -148,7 +174,8 @@ class TugasAkhirController extends Controller
             'judul' => ['required', 'string', 'max:300'],
             'bidang' => ['required', 'string', 'max:150'],
             'ringkasan' => ['required', 'string', 'max:5000'],
-            'usulan_pembimbing_1_id' => ['required', 'integer', DosenProfile::rulePilihan()],
+            // Tanpa pendadaran tidak ada pembimbing di sistem, jadi usulan pembimbing tidak diminta.
+            'usulan_pembimbing_1_id' => [Feature::aktif('pendadaran') ? 'required' : 'nullable', 'integer', DosenProfile::rulePilihan()],
             'usulan_pembimbing_2_id' => ['nullable', 'integer', DosenProfile::rulePilihan(), 'different:usulan_pembimbing_1_id'],
             'proposal' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:10240', 'extensions:pdf', 'mimes:pdf'],
         ], [
@@ -205,7 +232,7 @@ class TugasAkhirController extends Controller
     }
 
     /**
-     * Daftar wisuda: pilih periode, konfirmasi data ijazah, ukuran toga, dan unggah berkas (termasuk bukti bayar).
+     * Daftar wisuda: pilih periode, konfirmasi data ijazah, ukuran toga, dan unggah berkas (surat bebas pustaka & surat keterangan lunas).
      */
     public function ajukanWisuda(Request $request): RedirectResponse
     {
@@ -227,14 +254,11 @@ class TugasAkhirController extends Controller
             'tanggal_lahir' => ['required', 'date_format:Y-m-d', 'before:today'],
             'ukuran_toga' => ['required', Rule::in(self::UKURAN_TOGA)],
             'pas_foto' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:2048', 'extensions:jpg,jpeg,png', 'mimes:jpg,jpeg,png'],
-            'naskah_final' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:20480', 'extensions:pdf', 'mimes:pdf'],
             'bebas_pinjam' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
-            'bukti_bayar' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
+            'surat_lunas' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
         ], [
             'pas_foto.extensions' => 'Pas foto harus berupa JPG atau PNG.',
             'pas_foto.max' => 'Ukuran pas foto maksimal 2 MB.',
-            'naskah_final.extensions' => 'Naskah final harus berupa PDF.',
-            'naskah_final.max' => 'Ukuran naskah final maksimal 20 MB.',
             '*.extensions' => ':attribute harus berupa PDF atau foto (JPG/PNG).',
             '*.max' => 'Ukuran :attribute maksimal 5 MB.',
         ], [
@@ -244,15 +268,49 @@ class TugasAkhirController extends Controller
             'tanggal_lahir' => 'Tanggal lahir',
             'ukuran_toga' => 'Ukuran toga',
             'pas_foto' => 'Pas foto',
-            'naskah_final' => 'Naskah final',
-            'bebas_pinjam' => 'Bukti bebas pinjam perpustakaan',
-            'bukti_bayar' => 'Bukti bayar wisuda',
+            'bebas_pinjam' => 'Surat bebas pustaka',
+            'surat_lunas' => 'Surat keterangan lunas',
         ], [
-            self::TERKUNCI => 'Anda belum lulus pendadaran.',
+            self::TERKUNCI => Feature::aktif('pendadaran') ? 'Anda belum lulus pendadaran.' : 'Nilai TA/Skripsi Anda belum lulus.',
             self::TERDAFTAR => 'Anda sudah terdaftar sebagai peserta wisuda.',
             self::MENUNGGU => 'Pendaftaran Anda masih menunggu diproses admin.',
             self::BELUM_MEMENUHI => 'Anda belum memenuhi syarat pendaftaran wisuda.',
         ], 'pendaftaran wisuda');
+    }
+
+    /**
+     * Unggah (atau ganti) naskah TA sesudah judul disahkan. Terkunci setelah mahasiswa terdaftar sebagai peserta wisuda.
+     */
+    public function unggahNaskah(Request $request): RedirectResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+        $request->validate(
+            ['naskah_ta' => ['required', 'file', 'max:20480', 'extensions:pdf', 'mimes:pdf']],
+            ['naskah_ta.extensions' => 'Naskah TA harus berupa PDF.', 'naskah_ta.mimes' => 'Isi berkas naskah TA bukan PDF.', 'naskah_ta.max' => 'Ukuran naskah TA maksimal 20 MB.'],
+            ['naskah_ta' => 'Naskah TA'],
+        );
+
+        $tugasAkhir = TugasAkhir::milik($mahasiswa->id);
+        if ($tugasAkhir === null) {
+            return back()->with('error', 'Judul tugas akhir Anda belum disahkan.');
+        }
+        if (Wisuda::query()->where('mahasiswa_id', $mahasiswa->id)->exists()) {
+            return back()->with('error', 'Naskah TA tidak bisa diganti setelah Anda terdaftar sebagai peserta wisuda.');
+        }
+        if (PengajuanAkademik::terakhir($mahasiswa->id, PengajuanAkademik::WISUDA)?->sedangDiproses()) {
+            return back()->with('error', 'Naskah TA tidak bisa diganti selama pendaftaran wisuda Anda diproses admin.');
+        }
+
+        $lama = $tugasAkhir->naskah;
+        $tugasAkhir->update([
+            'naskah' => $request->file('naskah_ta')->storeAs('tugas-akhir', Str::random(24).'.pdf', AllowedUpload::DISK),
+            'naskah_diunggah_at' => now(),
+        ]);
+        if ($lama !== null) {
+            Storage::disk(AllowedUpload::DISK)->delete($lama);
+        }
+
+        return back()->with('success', $lama === null ? 'Naskah TA terunggah.' : 'Naskah TA diganti dengan berkas baru.');
     }
 
     /**

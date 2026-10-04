@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminProfile;
 use App\Models\DosenProfile;
 use App\Models\Fakultas;
 use App\Models\Kota;
@@ -66,6 +67,10 @@ class ProgramStudiController extends Controller
 
         if (MahasiswaProfile::query()->where('prodi_id', $programStudi->id)->exists() || DosenProfile::query()->where('prodi_id', $programStudi->id)->exists()) {
             return to_route('admin.program-studi.index')->with('error', 'Program Studi tidak dapat dihapus karena masih memiliki mahasiswa atau dosen.');
+        }
+
+        if (AdminProfile::query()->where('prodi_id', $programStudi->id)->exists()) {
+            return to_route('admin.program-studi.index')->with('error', 'Program Studi tidak dapat dihapus karena masih dipakai akun Prodi.');
         }
 
         try {

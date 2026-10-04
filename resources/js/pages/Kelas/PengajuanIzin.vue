@@ -62,7 +62,7 @@ const lampiran = (item: Pengajuan) => Array.from({ length: item.jumlah_lampiran 
     <Head title="Pengajuan Izin" />
     <AppLayout
         :breadcrumbs="[
-            { title: 'Presensi', href: rute('presensi.index') },
+            { title: props.peran === 'admin' ? 'Presensi Mahasiswa' : 'Presensi', href: rute('presensi.index') },
             { title: 'Pengajuan Izin', href: rute('presensi.izin.index') },
         ]"
     >

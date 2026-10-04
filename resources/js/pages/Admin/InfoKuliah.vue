@@ -29,16 +29,16 @@ const confirmDelete = () => {
 </script>
 
 <template>
-    <Head title="Info Kuliah" />
-    <AppLayout :breadcrumbs="[{ title: 'Info Kuliah', href: route('admin.info-kuliah.index') }]">
+    <Head title="Informasi & Pengumuman" />
+    <AppLayout :breadcrumbs="[{ title: 'Informasi & Pengumuman', href: route('admin.info-kuliah.index') }]">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Info Kuliah</h1>
-                        <p class="deskripsi-halaman">Kelola informasi perkuliahan.</p>
+                        <h1 class="judul-halaman">Informasi & Pengumuman</h1>
+                        <p class="deskripsi-halaman">Kelola informasi & pengumuman perkuliahan untuk mahasiswa.</p>
                     </div>
-                    <Button as-child><Link :href="route('admin.info-kuliah.create')">Tambah Info Kuliah</Link></Button>
+                    <Button as-child><Link :href="route('admin.info-kuliah.create')">Tambah Informasi</Link></Button>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
@@ -94,9 +94,7 @@ const confirmDelete = () => {
                                     </td>
                                 </tr>
                                 <tr v-if="!props.infoKuliahs.data.length" class="baris-kosong">
-                                    <td colspan="5" class="tabel-kosong">
-                                        Belum ada info kuliah. Tambahkan informasi perkuliahan baru untuk memulai.
-                                    </td>
+                                    <td colspan="5" class="tabel-kosong">Belum ada informasi & pengumuman. Tambahkan yang baru untuk memulai.</td>
                                 </tr>
                             </tbody>
                         </table>

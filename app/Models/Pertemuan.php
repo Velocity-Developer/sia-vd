@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Feature;
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use App\SegarkanKehadiran;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class Pertemuan extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     public const KULIAH = 'kuliah';
 
@@ -65,6 +67,13 @@ class Pertemuan extends Model
     protected $hidden = ['kode_rahasia'];
 
     protected $appends = ['terlewat'];
+
+    protected static function booted(): void
+    {
+        // Pertemuan yang selesai/dibatalkan mengubah dasar persentase kehadiran (komponen nilai Kehadiran).
+        static::saved(fn (self $p) => $p->wasChanged(['status', 'jenis']) ? SegarkanKehadiran::tandai($p->kelas_id) : null);
+        static::deleted(fn (self $p) => SegarkanKehadiran::tandai($p->kelas_id));
+    }
 
     protected function casts(): array
     {
@@ -503,5 +512,18 @@ class Pertemuan extends Model
     private static function urutanHari(string $hari): int
     {
         return (int) array_search($hari, self::NAMA_HARI, true);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->whereHas('kelasKuliah');
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return KelasKuliah::query()->whereKey($this->kelas_id)->exists();
     }
 }

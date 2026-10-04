@@ -22,7 +22,7 @@ class PengaturanAkademik extends Model
 
     protected $table = 'pengaturan_akademik';
 
-    protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'verifikasi_krs_aktif', 'jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif', 'huruf_maks_remidi', 'batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari', 'min_sks_pendadaran', 'min_sks_ambil_ta', 'maks_cuti', 'updated_by'];
+    protected $fillable = ['maks_sks_tanpa_ips', 'kunci_krs_aktif', 'verifikasi_krs_aktif', 'jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif', 'izin_sakit_dihitung_hadir', 'huruf_maks_remidi', 'batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari', 'min_sks_pendadaran', 'min_sks_ambil_ta', 'maks_cuti', 'updated_by'];
 
     protected $attributes = [
         'id' => self::SINGLETON_ID,
@@ -35,6 +35,7 @@ class PengaturanAkademik extends Model
         'durasi_presensi_mandiri_menit' => 15,
         'batas_pengajuan_izin_hari' => 1,
         'syarat_ujian_aktif' => false,
+        'izin_sakit_dihitung_hadir' => false,
         'batas_pengajuan_susulan_hari' => 3,
         'batas_bayar_susulan_hari' => 3,
         'min_sks_pendadaran' => 138,
@@ -54,6 +55,7 @@ class PengaturanAkademik extends Model
             'durasi_presensi_mandiri_menit' => 'integer',
             'batas_pengajuan_izin_hari' => 'integer',
             'syarat_ujian_aktif' => 'boolean',
+            'izin_sakit_dihitung_hadir' => 'boolean',
             'batas_pengajuan_susulan_hari' => 'integer',
             'batas_bayar_susulan_hari' => 'integer',
             'min_sks_pendadaran' => 'integer',
@@ -76,6 +78,26 @@ class PengaturanAkademik extends Model
     public static function current(): self
     {
         return static::query()->firstOrCreate(['id' => self::SINGLETON_ID]);
+    }
+
+    /**
+     * Pengaturan yang berlaku untuk satu prodi: syarat ujian & remedial milik prodi itu (Akademik → Konfigurasi →
+     * Syarat Ujian & Remedial) menimpa nilai umum; prodi yang belum diatur memakai nilai umum. Hasilnya salinan
+     * untuk dibaca saja, jangan disimpan.
+     */
+    public static function untukProdi(?int $prodiId): self
+    {
+        $pengaturan = clone static::current();
+        $milikProdi = $prodiId === null ? null : SyaratUjianProdi::query()
+            ->withoutGlobalScope('lingkup-prodi')
+            ->where('prodi_id', $prodiId)
+            ->first();
+
+        if ($milikProdi !== null) {
+            $pengaturan->setRawAttributes([...$pengaturan->getAttributes(), ...$milikProdi->only(SyaratUjianProdi::KOLOM)], true);
+        }
+
+        return $pengaturan;
     }
 
     /**

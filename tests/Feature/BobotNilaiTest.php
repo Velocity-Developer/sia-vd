@@ -75,8 +75,8 @@ it('keeps grade weights admin-only', function () {
  */
 function aturBobotProdi(int $prodiId): void
 {
-    foreach ([['A', 3.5, true, false], ['B+', 3.25, true, false], ['E', 0, false, true]] as [$huruf, $bobot, $lulus, $ulang]) {
-        BobotNilai::create(['prodi_id' => $prodiId, 'huruf' => $huruf, 'bobot' => $bobot, 'lulus' => $lulus, 'boleh_diulang' => $ulang]);
+    foreach ([['A', 3.5, 85, true, false], ['B+', 3.25, 70, true, false], ['E', 0, 0, false, true]] as [$huruf, $bobot, $angka, $lulus, $ulang]) {
+        BobotNilai::create(['prodi_id' => $prodiId, 'huruf' => $huruf, 'bobot' => $bobot, 'angka_minimal' => $angka, 'lulus' => $lulus, 'boleh_diulang' => $ulang]);
     }
 }
 
@@ -85,8 +85,8 @@ it('weighs grades with the course prodi weights, falling back to the general sca
     $kelasUmum = createMateriKelasKuliah();
     aturBobotProdi($kelasProdi->mataKuliah->prodi_id);
     $mahasiswa = User::factory()->mahasiswa()->create();
-    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasProdi->id, 'nilai' => 'A']);
-    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasUmum->id, 'nilai' => 'A']);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasProdi->id, 'nilai' => 'A', 'nilai_divalidasi_at' => now()]);
+    Krs::create(['mahasiswa_id' => $mahasiswa->mahasiswaProfile->id, 'kelas_id' => $kelasUmum->id, 'nilai' => 'A', 'nilai_divalidasi_at' => now()]);
 
     // 3 SKS × 3.5 (prodi) + 3 SKS × 4 (umum) = 22.5 / 6 SKS.
     expect(Transkrip::ringkasan($mahasiswa->mahasiswaProfile->id)['ipk'])->toBe(3.75);
@@ -95,7 +95,7 @@ it('weighs grades with the course prodi weights, falling back to the general sca
         ->assertInertia(fn ($page) => $page->where('ringkasan.ipk', 3.75)->where('ringkasan.totalMutu', 22.5));
 });
 
-it('offers and accepts only the prodi letters when a lecturer grades', function () {
+it('converts the lecturer score with the prodi letters', function () {
     $kelas = createMateriKelasKuliah();
     aturBobotProdi($kelas->mataKuliah->prodi_id);
     $krs = Krs::create(['mahasiswa_id' => User::factory()->mahasiswa()->create()->mahasiswaProfile->id, 'kelas_id' => $kelas->id]);
@@ -104,8 +104,9 @@ it('offers and accepts only the prodi letters when a lecturer grades', function 
     $this->actingAs($dosen)->get(route('dosen.kelas-kuliah.show', $kelas))
         ->assertInertia(fn ($page) => $page->where('skalaNilai', ['A', 'B+', 'E']));
 
-    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'C'])->assertSessionHasErrors('nilai');
-    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'B+'])->assertSessionHas('success');
+    // Skala umum memberi B untuk 75; skala prodi memberi B+.
+    isiNilaiKomponen($this, $kelas, $krs, 75)->assertSessionHas('success');
+    expect($krs->fresh()->nilai)->toBe('B+');
 
     expect($krs->fresh()->bobotNilai())->toBe(3.25);
 });

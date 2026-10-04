@@ -113,10 +113,8 @@ const terbitkan = () => {
                                 <tr v-if="!props.peserta.length" class="baris-kosong">
                                     <td colspan="6" class="tabel-kosong">
                                         Belum ada peserta. Setujui pendaftaran di
-                                        <Link
-                                            :href="route('admin.pengajuan-akademik.index', { jenis: 'wisuda' })"
-                                            class="text-[#0075de] hover:underline"
-                                            >TA & Wisuda → Wisuda</Link
+                                        <Link :href="route('admin.daftar-wisuda.index')" class="text-[#0075de] hover:underline"
+                                            >Pengajuan & Pendaftaran → Daftar Wisuda</Link
                                         >.
                                     </td>
                                 </tr>

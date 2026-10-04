@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use App\SegarkanKehadiran;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,14 @@ class PresensiMahasiswa extends Model
     protected $fillable = ['pertemuan_id', 'mahasiswa_id', 'status', 'waktu_presensi', 'metode', 'diubah_oleh', 'keterangan', 'ip', 'perangkat'];
 
     protected $hidden = ['ip', 'perangkat'];
+
+    protected static function booted(): void
+    {
+        // Komponen nilai Kehadiran kelasnya dihitung ulang di akhir request.
+        $tandai = fn (self $presensi) => SegarkanKehadiran::tandai(Pertemuan::query()->withoutGlobalScopes()->whereKey($presensi->pertemuan_id)->value('kelas_id'));
+        static::saved(fn (self $presensi) => $presensi->wasChanged('status') || $presensi->wasRecentlyCreated ? $tandai($presensi) : null);
+        static::deleted($tandai);
+    }
 
     protected function casts(): array
     {
@@ -161,6 +170,32 @@ class PresensiMahasiswa extends Model
             ->groupBy('pertemuans.kelas_id', 'presensi_mahasiswas.status')
             ->get()
             ->groupBy('kelas_id')
+            ->map(fn (Collection $baris): array => self::ringkas($baris));
+    }
+
+    /**
+     * Rekap banyak pasangan kelas–mahasiswa sekaligus (menu Rekap Presensi Mahasiswa), aturan sama dengan rekapKelas.
+     *
+     * @param  list<int>  $kelasIds
+     * @param  list<int>  $mahasiswaIds
+     * @return Collection<string, array{hadir: int, terlambat: int, izin: int, sakit: int, alpa: int, dihitung: int, persen: ?float}> kunci "kelas_id:mahasiswa_id"
+     */
+    public static function rekapPasangan(array $kelasIds, array $mahasiswaIds): Collection
+    {
+        if ($kelasIds === [] || $mahasiswaIds === []) {
+            return collect();
+        }
+
+        return static::query()
+            ->join('pertemuans', 'pertemuans.id', '=', 'presensi_mahasiswas.pertemuan_id')
+            ->whereIn('presensi_mahasiswas.mahasiswa_id', $mahasiswaIds)
+            ->whereIn('pertemuans.kelas_id', $kelasIds)
+            ->where('pertemuans.jenis', Pertemuan::KULIAH)
+            ->where('pertemuans.status', Pertemuan::SELESAI)
+            ->selectRaw('pertemuans.kelas_id, presensi_mahasiswas.mahasiswa_id, presensi_mahasiswas.status, COUNT(*) as jumlah')
+            ->groupBy('pertemuans.kelas_id', 'presensi_mahasiswas.mahasiswa_id', 'presensi_mahasiswas.status')
+            ->get()
+            ->groupBy(fn (self $baris): string => $baris->kelas_id.':'.$baris->mahasiswa_id)
             ->map(fn (Collection $baris): array => self::ringkas($baris));
     }
 

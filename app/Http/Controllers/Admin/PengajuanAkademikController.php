@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Feature;
 use App\Http\Controllers\Controller;
 use App\JadwalPendadaran;
+use App\KrsKkm;
 use App\Models\DosenProfile;
+use App\Models\GelombangKompre;
 use App\Models\Pendadaran;
 use App\Models\PengajuanAkademik;
 use App\Models\PeriodeWisuda;
@@ -22,16 +25,58 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Pengajuan TA, pendadaran, dan wisuda: admin menyetujui, meminta perbaikan, atau menolak.
+ * Menu Pengajuan & Pendaftaran: Persetujuan Tugas Akhir, Pendaftaran Pendadaran, Persetujuan KKM/PKL/KKN, Daftar PPL,
+ * Daftar Ujian Komprehensif, dan Daftar Wisuda — satu halaman per jenis (rute dengan `jenis` bawaan). Admin menyetujui, meminta
+ * perbaikan, atau menolak. Pendadaran hilang bila fitur pendadaran mati.
  */
 class PengajuanAkademikController extends Controller
 {
-    /** Jenis yang sudah bisa diproses; tab lain menyusul. */
-    public const JENIS_TERSEDIA = PengajuanAkademik::JENIS;
+    /** Rute halaman per jenis; alamat lama `admin/pengajuan-akademik?jenis=…` dialihkan ke sini. */
+    public const RUTE = [
+        PengajuanAkademik::TUGAS_AKHIR => 'admin.persetujuan-ta.index',
+        PengajuanAkademik::PENDADARAN => 'admin.pendaftaran-pendadaran.index',
+        PengajuanAkademik::WISUDA => 'admin.daftar-wisuda.index',
+        PengajuanAkademik::KKM => 'admin.persetujuan-kkm.index',
+        PengajuanAkademik::PPL => 'admin.daftar-ppl.index',
+        PengajuanAkademik::KOMPRE => 'admin.pengajuan-kompre.index',
+        PengajuanAkademik::SIDANG => 'admin.pendaftaran-sidang.index',
+    ];
 
-    public function index(Request $request): Response
+    public const JUDUL = [
+        PengajuanAkademik::TUGAS_AKHIR => 'Persetujuan Tugas Akhir',
+        PengajuanAkademik::PENDADARAN => 'Pendaftaran Pendadaran',
+        PengajuanAkademik::WISUDA => 'Daftar Wisuda',
+        PengajuanAkademik::KKM => 'Persetujuan KKM/PKL/KKN',
+        PengajuanAkademik::PPL => 'Daftar PPL',
+        PengajuanAkademik::KOMPRE => 'Daftar Ujian Komprehensif',
+        PengajuanAkademik::SIDANG => 'Pendaftaran Sidang',
+    ];
+
+    /**
+     * Jenis yang diproses di menu ini.
+     *
+     * @return list<string>
+     */
+    public static function jenisTersedia(): array
     {
-        $jenis = in_array($request->query('jenis'), self::JENIS_TERSEDIA, true) ? $request->query('jenis') : PengajuanAkademik::TUGAS_AKHIR;
+        return array_values(array_filter(
+            [...PengajuanAkademik::JENIS, ...PengajuanAkademik::JENIS_KEGIATAN],
+            // Pendaftaran pendadaran (dengan jadwal & penguji) dan pendaftaran sidang sederhana saling menggantikan.
+            fn (string $jenis): bool => match ($jenis) {
+                PengajuanAkademik::PENDADARAN => Feature::aktif('pendadaran'),
+                PengajuanAkademik::SIDANG => ! Feature::aktif('pendadaran'),
+                default => true,
+            },
+        ));
+    }
+
+    public function index(Request $request): Response|RedirectResponse
+    {
+        $dariRute = $request->route('jenis');
+        $jenis = $dariRute ?? (in_array($request->query('jenis'), self::jenisTersedia(), true) ? $request->query('jenis') : PengajuanAkademik::TUGAS_AKHIR);
+        if ($dariRute === null) {
+            return redirect()->route(self::RUTE[$jenis], $request->only(['status', 'search']));
+        }
         $filter = [
             'jenis' => $jenis,
             'status' => in_array($request->query('status'), PengajuanAkademik::STATUS, true) ? $request->query('status') : null,
@@ -60,6 +105,14 @@ class PengajuanAkademikController extends Controller
                 ->mapWithKeys(fn (Pendadaran $p): array => [$p->pengajuan_id => [...$p->jadwal(), ...$p->ringkasanHasil()]])->all();
         }
         $periode = $jenis === PengajuanAkademik::WISUDA ? PeriodeWisuda::query()->pluck('nama', 'id') : collect();
+        $gelombang = $jenis === PengajuanAkademik::KOMPRE ? GelombangKompre::query()->get()->keyBy('id') : collect();
+        // TA yang disahkan dari pengajuan TA ini, atau TA milik pendaftar wisuda (naskahnya = naskah final wisuda).
+        $tugasAkhir = match ($jenis) {
+            PengajuanAkademik::TUGAS_AKHIR => TugasAkhir::query()->whereIn('pengajuan_id', $pengajuan->getCollection()->pluck('id'))->get()->keyBy('pengajuan_id'),
+            PengajuanAkademik::WISUDA => TugasAkhir::query()->whereIn('id', $pengajuan->getCollection()->pluck('tugas_akhir_id')->filter())->get()
+                ->pipe(fn ($ta) => $pengajuan->getCollection()->mapWithKeys(fn (PengajuanAkademik $p): array => [$p->id => $ta->firstWhere('id', $p->tugas_akhir_id)])->filter()),
+            default => collect(),
+        };
         $pengajuan->through(fn (PengajuanAkademik $p): array => [
             'id' => $p->id,
             'nama' => $p->mahasiswa?->user?->name,
@@ -76,6 +129,14 @@ class PengajuanAkademikController extends Controller
             'disetujui_pembimbing_at' => $p->disetujui_pembimbing_at?->toIso8601String(),
             'jadwal' => $jadwal[$p->id] ?? null,
             'periode_wisuda' => $periode[$p->isian['periode_wisuda_id'] ?? 0] ?? null,
+            'gelombang_kompre' => ($g = $gelombang->get($p->isian['gelombang_kompre_id'] ?? 0))
+                ? ['nama' => $g->nama, 'tanggal_ujian' => $g->tanggal_ujian->toDateString()] : null,
+            'jenis_kkm' => PengajuanAkademik::JENIS_KKM[$p->isian['jenis_kkm'] ?? ''] ?? null,
+            'tugas_akhir' => ($ta = $tugasAkhir->get($p->id)) ? [
+                'id' => $ta->id,
+                'status' => $ta->status,
+                'naskah_diunggah_at' => $ta->naskah !== null ? $ta->naskah_diunggah_at?->toIso8601String() : null,
+            ] : null,
             // Data ijazah yang berbeda dari profil (koreksi dari mahasiswa) ditandai untuk diperiksa admin.
             'koreksi' => $jenis === PengajuanAkademik::WISUDA ? array_keys(array_filter([
                 'nama_ijazah' => ($p->isian['nama_ijazah'] ?? null) !== $p->mahasiswa?->user?->name,
@@ -92,9 +153,8 @@ class PengajuanAkademikController extends Controller
         return Inertia::render('Admin/PengajuanAkademik', [
             'pengajuan' => $pengajuan,
             'filter' => $filter,
-            'jenisTersedia' => self::JENIS_TERSEDIA,
-            'jumlahMenunggu' => PengajuanAkademik::query()->where('status', PengajuanAkademik::MENUNGGU)
-                ->whereIn('jenis', self::JENIS_TERSEDIA)->selectRaw('jenis, count(*) as jumlah')->groupBy('jenis')->pluck('jumlah', 'jenis'),
+            'judul' => self::JUDUL[$jenis],
+            'rute' => self::RUTE[$jenis],
             'dosenOptions' => DosenProfile::opsi(),
             'ruangOptions' => $jenis === PengajuanAkademik::PENDADARAN
                 ? Ruang::query()->orderBy('kode_ruang')->get(['id', 'kode_ruang', 'nama_ruang'])->map(fn (Ruang $r): array => ['id' => $r->id, 'name' => trim($r->kode_ruang.' '.$r->nama_ruang)])
@@ -104,11 +164,12 @@ class PengajuanAkademikController extends Controller
 
     public function setujui(Request $request, PengajuanAkademik $pengajuanAkademik): RedirectResponse
     {
-        abort_unless(in_array($pengajuanAkademik->jenis, self::JENIS_TERSEDIA, true), 404);
+        abort_unless(in_array($pengajuanAkademik->jenis, self::jenisTersedia(), true), 404);
 
         return match ($pengajuanAkademik->jenis) {
             PengajuanAkademik::PENDADARAN => $this->setujuiPendadaran($request, $pengajuanAkademik),
             PengajuanAkademik::WISUDA => $this->setujuiWisuda($request, $pengajuanAkademik),
+            PengajuanAkademik::KKM, PengajuanAkademik::PPL, PengajuanAkademik::KOMPRE, PengajuanAkademik::SIDANG => $this->setujuiKegiatan($request, $pengajuanAkademik),
             default => $this->setujuiTa($request, $pengajuanAkademik),
         };
     }
@@ -130,7 +191,7 @@ class PengajuanAkademikController extends Controller
     {
         $data = $request->validate([
             'judul' => ['required', 'string', 'max:300'],
-            'pembimbing_1_id' => ['required', 'integer', DosenProfile::rulePilihan()],
+            'pembimbing_1_id' => [Feature::aktif('pendadaran') ? 'required' : 'nullable', 'integer', DosenProfile::rulePilihan()],
             'pembimbing_2_id' => ['nullable', 'integer', DosenProfile::rulePilihan(), 'different:pembimbing_1_id'],
         ], ['pembimbing_2_id.different' => 'Pembimbing 2 harus berbeda dari pembimbing 1.'], [
             'judul' => 'Judul',
@@ -157,14 +218,14 @@ class PengajuanAkademikController extends Controller
                 'pengajuan_id' => $pengajuan->id,
                 'judul' => $data['judul'],
                 'bidang' => $pengajuan->isian['bidang'] ?? '-',
-                'pembimbing_1_id' => $data['pembimbing_1_id'],
+                'pembimbing_1_id' => $data['pembimbing_1_id'] ?? null,
                 'pembimbing_2_id' => $data['pembimbing_2_id'] ?? null,
                 'status' => TugasAkhir::BERJALAN,
                 'disahkan_oleh' => $request->user()->id,
             ]);
             $pengajuan->catat(PengajuanAkademik::DISETUJUI, null, $request->user()->id);
 
-            return back()->with('success', 'Pengajuan tugas akhir disetujui; judul dan pembimbing sudah disahkan.');
+            return back()->with('success', Feature::aktif('pendadaran') ? 'Pengajuan tugas akhir disetujui; judul dan pembimbing sudah disahkan.' : 'Pengajuan tugas akhir disetujui; judul sudah disahkan.');
         });
     }
 
@@ -261,7 +322,23 @@ class PengajuanAkademikController extends Controller
      */
     private function setujuiWisuda(Request $request, PengajuanAkademik $pengajuan): RedirectResponse
     {
-        return DB::transaction(function () use ($request, $pengajuan): RedirectResponse {
+        // Tanggal lulus (yudisium) dicetak di SKL dan transkrip. Tanpa pendadaran tidak ada tanggal sidang, jadi wajib diisi.
+        // Surat bebas pustaka dan surat keterangan lunas diunggah mahasiswa; admin wajib mencentang keduanya sudah diperiksa.
+        $data = $request->validate(
+            [
+                'tanggal_lulus' => [Feature::aktif('pendadaran') ? 'nullable' : 'required', 'date_format:Y-m-d', 'before_or_equal:today'],
+                'bebas_pustaka' => ['accepted'],
+                'lunas' => ['accepted'],
+            ],
+            [
+                'tanggal_lulus.before_or_equal' => 'Tanggal lulus tidak boleh sesudah hari ini.',
+                'bebas_pustaka.accepted' => 'Centang bebas pustaka setelah surat bebas pustaka diperiksa.',
+                'lunas.accepted' => 'Centang lunas setelah surat keterangan lunas diperiksa.',
+            ],
+            ['tanggal_lulus' => 'Tanggal lulus (yudisium)'],
+        );
+
+        return DB::transaction(function () use ($request, $pengajuan, $data): RedirectResponse {
             $pengajuan = PengajuanAkademik::query()->lockForUpdate()->findOrFail($pengajuan->id);
             $periode = PeriodeWisuda::query()->lockForUpdate()->find($pengajuan->isian['periode_wisuda_id'] ?? 0);
 
@@ -286,16 +363,48 @@ class PengajuanAkademikController extends Controller
                 'periode_wisuda_id' => $periode->id,
                 'mahasiswa_id' => $pengajuan->mahasiswa_id,
                 'tugas_akhir_id' => $pengajuan->tugas_akhir_id,
+                'tanggal_lulus' => $data['tanggal_lulus'] ?? null,
             ]);
+            $pengajuan->update(['isian' => [...$pengajuan->isian, 'dicentang' => [
+                'bebas_pustaka' => true, 'lunas' => true, 'oleh' => $request->user()->name, 'at' => now()->toIso8601String(),
+            ]]]);
             $pengajuan->catat(PengajuanAkademik::DISETUJUI, null, $request->user()->id);
 
             return back()->with('success', "Pendaftaran wisuda disetujui; mahasiswa masuk daftar peserta {$periode->nama}.");
         });
     }
 
+    /**
+     * Setujui pengajuan KKM, PPL, ujian komprehensif, atau pendaftaran sidang. KKM yang disetujui otomatis dimasukkan ke KRS mata kuliah KKM
+     * prodinya (bila belum diambil) agar nilainya bisa diisi di menu Nilai KKM.
+     */
+    private function setujuiKegiatan(Request $request, PengajuanAkademik $pengajuan): RedirectResponse
+    {
+        return DB::transaction(function () use ($request, $pengajuan): RedirectResponse {
+            $pengajuan = PengajuanAkademik::query()->lockForUpdate()->findOrFail($pengajuan->id);
+
+            if (! $pengajuan->menunggu()) {
+                return back()->with('error', 'Pengajuan ini sudah diproses.');
+            }
+
+            $pengajuan->catat(PengajuanAkademik::DISETUJUI, null, $request->user()->id);
+            $label = PengajuanAkademik::LABEL_JENIS[$pengajuan->jenis];
+            if ($pengajuan->jenis === PengajuanAkademik::SIDANG) {
+                return back()->with('success', 'Pendaftaran sidang disetujui. Jadwal dan penguji diatur di luar sistem; nilainya diisi lewat Nilai Semester mata kuliah TA/Skripsi.');
+            }
+            if ($pengajuan->jenis !== PengajuanAkademik::KKM) {
+                return back()->with('success', "Pengajuan {$label} disetujui.");
+            }
+
+            $hasil = KrsKkm::tambahkan($pengajuan->mahasiswa);
+
+            return back()->with($hasil['berhasil'] ? 'success' : 'error', "Pengajuan {$label} disetujui. {$hasil['pesan']}");
+        });
+    }
+
     private function kembalikan(Request $request, PengajuanAkademik $pengajuan, string $status, string $pesan): RedirectResponse
     {
-        abort_unless(in_array($pengajuan->jenis, self::JENIS_TERSEDIA, true), 404);
+        abort_unless(in_array($pengajuan->jenis, self::jenisTersedia(), true), 404);
         $data = $request->validate(['catatan' => ['required', 'string', 'max:1000']], attributes: ['catatan' => 'Catatan']);
 
         return DB::transaction(function () use ($request, $pengajuan, $status, $pesan, $data): RedirectResponse {

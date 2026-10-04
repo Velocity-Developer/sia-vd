@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { labelJenisPenilaian } from '@/lib/penilaian';
 import { Head, Link } from '@inertiajs/vue3';
 
 type MatkulRingkas = { id: number; kode_matkul: string; nama_matkul: string; semester: number };
@@ -13,6 +14,7 @@ type MataKuliahShowProps = {
     semester: number;
     jenis: string;
     tugas_akhir: boolean;
+    jenis_penilaian: string;
     prasyarat: MatkulRingkas[];
     menjadi_prasyarat: MatkulRingkas[];
     prodi?: {
@@ -76,7 +78,10 @@ const prodi = () => (props.mataKuliah as any).prodi ?? null;
                         <div class="space-y-1">
                             <dt class="teks-bantu">Jenis</dt>
                             <dd class="break-words text-sm font-medium text-black dark:text-foreground">
-                                {{ v(props.mataKuliah.jenis) }}<span v-if="props.mataKuliah.tugas_akhir"> · TA/Skripsi</span>
+                                {{ v(props.mataKuliah.jenis)
+                                }}<span v-if="props.mataKuliah.jenis_penilaian !== 'reguler'">
+                                    · {{ labelJenisPenilaian[props.mataKuliah.jenis_penilaian] ?? props.mataKuliah.jenis_penilaian }}</span
+                                >
                             </dd>
                         </div>
                     </dl>

@@ -71,8 +71,8 @@ class PendaftarPmbController extends Controller
             'status_pendaftaran' => ['nullable', Rule::in(array_keys(OpsiPmb::STATUS_PENDAFTARAN))],
         ], [], ['nilai' => 'Nilai', 'status_pendaftaran' => 'Status pendaftaran']);
 
-        if ($cmb->mahasiswa()->exists() && ($data['status_pendaftaran'] ?? null) !== Cmb::STATUS_LULUS) {
-            throw ValidationException::withMessages(['status_pendaftaran' => 'Pendaftar sudah disalin ke Data Mahasiswa, status tidak bisa diubah dari Lulus.']);
+        if ($cmb->mahasiswa()->exists() && ($data['status_pendaftaran'] ?? null) !== Cmb::STATUS_DITERIMA) {
+            throw ValidationException::withMessages(['status_pendaftaran' => 'Pendaftar sudah disalin ke Data Mahasiswa, status tidak bisa diubah dari Diterima.']);
         }
 
         $cmb->forceFill($data)->save();
@@ -81,11 +81,17 @@ class PendaftarPmbController extends Controller
     }
 
     /**
-     * Salin calon maba yang lulus ke Data Mahasiswa (akun + profil), lalu kirim tautan atur sandi dan verifikasi email.
+     * Salin calon maba yang diterima ke Data Mahasiswa (akun + profil) dengan NIM yang diisi admin, lalu kirim tautan
+     * atur sandi dan verifikasi email. NIM sekaligus menjadi username login mahasiswa.
      */
     public function salin(Request $request, Cmb $cmb): RedirectResponse
     {
         abort_unless($this->bolehSalin($request), 403, 'Anda tidak punya akses menambah Data Mahasiswa.');
+        $data = $request->validate(
+            ['nim' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9.\-]+$/', Rule::unique('mahasiswa_profiles', 'nim'), Rule::unique('users', 'username')]],
+            ['nim.unique' => 'NIM ini sudah dipakai mahasiswa atau akun lain.', 'nim.regex' => 'NIM hanya boleh berisi huruf, angka, titik, dan tanda hubung.'],
+            ['nim' => 'NIM'],
+        );
 
         $alasan = SalinCalonMaba::alasanTidakBisa($cmb);
         if ($alasan !== null) {
@@ -93,14 +99,14 @@ class PendaftarPmbController extends Controller
         }
 
         try {
-            $user = SalinCalonMaba::salin($cmb);
+            $user = SalinCalonMaba::salin($cmb, $data['nim']);
         } catch (Throwable $e) {
             report($e);
 
             return back()->with('error', 'Data '.$cmb->nama.' gagal disalin ke Data Mahasiswa.');
         }
 
-        $pesan = $cmb->nama.' disalin ke Data Mahasiswa (username '.$user->username.'). Lengkapi NIM dan dosen wali di Data Mahasiswa.';
+        $pesan = $cmb->nama.' disalin ke Data Mahasiswa dengan NIM '.$user->username.' (sekaligus username). Atur dosen wali lewat Set Penasehat Akademik.';
 
         return SalinCalonMaba::kirimAkses($user)
             ? back()->with('success', $pesan.' Tautan atur sandi dan verifikasi dikirim ke '.$user->email.'.')

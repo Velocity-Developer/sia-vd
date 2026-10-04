@@ -76,7 +76,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('id-ID', { day: 'n
                     <div>
                         <h1 class="judul-halaman">Calon Maba</h1>
                         <p class="deskripsi-halaman">
-                            Calon mahasiswa baru dari formulir PMB. Ubah nilai dan status langsung di tabel; yang Lulus bisa disalin ke Data
+                            Calon mahasiswa baru dari formulir PMB. Ubah nilai dan status langsung di tabel; yang Diterima bisa disalin ke Data
                             Mahasiswa.
                         </p>
                     </div>
@@ -95,7 +95,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('id-ID', { day: 'n
                     <SelectFilter v-model="filter.status" label="Status">
                         <option value="">Semua status</option>
                         <option value="menunggu">Menunggu</option>
-                        <option value="lulus">Lulus</option>
+                        <option value="diterima">Diterima</option>
                         <option value="ditolak">Ditolak</option>
                     </SelectFilter>
                     <p class="info-jumlah sm:ml-auto">
@@ -159,7 +159,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('id-ID', { day: 'n
                                             @change="simpanBaris(item)"
                                         >
                                             <option value="">Menunggu</option>
-                                            <option value="lulus">Lulus</option>
+                                            <option value="diterima">Diterima</option>
                                             <option value="ditolak">Ditolak</option>
                                         </select>
                                         <p v-if="barisGalat === item.id" class="mt-1 text-xs text-[#b34700]">
@@ -173,7 +173,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('id-ID', { day: 'n
                                                     ><GraduationCap /></Link
                                             ></Button>
                                             <SalinCalonMaba
-                                                v-else-if="props.bolehSalin && item.status_pendaftaran === 'lulus'"
+                                                v-else-if="props.bolehSalin && item.status_pendaftaran === 'diterima'"
                                                 :id="item.id"
                                                 :nama="item.nama"
                                                 ringkas

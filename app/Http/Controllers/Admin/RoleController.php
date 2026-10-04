@@ -191,7 +191,7 @@ class RoleController extends Controller
     private function lockedPermissionIds(Role $role): array
     {
         $isOwnRole = request()->user()?->role_id === $role->id;
-        $isSystemAdmin = $role->is_system && $role->user_type === UserType::Admin;
+        $isSystemAdmin = $role->is_system && $role->slug === UserType::Admin->value;
 
         if (! $isOwnRole && ! $isSystemAdmin) {
             return [];

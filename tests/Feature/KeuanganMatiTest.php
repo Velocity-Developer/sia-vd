@@ -253,7 +253,7 @@ it('saves the susulan settings without the payment deadline and keeps its old va
         ->and(PengaturanAkademik::current()->batas_bayar_susulan_hari)->toBe(7);
 });
 
-it('still requires the leave payment proof, which is a separate flow', function () {
+it('shows the leave fee as information only, without payment proof', function () {
     $tahun = tahunCutiKeuanganMati();
     $mhs = User::factory()->mahasiswa()->create();
     JenisBiaya::create(['kode' => 'CUTI', 'nama' => 'Biaya Cuti', 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => JenisBiaya::CUTI, 'aktif' => true])
@@ -261,7 +261,7 @@ it('still requires the leave payment proof, which is a separate flow', function 
 
     $this->actingAs($mhs)->get(route('mahasiswa.pengajuan-cuti'))->assertInertia(fn ($page) => $page->where('biaya.0.nominal', 250_000));
     $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), ['tahun_akademik_id' => $tahun->id, 'alasan' => 'Bekerja di luar kota.'])
-        ->assertSessionHasErrors('bukti_bayar');
+        ->assertSessionHasNoErrors();
 });
 
 function tahunCutiKeuanganMati(): TahunAkademik

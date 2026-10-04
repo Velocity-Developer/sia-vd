@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useFitur } from '@/composables/useFitur';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { JENIS_PERTEMUAN, formatTanggal, jam, statusTampil, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
@@ -62,6 +63,7 @@ const breadcrumbs: BreadcrumbItem[] = [{ title: 'Beranda', href: '/dosen' }];
 const { can } = usePermissions();
 const angka = new Intl.NumberFormat('id-ID');
 
+const fitur = useFitur();
 const kartuStatistik = computed(() => {
     const r = props.ringkasan;
     if (!r) return [];
@@ -69,7 +71,10 @@ const kartuStatistik = computed(() => {
         { label: 'Kelas Diampu', nilai: r.kelas_diampu, ikon: ClipboardList, href: can('dosen.kelas-kuliah') ? '/dosen/kelas-kuliah' : null },
         { label: 'Mahasiswa Diajar', nilai: r.mahasiswa_diajar, ikon: Users, href: can('dosen.mahasiswa-kelas') ? '/dosen/mahasiswa-kelas' : null },
         { label: 'Mahasiswa Wali', nilai: r.mahasiswa_wali, ikon: UsersRound, href: null },
-        { label: 'Bimbingan TA', nilai: r.bimbingan_ta, ikon: GraduationCap, href: can('dosen.bimbingan') ? '/dosen/bimbingan' : null },
+        // Tanpa fitur pendadaran tidak ada pembimbing TA di sistem.
+        ...(fitur.aktif('pendadaran')
+            ? [{ label: 'Bimbingan TA', nilai: r.bimbingan_ta, ikon: GraduationCap, href: can('dosen.bimbingan') ? '/dosen/bimbingan' : null }]
+            : []),
     ];
 });
 

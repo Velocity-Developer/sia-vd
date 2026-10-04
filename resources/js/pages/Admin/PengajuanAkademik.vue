@@ -6,8 +6,10 @@ import SearchSelect from '@/components/SearchSelect.vue';
 import SelectFilter from '@/components/SelectFilter.vue';
 import ModalJadwalPendadaran from '@/components/tugas-akhir/ModalJadwalPendadaran.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import {
@@ -20,8 +22,8 @@ import {
     type JenisPengajuan,
     type StatusPengajuan,
 } from '@/lib/tugasAkhir';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { Paperclip, Search } from 'lucide-vue-next';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { FileText, Paperclip, Search } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 type Baris = {
@@ -37,6 +39,9 @@ type Baris = {
     disetujui_pembimbing_at: string | null;
     jadwal: (JadwalPendadaran & HasilPendadaran) | null;
     periode_wisuda: string | null;
+    gelombang_kompre: { nama: string; tanggal_ujian: string } | null;
+    jenis_kkm: string | null;
+    tugas_akhir: { id: number; status: 'berjalan' | 'selesai'; naskah_diunggah_at: string | null } | null;
     koreksi: string[];
     status: StatusPengajuan;
     catatan: string | null;
@@ -48,8 +53,8 @@ type Baris = {
 const props = defineProps<{
     pengajuan: { data: Baris[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
     filter: { jenis: JenisPengajuan; status: string | null; search: string };
-    jenisTersedia: JenisPengajuan[];
-    jumlahMenunggu: Partial<Record<JenisPengajuan, number>>;
+    judul: string;
+    rute: string;
     dosenOptions: { id: number; name: string }[];
     ruangOptions: { id: number; name: string }[];
 }>();
@@ -62,8 +67,8 @@ let jeda: number | undefined;
 
 const kirim = () =>
     router.get(
-        route('admin.pengajuan-akademik.index'),
-        { jenis: props.filter.jenis, status: status.value === semua ? null : status.value, search: search.value },
+        route(props.rute),
+        { status: status.value === semua ? null : status.value, search: search.value },
         { preserveState: true, preserveScroll: true, replace: true },
     );
 watch(search, () => {
@@ -78,14 +83,27 @@ const setujuiItem = ref<Baris | null>(null);
 const setujuiForm = useForm({ judul: '', pembimbing_1_id: null as number | null, pembimbing_2_id: null as number | null });
 // Pendadaran disetujui sekaligus dijadwalkan lewat modal tersendiri.
 const jadwalkanItem = ref<Baris | null>(null);
-// Wisuda cukup dikonfirmasi: mahasiswa masuk daftar peserta periode pilihannya.
+// Tanpa fitur pendadaran tidak ada pembimbing TA, dan tanggal lulus (yudisium) wajib diisi saat menyetujui wisuda.
+const pendadaran = useFitur().aktif('pendadaran');
+// Wisuda: mahasiswa masuk daftar peserta periode pilihannya, dengan tanggal lulus (yudisium) untuk SKL & transkrip.
 const wisudaItem = ref<Baris | null>(null);
+const wisudaForm = useForm({ tanggal_lulus: '', bebas_pustaka: false, lunas: false });
 const setujuiWisuda = () => {
     if (!wisudaItem.value) return;
+    wisudaForm.post(route('admin.pengajuan-akademik.setujui', wisudaItem.value.id), {
+        preserveScroll: true,
+        onSuccess: () => (wisudaItem.value = null),
+    });
+};
+// KKM, PPL, Kompre, dan pendaftaran sidang cukup dikonfirmasi.
+const kegiatan = ['kkm', 'ppl', 'kompre', 'sidang'];
+const kegiatanItem = ref<Baris | null>(null);
+const setujuiKegiatan = () => {
+    if (!kegiatanItem.value) return;
     router.post(
-        route('admin.pengajuan-akademik.setujui', wisudaItem.value.id),
+        route('admin.pengajuan-akademik.setujui', kegiatanItem.value.id),
         {},
-        { preserveScroll: true, onFinish: () => (wisudaItem.value = null) },
+        { preserveScroll: true, onFinish: () => (kegiatanItem.value = null) },
     );
 };
 const bukaSetujui = (b: Baris) => {
@@ -94,7 +112,13 @@ const bukaSetujui = (b: Baris) => {
         return;
     }
     if (props.filter.jenis === 'wisuda') {
+        wisudaForm.reset();
+        wisudaForm.clearErrors();
         wisudaItem.value = b;
+        return;
+    }
+    if (kegiatan.includes(props.filter.jenis)) {
+        kegiatanItem.value = b;
         return;
     }
     setujuiItem.value = b;
@@ -127,13 +151,13 @@ const kembalikan = () => {
 </script>
 
 <template>
-    <Head title="Pengajuan TA & Wisuda" />
-    <AppLayout :breadcrumbs="[{ title: 'Pengajuan TA & Wisuda', href: route('admin.pengajuan-akademik.index') }]">
+    <Head :title="props.judul" />
+    <AppLayout :breadcrumbs="[{ title: props.judul, href: route(props.rute) }]">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Pengajuan TA & Wisuda</h1>
+                        <h1 class="judul-halaman">{{ props.judul }}</h1>
                         <p class="deskripsi-halaman">
                             Setujui, minta perbaikan, atau tolak pengajuan mahasiswa. Selama menunggu keputusan, mahasiswa tidak bisa mengirim
                             pengajuan baru.
@@ -147,21 +171,6 @@ const kembalikan = () => {
                 <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">
                     {{ page.props.flash.error }}
                 </div>
-
-                <nav class="flex gap-1 overflow-x-auto border-b border-[#e6e6e6] dark:border-border" aria-label="Jenis pengajuan">
-                    <Link
-                        v-for="j in props.jenisTersedia"
-                        :key="j"
-                        :href="route('admin.pengajuan-akademik.index', { jenis: j })"
-                        class="-mb-px flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium"
-                        :class="j === props.filter.jenis ? 'border-[#0075de] text-[#0075de]' : 'border-transparent text-[#615d59] hover:text-black'"
-                    >
-                        {{ JENIS_PENGAJUAN[j] }}
-                        <span v-if="props.jumlahMenunggu[j]" class="rounded-full bg-[#0075de] px-1.5 text-xs text-white">{{
-                            props.jumlahMenunggu[j]
-                        }}</span>
-                    </Link>
-                </nav>
 
                 <div class="bilah-filter">
                     <div class="kolom-cari">
@@ -200,6 +209,9 @@ const kembalikan = () => {
                                     <td class="max-w-[440px]">
                                         <template v-if="props.filter.jenis === 'wisuda'">
                                             <span class="block font-medium text-black">{{ b.periode_wisuda }}</span>
+                                            <span v-if="b.isian.dicentang" class="block text-xs text-[#1aae39]"
+                                                >Bebas pustaka ✓ · Lunas ✓ (dicentang {{ b.isian.dicentang.oleh }})</span
+                                            >
                                             <span class="block text-xs text-[#615d59]"
                                                 >Ijazah:
                                                 <span :class="{ 'font-medium text-[#dd5b00]': b.koreksi.includes('nama_ijazah') }">{{
@@ -219,7 +231,16 @@ const kembalikan = () => {
                                                 >Berbeda dari profil (koreksi mahasiswa) — periksa sebelum menyetujui.</span
                                             >
                                         </template>
-                                        <span v-else class="block font-medium text-black">{{ b.isian.judul }}</span>
+                                        <span v-else class="block font-medium text-black"
+                                            ><span
+                                                v-if="b.jenis_kkm"
+                                                class="mr-1.5 rounded bg-[#f2f9ff] px-1.5 py-0.5 text-xs font-semibold text-[#0075de]"
+                                                >{{ b.jenis_kkm }}</span
+                                            >{{ b.isian.judul }}</span
+                                        >
+                                        <span v-if="b.gelombang_kompre" class="block text-xs text-[#615d59]"
+                                            >{{ b.gelombang_kompre.nama }} · ujian {{ formatTanggal(b.gelombang_kompre.tanggal_ujian, false) }}</span
+                                        >
                                         <span v-if="b.isian.bidang" class="block text-xs text-[#615d59]">Bidang: {{ b.isian.bidang }}</span>
                                         <span v-if="b.usulan_pembimbing.length" class="block text-xs text-[#615d59]"
                                             >Usulan pembimbing: {{ b.usulan_pembimbing.join(', ') }}</span
@@ -231,17 +252,21 @@ const kembalikan = () => {
                                             >Disetujui {{ b.disetujui_pembimbing }} · {{ formatTanggal(b.disetujui_pembimbing_at, false) }}</span
                                         >
                                         <button
-                                            v-if="b.isian.ringkasan"
+                                            v-if="b.isian.ringkasan || b.isian.keterangan"
                                             type="button"
                                             class="mt-1 text-xs font-medium text-[#0075de] hover:underline"
                                             @click="terbuka = terbuka === b.id ? null : b.id"
                                         >
-                                            {{ terbuka === b.id ? 'Sembunyikan ringkasan' : 'Lihat ringkasan' }}
+                                            {{
+                                                terbuka === b.id
+                                                    ? `Sembunyikan ${b.isian.ringkasan ? 'ringkasan' : 'keterangan'}`
+                                                    : `Lihat ${b.isian.ringkasan ? 'ringkasan' : 'keterangan'}`
+                                            }}
                                         </button>
                                         <span
                                             v-if="terbuka === b.id"
                                             class="mt-1 block whitespace-pre-line rounded-lg bg-[#f6f5f4] p-3 text-sm dark:bg-muted"
-                                            >{{ b.isian.ringkasan }}</span
+                                            >{{ b.isian.ringkasan ?? b.isian.keterangan }}</span
                                         >
                                         <span class="mt-1 flex flex-wrap gap-3">
                                             <a
@@ -252,6 +277,23 @@ const kembalikan = () => {
                                                 rel="noopener"
                                                 class="inline-flex items-center gap-1 text-xs font-medium text-[#0075de] hover:underline"
                                                 ><Paperclip class="size-3" /> {{ LABEL_LAMPIRAN[k] ?? k }}</a
+                                            >
+                                        </span>
+                                        <span v-if="b.tugas_akhir" class="mt-1 block text-xs">
+                                            <a
+                                                v-if="b.tugas_akhir.naskah_diunggah_at"
+                                                :href="route('berkas.naskah-ta', b.tugas_akhir.id)"
+                                                target="_blank"
+                                                rel="noopener"
+                                                class="inline-flex items-center gap-1 font-medium text-[#0075de] hover:underline"
+                                                ><FileText class="size-3" /> Naskah TA</a
+                                            >
+                                            <span v-if="b.tugas_akhir.naskah_diunggah_at" class="text-[#a39e98]">
+                                                · diunggah {{ formatTanggal(b.tugas_akhir.naskah_diunggah_at, false) }}</span
+                                            >
+                                            <span v-else class="text-[#a39e98]">Naskah TA belum diunggah</span>
+                                            <span :class="b.tugas_akhir.status === 'selesai' ? 'text-[#1aae39]' : 'text-[#615d59]'">
+                                                · TA {{ b.tugas_akhir.status === 'selesai' ? 'selesai' : 'berjalan' }}</span
                                             >
                                         </span>
                                         <span class="mt-1 block text-xs text-[#a39e98]">Dikirim {{ formatTanggal(b.diajukan_at, false) }}</span>
@@ -299,9 +341,7 @@ const kembalikan = () => {
                                     </td>
                                 </tr>
                                 <tr v-if="!props.pengajuan.data.length" class="baris-kosong">
-                                    <td colspan="5" class="tabel-kosong">
-                                        Belum ada pengajuan {{ JENIS_PENGAJUAN[props.filter.jenis].toLowerCase() }}.
-                                    </td>
+                                    <td colspan="5" class="tabel-kosong">Belum ada pengajuan {{ JENIS_PENGAJUAN[props.filter.jenis] }}.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -313,17 +353,54 @@ const kembalikan = () => {
         </div>
 
         <AlertModal
-            :open="!!wisudaItem"
-            title="Setujui pendaftaran wisuda?"
+            :open="!!kegiatanItem"
+            :title="`Setujui pengajuan ${JENIS_PENGAJUAN[props.filter.jenis]}?`"
             :description="
-                wisudaItem ? `${wisudaItem.nama} masuk daftar peserta ${wisudaItem.periode_wisuda}. SKL diterbitkan dari menu Periode Wisuda.` : ''
+                kegiatanItem
+                    ? props.filter.jenis === 'kkm'
+                        ? `${kegiatanItem.nama} dimasukkan ke KRS mata kuliah KKM prodinya (bila belum), lalu nilainya diisi di Penilaian → Nilai KKM.`
+                        : props.filter.jenis === 'sidang'
+                          ? `Pendaftaran sidang ${kegiatanItem.nama} disetujui. Jadwal dan penguji diatur di luar sistem; nilainya diisi lewat Nilai Semester mata kuliah TA/Skripsi.`
+                          : `Pengajuan ${kegiatanItem.nama} disetujui; kegiatannya dilaksanakan di luar sistem.`
+                    : ''
             "
             confirm-text="Setujui"
             cancel-text="Batal"
-            @update:open="!$event && (wisudaItem = null)"
-            @confirm="setujuiWisuda"
-            @cancel="wisudaItem = null"
+            @update:open="!$event && (kegiatanItem = null)"
+            @confirm="setujuiKegiatan"
+            @cancel="kegiatanItem = null"
         />
+        <div v-if="wisudaItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="wisudaItem = null">
+            <form class="kartu w-full max-w-md p-6 shadow-xl" @submit.prevent="setujuiWisuda">
+                <h3 class="judul-bagian">Setujui pendaftaran wisuda</h3>
+                <p class="mt-2 text-sm text-[#615d59]">
+                    {{ wisudaItem.nama }} masuk daftar peserta {{ wisudaItem.periode_wisuda }}. SKL diterbitkan dari menu Periode Wisuda.
+                </p>
+                <label class="mt-4 grid gap-2">
+                    <span class="label-isian"
+                        >Tanggal lulus (yudisium)<span v-if="pendadaran" class="font-normal text-[#a39e98]"> (opsional)</span></span
+                    >
+                    <Input v-model="wisudaForm.tanggal_lulus" type="date" :required="!pendadaran" />
+                    <span class="teks-bantu"> Dicetak di SKL dan transkrip.{{ pendadaran ? ' Kosong = tanggal pendadaran.' : '' }} </span>
+                    <InputError :message="wisudaForm.errors.tanggal_lulus" />
+                </label>
+                <div class="mt-4 grid gap-2">
+                    <span class="label-isian">Pemeriksaan berkas</span>
+                    <label class="flex items-center gap-2 text-sm">
+                        <Checkbox v-model="wisudaForm.bebas_pustaka" /> Bebas pustaka (surat bebas pustaka sudah diperiksa)
+                    </label>
+                    <InputError :message="wisudaForm.errors.bebas_pustaka" />
+                    <label class="flex items-center gap-2 text-sm">
+                        <Checkbox v-model="wisudaForm.lunas" /> Lunas (surat keterangan lunas sudah diperiksa)
+                    </label>
+                    <InputError :message="wisudaForm.errors.lunas" />
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                    <Button type="button" variant="outline" @click="wisudaItem = null">Batal</Button>
+                    <Button type="submit" :disabled="wisudaForm.processing || !wisudaForm.bebas_pustaka || !wisudaForm.lunas">Setujui</Button>
+                </div>
+            </form>
+        </div>
         <ModalJadwalPendadaran
             v-if="jadwalkanItem"
             :pengajuan="{ id: jadwalkanItem.id, nama: jadwalkanItem.nama, judul: jadwalkanItem.isian.judul, pembimbing: jadwalkanItem.pembimbing }"
@@ -334,14 +411,20 @@ const kembalikan = () => {
         <div v-if="setujuiItem" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="setujuiItem = null">
             <form class="kartu w-full max-w-lg p-6 shadow-xl" @submit.prevent="setujui">
                 <h3 class="judul-bagian">Setujui tugas akhir</h3>
-                <p class="mt-1 text-sm text-[#615d59]">Sahkan judul dan tetapkan pembimbing {{ setujuiItem.nama }}. Boleh berbeda dari usulan.</p>
+                <p class="mt-1 text-sm text-[#615d59]">
+                    {{
+                        pendadaran
+                            ? `Sahkan judul dan tetapkan pembimbing ${setujuiItem.nama}. Boleh berbeda dari usulan.`
+                            : `Sahkan judul tugas akhir ${setujuiItem.nama}. Judul ini dicetak di transkrip.`
+                    }}
+                </p>
                 <div class="mt-4 grid gap-4">
                     <div class="grid gap-2">
                         <Label for="setujui_judul" class="label-isian">Judul disahkan</Label>
                         <textarea id="setujui_judul" v-model="setujuiForm.judul" maxlength="300" rows="3" class="isian isian-area" required />
                         <InputError :message="setujuiForm.errors.judul" />
                     </div>
-                    <div class="grid gap-2">
+                    <div v-if="pendadaran" class="grid gap-2">
                         <Label for="pembimbing_1_id" class="label-isian">Pembimbing 1</Label>
                         <SearchSelect
                             id="pembimbing_1_id"
@@ -353,7 +436,7 @@ const kembalikan = () => {
                         />
                         <InputError :message="setujuiForm.errors.pembimbing_1_id" />
                     </div>
-                    <div class="grid gap-2">
+                    <div v-if="pendadaran" class="grid gap-2">
                         <Label for="pembimbing_2_id" class="label-isian flex items-center justify-between">
                             <span>Pembimbing 2 <span class="font-normal text-[#a39e98]">(opsional)</span></span>
                             <button

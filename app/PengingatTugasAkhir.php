@@ -24,10 +24,13 @@ class PengingatTugasAkhir
     public static function untukMahasiswa(MahasiswaProfile $mahasiswa): ?array
     {
         $pesan = [];
+        // Pengingat wisuda menautkan ke halaman Pengajuan Wisuda, selain itu ke Pengajuan Judul & Upload TA.
+        $soalWisuda = false;
 
         foreach (PengajuanAkademik::JENIS as $jenis) {
             $p = PengajuanAkademik::terakhir($mahasiswa->id, $jenis);
             if ($p?->status === PengajuanAkademik::PERLU_PERBAIKAN) {
+                $soalWisuda = $soalWisuda || $jenis === PengajuanAkademik::WISUDA;
                 $pesan[] = ['teks' => 'Pengajuan '.strtolower(PengajuanAkademik::LABEL_JENIS[$jenis]).' diminta perbaikan: '.$p->catatan, 'penting' => true];
             }
         }
@@ -47,13 +50,14 @@ class PengingatTugasAkhir
         }
 
         $wisuda = Wisuda::query()->where('mahasiswa_id', $mahasiswa->id)->with('periode')->first();
+        $soalWisuda = $soalWisuda || $wisuda !== null;
         if ($wisuda?->nomor_skl !== null) {
             $pesan[] = ['teks' => 'Surat keterangan lulus Anda sudah terbit dan bisa diunduh.', 'penting' => false];
         } elseif ($wisuda?->periode && $wisuda->periode->tanggal_acara->greaterThanOrEqualTo(today())) {
             $pesan[] = ['teks' => 'Anda peserta '.$wisuda->periode->nama.', '.$wisuda->periode->tanggal_acara->translatedFormat('d F Y').'.', 'penting' => false];
         }
 
-        return $pesan === [] ? null : ['pesan' => $pesan, 'tautan' => route('mahasiswa.tugas-akhir')];
+        return $pesan === [] ? null : ['pesan' => $pesan, 'tautan' => route($soalWisuda ? 'mahasiswa.wisuda' : 'mahasiswa.tugas-akhir')];
     }
 
     /**

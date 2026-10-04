@@ -140,7 +140,16 @@ const akademikDosen = [
     { label: 'Kode Fakultas', key: 'fakultas_kode' },
 ];
 
-const identitasKaryawan = [{ label: 'Nomor Induk', key: 'nomor_induk' }];
+// Program Studi hanya tampil untuk akun Prodi (karyawan yang datanya dibatasi ke satu prodi).
+const identitasKaryawan = [
+    { label: 'Nomor Induk', key: 'nomor_induk' },
+    ...(props.user.prodi_name
+        ? [
+              { label: 'Program Studi', key: 'prodi_name' },
+              { label: 'Jenjang', key: 'prodi_jenjang' },
+          ]
+        : []),
+];
 
 const ayah = [
     { label: 'Nama Ayah Kandung', key: 'nama_ayah_kandung' },

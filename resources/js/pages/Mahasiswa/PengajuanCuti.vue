@@ -50,7 +50,6 @@ const lamaCuti = isianLama(props.cuti)?.isian;
 const formCuti = useForm({
     tahun_akademik_id: (lamaCuti?.tahun_akademik_id ?? (props.cuti.tahunOptions.length === 1 ? props.cuti.tahunOptions[0].id : '')) as number | '',
     alasan: lamaCuti?.alasan ?? '',
-    bukti_bayar: null as File | null,
     dokumen_pendukung: null as File | null,
 });
 // Input berkas dipasang ulang (dikosongkan) setelah terkirim.
@@ -60,7 +59,7 @@ const kirimCuti = () =>
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
-            formCuti.bukti_bayar = formCuti.dokumen_pendukung = null;
+            formCuti.dokumen_pendukung = null;
             versiBerkas.value++;
         },
     });
@@ -99,9 +98,9 @@ const infoBiaya = computed(() => props.biaya.map((b) => `${b.nama} ${rupiah(b.no
                             {{ props.mahasiswa.jumlah_cuti }} dari {{ props.mahasiswa.maks_cuti }} semester
                         </p>
                     </div>
-                    <div>
+                    <div v-if="infoBiaya">
                         <p class="teks-bantu uppercase tracking-[0.04em]">Biaya cuti</p>
-                        <p class="mt-1 text-sm text-black dark:text-foreground">{{ infoBiaya || 'Belum diatur' }}</p>
+                        <p class="mt-1 text-sm text-black dark:text-foreground">{{ infoBiaya }}</p>
                     </div>
                 </section>
 
@@ -175,18 +174,6 @@ const infoBiaya = computed(() => props.biaya.map((b) => `${b.nama} ${rupiah(b.no
                                 <InputError :message="formCuti.errors.alasan" />
                             </div>
                             <div class="grid items-start gap-4 sm:grid-cols-2">
-                                <InputBerkas
-                                    id="bukti_bayar"
-                                    :key="`bukti_bayar-${versiBerkas}`"
-                                    :label="`Bukti bayar cuti${infoBiaya ? ' — ' + infoBiaya : ''}`"
-                                    :accept="dokumen"
-                                    :pengajuan-id="cuti.pengajuan?.id"
-                                    :sudah-ada="sudahAda(cuti, 'bukti_bayar')"
-                                    :wajib="cuti.keadaan === 'baru'"
-                                    :terkunci="!terbuka(cuti)"
-                                    :error="formCuti.errors.bukti_bayar"
-                                    @pilih="formCuti.bukti_bayar = $event"
-                                />
                                 <InputBerkas
                                     id="dokumen_pendukung"
                                     :key="`dokumen_pendukung-${versiBerkas}`"

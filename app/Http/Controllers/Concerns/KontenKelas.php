@@ -73,7 +73,7 @@ trait KontenKelas
 
         if ($this->peran() === 'dosen' && $kelasKuliah->nilaiFinal()) {
             return $kelasKuliah->nilai_final_at !== null
-                ? 'Nilai kelas ini sudah difinalisasi. Hubungi admin bila perlu dibuka kembali.'
+                ? 'Nilai kelas ini sudah dikirim ke validasi. Hubungi admin bila perlu dikembalikan untuk koreksi.'
                 : 'Batas input nilai sudah lewat. Hubungi admin bila perlu dibuka kembali.';
         }
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Feature;
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use App\SyaratUjian;
 use App\UjianSusulan;
@@ -20,7 +21,7 @@ use Illuminate\Support\Collection;
  */
 class Ujian extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     public const JENIS = [Pertemuan::UTS, Pertemuan::UAS];
 
@@ -189,6 +190,15 @@ class Ujian extends Model
     public function online(): bool
     {
         return $this->mode !== self::TATAP_MUKA;
+    }
+
+    /**
+     * UTS/UAS (termasuk susulannya) tatap muka tidak dinilai di halaman ujian: nilainya diisi sebagai komponen nilai
+     * di tabel Nilai Mahasiswa / Nilai Semester, agar tidak diinput dua kali. Ujian remidi tetap dinilai di sini.
+     */
+    public function nilaiLewatKomponen(): bool
+    {
+        return ! $this->online() && ! $this->remidi();
     }
 
     public function sudahMulai(): bool
@@ -371,5 +381,18 @@ class Ujian extends Model
             self::ONLINE_SOAL => 'Online (soal di sistem)',
             default => 'Tatap muka',
         };
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->whereHas('kelasKuliah');
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return KelasKuliah::query()->whereKey($this->kelas_id)->exists();
     }
 }

@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Pengajuan tugas akhir, pendadaran, wisuda, cuti, dan aktif kembali. Isian form berbeda per jenis dan disimpan di `isian`.
+ * Pengajuan tugas akhir, pendadaran, wisuda, KKM/PKL/KKN, PPL, ujian komprehensif, cuti, dan aktif kembali. Isian form
+ * berbeda per jenis dan disimpan di `isian`.
  *
  * Selama berstatus menunggu, mahasiswa tidak bisa membatalkan maupun mengisi form baru untuk jenis yang
  * sama. "Perlu perbaikan" membuka form yang sama untuk dikirim ulang; "ditolak" membuka form baru.
@@ -24,11 +25,35 @@ class PengajuanAkademik extends Model
 
     public const WISUDA = 'wisuda';
 
-    /** Cuti satu semester (isian tahun_akademik_id + alasan, lampiran bukti bayar); lihat App\PengajuanCuti. */
+    /** Cuti satu semester (isian tahun_akademik_id + alasan, lampiran dokumen pendukung opsional); lihat App\PengajuanCuti. */
     public const CUTI = 'cuti';
 
     /** Mahasiswa Cuti meminta status Aktif kembali. */
     public const AKTIF_KEMBALI = 'aktif_kembali';
+
+    /**
+     * Kuliah Kerja Mahasiswa berbentuk KKM, PKL, atau KKN (isian `jenis_kkm`): setelah disetujui, admin mengisi nilainya
+     * di Penilaian → Nilai KKM.
+     */
+    public const KKM = 'kkm';
+
+    /** Bentuk Kuliah Kerja Mahasiswa yang dipilih mahasiswa di pengajuan KKM. */
+    public const JENIS_KKM = ['kkm' => 'KKM', 'pkl' => 'PKL', 'kkn' => 'KKN'];
+
+    /** Praktek Pengalaman Lapangan; nilainya lewat Nilai Semester mata kuliah PPL. */
+    public const PPL = 'ppl';
+
+    /** Ujian komprehensif pada gelombang yang dipilih (isian `gelombang_kompre_id`); ujiannya di luar sistem. */
+    public const KOMPRE = 'kompre';
+
+    /**
+     * Pendaftaran sidang TA/Skripsi saat fitur pendadaran mati: cukup form + berkas + persetujuan admin. Jadwal sidang
+     * dan penguji dikelola di luar sistem; nilainya masuk lewat Nilai Semester mata kuliah TA/Skripsi.
+     */
+    public const SIDANG = 'sidang';
+
+    /** Jenis milik halaman Pengajuan KKM, PPL, Kompre & Pendaftaran Sidang (form sama: judul/topik, keterangan, berkas). */
+    public const JENIS_KEGIATAN = [self::KKM, self::PPL, self::KOMPRE, self::SIDANG];
 
     /** Jenis milik halaman Tugas Akhir & Wisuda. */
     public const JENIS = [self::TUGAS_AKHIR, self::PENDADARAN, self::WISUDA];
@@ -42,6 +67,10 @@ class PengajuanAkademik extends Model
         self::WISUDA => 'Wisuda',
         self::CUTI => 'Cuti',
         self::AKTIF_KEMBALI => 'Aktif Kembali',
+        self::KKM => 'KKM/PKL/KKN',
+        self::PPL => 'PPL',
+        self::KOMPRE => 'Ujian Komprehensif',
+        self::SIDANG => 'Pendaftaran Sidang',
     ];
 
     /** Menunggu keputusan admin. */

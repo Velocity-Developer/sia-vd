@@ -70,7 +70,7 @@ const keteranganKategori = computed(
             susulan: 'Hanya dipakai saat menerbitkan tagihan ujian susulan.',
             pendadaran: `Tidak ditagihkan: ${tempatInfo}; mahasiswa mengunggah bukti bayar di form pendaftaran pendadaran.`,
             wisuda: `Tidak ditagihkan: ${tempatInfo}; mahasiswa mengunggah bukti bayar di form pendaftaran wisuda.`,
-            cuti: `Tidak ditagihkan: ${tempatInfo}; mahasiswa mengunggah bukti bayar di form pengajuan cuti.`,
+            cuti: `Tidak ditagihkan: ${tempatInfo}; hanya ditampilkan di halaman pengajuan cuti.`,
         })[form.kategori as string] ?? '',
 );
 const keteranganHitung = computed(() => {

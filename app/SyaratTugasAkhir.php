@@ -57,7 +57,7 @@ class SyaratTugasAkhir
     }
 
     /**
-     * Syarat mendaftar wisuda (selain bukti bayar yang diunggah di form). Kali ini nilai TA/Skripsi juga harus ada.
+     * Syarat mendaftar wisuda (selain surat bebas pustaka dan surat keterangan lunas yang diunggah di form). Kali ini nilai TA/Skripsi juga harus ada.
      *
      * @return list<array{label: string, terpenuhi: bool, keterangan: ?string}>
      */
@@ -68,11 +68,27 @@ class SyaratTugasAkhir
 
         return [
             [
-                'label' => 'Lulus pendadaran (termasuk revisi yang sudah disahkan)',
+                'label' => Feature::aktif('pendadaran') ? 'Lulus pendadaran (termasuk revisi yang sudah disahkan)' : 'Nilai TA/Skripsi lulus',
                 'terpenuhi' => $tugasAkhir?->status === TugasAkhir::SELESAI,
                 'keterangan' => null,
             ],
             ...self::nilai($mahasiswa, true),
+            // Transkrip dan SKL hanya memakai nilai yang sudah divalidasi.
+            (function () use ($mahasiswa): array {
+                $belum = Krs::query()->where('mahasiswa_id', $mahasiswa->id)->whereNotNull('nilai')->whereNull('nilai_divalidasi_at')->count();
+
+                return [
+                    'label' => 'Semua nilai sudah divalidasi',
+                    'terpenuhi' => $belum === 0,
+                    'keterangan' => $belum > 0 ? "{$belum} nilai mata kuliah masih menunggu validasi admin/prodi." : null,
+                ];
+            })(),
+            // Naskah final = naskah TA yang diunggah di Pengajuan Judul & Upload TA (tidak diunggah ulang di form wisuda).
+            [
+                'label' => 'Naskah TA sudah diunggah',
+                'terpenuhi' => $tugasAkhir?->naskah !== null,
+                'keterangan' => $tugasAkhir?->naskah === null ? 'Unggah di menu Pengajuan Judul & Upload TA.' : null,
+            ],
             [
                 'label' => 'Ada periode wisuda yang dibuka dan kuotanya tersisa',
                 'terpenuhi' => $periode->isNotEmpty(),

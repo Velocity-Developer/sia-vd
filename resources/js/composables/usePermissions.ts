@@ -10,6 +10,8 @@ export function usePermissions() {
     const permissions = computed(() => page.props.auth?.permissions ?? []);
 
     const can = (permission?: string | null): boolean => !permission || permissions.value.includes(permission);
+    // Akun Prodi: data dibatasi ke prodinya; data global (Tahun Akademik, Ruang, Predikat) hanya bisa dilihat.
+    const prodi = computed(() => page.props.auth?.prodi ?? null);
 
-    return { permissions, can };
+    return { permissions, can, prodi };
 }

@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Feature;
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 
 class Krs extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     /**
      * Status mahasiswa yang boleh mengisi KRS.
@@ -18,11 +22,23 @@ class Krs extends Model
 
     protected $table = 'krs';
 
-    protected $fillable = ['mahasiswa_id', 'kelas_id', 'nilai', 'status'];
+    protected $fillable = ['mahasiswa_id', 'kelas_id', 'nilai', 'nilai_angka', 'nilai_divalidasi_at', 'nilai_divalidasi_oleh', 'status'];
 
     protected function casts(): array
     {
-        return [];
+        return ['nilai_angka' => 'float', 'nilai_divalidasi_at' => 'datetime'];
+    }
+
+    protected static function booted(): void
+    {
+        // Tanpa pendadaran, status TA mengikuti nilai mata kuliah TA/Skripsi (lihat TugasAkhir::sinkronDariNilai).
+        static::saved(function (self $krs): void {
+            if (! Feature::aktif('pendadaran') && ($krs->wasChanged('nilai') || ($krs->wasRecentlyCreated && $krs->nilai !== null))) {
+                if (MataKuliah::query()->whereKey(KelasKuliah::query()->whereKey($krs->kelas_id)->value('matkul_id'))->value('tugas_akhir')) {
+                    TugasAkhir::sinkronDariNilai($krs->mahasiswa_id);
+                }
+            }
+        });
     }
 
     public function mahasiswa(): BelongsTo
@@ -33,6 +49,27 @@ class Krs extends Model
     public function kelasKuliah(): BelongsTo
     {
         return $this->belongsTo(KelasKuliah::class, 'kelas_id');
+    }
+
+    /**
+     * Nilai sudah divalidasi admin (Validasi Nilai): terkunci untuk dosen dan admin sampai validasinya dibatalkan.
+     */
+    public function nilaiTervalidasi(): bool
+    {
+        return $this->nilai_divalidasi_at !== null;
+    }
+
+    public function validator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'nilai_divalidasi_oleh');
+    }
+
+    /**
+     * Angka per komponen nilai (Nilai Semester).
+     */
+    public function nilaiKomponen(): HasMany
+    {
+        return $this->hasMany(NilaiKomponen::class);
     }
 
     /**
@@ -97,5 +134,18 @@ class Krs extends Model
 
             $this->delete();
         });
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->whereHas('kelasKuliah')->whereHas('mahasiswa');
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return KelasKuliah::query()->whereKey($this->kelas_id)->exists() && MahasiswaProfile::query()->whereKey($this->mahasiswa_id)->exists();
     }
 }

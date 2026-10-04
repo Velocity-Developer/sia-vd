@@ -4,17 +4,33 @@ use App\Http\Controllers\Admin\AgamaController;
 use App\Http\Controllers\Admin\BadanHukumController;
 use App\Http\Controllers\Admin\BatasSksController;
 use App\Http\Controllers\Admin\BobotNilaiController;
+use App\Http\Controllers\Admin\CetakKrsController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DetailNilaiController;
 use App\Http\Controllers\Admin\FakultasController;
+use App\Http\Controllers\Admin\GelombangKompreController;
+use App\Http\Controllers\Admin\ImporDataController;
 use App\Http\Controllers\Admin\InfoKuliahController;
+use App\Http\Controllers\Admin\InformasiPmbController;
+use App\Http\Controllers\Admin\InputKrsController;
 use App\Http\Controllers\Admin\JenisBiayaController;
+use App\Http\Controllers\Admin\KetuaKelasController;
+use App\Http\Controllers\Admin\KhsController;
+use App\Http\Controllers\Admin\KomponenNilaiController;
 use App\Http\Controllers\Admin\KotaController;
+use App\Http\Controllers\Admin\KurikulumController;
+use App\Http\Controllers\Admin\LogAktivitasController;
+use App\Http\Controllers\Admin\MahasiswaCutiController as AdminMahasiswaCutiController;
 use App\Http\Controllers\Admin\MataKuliahController;
+use App\Http\Controllers\Admin\NilaiKkmController;
+use App\Http\Controllers\Admin\NilaiSemesterController;
 use App\Http\Controllers\Admin\PenasehatAkademikController;
 use App\Http\Controllers\Admin\PendaftarPmbController;
+use App\Http\Controllers\Admin\PendataanNilaiController;
 use App\Http\Controllers\Admin\PengajuanAkademikController as AdminPengajuanAkademikController;
 use App\Http\Controllers\Admin\PengajuanCutiController as AdminPengajuanCutiController;
 use App\Http\Controllers\Admin\PengaturanPmbController;
+use App\Http\Controllers\Admin\PenggunaController;
 use App\Http\Controllers\Admin\PerguruanTinggiController;
 use App\Http\Controllers\Admin\PeriodeWisudaController;
 use App\Http\Controllers\Admin\PindahKelasController as AdminPindahKelasController;
@@ -23,15 +39,21 @@ use App\Http\Controllers\Admin\PredikatController;
 use App\Http\Controllers\Admin\PresensiDosenController;
 use App\Http\Controllers\Admin\ProgramStudiController;
 use App\Http\Controllers\Admin\ProvinsiController;
+use App\Http\Controllers\Admin\RekapKrsController;
+use App\Http\Controllers\Admin\RekapPresensiMahasiswaController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\RuangController;
+use App\Http\Controllers\Admin\StatusKrsController;
+use App\Http\Controllers\Admin\SyaratUjianController;
 use App\Http\Controllers\Admin\TagihanController;
 use App\Http\Controllers\Admin\TagihanRemidiController;
 use App\Http\Controllers\Admin\TagihanSusulanController;
 use App\Http\Controllers\Admin\TahunAkademikController;
+use App\Http\Controllers\Admin\TranskripNilaiController;
 use App\Http\Controllers\Admin\UjianController as AdminUjianController;
 use App\Http\Controllers\Admin\UjianSusulanController as AdminUjianSusulanController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ValidasiNilaiController;
 use App\Http\Controllers\Admin\VerifikasiKrsController;
 use App\Http\Controllers\Admin\VerifikasiPresensiDosenController;
 use App\Http\Controllers\BerkasController;
@@ -39,6 +61,7 @@ use App\Http\Controllers\Dosen\BimbinganController;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
 use App\Http\Controllers\Dosen\MahasiswaKelasController;
 use App\Http\Controllers\Dosen\PendadaranController as DosenPendadaranController;
+use App\Http\Controllers\Dosen\PengajuanMahasiswaPaController as DosenPengajuanMahasiswaPaController;
 use App\Http\Controllers\Dosen\UjianController as DosenUjianController;
 use App\Http\Controllers\Kelas\BapController;
 use App\Http\Controllers\Kelas\JadwalController;
@@ -52,6 +75,7 @@ use App\Http\Controllers\Kelas\QuizPenilaianController;
 use App\Http\Controllers\Kelas\RemidiController;
 use App\Http\Controllers\Kelas\TugasController;
 use App\Http\Controllers\Kelas\UjianKelasController;
+use App\Http\Controllers\Mahasiswa\CetakKartuController;
 use App\Http\Controllers\Mahasiswa\ContentController as MahasiswaContentController;
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 use App\Http\Controllers\Mahasiswa\HasilStudiController;
@@ -59,6 +83,7 @@ use App\Http\Controllers\Mahasiswa\InfoBiayaKuliahController;
 use App\Http\Controllers\Mahasiswa\InfoKuliahController as MahasiswaInfoKuliahController;
 use App\Http\Controllers\Mahasiswa\KrsController;
 use App\Http\Controllers\Mahasiswa\PengajuanCutiController as MahasiswaPengajuanCutiController;
+use App\Http\Controllers\Mahasiswa\PengajuanKegiatanController as MahasiswaPengajuanKegiatanController;
 use App\Http\Controllers\Mahasiswa\PengumpulanTugasController;
 use App\Http\Controllers\Mahasiswa\PindahKelasController as MahasiswaPindahKelasController;
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
@@ -167,6 +192,7 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
     Route::get('surat-pendadaran/{pendadaran}', [PendadaranBerkasController::class, 'surat'])->name('berkas.surat-pendadaran');
     Route::get('naskah-revisi/{pendadaran}', [PendadaranBerkasController::class, 'naskahRevisi'])->name('berkas.naskah-revisi');
     Route::get('skl/{wisuda}', [PendadaranBerkasController::class, 'skl'])->name('berkas.skl');
+    Route::get('naskah-ta/{tugasAkhir}', [PendadaranBerkasController::class, 'naskahTa'])->name('berkas.naskah-ta');
     Route::get('ujian-soal/{ujian}/{index}', [BerkasController::class, 'soalUjian'])->whereNumber('index')->name('berkas.ujian-soal');
     Route::get('ujian-jawaban/{jawaban}/{index}', [BerkasController::class, 'jawabanUjian'])->whereNumber('index')->name('berkas.ujian-jawaban');
 });
@@ -199,6 +225,12 @@ Route::prefix('admin/users')->middleware(['auth', 'verified'])->group(function (
     Route::delete('mahasiswa/{user}/kunci-krs', [UserController::class, 'bukaKunciKrs'])
         ->middleware(['can:admin.users.mahasiswa', 'password.confirm'])
         ->name('admin.users.mahasiswa.buka-kunci-krs');
+});
+
+// Tools → Create User & Data Pengguna: pintu bersama ke kelola user per jenis (izin dicek per jenis di controller).
+Route::prefix('admin/pengguna')->middleware(['auth', 'verified', 'password.confirm'])->group(function (): void {
+    Route::get('/', [PenggunaController::class, 'index'])->name('admin.pengguna.index');
+    Route::get('buat', [PenggunaController::class, 'buat'])->name('admin.pengguna.buat');
 });
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use ($rutePresensi, $ruteUjianKelas, $ruteMenuKonten): void {
@@ -270,6 +302,18 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:admin.pengajuan-akademik')->group(function (): void {
         Route::get('pengajuan-akademik', [AdminPengajuanAkademikController::class, 'index'])->name('admin.pengajuan-akademik.index');
+        // Satu halaman per jenis di menu Pengajuan & Pendaftaran; alamat lama ?jenis=… dialihkan ke sini.
+        Route::get('persetujuan-tugas-akhir', [AdminPengajuanAkademikController::class, 'index'])->defaults('jenis', 'tugas_akhir')->name('admin.persetujuan-ta.index');
+        Route::get('pendaftaran-pendadaran', [AdminPengajuanAkademikController::class, 'index'])->defaults('jenis', 'pendadaran')->middleware('fitur:pendadaran')->name('admin.pendaftaran-pendadaran.index');
+        Route::get('persetujuan-kkm', [AdminPengajuanAkademikController::class, 'index'])->defaults('jenis', 'kkm')->name('admin.persetujuan-kkm.index');
+        Route::get('daftar-ppl', [AdminPengajuanAkademikController::class, 'index'])->defaults('jenis', 'ppl')->name('admin.daftar-ppl.index');
+        Route::get('ujian-komprehensif', [AdminPengajuanAkademikController::class, 'index'])->defaults('jenis', 'kompre')->name('admin.pengajuan-kompre.index');
+        Route::get('pendaftaran-sidang', [AdminPengajuanAkademikController::class, 'index'])->defaults('jenis', 'sidang')->middleware('fitur:!pendadaran')->name('admin.pendaftaran-sidang.index');
+        Route::get('daftar-wisuda', [AdminPengajuanAkademikController::class, 'index'])->defaults('jenis', 'wisuda')->name('admin.daftar-wisuda.index');
+        Route::get('gelombang-kompre', [GelombangKompreController::class, 'index'])->name('admin.gelombang-kompre.index');
+        Route::post('gelombang-kompre', [GelombangKompreController::class, 'store'])->name('admin.gelombang-kompre.store');
+        Route::put('gelombang-kompre/{gelombangKompre}', [GelombangKompreController::class, 'update'])->name('admin.gelombang-kompre.update');
+        Route::delete('gelombang-kompre/{gelombangKompre}', [GelombangKompreController::class, 'destroy'])->name('admin.gelombang-kompre.destroy');
         Route::post('pengajuan-akademik/{pengajuanAkademik}/setujui', [AdminPengajuanAkademikController::class, 'setujui'])->name('admin.pengajuan-akademik.setujui');
         Route::post('pengajuan-akademik/{pengajuanAkademik}/perbaikan', [AdminPengajuanAkademikController::class, 'perbaikan'])->name('admin.pengajuan-akademik.perbaikan');
         Route::post('pengajuan-akademik/{pengajuanAkademik}/tolak', [AdminPengajuanAkademikController::class, 'tolak'])->name('admin.pengajuan-akademik.tolak');
@@ -291,8 +335,34 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::post('verifikasi-krs/{krsSemester}/revisi', [VerifikasiKrsController::class, 'revisi'])->name('admin.verifikasi-krs.revisi');
     });
 
+    Route::middleware('can:admin.input-krs')->group(function (): void {
+        Route::get('input-krs', [InputKrsController::class, 'index'])->name('admin.input-krs.index');
+        Route::post('input-krs/{mahasiswa}/kelas/{kelasKuliah}', [InputKrsController::class, 'store'])->name('admin.input-krs.store');
+        Route::delete('input-krs/krs/{krs}', [InputKrsController::class, 'destroy'])->name('admin.input-krs.destroy');
+        Route::post('input-krs/{mahasiswa}/simpan', [InputKrsController::class, 'simpan'])->name('admin.input-krs.simpan');
+    });
+
+    Route::middleware('can:admin.status-krs')->group(function (): void {
+        Route::get('status-krs', [StatusKrsController::class, 'index'])->name('admin.status-krs.index');
+        Route::post('status-krs/{mahasiswa}/ya', [StatusKrsController::class, 'ya'])->name('admin.status-krs.ya');
+        Route::post('status-krs/{mahasiswa}/tidak', [StatusKrsController::class, 'tidak'])->name('admin.status-krs.tidak');
+    });
+
+    Route::middleware('can:admin.cetak-kst')->group(function (): void {
+        Route::get('cetak-kst', [CetakKrsController::class, 'kst'])->name('admin.cetak-kst.index');
+        Route::get('cetak-kst/{mahasiswa}', [CetakKrsController::class, 'cetakKst'])->name('admin.cetak-kst.cetak');
+    });
+
+    Route::middleware('can:admin.kartu-ujian')->group(function (): void {
+        Route::get('kartu-ujian', [CetakKrsController::class, 'kartuUjian'])->name('admin.kartu-ujian.index');
+        Route::get('kartu-ujian/{mahasiswa}', [CetakKrsController::class, 'cetakKartuUjian'])->name('admin.kartu-ujian.cetak');
+    });
+
+    Route::get('rekap-krs', [RekapKrsController::class, 'index'])->middleware('can:admin.rekap-krs')->name('admin.rekap-krs.index');
+
     Route::middleware('can:admin.pengajuan-cuti')->group(function (): void {
         Route::get('pengajuan-cuti', [AdminPengajuanCutiController::class, 'index'])->name('admin.pengajuan-cuti.index');
+        Route::get('mahasiswa-cuti', [AdminMahasiswaCutiController::class, 'index'])->name('admin.mahasiswa-cuti.index');
         Route::post('pengajuan-cuti/{pengajuanAkademik}/setujui', [AdminPengajuanCutiController::class, 'setujui'])->name('admin.pengajuan-cuti.setujui');
         Route::post('pengajuan-cuti/{pengajuanAkademik}/perbaikan', [AdminPengajuanCutiController::class, 'perbaikan'])->name('admin.pengajuan-cuti.perbaikan');
         Route::post('pengajuan-cuti/{pengajuanAkademik}/tolak', [AdminPengajuanCutiController::class, 'tolak'])->name('admin.pengajuan-cuti.tolak');
@@ -324,10 +394,92 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
         Route::resource('predikat', PredikatController::class)->except('show')->parameters(['predikat' => 'predikat'])->names('admin.predikat');
     });
 
+    Route::middleware('can:admin.komponen-nilai')->group(function (): void {
+        Route::get('komponen-nilai', [KomponenNilaiController::class, 'index'])->name('admin.komponen-nilai.index');
+        Route::put('komponen-nilai', [KomponenNilaiController::class, 'update'])->name('admin.komponen-nilai.update');
+    });
+
+    Route::middleware('can:admin.detail-nilai')->group(function (): void {
+        Route::get('detail-nilai', [DetailNilaiController::class, 'index'])->name('admin.detail-nilai.index');
+        Route::get('detail-nilai/{mahasiswa}', [DetailNilaiController::class, 'show'])->name('admin.detail-nilai.show');
+    });
+
+    Route::middleware('can:admin.pendataan-nilai')->group(function (): void {
+        Route::get('pendataan-nilai', [PendataanNilaiController::class, 'index'])->name('admin.pendataan-nilai.index');
+        Route::get('pendataan-nilai/{mahasiswa}', [PendataanNilaiController::class, 'show'])->name('admin.pendataan-nilai.show');
+    });
+
+    Route::middleware('can:admin.nilai-kkm')->group(function (): void {
+        Route::get('nilai-kkm', [NilaiKkmController::class, 'index'])->name('admin.nilai-kkm.index');
+        Route::put('nilai-kkm/{krs}', [NilaiKkmController::class, 'update'])->name('admin.nilai-kkm.update');
+        Route::post('nilai-kkm/{mahasiswa}/krs', [NilaiKkmController::class, 'tambahKrs'])->name('admin.nilai-kkm.tambah-krs');
+    });
+
+    Route::middleware('can:admin.validasi-nilai')->group(function (): void {
+        Route::get('validasi-nilai', [ValidasiNilaiController::class, 'index'])->name('admin.validasi-nilai.index');
+        Route::get('validasi-nilai/{mahasiswa}', [ValidasiNilaiController::class, 'show'])->name('admin.validasi-nilai.show');
+        Route::post('validasi-nilai/{mahasiswa}/validasi', [ValidasiNilaiController::class, 'validasi'])->name('admin.validasi-nilai.validasi');
+        Route::post('validasi-nilai/{mahasiswa}/batal', [ValidasiNilaiController::class, 'batalValidasi'])->name('admin.validasi-nilai.batal');
+    });
+
+    Route::middleware('can:admin.khs')->group(function (): void {
+        Route::get('khs', [KhsController::class, 'index'])->name('admin.khs.index');
+        Route::get('khs/{mahasiswa}', [KhsController::class, 'show'])->name('admin.khs.show');
+        Route::get('khs/{mahasiswa}/download', [KhsController::class, 'download'])->name('admin.khs.download');
+    });
+
+    Route::middleware('can:admin.transkrip-nilai')->group(function (): void {
+        Route::get('transkrip-nilai', [TranskripNilaiController::class, 'index'])->name('admin.transkrip-nilai.index');
+        Route::get('transkrip-nilai/{mahasiswa}', [TranskripNilaiController::class, 'show'])->name('admin.transkrip-nilai.show');
+        Route::get('transkrip-nilai/{mahasiswa}/download', [TranskripNilaiController::class, 'download'])->name('admin.transkrip-nilai.download');
+    });
+
+    Route::middleware('can:admin.nilai-semester')->group(function (): void {
+        Route::get('nilai-semester', [NilaiSemesterController::class, 'index'])->name('admin.nilai-semester.index');
+        Route::get('nilai-semester/{kelasKuliah}', [NilaiSemesterController::class, 'show'])->name('admin.nilai-semester.show');
+        Route::put('nilai-semester/{kelasKuliah}', [NilaiSemesterController::class, 'update'])->name('admin.nilai-semester.update');
+    });
+
     Route::middleware('can:admin.batas-sks')->group(function (): void {
         Route::get('batas-sks', [BatasSksController::class, 'index'])->name('admin.batas-sks.index');
         Route::put('batas-sks/{programStudi}', [BatasSksController::class, 'update'])->name('admin.batas-sks.update');
         Route::delete('batas-sks/{programStudi}', [BatasSksController::class, 'destroy'])->name('admin.batas-sks.destroy');
+    });
+
+    // Izin diperiksa per jenis data di controller (Data Mahasiswa, Data Dosen, Mata Kuliah).
+    Route::get('impor/{jenis}', [ImporDataController::class, 'index'])->name('admin.impor.index');
+    Route::get('impor/{jenis}/template', [ImporDataController::class, 'template'])->name('admin.impor.template');
+    Route::post('impor/{jenis}', [ImporDataController::class, 'store'])->middleware('throttle:10,1')->name('admin.impor.store');
+
+    Route::get('log-aktivitas', [LogAktivitasController::class, 'index'])->middleware('can:admin.log-aktivitas')->name('admin.log-aktivitas.index');
+
+    Route::middleware('can:admin.informasi-pmb')->group(function (): void {
+        Route::get('informasi-pmb', [InformasiPmbController::class, 'edit'])->name('admin.informasi-pmb.edit');
+        Route::put('informasi-pmb', [InformasiPmbController::class, 'update'])->name('admin.informasi-pmb.update');
+    });
+
+    Route::middleware('can:admin.rekap-presensi')->group(function (): void {
+        Route::get('rekap-presensi-mahasiswa', [RekapPresensiMahasiswaController::class, 'index'])->name('admin.rekap-presensi.index');
+        Route::get('rekap-presensi-mahasiswa/unduh', [RekapPresensiMahasiswaController::class, 'unduh'])->name('admin.rekap-presensi.unduh');
+    });
+
+    Route::middleware('can:admin.ketua-kelas')->group(function (): void {
+        Route::get('ketua-kelas', [KetuaKelasController::class, 'index'])->name('admin.ketua-kelas.index');
+        Route::put('ketua-kelas/{kelasKuliah}', [KetuaKelasController::class, 'update'])->name('admin.ketua-kelas.update');
+    });
+
+    Route::middleware('can:admin.kurikulum')->group(function (): void {
+        Route::resource('kurikulum', KurikulumController::class)->parameters(['kurikulum' => 'kurikulum'])->names('admin.kurikulum');
+        Route::post('kurikulum/{kurikulum}/mata-kuliah', [KurikulumController::class, 'tambahMataKuliah'])->name('admin.kurikulum.mata-kuliah.store');
+        Route::put('kurikulum/{kurikulum}/mata-kuliah/{mataKuliah}', [KurikulumController::class, 'ubahMataKuliah'])->name('admin.kurikulum.mata-kuliah.update');
+        Route::delete('kurikulum/{kurikulum}/mata-kuliah/{mataKuliah}', [KurikulumController::class, 'hapusMataKuliah'])->name('admin.kurikulum.mata-kuliah.destroy');
+    });
+
+    Route::middleware('can:admin.syarat-ujian')->group(function (): void {
+        Route::get('syarat-ujian', [SyaratUjianController::class, 'index'])->name('admin.syarat-ujian.index');
+        Route::put('syarat-ujian/umum', [SyaratUjianController::class, 'updateUmum'])->name('admin.syarat-ujian.update-umum');
+        Route::put('syarat-ujian/{programStudi}', [SyaratUjianController::class, 'update'])->name('admin.syarat-ujian.update');
+        Route::delete('syarat-ujian/{programStudi}', [SyaratUjianController::class, 'destroy'])->name('admin.syarat-ujian.destroy');
     });
 
     Route::middleware('can:admin.presensi-dosen')->group(function (): void {
@@ -401,6 +553,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () use 
     Route::middleware('can:admin.kelas-kuliah')->group(function (): void {
         Route::resource('kelas-kuliah', KelasKuliahController::class)->parameters(['kelas_kuliah' => 'kelasKuliah'])->names('admin.kelas-kuliah');
         Route::put('kelas-kuliah/{kelasKuliah}/krs/{krs}/nilai', [KelasKuliahController::class, 'updateGrade'])->name('admin.kelas-kuliah.krs.nilai');
+        Route::put('kelas-kuliah/{kelasKuliah}/nilai-komponen', [KelasKuliahController::class, 'updateNilaiKomponen'])->name('admin.kelas-kuliah.nilai-komponen');
         Route::post('kelas-kuliah/{kelasKuliah}/finalisasi-nilai', [KelasKuliahController::class, 'finalisasiNilai'])->name('admin.kelas-kuliah.finalisasi-nilai');
         Route::post('kelas-kuliah/{kelasKuliah}/buka-kunci-nilai', [KelasKuliahController::class, 'bukaKunciNilai'])->name('admin.kelas-kuliah.buka-kunci-nilai');
         Route::post('kelas-kuliah/{kelasKuliah}/remidi/kunci', [RemidiController::class, 'kunci'])->name('admin.kelas-kuliah.remidi.kunci');
@@ -459,8 +612,11 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
 
     Route::middleware('can:dosen.kelas-kuliah')->group(function (): void {
         Route::get('kelas-kuliah', [KelasKuliahController::class, 'index'])->name('dosen.kelas-kuliah.index');
+        // Menu Input Nilai: daftar kelas yang sama, tombolnya langsung membuka bagian Nilai Mahasiswa.
+        Route::get('input-nilai', [KelasKuliahController::class, 'index'])->defaults('mode', 'nilai')->name('dosen.input-nilai.index');
         Route::get('kelas-kuliah/{kelasKuliah}', [KelasKuliahController::class, 'show'])->name('dosen.kelas-kuliah.show');
         Route::put('kelas-kuliah/{kelasKuliah}/krs/{krs}/nilai', [KelasKuliahController::class, 'updateGrade'])->name('dosen.kelas-kuliah.krs.nilai');
+        Route::put('kelas-kuliah/{kelasKuliah}/nilai-komponen', [KelasKuliahController::class, 'updateNilaiKomponen'])->name('dosen.kelas-kuliah.nilai-komponen');
         Route::post('kelas-kuliah/{kelasKuliah}/finalisasi-nilai', [KelasKuliahController::class, 'finalisasiNilai'])->name('dosen.kelas-kuliah.finalisasi-nilai');
         Route::post('kelas-kuliah/{kelasKuliah}/remidi/kunci', [RemidiController::class, 'kunci'])->name('dosen.kelas-kuliah.remidi.kunci');
         Route::post('kelas-kuliah/{kelasKuliah}/remidi/finalisasi', [RemidiController::class, 'finalisasi'])->name('dosen.kelas-kuliah.remidi.finalisasi');
@@ -498,7 +654,9 @@ Route::prefix('dosen')->middleware(['auth', 'verified'])->group(function () use 
         $ruteUjianKelas('dosen');
     });
 
-    Route::middleware('can:dosen.bimbingan')->group(function (): void {
+    Route::get('pengajuan-pa', [DosenPengajuanMahasiswaPaController::class, 'index'])->middleware('can:dosen.pengajuan-pa')->name('dosen.pengajuan-pa.index');
+
+    Route::middleware(['fitur:pendadaran', 'can:dosen.bimbingan'])->group(function (): void {
         Route::get('bimbingan', [BimbinganController::class, 'index'])->name('dosen.bimbingan.index');
         Route::post('bimbingan/pendadaran/{pengajuanAkademik}/setujui', [BimbinganController::class, 'setujui'])->name('dosen.bimbingan.pendadaran.setujui');
         Route::post('bimbingan/pendadaran/{pengajuanAkademik}/perbaikan', [BimbinganController::class, 'perbaikan'])->name('dosen.bimbingan.pendadaran.perbaikan');
@@ -540,6 +698,8 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
     Route::middleware(['can:mahasiswa.krs', 'tagihan.lunas'])->group(function (): void {
         Route::get('krs', [KrsController::class, 'index'])->name('mahasiswa.krs');
         Route::get('krs/download', [KrsController::class, 'download'])->name('mahasiswa.krs.download');
+        Route::get('krs/kst', [KrsController::class, 'kst'])->name('mahasiswa.krs.kst');
+        Route::get('cetak-kst', [CetakKartuController::class, 'kst'])->name('mahasiswa.cetak-kst');
         Route::post('krs/simpan', [KrsController::class, 'simpan'])->name('mahasiswa.krs.simpan');
         Route::post('krs/{kelasKuliah}', [KrsController::class, 'store'])->name('mahasiswa.krs.store');
         Route::delete('krs/{krs}', [KrsController::class, 'destroy'])->name('mahasiswa.krs.destroy');
@@ -566,6 +726,7 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
     Route::middleware('can:mahasiswa.ujian')->group(function (): void {
         Route::get('ujian', [MahasiswaUjianController::class, 'index'])->name('mahasiswa.ujian');
         Route::get('ujian/kartu', [MahasiswaUjianController::class, 'kartu'])->name('mahasiswa.ujian.kartu');
+        Route::get('cetak-kartu-ujian', [CetakKartuController::class, 'kartuUjian'])->name('mahasiswa.cetak-kartu-ujian');
         Route::middleware('fitur:ujian_susulan')->group(function (): void {
             Route::post('ujian/{ujian}/susulan', [MahasiswaUjianSusulanController::class, 'ajukan'])->middleware('throttle:10,1')->name('mahasiswa.ujian.susulan');
             Route::delete('ujian-susulan/{pengajuanSusulan}', [MahasiswaUjianSusulanController::class, 'batalkan'])->name('mahasiswa.ujian-susulan.batalkan');
@@ -579,12 +740,23 @@ Route::prefix('mahasiswa')->middleware(['auth', 'verified'])->group(function () 
         Route::post('pengajuan-cuti', [MahasiswaPengajuanCutiController::class, 'ajukan'])->middleware('throttle:10,1')->name('mahasiswa.pengajuan-cuti.ajukan');
         Route::post('pengajuan-cuti/aktif-kembali', [MahasiswaPengajuanCutiController::class, 'ajukanAktifKembali'])->middleware('throttle:10,1')->name('mahasiswa.pengajuan-cuti.aktif-kembali');
     });
+    Route::middleware('can:mahasiswa.pengajuan-kegiatan')->group(function (): void {
+        Route::get('pengajuan-kegiatan', [MahasiswaPengajuanKegiatanController::class, 'index'])->name('mahasiswa.pengajuan-kegiatan');
+        Route::get('pengajuan-kkm', [MahasiswaPengajuanKegiatanController::class, 'index'])->defaults('jenis', 'kkm')->name('mahasiswa.pengajuan-kkm');
+        Route::get('pengajuan-ppl', [MahasiswaPengajuanKegiatanController::class, 'index'])->defaults('jenis', 'ppl')->name('mahasiswa.pengajuan-ppl');
+        Route::get('pengajuan-kompre', [MahasiswaPengajuanKegiatanController::class, 'index'])->defaults('jenis', 'kompre')->name('mahasiswa.pengajuan-kompre');
+        Route::get('pendaftaran-sidang', [MahasiswaPengajuanKegiatanController::class, 'index'])->defaults('jenis', 'sidang')->middleware('fitur:!pendadaran')->name('mahasiswa.pendaftaran-sidang');
+        Route::post('pengajuan-kegiatan/{jenis}', [MahasiswaPengajuanKegiatanController::class, 'ajukan'])->whereIn('jenis', ['kkm', 'ppl', 'kompre', 'sidang'])
+            ->middleware('throttle:10,1')->name('mahasiswa.pengajuan-kegiatan.ajukan');
+    });
     Route::middleware('can:mahasiswa.tugas-akhir')->group(function (): void {
         Route::get('tugas-akhir', [MahasiswaTugasAkhirController::class, 'index'])->name('mahasiswa.tugas-akhir');
+        Route::get('wisuda', [MahasiswaTugasAkhirController::class, 'wisuda'])->name('mahasiswa.wisuda');
+        Route::post('tugas-akhir/naskah', [MahasiswaTugasAkhirController::class, 'unggahNaskah'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.naskah');
         Route::post('tugas-akhir/pengajuan-ta', [MahasiswaTugasAkhirController::class, 'ajukanTa'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-ta');
-        Route::post('tugas-akhir/pendadaran', [MahasiswaTugasAkhirController::class, 'ajukanPendadaran'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-pendadaran');
+        Route::post('tugas-akhir/pendadaran', [MahasiswaTugasAkhirController::class, 'ajukanPendadaran'])->middleware(['fitur:pendadaran', 'throttle:10,1'])->name('mahasiswa.tugas-akhir.ajukan-pendadaran');
         Route::post('tugas-akhir/wisuda', [MahasiswaTugasAkhirController::class, 'ajukanWisuda'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.ajukan-wisuda');
-        Route::post('tugas-akhir/revisi', [MahasiswaTugasAkhirController::class, 'unggahRevisi'])->middleware('throttle:10,1')->name('mahasiswa.tugas-akhir.revisi');
+        Route::post('tugas-akhir/revisi', [MahasiswaTugasAkhirController::class, 'unggahRevisi'])->middleware(['fitur:pendadaran', 'throttle:10,1'])->name('mahasiswa.tugas-akhir.revisi');
     });
 
     Route::middleware(['fitur:pindah_kelas', 'can:mahasiswa.pindah-kelas'])->group(function (): void {

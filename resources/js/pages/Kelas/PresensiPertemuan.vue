@@ -264,7 +264,7 @@ const infoMulai = computed(() => {
     <Head :title="`Pertemuan ${props.pertemuan.pertemuan_ke} · ${props.kelasKuliah.kode_kelas}`" />
     <AppLayout
         :breadcrumbs="[
-            { title: 'Presensi', href: rute('presensi.index') },
+            { title: props.peran === 'admin' ? 'Presensi Mahasiswa' : 'Presensi', href: rute('presensi.index') },
             { title: props.kelasKuliah.kode_kelas, href: rute('presensi.kelas', props.kelasKuliah.id) },
             { title: `Pertemuan ${props.pertemuan.pertemuan_ke}`, href: '#' },
         ]"

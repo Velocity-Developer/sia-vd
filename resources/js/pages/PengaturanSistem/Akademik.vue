@@ -21,18 +21,15 @@ type SkalaNilai = {
 
 type Presensi = {
     jumlah_pertemuan: number;
-    min_kehadiran_ujian: number;
     toleransi_terlambat_menit: number;
     durasi_presensi_mandiri_menit: number;
     batas_pengajuan_izin_hari: number;
-    syarat_ujian_aktif: boolean;
 };
 
 const props = defineProps<{
     maksSksTanpaIps: number;
     kunciKrsAktif: boolean;
     verifikasiKrsAktif: boolean;
-    hurufMaksRemidi: string | null;
     susulan: { batas_pengajuan_susulan_hari: number; batas_bayar_susulan_hari: number };
     minSksPendadaran: number;
     minSksAmbilTa: number;
@@ -74,12 +71,6 @@ const simpanTugasAkhir = () => tugasAkhirForm.put(route('admin.pengaturan-akadem
 const cutiForm = useForm({ maks_cuti: props.maksCuti });
 const simpanCuti = () => cutiForm.put(route('admin.pengaturan-akademik.cuti'), { preserveScroll: true });
 
-const remidiForm = useForm({ huruf_maks_remidi: props.hurufMaksRemidi ?? '' });
-const simpanRemidi = () =>
-    remidiForm
-        .transform((data) => ({ huruf_maks_remidi: data.huruf_maks_remidi || null }))
-        .put(route('admin.pengaturan-akademik.remidi'), { preserveScroll: true });
-
 const presensiForm = useForm({ ...props.presensi });
 const simpanPresensi = () => presensiForm.put(route('admin.pengaturan-akademik.presensi'), { preserveScroll: true });
 
@@ -94,7 +85,6 @@ const daftarBagian = [
     { id: 'krs', judul: 'KRS & SKS' },
     ...(fiturPindahKelas ? [{ id: 'pindah-kelas', judul: 'Pindah Kelas' }] : []),
     { id: 'nilai', judul: 'Nilai' },
-    { id: 'remidi', judul: 'Remidi' },
     ...(susulanAktif ? [{ id: 'susulan', judul: 'Ujian Susulan' }] : []),
     { id: 'tugas-akhir', judul: 'Tugas Akhir' },
     { id: 'cuti', judul: 'Cuti' },
@@ -342,28 +332,6 @@ const saveNilai = () =>
             </form>
         </section>
 
-        <section id="remidi" class="flex scroll-mt-4 flex-col gap-4">
-            <h2 class="teks-bantu font-semibold uppercase tracking-[0.06em]">Remidi</h2>
-            <form class="kartu p-6" @submit.prevent="simpanRemidi">
-                <h3 class="judul-bagian">Huruf Akhir Setelah Remidi</h3>
-                <p class="teks-bantu mt-1">
-                    Setelah ujian remidi selesai, dosen bisa mengubah huruf akhir peserta remidi yang lunas sampai batas input nilai remidi. Batasi
-                    huruf tertinggi yang boleh diberikan, atau biarkan bebas.
-                </p>
-                <div class="mt-4 grid max-w-xs gap-2">
-                    <Label for="huruf_maks_remidi" class="label-isian">Huruf maksimal</Label>
-                    <select id="huruf_maks_remidi" v-model="remidiForm.huruf_maks_remidi" class="isian isian-pilih">
-                        <option value="">Bebas</option>
-                        <option v-for="row in props.skalaNilai" :key="row.huruf" :value="row.huruf">{{ row.huruf }}</option>
-                    </select>
-                    <InputError :message="remidiForm.errors.huruf_maks_remidi" />
-                </div>
-                <div class="mt-6 flex justify-end gap-2">
-                    <Button type="submit" :disabled="remidiForm.processing"> Simpan Pengaturan Remidi </Button>
-                </div>
-            </form>
-        </section>
-
         <section v-if="susulanAktif" id="susulan" class="flex scroll-mt-4 flex-col gap-4">
             <h2 class="teks-bantu font-semibold uppercase tracking-[0.06em]">Ujian Susulan</h2>
             <form class="kartu p-6" @submit.prevent="simpanSusulan">
@@ -444,8 +412,8 @@ const saveNilai = () =>
             <form class="kartu p-6" @submit.prevent="simpanPresensi">
                 <h3 class="judul-bagian">Presensi</h3>
                 <p class="teks-bantu mt-1">
-                    Kehadiran dihitung dari pertemuan kuliah yang sudah selesai (UTS dan UAS tidak dihitung). Izin dan sakit dihitung tidak hadir;
-                    terlambat dihitung hadir.
+                    Kehadiran dihitung dari pertemuan kuliah yang sudah selesai (UTS dan UAS tidak dihitung); terlambat dihitung hadir. Syarat
+                    kehadiran ujian dan remedial diatur di menu Akademik → Konfigurasi → Syarat Ujian &amp; Remedial.
                 </p>
 
                 <div class="mt-4 grid content-start items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -454,12 +422,6 @@ const saveNilai = () =>
                         <Input id="jumlah_pertemuan" v-model="presensiForm.jumlah_pertemuan" type="number" min="1" max="32" />
                         <p class="teks-bantu">Nilai awal untuk kelas baru, bisa diubah per kelas. Kelas lama tidak berubah.</p>
                         <InputError :message="presensiForm.errors.jumlah_pertemuan" />
-                    </div>
-                    <div class="grid content-start gap-2">
-                        <Label for="min_kehadiran_ujian" class="label-isian">Minimal kehadiran ujian (%)</Label>
-                        <Input id="min_kehadiran_ujian" v-model="presensiForm.min_kehadiran_ujian" type="number" min="0" max="100" />
-                        <p class="teks-bantu">Mahasiswa di bawah batas ini ditandai di rekap presensi.</p>
-                        <InputError :message="presensiForm.errors.min_kehadiran_ujian" />
                     </div>
                     <div class="grid content-start gap-2">
                         <Label for="toleransi_terlambat_menit" class="label-isian">Toleransi terlambat (menit)</Label>
@@ -486,15 +448,6 @@ const saveNilai = () =>
                         <InputError :message="presensiForm.errors.batas_pengajuan_izin_hari" />
                     </div>
                 </div>
-
-                <Label for="syarat_ujian_aktif" class="label-isian mt-4 flex w-fit items-start gap-2.5 font-normal">
-                    <Checkbox id="syarat_ujian_aktif" v-model="presensiForm.syarat_ujian_aktif" class="mt-0.5" />
-                    <span>
-                        Terapkan syarat kehadiran ujian: mahasiswa di bawah batas minimal ditandai <strong>tidak memenuhi syarat</strong> UTS/UAS di
-                        daftar peserta ujian dan halaman presensinya, tidak bisa mengerjakan ujian online, dan
-                        <strong>tidak bisa mencetak kartu ujian</strong> jenis itu, kecuali mendapat dispensasi.
-                    </span>
-                </Label>
 
                 <div class="mt-6 flex justify-end gap-2">
                     <Button type="submit" :disabled="presensiForm.processing"> Simpan Pengaturan Presensi </Button>

@@ -43,7 +43,7 @@ function nilaiMatkulBiasa(MahasiswaProfile $mahasiswa, TahunAkademik $tahun, int
     $matkul = MataKuliah::create(['kode_matkul' => "MK{$suffix}", 'nama_matkul' => "Matkul {$suffix}", 'sks' => $sks, 'semester' => 1, 'jenis' => 'Wajib', 'prodi_id' => $mahasiswa->prodi_id]);
     $kelas = KelasKuliah::create(['kode_kelas' => "K{$suffix}", 'tahun_akademik_id' => $tahun->id, 'kapasitas' => 30, 'dosen_id' => User::factory()->dosen()->create()->dosenProfile->id, 'matkul_id' => $matkul->id]);
 
-    return Krs::create(['mahasiswa_id' => $mahasiswa->id, 'kelas_id' => $kelas->id, 'status' => 'Aktif', 'nilai' => $nilai]);
+    return Krs::create(['mahasiswa_id' => $mahasiswa->id, 'kelas_id' => $kelas->id, 'status' => 'Aktif', 'nilai' => $nilai, 'nilai_divalidasi_at' => now()]);
 }
 
 /**

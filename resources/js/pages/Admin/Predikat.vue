@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import { Button } from '@/components/ui/button';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from 'lucide-vue-next';
@@ -11,6 +12,7 @@ const page = usePage<{ flash: { success?: string; error?: string } }>();
 type Item = { id: number; nama: string; bobot_minimal: number; bobot_maksimal: number };
 
 const props = defineProps<{ predikat: Item[] }>();
+const { prodi } = usePermissions();
 
 const angka = (nilai: number) => Number(nilai).toFixed(2);
 
@@ -45,7 +47,7 @@ const confirmDelete = () => {
                             Predikat kelulusan menurut rentang IPK. Predikat ditetapkan saat SKL terbit; SKL yang sudah terbit tidak berubah.
                         </p>
                     </div>
-                    <Button as-child><Link :href="route('admin.predikat.create')">Tambah Predikat</Link></Button>
+                    <Button v-if="!prodi" as-child><Link :href="route('admin.predikat.create')">Tambah Predikat</Link></Button>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">
@@ -75,13 +77,14 @@ const confirmDelete = () => {
                                     <td class="tabular-nums">{{ angka(item.bobot_maksimal) }}</td>
                                     <td class="kolom-aksi">
                                         <div class="aksi-tabel">
-                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]"
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]" v-if="!prodi"
                                                 ><Link :href="route('admin.predikat.edit', item.id)" title="Edit" aria-label="Edit"><Pencil /></Link
                                             ></Button>
                                             <Button
                                                 variant="outline"
                                                 size="icon-sm"
                                                 class="text-[#dd5b00]"
+                                                v-if="!prodi"
                                                 title="Hapus"
                                                 aria-label="Hapus"
                                                 @click="remove(item)"

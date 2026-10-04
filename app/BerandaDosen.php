@@ -117,7 +117,7 @@ class BerandaDosen
 
                 return [
                     'teks' => ($k->mataKuliah?->nama_matkul ?? 'Kelas').' · '.$k->kode_kelas.': batas input nilai '
-                        .$k->batasInputNilai()->translatedFormat('d F Y').($sisa === 0 ? ' (hari ini)' : " ({$sisa} hari lagi)").'. Isi nilai lalu finalisasi.',
+                        .$k->batasInputNilai()->translatedFormat('d F Y').($sisa === 0 ? ' (hari ini)' : " ({$sisa} hari lagi)").'. Isi nilai lalu kirim ke validasi.',
                     'penting' => $sisa <= 3,
                 ];
             })->values()->all();

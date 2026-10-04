@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Feature;
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,14 +14,14 @@ use Illuminate\Validation\ValidationException;
 
 class KelasKuliah extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     protected $table = 'kelas_kuliah';
 
     /** @var array<string, Ujian|null> */
     private array $ujianTerbitCache = [];
 
-    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai', 'remidi_dikunci_at', 'remidi_dikunci_oleh', 'remidi_final_at'];
+    protected $fillable = ['kode_kelas', 'tahun_akademik_id', 'kapasitas', 'jumlah_pertemuan', 'dosen_id', 'ketua_kelas_id', 'matkul_id', 'nilai_final_at', 'nilai_final_oleh', 'nilai_dibuka_sampai', 'remidi_dikunci_at', 'remidi_dikunci_oleh', 'remidi_final_at'];
 
     /**
      * Kelas baru tanpa jumlah pertemuan memakai bawaan di Pengaturan Akademik.
@@ -156,6 +158,11 @@ class KelasKuliah extends Model
         return $this->belongsTo(DosenProfile::class, 'dosen_id');
     }
 
+    public function ketuaKelas(): BelongsTo
+    {
+        return $this->belongsTo(MahasiswaProfile::class, 'ketua_kelas_id');
+    }
+
     public function mataKuliah(): BelongsTo
     {
         return $this->belongsTo(MataKuliah::class, 'matkul_id');
@@ -275,5 +282,18 @@ class KelasKuliah extends Model
     public function ujians(): HasMany
     {
         return $this->hasMany(Ujian::class, 'kelas_id');
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->whereHas('mataKuliah');
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return MataKuliah::query()->whereKey($this->matkul_id)->exists();
     }
 }

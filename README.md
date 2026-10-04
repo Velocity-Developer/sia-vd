@@ -277,7 +277,7 @@ pertama masuk pengguna diminta memverifikasi email: pastikan SMTP (A1) sudah ben
 | # | Langkah | Oleh | Menu | Rujukan |
 |---|---|---|---|---|
 | C1 | Mahasiswa mengambil mata kuliah **TA/Skripsi** di KRS (minimal SKS lulus sesuai Pengaturan Akademik) dan mengambilnya lagi tiap semester sampai dinilai. | Mahasiswa | KRS | 14.7 |
-| C2 | **Pengajuan TA/Skripsi**; admin mengesahkan judul dan menetapkan pembimbing (maks 2). | Mahasiswa, admin | Tugas Akhir & Wisuda; Administrasi → TA & Wisuda | 14.2 |
+| C2 | **Pengajuan TA/Skripsi**; admin mengesahkan judul dan menetapkan pembimbing (maks 2). | Mahasiswa, admin | Pengajuan & Pendaftaran → Tugas Akhir/Skripsi | 14.2 |
 | C3 | **Pendaftaran pendadaran** (syarat SKS, tanpa E, semua nilai lengkap, bukti bayar) → disetujui salah satu pembimbing → admin menjadwalkan dengan 3 penguji dan surat PDF. | Mahasiswa, dosen, admin | Bimbingan TA; TA & Wisuda | 14.3 |
 | C4 | Tiga penguji menilai 0–100; ketua menetapkan **lulus / lulus revisi / tidak lulus**. Huruf lulus otomatis masuk ke KRS mata kuliah TA. | Dosen penguji | Bimbingan TA | 14.4 |
 | C5 | Admin membuka **Periode Wisuda**; mahasiswa mendaftar (data ijazah, toga, foto, bukti bayar); admin menyetujui → **Generate SKL** → status mahasiswa menjadi **Lulus**. | Admin, mahasiswa | Administrasi → Periode Wisuda | 14.5 |

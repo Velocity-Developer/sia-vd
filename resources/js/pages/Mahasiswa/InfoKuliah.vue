@@ -22,14 +22,14 @@ const formatDateTime = (value: string | null | undefined): string => {
 </script>
 
 <template>
-    <Head title="Info Kuliah" />
-    <AppLayout :breadcrumbs="[{ title: 'Info Kuliah', href: route('mahasiswa.info-kuliah') }]">
+    <Head title="Informasi & Pengumuman" />
+    <AppLayout :breadcrumbs="[{ title: 'Informasi & Pengumuman', href: route('mahasiswa.info-kuliah') }]">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Info Kuliah</h1>
-                        <p class="deskripsi-halaman">Informasi dan berkas perkuliahan.</p>
+                        <h1 class="judul-halaman">Informasi & Pengumuman</h1>
+                        <p class="deskripsi-halaman">Informasi, pengumuman, dan berkas perkuliahan.</p>
                     </div>
                 </div>
                 <div class="tabel-wadah">
@@ -59,7 +59,7 @@ const formatDateTime = (value: string | null | undefined): string => {
                                     <td>{{ formatDateTime(item.created_at) ?? '-' }}</td>
                                 </tr>
                                 <tr v-if="!props.infoKuliahs.data.length" class="baris-kosong">
-                                    <td colspan="4" class="tabel-kosong">Belum ada info kuliah.</td>
+                                    <td colspan="4" class="tabel-kosong">Belum ada informasi & pengumuman.</td>
                                 </tr>
                             </tbody>
                         </table>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Jadwal extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     protected $table = 'jadwals';
 
@@ -78,5 +79,18 @@ class Jadwal extends Model
     {
         return $this->kelasKuliah?->kode_kelas.' ('.$this->kelasKuliah?->mataKuliah?->nama_matkul.') pada '
             .$this->hari.', '.substr($this->jam_mulai, 0, 5).'–'.substr($this->jam_akhir, 0, 5);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->whereHas('kelasKuliah');
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return KelasKuliah::query()->whereKey($this->kelas_id)->exists();
     }
 }

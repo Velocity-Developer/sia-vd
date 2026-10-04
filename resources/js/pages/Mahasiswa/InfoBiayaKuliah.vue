@@ -259,9 +259,11 @@ const statusTagihan = (tagihan: Tagihan | null) => STATUS_TAGIHAN_REMIDI[tagihan
                     <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
                         Informasi saja, tidak ditagihkan di sini. Bayar sesuai nominal, lalu unggah bukti bayarnya di form pendaftaran pendadaran atau
                         wisuda (menu
-                        <Link :href="route('mahasiswa.tugas-akhir')" class="font-medium text-[#0075de] hover:underline">Tugas Akhir & Wisuda</Link>)
-                        atau form
-                        <Link :href="route('mahasiswa.pengajuan-cuti')" class="font-medium text-[#0075de] hover:underline">Pengajuan Cuti</Link>.
+                        <Link :href="route('mahasiswa.tugas-akhir')" class="font-medium text-[#0075de] hover:underline"
+                            >Pengajuan Judul & Upload TA</Link
+                        >
+                        dan <Link :href="route('mahasiswa.wisuda')" class="font-medium text-[#0075de] hover:underline">Pengajuan Wisuda</Link>) atau
+                        form <Link :href="route('mahasiswa.pengajuan-cuti')" class="font-medium text-[#0075de] hover:underline">Pengajuan Cuti</Link>.
                     </p>
                     <div class="mt-4 grid gap-3 sm:grid-cols-3">
                         <div v-for="b in biayaInfo" :key="b.kunci" class="rounded-lg border border-[#e6e6e6] p-4 dark:border-border">

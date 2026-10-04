@@ -11,6 +11,7 @@ import {
     ArrowLeftRight,
     Award,
     BadgeCheck,
+    BookCopy,
     BookMarked,
     BookOpen,
     BookOpenCheck,
@@ -18,53 +19,90 @@ import {
     Building2,
     CalendarDays,
     CalendarRange,
+    ChartColumn,
     ClipboardCheck,
     ClipboardList,
+    ClipboardPen,
+    Contact,
+    Crown,
     Database,
     DoorOpen,
+    FileCheck2,
+    FilePen,
+    FileSearch,
+    FileSpreadsheet,
+    FileStack,
     FileText,
+    FileUp,
     Gauge,
     GraduationCap,
     HandHeart,
+    History,
+    IdCard,
     Inbox,
     Landmark,
     LayoutGrid,
     Library,
+    ListChecks,
     ListTree,
     MapIcon,
     MapPin,
+    Megaphone,
     NotebookPen,
+    NotebookTabs,
     PauseCircle,
+    Percent,
+    Presentation,
+    Printer,
     Receipt,
     Scale,
+    ScrollText,
     Settings2,
     ShieldCheck,
     SlidersHorizontal,
     Table2,
+    Tent,
+    ToggleRight,
     UserCheck,
+    UserMinus,
     UserPlus,
     UserRoundCheck,
     UserRoundCog,
     Users,
     Wallet,
+    Wrench,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from './AppLogo.vue';
 
 const { can } = usePermissions();
 const fitur = useFitur();
-const tampil = (item: MenuItem): boolean => can(item.permission) && (!item.fitur || fitur.aktif(item.fitur));
+const tampil = (item: MenuItem): boolean =>
+    can(item.permission) &&
+    (!item.izinSalahSatu || item.izinSalahSatu.some((izin) => can(izin))) &&
+    (!item.fitur || fitur.aktif(item.fitur)) &&
+    (!item.tanpaFitur || !fitur.aktif(item.tanpaFitur));
 
 // URL dibentuk setelah menu difilter izin: daftar route yang dikirim ke browser hanya berisi
 // route milik peran pengguna (lihat config/ziggy.php), jadi route('admin…') tidak boleh dipanggil
 // untuk pengguna yang tidak punya izin itu.
 // `fitur`: menu hanya tampil selama fitur per klien itu aktif (config/client.php), selain izinnya.
-type MenuItem = Omit<NavItem, 'href'> & { href?: string; routeName?: string; fitur?: NamaFitur };
+// `tanpaFitur`: kebalikannya, menu pengganti yang hanya tampil selama fitur itu mati.
+// `izinSalahSatu`: menu tampil bila pengguna punya minimal satu izin di daftar ini.
+type MenuItem = Omit<NavItem, 'href'> & {
+    href?: string;
+    routeName?: string;
+    fitur?: NamaFitur;
+    tanpaFitur?: NamaFitur;
+    izinSalahSatu?: string[];
+};
 // `tetap`: seksi tetap tampil sebagai dropdown walau isinya tinggal satu menu.
 type MenuSeksi = { title: string; icon?: NavItem['icon']; tetap?: boolean; items: (MenuItem | MenuSeksi)[] };
 type MenuEntry = MenuItem | MenuSeksi;
 
 const adalahSeksi = (entry: MenuEntry): entry is MenuSeksi => 'items' in entry && Array.isArray(entry.items);
+
+const IZIN_KELOLA_USER = ['admin.users.karyawan', 'admin.users.dosen', 'admin.users.mahasiswa'];
 
 // Menu dikelompokkan per bidang kerja; menu tunggal (beranda) tetap di luar seksi.
 // Setiap menu hanya tampil jika role user memiliki permission terkait (diatur di halaman Kelola Role).
@@ -92,6 +130,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     },
                     { title: 'Data Dosen', href: '/admin/users/dosen', icon: GraduationCap, permission: 'admin.users.dosen' },
                     { title: 'Data Mahasiswa', href: '/admin/users/mahasiswa', icon: Users, permission: 'admin.users.mahasiswa' },
+                    { title: 'Impor Data Excel', href: '/admin/impor/mahasiswa', icon: FileSpreadsheet, permission: 'admin.users.mahasiswa' },
                 ],
             },
             {
@@ -110,12 +149,19 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                                 icon: CalendarRange,
                                 permission: 'admin.tahun-akademik',
                             },
+                            { title: 'Kurikulum', routeName: 'admin.kurikulum.index', icon: BookCopy, permission: 'admin.kurikulum' },
                             { title: 'Mata Kuliah', routeName: 'admin.mata-kuliah.index', icon: Library, permission: 'admin.mata-kuliah' },
                             { title: 'Mata Kuliah Prasyarat', routeName: 'admin.prasyarat.index', icon: ListTree, permission: 'admin.prasyarat' },
                             { title: 'Ruang', routeName: 'admin.ruang.index', icon: DoorOpen, permission: 'admin.ruang' },
                             { title: 'Batas SKS per Semester', routeName: 'admin.batas-sks.index', icon: Gauge, permission: 'admin.batas-sks' },
                             { title: 'Bobot Nilai', routeName: 'admin.bobot-nilai.index', icon: Scale, permission: 'admin.bobot-nilai' },
                             { title: 'Predikat', routeName: 'admin.predikat.index', icon: Award, permission: 'admin.predikat' },
+                            {
+                                title: 'Syarat Ujian & Remedial',
+                                routeName: 'admin.syarat-ujian.index',
+                                icon: ListChecks,
+                                permission: 'admin.syarat-ujian',
+                            },
                         ],
                     },
                     {
@@ -134,7 +180,13 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                             { title: 'Materi', routeName: 'admin.materi.index', icon: BookMarked, permission: 'admin.materi', fitur: 'materi' },
                             { title: 'Tugas', routeName: 'admin.tugas.index', icon: ClipboardList, permission: 'admin.tugas', fitur: 'tugas' },
                             { title: 'Quiz', routeName: 'admin.quiz.index', icon: FileText, permission: 'admin.quiz', fitur: 'quiz' },
-                            { title: 'Presensi', routeName: 'admin.presensi.index', icon: UserCheck, permission: 'admin.presensi' },
+                            { title: 'Presensi Mahasiswa', routeName: 'admin.presensi.index', icon: UserCheck, permission: 'admin.presensi' },
+                            {
+                                title: 'Rekap Presensi Mahasiswa',
+                                routeName: 'admin.rekap-presensi.index',
+                                icon: ChartColumn,
+                                permission: 'admin.rekap-presensi',
+                            },
                             {
                                 title: 'Presensi Dosen',
                                 routeName: 'admin.presensi-dosen.index',
@@ -148,6 +200,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                                 permission: 'admin.verifikasi-presensi-dosen',
                             },
                             { title: 'Jadwal Ujian', routeName: 'admin.ujian.index', icon: NotebookPen, permission: 'admin.ujian' },
+                            { title: 'Ketua Kelas', routeName: 'admin.ketua-kelas.index', icon: Crown, permission: 'admin.ketua-kelas' },
                             {
                                 title: 'Ujian Susulan',
                                 routeName: 'admin.ujian-susulan.index',
@@ -157,14 +210,186 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                             },
                         ],
                     },
+                    {
+                        title: 'KRS',
+                        icon: ClipboardList,
+                        tetap: true,
+                        items: [
+                            { title: 'Input KRS', routeName: 'admin.input-krs.index', icon: FilePen, permission: 'admin.input-krs' },
+                            {
+                                title: 'Verifikasi KRS',
+                                routeName: 'admin.verifikasi-krs.index',
+                                icon: ClipboardCheck,
+                                permission: 'admin.verifikasi-krs',
+                            },
+                            { title: 'Status KRS', routeName: 'admin.status-krs.index', icon: ToggleRight, permission: 'admin.status-krs' },
+                            { title: 'Cetak KST', routeName: 'admin.cetak-kst.index', icon: Printer, permission: 'admin.cetak-kst' },
+                            { title: 'Cetak Kartu Ujian', routeName: 'admin.kartu-ujian.index', icon: IdCard, permission: 'admin.kartu-ujian' },
+                            { title: 'Rekap KRS', routeName: 'admin.rekap-krs.index', icon: ChartColumn, permission: 'admin.rekap-krs' },
+                        ],
+                    },
+                    {
+                        title: 'Penilaian',
+                        icon: NotebookTabs,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Nilai Semester',
+                                routeName: 'admin.nilai-semester.index',
+                                icon: NotebookPen,
+                                permission: 'admin.nilai-semester',
+                            },
+                            { title: 'Detail Nilai', routeName: 'admin.detail-nilai.index', icon: FileSearch, permission: 'admin.detail-nilai' },
+                            // Urutan mengikuti alur: input → rincian komponen → konversi huruf → (KKM) → validasi.
+                            {
+                                title: 'Pendataan Nilai Akhir',
+                                routeName: 'admin.pendataan-nilai.index',
+                                icon: ClipboardPen,
+                                permission: 'admin.pendataan-nilai',
+                            },
+                            { title: 'Nilai KKM', routeName: 'admin.nilai-kkm.index', icon: Presentation, permission: 'admin.nilai-kkm' },
+                            {
+                                title: 'Validasi Nilai',
+                                routeName: 'admin.validasi-nilai.index',
+                                icon: FileCheck2,
+                                permission: 'admin.validasi-nilai',
+                            },
+                            {
+                                title: 'Tambah Komponen Nilai',
+                                routeName: 'admin.komponen-nilai.index',
+                                icon: Percent,
+                                permission: 'admin.komponen-nilai',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Hasil Studi',
+                        icon: BookOpenCheck,
+                        tetap: true,
+                        items: [
+                            { title: 'KHS', routeName: 'admin.khs.index', icon: FileText, permission: 'admin.khs' },
+                            {
+                                title: 'Transkrip Nilai',
+                                routeName: 'admin.transkrip-nilai.index',
+                                icon: ScrollText,
+                                permission: 'admin.transkrip-nilai',
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                title: 'Pengajuan & Pendaftaran',
+                icon: FileStack,
+                tetap: true,
+                items: [
+                    {
+                        title: 'Status Mahasiswa',
+                        icon: UserRoundCog,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Pengajuan Cuti',
+                                routeName: 'admin.pengajuan-cuti.index',
+                                icon: PauseCircle,
+                                permission: 'admin.pengajuan-cuti',
+                            },
+                            { title: 'Mahasiswa Cuti', routeName: 'admin.mahasiswa-cuti.index', icon: UserMinus, permission: 'admin.pengajuan-cuti' },
+                        ],
+                    },
+                    {
+                        title: 'Tugas Akhir/Skripsi',
+                        icon: BookOpenCheck,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Persetujuan Tugas Akhir',
+                                routeName: 'admin.persetujuan-ta.index',
+                                icon: FileCheck2,
+                                permission: 'admin.pengajuan-akademik',
+                            },
+                            {
+                                title: 'Pendaftaran Pendadaran',
+                                routeName: 'admin.pendaftaran-pendadaran.index',
+                                icon: Presentation,
+                                permission: 'admin.pengajuan-akademik',
+                                fitur: 'pendadaran',
+                            },
+                            {
+                                title: 'Pendaftaran Sidang',
+                                routeName: 'admin.pendaftaran-sidang.index',
+                                icon: Presentation,
+                                permission: 'admin.pengajuan-akademik',
+                                tanpaFitur: 'pendadaran',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Kuliah Kerja Mahasiswa',
+                        icon: Tent,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Persetujuan KKM/PKL/KKN',
+                                routeName: 'admin.persetujuan-kkm.index',
+                                icon: ClipboardCheck,
+                                permission: 'admin.pengajuan-akademik',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Praktek Pengalaman Lapangan',
+                        icon: Briefcase,
+                        tetap: true,
+                        items: [
+                            { title: 'Daftar PPL', routeName: 'admin.daftar-ppl.index', icon: ClipboardList, permission: 'admin.pengajuan-akademik' },
+                        ],
+                    },
+                    {
+                        title: 'Ujian Komprehensif',
+                        icon: NotebookPen,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Daftar Ujian Komprehensif',
+                                routeName: 'admin.pengajuan-kompre.index',
+                                icon: ClipboardList,
+                                permission: 'admin.pengajuan-akademik',
+                            },
+                            {
+                                title: 'Gelombang Ujian Komprehensif',
+                                routeName: 'admin.gelombang-kompre.index',
+                                icon: CalendarRange,
+                                permission: 'admin.pengajuan-akademik',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Wisuda',
+                        icon: GraduationCap,
+                        tetap: true,
+                        items: [
+                            { title: 'Daftar Wisuda', routeName: 'admin.daftar-wisuda.index', icon: Users, permission: 'admin.pengajuan-akademik' },
+                            {
+                                title: 'Periode Wisuda',
+                                routeName: 'admin.periode-wisuda.index',
+                                icon: CalendarRange,
+                                permission: 'admin.pengajuan-akademik',
+                            },
+                        ],
+                    },
                 ],
             },
             {
                 title: 'Administrasi',
                 icon: Inbox,
                 items: [
-                    { title: 'Info Kuliah', routeName: 'admin.info-kuliah.index', icon: FileText, permission: 'admin.info-kuliah' },
-                    { title: 'Verifikasi KRS', routeName: 'admin.verifikasi-krs.index', icon: ClipboardCheck, permission: 'admin.verifikasi-krs' },
+                    {
+                        title: 'Informasi & Pengumuman',
+                        routeName: 'admin.info-kuliah.index',
+                        icon: Megaphone,
+                        permission: 'admin.info-kuliah',
+                    },
                     {
                         title: 'Pindah Kelas',
                         routeName: 'admin.pindah-kelas.index',
@@ -172,14 +397,6 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                         permission: 'admin.pindah-kelas',
                         fitur: 'pindah_kelas',
                     },
-                    {
-                        title: 'TA & Wisuda',
-                        routeName: 'admin.pengajuan-akademik.index',
-                        icon: GraduationCap,
-                        permission: 'admin.pengajuan-akademik',
-                    },
-                    { title: 'Periode Wisuda', routeName: 'admin.periode-wisuda.index', icon: CalendarRange, permission: 'admin.pengajuan-akademik' },
-                    { title: 'Pengajuan Cuti', routeName: 'admin.pengajuan-cuti.index', icon: PauseCircle, permission: 'admin.pengajuan-cuti' },
                 ],
             },
             {
@@ -194,6 +411,7 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                         tetap: true,
                         items: [
                             { title: 'Atur Periode PMB', routeName: 'admin.periode-pmb.index', icon: CalendarRange, permission: 'admin.periode-pmb' },
+                            { title: 'Informasi PMB', routeName: 'admin.informasi-pmb.edit', icon: Megaphone, permission: 'admin.informasi-pmb' },
                         ],
                     },
                 ],
@@ -215,11 +433,15 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 ],
             },
             {
-                title: 'Pengguna & Akses',
-                icon: Users,
+                // Semua akun (Prodi, Dosen, Mahasiswa, Karyawan) dibuat & dicari dari sini; Data Dosen/Mahasiswa di Master tetap ada.
+                title: 'Tools',
+                icon: Wrench,
+                tetap: true,
                 items: [
-                    { title: 'Karyawan', href: '/admin/users/karyawan', icon: Briefcase, permission: 'admin.users.karyawan' },
+                    { title: 'Create User', routeName: 'admin.pengguna.buat', icon: UserPlus, izinSalahSatu: IZIN_KELOLA_USER },
+                    { title: 'Data Pengguna', routeName: 'admin.pengguna.index', icon: Contact, izinSalahSatu: IZIN_KELOLA_USER },
                     { title: 'Kelola Role', routeName: 'admin.roles.index', icon: ShieldCheck, permission: 'admin.roles', fitur: 'kelola_role' },
+                    { title: 'Log Aktivitas', routeName: 'admin.log-aktivitas.index', icon: History, permission: 'admin.log-aktivitas' },
                 ],
             },
         ],
@@ -233,11 +455,31 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 icon: BookOpenCheck,
                 items: [
                     { title: 'Kelas Kuliah', href: '/dosen/kelas-kuliah', icon: ClipboardList, permission: 'dosen.kelas-kuliah' },
+                    { title: 'Input Nilai', routeName: 'dosen.input-nilai.index', icon: ClipboardPen, permission: 'dosen.kelas-kuliah' },
                     { title: 'Jadwal Mengajar', routeName: 'dosen.jadwal.index', icon: CalendarDays, permission: 'dosen.jadwal' },
                     { title: 'Presensi', routeName: 'dosen.presensi.index', icon: UserCheck, permission: 'dosen.presensi' },
                     { title: 'Ujian', routeName: 'dosen.ujian.index', icon: NotebookPen, permission: 'dosen.ujian' },
                     { title: 'Mahasiswa Kelas', href: '/dosen/mahasiswa-kelas', icon: Users, permission: 'dosen.mahasiswa-kelas' },
-                    { title: 'Bimbingan TA', routeName: 'dosen.bimbingan.index', icon: GraduationCap, permission: 'dosen.bimbingan' },
+                    {
+                        title: 'Bimbingan TA',
+                        routeName: 'dosen.bimbingan.index',
+                        icon: GraduationCap,
+                        permission: 'dosen.bimbingan',
+                        fitur: 'pendadaran',
+                    },
+                ],
+            },
+            {
+                title: 'Pengajuan & Pendaftaran',
+                icon: Inbox,
+                tetap: true,
+                items: [
+                    {
+                        title: 'Pengajuan Mahasiswa PA',
+                        routeName: 'dosen.pengajuan-pa.index',
+                        icon: Inbox,
+                        permission: 'dosen.pengajuan-pa',
+                    },
                 ],
             },
             {
@@ -260,19 +502,112 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 icon: GraduationCap,
                 items: [
                     { title: 'Rencana Studi (KRS)', href: '/mahasiswa/krs', icon: ClipboardList, permission: 'mahasiswa.krs' },
+                    { title: 'Cetak KST', routeName: 'mahasiswa.cetak-kst', icon: Printer, permission: 'mahasiswa.krs' },
                     { title: 'Kartu Hasil Studi', href: '/mahasiswa/khs', icon: FileText, permission: 'mahasiswa.hasil-studi' },
                     { title: 'Transkrip Nilai', href: '/mahasiswa/transkrip', icon: BookOpen, permission: 'mahasiswa.hasil-studi' },
                     { title: 'Jadwal Kuliah', href: '/mahasiswa/jadwal', icon: CalendarDays, permission: 'mahasiswa.jadwal-kuliah' },
                     { title: 'Presensi', routeName: 'mahasiswa.presensi', icon: UserCheck, permission: 'mahasiswa.presensi' },
                     { title: 'Jadwal Ujian', routeName: 'mahasiswa.ujian', icon: NotebookPen, permission: 'mahasiswa.ujian' },
-                    { title: 'Tugas Akhir & Wisuda', routeName: 'mahasiswa.tugas-akhir', icon: GraduationCap, permission: 'mahasiswa.tugas-akhir' },
+                    { title: 'Cetak Kartu UTS & UAS', routeName: 'mahasiswa.cetak-kartu-ujian', icon: IdCard, permission: 'mahasiswa.ujian' },
+                ],
+            },
+            {
+                title: 'Pengajuan & Pendaftaran',
+                icon: FileStack,
+                tetap: true,
+                items: [
+                    {
+                        title: 'Status Mahasiswa',
+                        icon: UserRoundCog,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Pengajuan Cuti',
+                                routeName: 'mahasiswa.pengajuan-cuti',
+                                icon: PauseCircle,
+                                permission: 'mahasiswa.pengajuan-cuti',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Tugas Akhir/Skripsi',
+                        icon: BookOpenCheck,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Pengajuan Judul & Upload TA',
+                                routeName: 'mahasiswa.tugas-akhir',
+                                icon: FileUp,
+                                permission: 'mahasiswa.tugas-akhir',
+                            },
+                            {
+                                title: 'Pendaftaran Sidang',
+                                routeName: 'mahasiswa.pendaftaran-sidang',
+                                icon: Presentation,
+                                permission: 'mahasiswa.pengajuan-kegiatan',
+                                tanpaFitur: 'pendadaran',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Kuliah Kerja Mahasiswa',
+                        icon: Tent,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Pengajuan Judul KKM/PKL/KKN',
+                                routeName: 'mahasiswa.pengajuan-kkm',
+                                icon: ClipboardPen,
+                                permission: 'mahasiswa.pengajuan-kegiatan',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Praktek Pengalaman Lapangan',
+                        icon: Briefcase,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Pengajuan PPL',
+                                routeName: 'mahasiswa.pengajuan-ppl',
+                                icon: ClipboardPen,
+                                permission: 'mahasiswa.pengajuan-kegiatan',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Ujian Komprehensif',
+                        icon: NotebookPen,
+                        tetap: true,
+                        items: [
+                            {
+                                title: 'Pengajuan Ujian Komprehensif',
+                                routeName: 'mahasiswa.pengajuan-kompre',
+                                icon: ClipboardPen,
+                                permission: 'mahasiswa.pengajuan-kegiatan',
+                            },
+                        ],
+                    },
+                    {
+                        title: 'Wisuda',
+                        icon: GraduationCap,
+                        tetap: true,
+                        items: [
+                            { title: 'Pengajuan Wisuda', routeName: 'mahasiswa.wisuda', icon: GraduationCap, permission: 'mahasiswa.tugas-akhir' },
+                        ],
+                    },
                 ],
             },
             {
                 title: 'Administrasi',
                 icon: Inbox,
                 items: [
-                    { title: 'Info Kuliah', routeName: 'mahasiswa.info-kuliah', icon: FileText, permission: 'mahasiswa.info-kuliah' },
+                    {
+                        title: 'Informasi & Pengumuman',
+                        routeName: 'mahasiswa.info-kuliah',
+                        icon: Megaphone,
+                        permission: 'mahasiswa.info-kuliah',
+                    },
                     {
                         title: 'Pindah Kelas',
                         routeName: 'mahasiswa.pindah-kelas',
@@ -281,7 +616,6 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                         fitur: 'pindah_kelas',
                     },
                     { title: 'Biaya Kuliah', routeName: 'mahasiswa.info-biaya-kuliah', icon: Wallet, permission: 'mahasiswa.info-biaya' },
-                    { title: 'Pengajuan Cuti', routeName: 'mahasiswa.pengajuan-cuti', icon: PauseCircle, permission: 'mahasiswa.pengajuan-cuti' },
                 ],
             },
         ],

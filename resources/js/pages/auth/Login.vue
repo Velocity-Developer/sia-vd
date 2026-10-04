@@ -131,7 +131,7 @@ const submit = () => {
             </Button>
 
             <Button as-child variant="outline" class="w-full">
-                <Link :href="route('pmb.daftar')"><UserPlus /> Link Pendaftaran Mahasiswa Baru</Link>
+                <Link :href="route('pmb.informasi')"><UserPlus /> Link Pendaftaran Mahasiswa Baru</Link>
             </Button>
 
             <p class="text-center text-sm text-[#615d59] dark:text-muted-foreground">

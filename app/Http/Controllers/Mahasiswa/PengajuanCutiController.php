@@ -94,7 +94,6 @@ class PengajuanCutiController extends Controller
                     }
                 }],
                 'alasan' => ['required', 'string', 'max:2000'],
-                'bukti_bayar' => [$perbaikan ? 'nullable' : 'required', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
                 'dokumen_pendukung' => ['nullable', 'file', 'max:5120', 'extensions:'.self::EKSTENSI_DOKUMEN, 'mimes:'.self::EKSTENSI_DOKUMEN],
             ], [
                 '*.extensions' => ':attribute harus berupa PDF atau foto (JPG/PNG).',
@@ -102,7 +101,6 @@ class PengajuanCutiController extends Controller
             ], [
                 'tahun_akademik_id' => 'Semester cuti',
                 'alasan' => 'Alasan cuti',
-                'bukti_bayar' => 'Bukti bayar cuti',
                 'dokumen_pendukung' => 'Dokumen pendukung',
             ], [
                 self::MENUNGGU => 'Pengajuan cuti Anda masih menunggu diproses admin.',

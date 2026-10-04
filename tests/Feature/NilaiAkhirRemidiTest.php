@@ -106,11 +106,13 @@ it('locks again after the remidi deadline or when the lecturer finalizes, and ad
     ubahHuruf($this, $kelas, $krs[0], 'B', $admin)->assertSessionHas('success');
 });
 
+const SYARAT_UMUM = ['syarat_ujian_aktif' => false, 'min_kehadiran_ujian' => 75, 'izin_sakit_dihitung_hadir' => false];
+
 it('stores the maximum letter in the academic settings', function () {
     $admin = User::factory()->admin()->create();
 
-    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.remidi'), ['huruf_maks_remidi' => 'Z'])->assertSessionHasErrors('huruf_maks_remidi');
-    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.remidi'), ['huruf_maks_remidi' => 'C'])->assertSessionHas('success');
+    $this->actingAs($admin)->put(route('admin.syarat-ujian.update-umum'), [...SYARAT_UMUM, 'huruf_maks_remidi' => 'Z'])->assertSessionHasErrors('huruf_maks_remidi');
+    $this->actingAs($admin)->put(route('admin.syarat-ujian.update-umum'), [...SYARAT_UMUM, 'huruf_maks_remidi' => 'C'])->assertSessionHas('success');
     expect(PengaturanAkademik::current()->huruf_maks_remidi)->toBe('C');
 
     // Huruf yang dihapus dari skala membuat batas kembali bebas.
@@ -119,7 +121,7 @@ it('stores the maximum letter in the academic settings', function () {
     $this->actingAs($admin)->put(route('admin.pengaturan-akademik.skala-nilai'), ['skala_nilai' => $skala])->assertSessionHas('success');
     expect(PengaturanAkademik::current()->fresh()->huruf_maks_remidi)->toBeNull();
 
-    $this->actingAs($admin)->put(route('admin.pengaturan-akademik.remidi'), ['huruf_maks_remidi' => null])->assertSessionHas('success');
+    $this->actingAs($admin)->put(route('admin.syarat-ujian.update-umum'), [...SYARAT_UMUM, 'huruf_maks_remidi' => null])->assertSessionHas('success');
 });
 
 it('keeps remidi participants locked when admin reopens the class grades', function () {
@@ -128,8 +130,8 @@ it('keeps remidi participants locked when admin reopens the class grades', funct
     $this->travelTo('2026-01-14 08:00:00');
     $this->actingAs($admin)->post(route('admin.kelas-kuliah.buka-kunci-nilai', $kelas))->assertSessionHas('success');
 
-    // Bukan peserta bisa diubah; peserta (lunas maupun belum) menunggu remidi.
-    ubahHuruf($this, $kelas, $krs[2], 'D')->assertSessionHas('success');
+    // Bukan peserta tidak diberi huruf langsung (nilainya lewat komponen); peserta (lunas maupun belum) menunggu remidi.
+    ubahHuruf($this, $kelas, $krs[2], 'D')->assertSessionHas('error');
     ubahHuruf($this, $kelas, $krs[0], 'C')->assertSessionHas('error', 'Huruf akhir peserta remidi hanya bisa diubah setelah ujian remidinya selesai.');
     ubahHuruf($this, $kelas, $krs[1], 'C')->assertSessionHas('error');
     $this->actingAs($kelas->dosen->user)->get(route('dosen.kelas-kuliah.show', $kelas))

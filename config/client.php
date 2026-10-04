@@ -100,5 +100,15 @@ return [
             'locked' => env('LOCK_UJIAN_SUSULAN', false),
             'butuh' => [],
         ],
+
+        // Pendaftaran pendadaran, jadwal sidang, penguji, bimbingan, dan revisi naskah. Mati = TA/Skripsi dinilai
+        // seperti mata kuliah biasa (satu nilai akhir di Nilai Semester) dan pengajuan TA tanpa pembimbing.
+        'pendadaran' => [
+            'label' => 'Pendadaran & Bimbingan TA',
+            'keterangan' => 'Pendaftaran pendadaran, jadwal & penguji, bimbingan, revisi naskah. Mati = nilai TA/Skripsi lewat Nilai Semester.',
+            'default' => env('FEATURE_PENDADARAN', true),
+            'locked' => env('LOCK_PENDADARAN', false),
+            'butuh' => [],
+        ],
     ],
 ];

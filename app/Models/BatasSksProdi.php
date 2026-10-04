@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class BatasSksProdi extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     protected $fillable = ['prodi_id', 'ips_minimal', 'maks_sks'];
 
@@ -26,5 +28,18 @@ class BatasSksProdi extends Model
     public function programStudi(): BelongsTo
     {
         return $this->belongsTo(ProgramStudi::class, 'prodi_id');
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->where($query->qualifyColumn('prodi_id'), $prodiId);
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return (int) $this->prodi_id === $prodiId;
     }
 }

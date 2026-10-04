@@ -4,6 +4,7 @@ import SearchSelect from '@/components/SearchSelect.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
@@ -14,7 +15,18 @@ const props = defineProps<{
     mataKuliah: Record<string, any> | null;
     programStudis: { id: number; nama_prodi: string; jenjang: string; nama_fakultas: string }[];
     pilihanPrasyarat: { id: number; kode_matkul: string; nama_matkul: string; semester: number; prodi_id: number }[];
+    jenisPenilaian: Record<string, string>;
 }>();
+
+const { aktif } = useFitur();
+const keteranganJenis = computed<Record<string, string>>(() => ({
+    reguler: 'Nilai dari komponen nilai (Penilaian → Tambah Komponen Nilai).',
+    tugas_akhir: aktif('pendadaran')
+        ? 'Mahasiswa yang mengambilnya di semester aktif boleh mengajukan tugas akhir; nilainya dari hasil pendadaran.'
+        : 'Mahasiswa yang mengambilnya di semester aktif boleh mengajukan tugas akhir; nilainya satu angka akhir di Nilai Semester.',
+    ppl: 'Praktek Pengalaman Lapangan: nilainya satu angka akhir di Nilai Semester, tanpa komponen.',
+    kkm: 'Nilainya diisi admin di Penilaian → Nilai KKM setelah pengajuan KKM mahasiswa disetujui.',
+}));
 
 const groupedProdi = computed(() => {
     const groups: Record<string, { id: number; name: string }[]> = {};
@@ -33,7 +45,7 @@ const form = useForm({
     sks: props.mataKuliah?.sks ?? '',
     semester: props.mataKuliah?.semester ?? '',
     jenis: props.mataKuliah?.jenis ?? '',
-    tugas_akhir: Boolean(props.mataKuliah?.tugas_akhir),
+    jenis_penilaian: props.mataKuliah?.jenis_penilaian ?? 'reguler',
     prodi_id: props.mataKuliah?.prodi_id ?? '',
     prasyarat_ids: (props.mataKuliah?.prasyarat_ids ?? []) as number[],
 });
@@ -129,17 +141,14 @@ const submit = () =>
                                 <InputError :message="form.errors.jenis" />
                             </div>
                         </div>
-                        <label class="mt-4 flex items-start gap-3 rounded-lg border border-[#e6e6e6] px-4 py-3 dark:border-border">
-                            <input v-model="form.tugas_akhir" type="checkbox" class="mt-0.5 size-4 accent-[#0075de]" />
-                            <span class="grid gap-0.5">
-                                <span class="label-isian">Mata kuliah TA/Skripsi</span>
-                                <span class="teks-bantu"
-                                    >Mahasiswa yang mengambil mata kuliah ini di semester aktif boleh mengajukan tugas akhir dan mendaftar
-                                    pendadaran.</span
-                                >
-                            </span>
-                        </label>
-                        <InputError :message="form.errors.tugas_akhir" />
+                        <div class="mt-4 grid gap-2">
+                            <Label for="jenis_penilaian" class="label-isian">Jenis Penilaian</Label>
+                            <select id="jenis_penilaian" v-model="form.jenis_penilaian" class="isian isian-pilih" required>
+                                <option v-for="(label, kunci) in props.jenisPenilaian" :key="kunci" :value="kunci">{{ label }}</option>
+                            </select>
+                            <p class="teks-bantu">{{ keteranganJenis[form.jenis_penilaian] }}</p>
+                            <InputError :message="form.errors.jenis_penilaian" />
+                        </div>
                     </section>
 
                     <section class="kartu p-6">

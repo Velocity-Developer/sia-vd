@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
@@ -16,7 +18,7 @@ use Illuminate\Support\Carbon;
  */
 class KrsSemester extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     public const DIAJUKAN = 'diajukan';
 
@@ -258,5 +260,18 @@ class KrsSemester extends Model
             'diverifikasi_oleh' => $this->verifikator?->name,
             'diverifikasi_pada' => $this->diverifikasi_pada?->toIso8601String(),
         ];
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->whereHas('mahasiswa');
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return MahasiswaProfile::query()->whereKey($this->mahasiswa_id)->exists();
     }
 }

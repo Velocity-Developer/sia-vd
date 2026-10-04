@@ -1,29 +1,27 @@
 <script setup lang="ts">
-import AlertModal from '@/components/AlertModal.vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { router } from '@inertiajs/vue3';
+import { Input } from '@/components/ui/input';
+import { useForm } from '@inertiajs/vue3';
 import { UserRoundPlus } from 'lucide-vue-next';
 import { ref } from 'vue';
 
-// Tombol + konfirmasi "Salin ke Master Mahasiswa" untuk calon maba yang lulus.
+// Tombol + dialog "Salin ke Master Mahasiswa" untuk calon maba yang diterima. NIM diisi admin dan menjadi username.
 const props = defineProps<{ id: number; nama: string; ringkas?: boolean }>();
 
 const buka = ref(false);
-const memproses = ref(false);
+const form = useForm({ nim: '' });
 
+const bukaDialog = () => {
+    form.reset();
+    form.clearErrors();
+    buka.value = true;
+};
 const salin = () =>
-    router.post(
-        route('admin.pendaftar-pmb.salin', props.id),
-        {},
-        {
-            preserveScroll: true,
-            onStart: () => (memproses.value = true),
-            onFinish: () => {
-                memproses.value = false;
-                buka.value = false;
-            },
-        },
-    );
+    form.post(route('admin.pendaftar-pmb.salin', props.id), {
+        preserveScroll: true,
+        onSuccess: () => (buka.value = false),
+    });
 </script>
 
 <template>
@@ -34,20 +32,28 @@ const salin = () =>
         class="text-[#0075de]"
         title="Salin ke Master Mahasiswa"
         aria-label="Salin ke Master Mahasiswa"
-        @click="buka = true"
+        @click="bukaDialog"
         ><UserRoundPlus
     /></Button>
-    <Button v-else @click="buka = true"><UserRoundPlus /> Salin ke Master Mahasiswa</Button>
-    <AlertModal
-        :open="buka"
-        title="Salin ke Master Mahasiswa?"
-        :description="`Akun mahasiswa untuk ${props.nama} dibuat dengan username nomor pendaftaran, lalu tautan atur sandi dan verifikasi email dikirim. NIM dan dosen wali dilengkapi di Data Mahasiswa.`"
-        confirm-text="Salin"
-        cancel-text="Batal"
-        :loading="memproses"
-        :destructive="false"
-        @update:open="buka = $event"
-        @confirm="salin"
-        @cancel="buka = false"
-    />
+    <Button v-else @click="bukaDialog"><UserRoundPlus /> Salin ke Master Mahasiswa</Button>
+    <Teleport to="body">
+        <div v-if="buka" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="buka = false">
+            <form class="kartu w-full max-w-md p-6 text-left shadow-xl" @submit.prevent="salin">
+                <h3 class="judul-bagian">Salin ke Master Mahasiswa</h3>
+                <p class="mt-2 text-sm text-[#615d59]">
+                    Akun mahasiswa untuk {{ props.nama }} dibuat dengan NIM di bawah sebagai username, lalu tautan atur sandi dan verifikasi email
+                    dikirim. Dosen wali diatur lewat Set Penasehat Akademik.
+                </p>
+                <label class="mt-4 grid gap-2">
+                    <span class="label-isian">NIM</span>
+                    <Input v-model="form.nim" maxlength="50" required autofocus />
+                    <InputError :message="form.errors.nim" />
+                </label>
+                <div class="mt-6 flex justify-end gap-2">
+                    <Button type="button" variant="outline" @click="buka = false">Batal</Button>
+                    <Button type="submit" :disabled="form.processing || !form.nim.trim()">Salin</Button>
+                </div>
+            </form>
+        </div>
+    </Teleport>
 </template>

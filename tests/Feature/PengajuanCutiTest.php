@@ -26,7 +26,7 @@ function isianCuti(TahunAkademik $tahun, array $lain = []): array
     return [
         'tahun_akademik_id' => $tahun->id,
         'alasan' => 'Bekerja di luar kota selama satu semester.',
-        'bukti_bayar' => UploadedFile::fake()->create('bukti.pdf', 100, 'application/pdf'),
+        'dokumen_pendukung' => UploadedFile::fake()->create('surat.pdf', 100, 'application/pdf'),
         ...$lain,
     ];
 }
@@ -43,12 +43,12 @@ it('lets an active student apply for leave and the admin approve it', function (
 
     $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), isianCuti($tahun))->assertSessionHasNoErrors()->assertSessionHas('success');
     $pengajuan = PengajuanAkademik::query()->where('jenis', 'cuti')->sole();
-    expect($pengajuan->status)->toBe('menunggu')->and($pengajuan->lampiran)->toHaveKey('bukti_bayar');
+    expect($pengajuan->status)->toBe('menunggu')->and($pengajuan->lampiran)->toHaveKey('dokumen_pendukung');
 
     // Selama menunggu, form terkunci.
     $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), isianCuti($tahun))->assertSessionHasErrors('tahun_akademik_id');
     // Berkasnya bisa dibuka admin cuti.
-    $this->actingAs($admin)->get(route('berkas.pengajuan-akademik', [$pengajuan, 'bukti_bayar']))->assertOk();
+    $this->actingAs($admin)->get(route('berkas.pengajuan-akademik', [$pengajuan, 'dokumen_pendukung']))->assertOk();
 
     $this->actingAs($admin)->post(route('admin.pengajuan-cuti.setujui', $pengajuan))->assertSessionHas('success', fn (string $p) => str_contains($p, 'kini Cuti'));
     expect($pengajuan->fresh()->status)->toBe('disetujui')
@@ -92,11 +92,13 @@ it('only offers semesters whose leave period is open', function () {
     expect(PengajuanAkademik::count())->toBe(0);
 });
 
-it('requires payment proof and enforces the leave limit', function () {
+it('does not ask for payment proof and enforces the leave limit', function () {
     $tahun = tahunCuti();
     $mhs = User::factory()->mahasiswa()->create();
 
-    $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), isianCuti($tahun, ['bukti_bayar' => null]))->assertSessionHasErrors('bukti_bayar');
+    // Yapika: tidak ada pembayaran di alur sistem, jadi cuti cukup semester + alasan.
+    $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), isianCuti($tahun, ['dokumen_pendukung' => null]))->assertSessionHasNoErrors();
+    PengajuanAkademik::query()->delete();
 
     PengaturanAkademik::current()->update(['maks_cuti' => 1]);
     $lama = tahunCuti(aktif: false, dibuka: false, tahun: '2025/2026');
@@ -124,11 +126,11 @@ it('lets the admin ask for a fix and the student resend without re-uploading', f
     $pengajuan = PengajuanAkademik::query()->sole();
 
     $this->actingAs($admin)->post(route('admin.pengajuan-cuti.perbaikan', $pengajuan), ['catatan' => 'Perjelas alasan.'])->assertSessionHas('success');
-    $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), isianCuti($tahun, ['alasan' => 'Alasan diperjelas.', 'bukti_bayar' => null]))
+    $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), isianCuti($tahun, ['alasan' => 'Alasan diperjelas.', 'dokumen_pendukung' => null]))
         ->assertSessionHasNoErrors();
 
     expect($pengajuan->fresh())->status->toBe('menunggu')->isian->alasan->toBe('Alasan diperjelas.')
-        ->and($pengajuan->fresh()->lampiran)->toHaveKey('bukti_bayar');
+        ->and($pengajuan->fresh()->lampiran)->toHaveKey('dokumen_pendukung');
 
     // Pengajuan cuti tidak bisa diproses dari halaman TA & Wisuda.
     $this->actingAs($admin)->post(route('admin.pengajuan-akademik.setujui', $pengajuan))->assertNotFound();
@@ -146,4 +148,30 @@ it('validates the leave period on the academic year form', function () {
     $this->actingAs($admin)->post(route('admin.tahun-akademik.store'), [...$data, 'tanggal_cuti_awal' => '2027-07-01', 'tanggal_cuti_akhir' => '2027-08-15'])
         ->assertSessionHasNoErrors();
     expect(TahunAkademik::query()->where('tahun', '2027/2028')->value('tanggal_cuti_akhir')->toDateString())->toBe('2027-08-15');
+});
+
+it('lists students on leave in Mahasiswa Cuti', function () {
+    $tahun = tahunCuti();
+    $mhs = User::factory()->mahasiswa()->create();
+    User::factory()->mahasiswa()->create();
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), isianCuti($tahun));
+    $this->actingAs($admin)->get(route('admin.mahasiswa-cuti.index'))->assertInertia(fn ($page) => $page->where('mahasiswa.total', 0));
+
+    $this->actingAs($admin)->post(route('admin.pengajuan-cuti.setujui', PengajuanAkademik::sole()))->assertSessionHas('success');
+    $this->actingAs($admin)->get(route('admin.mahasiswa-cuti.index'))->assertInertia(fn ($page) => $page
+        ->component('Admin/MahasiswaCuti')
+        ->where('mahasiswa.total', 1)
+        ->where('mahasiswa.data.0.id', $mhs->mahasiswaProfile->id)
+        ->where('mahasiswa.data.0.tahun_akademik', $tahun->label())
+        ->where('mahasiswa.data.0.alasan', 'Bekerja di luar kota selama satu semester.')
+        ->where('mahasiswa.data.0.jumlah_cuti', 1)
+        ->where('mahasiswa.data.0.aktif_kembali_menunggu', false));
+
+    $mhs->refresh();
+    $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.aktif-kembali'), ['keterangan' => 'Siap kuliah lagi.']);
+    $this->actingAs($admin)->get(route('admin.mahasiswa-cuti.index'))->assertInertia(fn ($page) => $page->where('mahasiswa.data.0.aktif_kembali_menunggu', true));
+
+    $this->actingAs($mhs)->get(route('admin.mahasiswa-cuti.index'))->assertForbidden();
 });

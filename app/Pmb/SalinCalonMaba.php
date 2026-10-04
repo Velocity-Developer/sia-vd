@@ -16,8 +16,8 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Salin calon maba yang lulus seleksi ke Data Mahasiswa: buat akun (username = nomor pendaftaran, sandi acak)
- * beserta profil mahasiswanya. NIM dan dosen wali dilengkapi admin kemudian.
+ * Salin calon maba yang diterima ke Data Mahasiswa: buat akun (username = NIM yang diisi admin, sandi acak)
+ * beserta profil mahasiswanya. Dosen wali diatur kemudian lewat Set Penasehat Akademik.
  */
 class SalinCalonMaba
 {
@@ -30,17 +30,16 @@ class SalinCalonMaba
     public static function alasanTidakBisa(Cmb $cmb): ?string
     {
         return match (true) {
-            $cmb->status_pendaftaran !== Cmb::STATUS_LULUS => 'Hanya pendaftar berstatus Lulus yang bisa disalin ke Data Mahasiswa.',
+            $cmb->status_pendaftaran !== Cmb::STATUS_DITERIMA => 'Hanya pendaftar berstatus Diterima yang bisa disalin ke Data Mahasiswa.',
             $cmb->mahasiswa()->exists() => 'Pendaftar ini sudah disalin ke Data Mahasiswa.',
             User::query()->where('email', $cmb->email)->exists() => "Email {$cmb->email} sudah dipakai akun lain. Ubah email akun itu dulu.",
-            User::query()->where('username', $cmb->nomor_pendaftaran)->exists() => "Username {$cmb->nomor_pendaftaran} sudah dipakai akun lain.",
             MahasiswaProfile::query()->where('nik', $cmb->nik)->exists() => "NIK {$cmb->nik} sudah terdaftar di Data Mahasiswa.",
             filled($cmb->nisn) && MahasiswaProfile::query()->where('nisn', $cmb->nisn)->exists() => "NISN {$cmb->nisn} sudah terdaftar di Data Mahasiswa.",
             default => null,
         };
     }
 
-    public static function salin(Cmb $cmb): User
+    public static function salin(Cmb $cmb, string $nim): User
     {
         $cmb->loadMissing(['periode', 'agama']);
         $berkas = [];
@@ -57,15 +56,15 @@ class SalinCalonMaba
                 }
             }
 
-            $user = DB::transaction(function () use ($cmb, $berkas): User {
+            $user = DB::transaction(function () use ($cmb, $berkas, $nim): User {
                 $user = User::query()->create([
                     'name' => $cmb->nama,
-                    'username' => $cmb->nomor_pendaftaran,
+                    'username' => $nim,
                     'email' => $cmb->email,
                     'password' => Str::password(32),
                     'role_id' => Role::system(UserType::Mahasiswa)->id,
                 ]);
-                $user->mahasiswaProfile()->create([...self::profil($cmb), ...$berkas]);
+                $user->mahasiswaProfile()->create([...self::profil($cmb), 'nim' => $nim, ...$berkas]);
 
                 return $user;
             });

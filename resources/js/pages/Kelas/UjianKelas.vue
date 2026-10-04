@@ -48,6 +48,7 @@ const props = defineProps<{
         jam_mulai: string;
         jam_akhir: string;
         label_mode: string;
+        label_jenis: string;
         ruang: string | null;
         pengawas: string | null;
         petunjuk: string | null;
@@ -61,6 +62,7 @@ const props = defineProps<{
     sudahMulai: boolean;
     sudahSelesai: boolean;
     terkunci: boolean;
+    nilaiLewatKomponen: boolean;
     batasNilaiRemidi: string | null;
 }>();
 
@@ -205,14 +207,24 @@ const labelSyarat = (s: Syarat) => (s?.dispensasi ? 'Dispensasi' : s?.memenuhi =
                 <section v-if="berkasMode || tatapMuka" class="kartu p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="judul-bagian">{{ tatapMuka ? 'Nilai ujian' : 'Jawaban mahasiswa' }}</h2>
+                            <h2 class="judul-bagian">
+                                {{ props.nilaiLewatKomponen ? 'Peserta ujian' : tatapMuka ? 'Nilai ujian' : 'Jawaban mahasiswa' }}
+                            </h2>
                             <p class="mt-1 text-sm text-[#615d59] dark:text-muted-foreground">
-                                <template v-if="tatapMuka">{{ dinilai }} dari {{ props.peserta.length }} mahasiswa sudah dinilai.</template>
+                                <template v-if="props.nilaiLewatKomponen"
+                                    >Nilai {{ props.ujian.label_jenis }} diisi sebagai komponen nilai di tabel Nilai Mahasiswa pada
+                                    <Link :href="rute('kelas-kuliah.show', props.kelasKuliah.id)" class="text-[#0075de] hover:underline"
+                                        >halaman kelas</Link
+                                    >, bukan di sini.</template
+                                >
+                                <template v-else-if="tatapMuka">{{ dinilai }} dari {{ props.peserta.length }} mahasiswa sudah dinilai.</template>
                                 <template v-else>{{ terkumpul }} dari {{ props.peserta.length }} mahasiswa mengumpulkan.</template>
-                                <template v-if="!props.sudahSelesai">{{ ' ' }}Nilai diisi setelah ujian selesai.</template>
+                                <template v-if="!props.sudahSelesai && !props.nilaiLewatKomponen"
+                                    >{{ ' ' }}Nilai diisi setelah ujian selesai.</template
+                                >
                             </p>
                         </div>
-                        <div v-if="props.sudahSelesai && !props.terkunci" class="flex items-center gap-2 text-sm">
+                        <div v-if="props.sudahSelesai && !props.terkunci && !props.nilaiLewatKomponen" class="flex items-center gap-2 text-sm">
                             <span :class="props.ujian.nilai_dirilis ? 'text-[#1a7f37]' : 'text-[#615d59] dark:text-muted-foreground'">
                                 {{ props.ujian.nilai_dirilis ? 'Nilai terlihat oleh mahasiswa' : 'Nilai belum dirilis' }}
                             </span>
@@ -230,7 +242,7 @@ const labelSyarat = (s: Syarat) => (s?.dispensasi ? 'Dispensasi' : s?.memenuhi =
                                         <th>Mahasiswa</th>
                                         <th v-if="props.syaratAktif">Syarat</th>
                                         <th v-if="berkasMode">Jawaban</th>
-                                        <th>Nilai (0–100)</th>
+                                        <th v-if="!props.nilaiLewatKomponen">Nilai (0–100)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -261,7 +273,7 @@ const labelSyarat = (s: Syarat) => (s?.dispensasi ? 'Dispensasi' : s?.memenuhi =
                                             </template>
                                             <span v-else class="text-[#a39e98]">Belum mengumpulkan</span>
                                         </td>
-                                        <td>
+                                        <td v-if="!props.nilaiLewatKomponen">
                                             <form
                                                 v-if="(tatapMuka || p.jawaban) && props.sudahSelesai && !props.terkunci"
                                                 class="flex flex-wrap items-center gap-2"
@@ -292,7 +304,10 @@ const labelSyarat = (s: Syarat) => (s?.dispensasi ? 'Dispensasi' : s?.memenuhi =
                                         </td>
                                     </tr>
                                     <tr v-if="!props.peserta.length" class="baris-kosong">
-                                        <td :colspan="3 + (props.syaratAktif ? 1 : 0) + (berkasMode ? 1 : 0)" class="tabel-kosong">
+                                        <td
+                                            :colspan="(props.nilaiLewatKomponen ? 2 : 3) + (props.syaratAktif ? 1 : 0) + (berkasMode ? 1 : 0)"
+                                            class="tabel-kosong"
+                                        >
                                             Belum ada peserta ujian.
                                         </td>
                                     </tr>

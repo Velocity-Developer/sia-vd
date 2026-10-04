@@ -1,4 +1,4 @@
-export type JenisPengajuan = 'tugas_akhir' | 'pendadaran' | 'wisuda';
+export type JenisPengajuan = 'tugas_akhir' | 'pendadaran' | 'wisuda' | 'kkm' | 'ppl' | 'kompre' | 'sidang';
 export type StatusPengajuan = 'menunggu_pembimbing' | 'menunggu' | 'perlu_perbaikan' | 'disetujui' | 'ditolak';
 export type KeadaanForm = 'terkunci' | 'selesai' | 'terjadwal' | 'terdaftar' | 'menunggu' | 'perbaikan' | 'baru' | 'belum_memenuhi';
 export type Syarat = { label: string; terpenuhi: boolean; keterangan: string | null };
@@ -35,6 +35,10 @@ export const JENIS_PENGAJUAN: Record<JenisPengajuan, string> = {
     tugas_akhir: 'Tugas Akhir',
     pendadaran: 'Pendadaran',
     wisuda: 'Wisuda',
+    kkm: 'KKM/PKL/KKN',
+    ppl: 'PPL',
+    kompre: 'Ujian Kompre',
+    sidang: 'Pendaftaran Sidang',
 };
 
 export const STATUS_PENGAJUAN: Record<StatusPengajuan, { label: string; kelas: string }> = {
@@ -58,12 +62,15 @@ export const labelPeristiwa = (status: string, pertama: boolean): string =>
 /** Label berkas lampiran per kunci isian form. */
 export const LABEL_LAMPIRAN: Record<string, string> = {
     proposal: 'Proposal',
+    berkas_syarat: 'Berkas syarat',
+    berkas_tambahan: 'Berkas tambahan',
     naskah: 'Naskah',
     persetujuan_pembimbing: 'Lembar persetujuan',
     bukti_bayar: 'Bukti bayar',
     pas_foto: 'Pas foto',
     naskah_final: 'Naskah final',
-    bebas_pinjam: 'Bebas pinjam perpustakaan',
+    bebas_pinjam: 'Surat bebas pustaka',
+    surat_lunas: 'Surat keterangan lunas',
     dokumen_pendukung: 'Dokumen pendukung',
 };
 

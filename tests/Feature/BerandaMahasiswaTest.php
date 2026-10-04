@@ -4,7 +4,6 @@ use App\Models\PengajuanAkademik;
 use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(fn () => Storage::fake('local'));
@@ -26,7 +25,6 @@ function ajukanCutiBeranda(User $mhs, TahunAkademik $tahun): PengajuanAkademik
     test()->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), [
         'tahun_akademik_id' => $tahun->id,
         'alasan' => 'Bekerja di luar kota.',
-        'bukti_bayar' => UploadedFile::fake()->create('bukti.pdf', 100, 'application/pdf'),
     ])->assertSessionHasNoErrors();
 
     return PengajuanAkademik::query()->where('jenis', PengajuanAkademik::CUTI)->latest('id')->firstOrFail();

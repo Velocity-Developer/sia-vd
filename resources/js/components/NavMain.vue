@@ -186,10 +186,10 @@ const aturSeksi = (seksi: NavGroup, terbuka: boolean) => {
                                                 <SidebarMenuSubButton
                                                     as="button"
                                                     :is-active="seksiAktif(sub) && !seksiTerbuka(sub)"
-                                                    class="w-full rounded-[5px] text-[14px] leading-5"
+                                                    class="h-auto min-h-7 w-full rounded-[5px] py-1 text-left text-[14px] leading-5"
                                                 >
                                                     <component :is="sub.icon" v-if="sub.icon" class="text-muted-foreground" />
-                                                    <span>{{ sub.title }}</span>
+                                                    <span class="min-w-0 flex-1">{{ sub.title }}</span>
                                                     <ChevronRight
                                                         class="ml-auto size-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/subseksi:rotate-90"
                                                     />
@@ -202,7 +202,7 @@ const aturSeksi = (seksi: NavGroup, terbuka: boolean) => {
                                                             <SidebarMenuSubButton
                                                                 as-child
                                                                 :is-active="isItemActive(anak)"
-                                                                class="rounded-[5px] text-[14px] leading-5"
+                                                                class="h-auto min-h-7 rounded-[5px] py-1 text-[14px] leading-5 [&>span:last-child]:whitespace-normal"
                                                             >
                                                                 <Link :href="anak.href">
                                                                     <component :is="anak.icon" v-if="anak.icon" class="text-muted-foreground" />

@@ -22,7 +22,7 @@ class PeringatanPresensi
      */
     public static function untukMahasiswa(MahasiswaProfile $mahasiswa): array
     {
-        $min = PengaturanAkademik::current()->min_kehadiran_ujian;
+        $min = PengaturanAkademik::untukProdi($mahasiswa->prodi_id)->min_kehadiran_ujian;
         $kelas = KelasKuliah::query()
             ->whereHas('tahunAkademik', fn ($q) => $q->where('status', true))
             ->whereHas('krs', fn ($q) => $q->where('mahasiswa_id', $mahasiswa->id))

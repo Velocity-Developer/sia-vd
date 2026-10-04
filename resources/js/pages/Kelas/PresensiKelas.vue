@@ -178,7 +178,7 @@ const jumlahBerisiko = computed(() => props.peserta.filter((item) => dibawahBata
     <Head :title="`Presensi ${props.kelasKuliah.kode_kelas}`" />
     <AppLayout
         :breadcrumbs="[
-            { title: 'Presensi', href: rute('presensi.index') },
+            { title: props.peran === 'admin' ? 'Presensi Mahasiswa' : 'Presensi', href: rute('presensi.index') },
             { title: props.kelasKuliah.kode_kelas, href: rute('presensi.kelas', props.kelasKuliah.id) },
         ]"
     >

@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\AmbilKelasKrs;
 use App\Feature;
 use App\Http\Controllers\Controller;
-use App\Models\Jadwal;
+use App\KartuStudiTetap;
 use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\KrsSemester;
@@ -19,7 +20,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -106,44 +106,7 @@ class KrsController extends Controller
             return back()->with('krs_error', 'Status akademik Anda ('.($mahasiswa->status ?? 'belum diisi').') tidak memungkinkan pengisian KRS. Silakan hubungi bagian akademik.');
         }
 
-        // Kunci baris mahasiswa dan kelas agar dua pengambilan bersamaan tidak melewati kapasitas/SKS.
-        $error = DB::transaction(function () use ($mahasiswa, $kelasKuliah): ?string {
-            MahasiswaProfile::query()->whereKey($mahasiswa->id)->lockForUpdate()->first();
-            $kelas = KelasKuliah::query()->whereKey($kelasKuliah->id)->lockForUpdate()->first();
-            $tawaran = new TawaranKrs($mahasiswa, $kelasKuliah->tahunAkademik, $this->semuaKrs($mahasiswa));
-            $alasan = $tawaran->alasanTidakBolehAmbil($kelasKuliah->mataKuliah);
-
-            if ($alasan !== null) {
-                return $alasan;
-            }
-
-            $bentrok = Jadwal::bentrokUntukMahasiswa($kelas, $mahasiswa->id);
-
-            if ($bentrok !== null) {
-                return 'Jadwal kelas ini bentrok dengan kelas '.$bentrok->keterangan().'.';
-            }
-
-            // Kelas TA/Skripsi tidak dibatasi kapasitas: tiap mahasiswa dibimbing terpisah.
-            if (! $kelasKuliah->mataKuliah->tugas_akhir && $kelas->krs()->count() >= $kelas->kapasitas) {
-                return 'Kelas sudah penuh, silakan ambil kelas lain.';
-            }
-
-            $sksDiambil = (int) $mahasiswa->krs()
-                ->join('kelas_kuliah', 'kelas_kuliah.id', '=', 'krs.kelas_id')
-                ->join('mata_kuliahs', 'mata_kuliahs.id', '=', 'kelas_kuliah.matkul_id')
-                ->where('kelas_kuliah.tahun_akademik_id', $kelas->tahun_akademik_id)
-                ->sum('mata_kuliahs.sks');
-
-            $maksSks = PengaturanAkademik::maksSksUntuk($mahasiswa->ipsSemesterSebelum($kelasKuliah->tahunAkademik)['ips'] ?? null, $mahasiswa->prodi_id);
-
-            if ($sksDiambil + $kelasKuliah->mataKuliah->sks > $maksSks) {
-                return "Total SKS melebihi batas maksimal {$maksSks} SKS untuk Anda (sudah diambil {$sksDiambil} SKS).";
-            }
-
-            Krs::create(['mahasiswa_id' => $mahasiswa->id, 'kelas_id' => $kelas->id, 'status' => 'Aktif']);
-
-            return null;
-        });
+        $error = AmbilKelasKrs::ambil($mahasiswa, $kelasKuliah);
 
         return $error === null
             ? back()->with('krs_success', 'Kelas berhasil diambil.')
@@ -250,6 +213,24 @@ class KrsController extends Controller
         ])->download('krs-'.$mahasiswa->nim.'-'.Str::slug($tahunAkademik->tahun.'-'.$tahunAkademik->semester).'.pdf');
     }
 
+    /**
+     * KST (Kartu Studi Tetap) PDF: hanya untuk KRS yang sudah disetujui.
+     */
+    public function kst(Request $request): HttpResponse|RedirectResponse
+    {
+        $mahasiswa = $this->mahasiswa($request);
+        $tahunAkademik = $request->filled('tahun_akademik_id')
+            ? TahunAkademik::find($request->integer('tahun_akademik_id'))
+            : TahunAkademik::aktif();
+        abort_if($tahunAkademik === null, 404);
+
+        if (($alasan = KartuStudiTetap::alasanTidakBisa($mahasiswa, $tahunAkademik)) !== null) {
+            return redirect()->route('mahasiswa.krs')->with('krs_error', 'KST belum bisa dicetak: '.$alasan);
+        }
+
+        return KartuStudiTetap::pdf($mahasiswa, $tahunAkademik);
+    }
+
     private function mahasiswa(Request $request): MahasiswaProfile
     {
         $mahasiswa = $request->user()->mahasiswaProfile;
@@ -278,18 +259,10 @@ class KrsController extends Controller
     }
 
     /**
-     * Seluruh KRS mahasiswa beserta data kelas yang dibutuhkan halaman KRS.
-     *
      * @return Collection<int, Krs>
      */
     private function semuaKrs(MahasiswaProfile $mahasiswa): Collection
     {
-        return $mahasiswa->krs()
-            ->with([
-                'kelasKuliah:id,matkul_id,tahun_akademik_id',
-                'kelasKuliah.mataKuliah:id,prodi_id,sks,tugas_akhir',
-                'kelasKuliah.tahunAkademik:id,tahun,semester,tanggal_mulai,status',
-            ])
-            ->get();
+        return AmbilKelasKrs::semuaKrs($mahasiswa);
     }
 }

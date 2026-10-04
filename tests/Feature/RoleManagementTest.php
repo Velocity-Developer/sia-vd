@@ -20,7 +20,7 @@ it('lists roles with their user and permission counts', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Admin/Roles')
-            ->has('roles.data', 3)
+            ->has('roles.data', 4) // Admin, Dosen, Mahasiswa, Prodi
             ->where('roles.data', fn ($roles) => collect($roles)->firstWhere('slug', 'dosen')['users_count'] === 2
                 && collect($roles)->firstWhere('slug', 'admin')['permissions_count'] === Permission::whereNull('user_type')->count())
         );

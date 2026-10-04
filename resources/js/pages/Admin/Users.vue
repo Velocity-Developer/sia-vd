@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { Eye, FileSpreadsheet, Pencil, Search, Trash2 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
@@ -82,9 +82,14 @@ const confirmDelete = () => {
                         <h1 class="judul-halaman">{{ props.title }}</h1>
                         <p class="deskripsi-halaman">{{ subtitle[props.type] ?? '' }}</p>
                     </div>
-                    <Button as-child
-                        ><Link :href="route(`admin.users.${props.type}.create`)"> {{ createLabel[props.type] }} </Link></Button
-                    >
+                    <div class="flex flex-wrap gap-2">
+                        <Button v-if="props.type !== 'karyawan'" as-child variant="outline">
+                            <Link :href="route('admin.impor.index', props.type)"><FileSpreadsheet /> Impor Excel</Link>
+                        </Button>
+                        <Button as-child
+                            ><Link :href="route(`admin.users.${props.type}.create`)"> {{ createLabel[props.type] }} </Link></Button
+                        >
+                    </div>
                 </div>
 
                 <div class="bilah-filter">

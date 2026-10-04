@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\AllowedUpload;
 use App\Http\Controllers\Controller;
+use App\LingkupProdi;
 use App\Models\DispensasiUjian;
 use App\Models\DosenProfile;
 use App\Models\Fakultas;
@@ -79,12 +80,17 @@ class UserController extends Controller
     public function create(string $type): Response
     {
         $role = $this->role($type);
+        $roles = $this->roleOptions($role);
+        // Create User → Prodi membuka form karyawan dengan role Prodi sudah terpilih (bila boleh diberikan).
+        $roleProdi = $type === 'karyawan' && request()->query('role') === LingkupProdi::ROLE
+            ? collect($roles)->firstWhere('prodi', true)
+            : null;
 
         return Inertia::render('Admin/UserForm', [
-            'title' => 'Tambah User - '.ucfirst($type), 'type' => $type, 'user' => null,
-            'roles' => $this->roleOptions($role), 'defaultRoleId' => Role::system($role)->id,
+            'title' => $roleProdi ? 'Tambah User - Prodi' : 'Tambah User - '.ucfirst($type), 'type' => $type, 'user' => null,
+            'roles' => $roles, 'defaultRoleId' => $roleProdi['id'] ?? Role::system($role)->id,
             'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions(null) : [],
-            'programStudi' => $type !== 'karyawan' ? $this->programStudiOptions() : [],
+            'programStudi' => $this->programStudiOptions(),
             'opsi' => $type === 'mahasiswa' ? OpsiPmb::untukForm() : [],
         ]);
     }
@@ -127,6 +133,14 @@ class UserController extends Controller
             $extra['prodi_kode'] = $user->dosenProfile->prodi?->kode_prodi;
             $extra['fakultas_name'] = $user->dosenProfile->prodi?->fakultas?->nama_fakultas;
             $extra['fakultas_kode'] = $user->dosenProfile->prodi?->fakultas?->kode_fakultas;
+        }
+        if ($role === UserType::Admin && $user->adminProfile?->prodi_id) {
+            $prodi = $user->adminProfile->loadMissing('prodi.fakultas')->prodi;
+            $extra['prodi_name'] = $prodi?->nama_prodi;
+            $extra['prodi_jenjang'] = $prodi?->jenjang;
+            $extra['prodi_kode'] = $prodi?->kode_prodi;
+            $extra['fakultas_name'] = $prodi?->fakultas?->nama_fakultas;
+            $extra['fakultas_kode'] = $prodi?->fakultas?->kode_fakultas;
         }
 
         return Inertia::render('Admin/UserShow', [
@@ -182,13 +196,13 @@ class UserController extends Controller
                 + ($user->mahasiswaProfile ? $this->biodataTambahan($user->mahasiswaProfile) : []),
             'roles' => $this->roleOptions($role), 'defaultRoleId' => $user->role_id,
             'dosenWali' => $type === 'mahasiswa' ? $this->dosenOptions($user->mahasiswaProfile?->dosen_wali_id) : [],
-            'programStudi' => $type !== 'karyawan' ? $this->programStudiOptions() : [],
+            'programStudi' => $this->programStudiOptions(),
             'opsi' => $type === 'mahasiswa' ? OpsiPmb::untukForm() : [],
         ]);
     }
 
     /**
-     * @return list<array{id: int, name: string}>
+     * @return list<array{id: int, name: string, prodi: bool}>
      */
     private function roleOptions(UserType $type): array
     {
@@ -196,7 +210,7 @@ class UserController extends Controller
 
         return Role::query()->ofType($type)->with('permissions')->orderByDesc('is_system')->orderBy('name')->get()
             ->filter(fn (Role $role): bool => $actor === null || $actor->canAssignRole($role))
-            ->map(fn (Role $role): array => ['id' => $role->id, 'name' => $role->name])->values()->all();
+            ->map(fn (Role $role): array => ['id' => $role->id, 'name' => $role->name, 'prodi' => $role->slug === LingkupProdi::ROLE])->values()->all();
     }
 
     /**
@@ -476,6 +490,12 @@ class UserController extends Controller
         ];
     }
 
+    /** Role yang dipilih di form adalah role Prodi. */
+    private function rolePilihanProdi(): bool
+    {
+        return Role::query()->whereKey(request()->integer('role_id'))->value('slug') === LingkupProdi::ROLE;
+    }
+
     private function role(string $type): UserType
     {
         return match ($type) {
@@ -504,6 +524,10 @@ class UserController extends Controller
         $fields[] = match ($role) {
             UserType::Admin => 'nomor_induk', UserType::Dosen => 'nidn', UserType::Mahasiswa => 'nim'
         };
+        if ($role === UserType::Admin) {
+            $fields[] = 'prodi_id';
+            $data['prodi_id'] = $this->rolePilihanProdi() ? ($data['prodi_id'] ?? null) : null;
+        }
         if ($role === UserType::Dosen) {
             $fields = [...$fields, 'jabatan_fungsional', 'pendidikan_terakhir', 'status_kepegawaian', 'status', 'prodi_id'];
         }
@@ -527,6 +551,8 @@ class UserController extends Controller
         // Karyawan: nomor_induk wajib agar detail tidak tampil "-".
         if ($role === UserType::Admin) {
             $rules['nomor_induk'] = ['required', 'string', 'max:50', Rule::unique('admin_profiles')->ignore($user?->adminProfile?->id)];
+            // Akun Prodi wajib terikat ke satu program studi; role lain tidak memakai isian ini.
+            $rules['prodi_id'] = [Rule::requiredIf(fn (): bool => $this->rolePilihanProdi()), 'nullable', 'exists:program_studis,id'];
         }
         if ($role === UserType::Dosen) {
             $rules += ['nidn' => ['required', 'string', 'max:50', Rule::unique('dosen_profiles')->ignore($user?->dosenProfile?->id)], 'jabatan_fungsional' => ['required', 'string', 'max:100'], 'pendidikan_terakhir' => ['required', 'string', 'max:100'], 'status_kepegawaian' => ['required', 'string', 'max:100'], 'status' => ['required', Rule::in(DosenProfile::STATUS)], 'prodi_id' => ['nullable', 'exists:program_studis,id']];

@@ -3,6 +3,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Pencil, Search, Trash2 } from 'lucide-vue-next';
@@ -22,6 +23,7 @@ type Item = {
 };
 const page = usePage<{ flash?: { success?: string; error?: string } }>();
 const props = defineProps<{ tahunAkademiks: { data: Item[]; total: number; from: number | null; links: any[] }; search?: string }>();
+const { prodi } = usePermissions();
 const search = ref(props.search ?? '');
 watch(search, (value) => router.get(route('admin.tahun-akademik.index'), { search: value }, { preserveState: true, replace: true }));
 const confirmOpen = ref(false);
@@ -50,7 +52,7 @@ const confirmDelete = () => {
                         <h1 class="judul-halaman">Tahun Akademik</h1>
                         <p class="deskripsi-halaman">Kelola periode akademik perkuliahan.</p>
                     </div>
-                    <Button as-child><Link :href="route('admin.tahun-akademik.create')">Tambah Tahun Akademik</Link></Button>
+                    <Button v-if="!prodi" as-child><Link :href="route('admin.tahun-akademik.create')">Tambah Tahun Akademik</Link></Button>
                 </div>
 
                 <div class="bilah-filter">
@@ -98,7 +100,7 @@ const confirmDelete = () => {
                                     </td>
                                     <td class="kolom-aksi">
                                         <div class="aksi-tabel">
-                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]" v-if="!prodi">
                                                 <Link :href="route('admin.tahun-akademik.edit', item.id)" title="Edit" aria-label="Edit"
                                                     ><Pencil
                                                 /></Link>
@@ -107,6 +109,7 @@ const confirmDelete = () => {
                                                 variant="outline"
                                                 size="icon-sm"
                                                 class="text-[#dd5b00]"
+                                                v-if="!prodi"
                                                 title="Hapus"
                                                 aria-label="Hapus"
                                                 @click="remove(item)"

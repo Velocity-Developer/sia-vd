@@ -180,9 +180,9 @@ class DashboardController extends Controller
         }
 
         if ($user->hasPermission('admin.pengajuan-akademik')) {
-            $this->perJenis(PengajuanAkademik::JENIS)->each(fn (int $jumlah, string $jenis) => $daftar->push($this->butir(
-                'Pengajuan '.strtolower(PengajuanAkademik::LABEL_JENIS[$jenis]), null, $jumlah,
-                route('admin.pengajuan-akademik.index', ['jenis' => $jenis, 'status' => PengajuanAkademik::MENUNGGU]), true)));
+            $this->perJenis(PengajuanAkademikController::jenisTersedia())->each(fn (int $jumlah, string $jenis) => $daftar->push($this->butir(
+                'Pengajuan '.PengajuanAkademik::LABEL_JENIS[$jenis], null, $jumlah,
+                route(PengajuanAkademikController::RUTE[$jenis], ['status' => PengajuanAkademik::MENUNGGU]), true)));
         }
 
         if ($user->hasPermission('admin.pengajuan-cuti')) {

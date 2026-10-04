@@ -5,8 +5,10 @@ use App\Models\KelasKuliah;
 use App\Models\Krs;
 use App\Models\PengajuanAkademik;
 use App\Models\PengaturanAkademik;
+use App\Models\PeriodeWisuda;
 use App\Models\TugasAkhir;
 use App\Models\User;
+use App\Models\Wisuda;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -45,14 +47,14 @@ it('marks a course as the TA/Skripsi course from the course form', function () {
     $mk = $kelas->mataKuliah;
 
     $this->actingAs($admin)->put(route('admin.mata-kuliah.update', $mk), [
-        'kode_matkul' => $mk->kode_matkul, 'nama_matkul' => $mk->nama_matkul, 'sks' => 6, 'semester' => 8, 'jenis' => 'Wajib', 'prodi_id' => $mk->prodi_id,
+        'kode_matkul' => $mk->kode_matkul, 'nama_matkul' => $mk->nama_matkul, 'sks' => 6, 'semester' => 8, 'jenis' => 'Wajib', 'jenis_penilaian' => 'reguler', 'prodi_id' => $mk->prodi_id,
     ])->assertSessionHasNoErrors();
     expect($mk->fresh()->tugas_akhir)->toBeFalse();
 
     $this->actingAs($admin)->put(route('admin.mata-kuliah.update', $mk), [
-        'kode_matkul' => $mk->kode_matkul, 'nama_matkul' => $mk->nama_matkul, 'sks' => 6, 'semester' => 8, 'jenis' => 'Wajib', 'prodi_id' => $mk->prodi_id, 'tugas_akhir' => true,
+        'kode_matkul' => $mk->kode_matkul, 'nama_matkul' => $mk->nama_matkul, 'sks' => 6, 'semester' => 8, 'jenis' => 'Wajib', 'jenis_penilaian' => 'tugas_akhir', 'prodi_id' => $mk->prodi_id,
     ])->assertSessionHasNoErrors();
-    expect($mk->fresh()->tugas_akhir)->toBeTrue();
+    expect($mk->fresh())->tugas_akhir->toBeTrue()->jenis_penilaian->toBe('tugas_akhir');
 });
 
 it('locks the TA form until the student takes the TA/Skripsi course this semester', function () {
@@ -205,10 +207,10 @@ it('lists waiting submissions first for the admin', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.ajukan-ta'), isianTa());
 
-    $this->actingAs($admin)->get(route('admin.pengajuan-akademik.index'))->assertInertia(fn ($page) => $page
+    $this->actingAs($admin)->get(route('admin.persetujuan-ta.index'))->assertInertia(fn ($page) => $page
         ->component('Admin/PengajuanAkademik')
         ->where('filter.jenis', 'tugas_akhir')
-        ->where('jumlahMenunggu.tugas_akhir', 1)
+        ->where('judul', 'Persetujuan Tugas Akhir')
         ->has('pengajuan.data', 1)
         ->where('pengajuan.data.0.lampiran', ['proposal'])
         ->has('pengajuan.data.0.usulan_pembimbing', 1));
@@ -278,4 +280,49 @@ it('shows the defence and graduation fees as information only', function () {
         ->where('biayaTugasAkhir.pendadaran', [['nama' => 'Biaya Pendadaran', 'nominal' => 900000, 'keterangan' => null]])
         ->where('biayaTugasAkhir.wisuda', []));
     $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page->where('biaya.pendadaran.0.nominal', 900000));
+});
+
+it('uploads the TA manuscript after the title is approved until the student is registered for graduation', function () {
+    [, $mhs] = kelasTa();
+    $admin = User::factory()->admin()->create();
+    $naskah = fn () => ['naskah_ta' => UploadedFile::fake()->create('naskah.pdf', 300, 'application/pdf')];
+
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.naskah'), $naskah())->assertSessionHas('error');
+
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.ajukan-ta'), isianTa());
+    $pengajuan = PengajuanAkademik::sole();
+    $this->actingAs($admin)->post(route('admin.pengajuan-akademik.setujui', $pengajuan), [
+        'judul' => 'Sistem Rekomendasi', 'pembimbing_1_id' => $pengajuan->isian['usulan_pembimbing_1_id'],
+    ])->assertSessionHas('success');
+    $ta = TugasAkhir::sole();
+
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.naskah'), ['naskah_ta' => UploadedFile::fake()->image('naskah.jpg')])->assertSessionHasErrors('naskah_ta');
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.naskah'), $naskah())->assertSessionHas('success');
+    $lama = $ta->fresh()->naskah;
+    Storage::disk('local')->assertExists($lama);
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.naskah'), $naskah())->assertSessionHas('success');
+    Storage::disk('local')->assertMissing($lama);
+
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page
+        ->where('bagian', 'tugas_akhir')->where('tugasAkhir.bisa_unggah_naskah', true)->whereNot('tugasAkhir.naskah_diunggah_at', null));
+    $this->actingAs($admin)->get(route('admin.persetujuan-ta.index'))->assertInertia(fn ($page) => $page
+        ->where('pengajuan.data.0.tugas_akhir.id', $ta->id)->whereNot('pengajuan.data.0.tugas_akhir.naskah_diunggah_at', null));
+
+    $this->actingAs($mhs)->get(route('berkas.naskah-ta', $ta))->assertOk();
+    $this->actingAs($admin)->get(route('berkas.naskah-ta', $ta))->assertOk();
+    $this->actingAs(User::factory()->mahasiswa()->create())->get(route('berkas.naskah-ta', $ta))->assertForbidden();
+
+    // Sudah terdaftar wisuda: naskah terkunci.
+    Wisuda::create(['pengajuan_id' => $pengajuan->id, 'mahasiswa_id' => $mhs->mahasiswaProfile->id, 'tugas_akhir_id' => $ta->id,
+        'periode_wisuda_id' => PeriodeWisuda::create(['nama' => 'Wisuda I', 'tanggal_acara' => now()->addMonth()->toDateString(), 'batas_daftar' => now()->addWeek()->toDateString()])->id]);
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.naskah'), $naskah())->assertSessionHas('error');
+});
+
+it('shows the graduation registration on its own page', function () {
+    [, $mhs] = kelasTa();
+    $this->actingAs($mhs)->post(route('mahasiswa.tugas-akhir.ajukan-ta'), isianTa());
+
+    $this->actingAs($mhs)->get(route('mahasiswa.wisuda'))->assertInertia(fn ($page) => $page
+        ->component('Mahasiswa/TugasAkhir')->where('bagian', 'wisuda')->where('pendaftaranWisuda.keadaan', 'terkunci')->has('riwayat', 0));
+    $this->actingAs($mhs)->get(route('mahasiswa.tugas-akhir'))->assertInertia(fn ($page) => $page->where('bagian', 'tugas_akhir')->has('riwayat', 1));
 });

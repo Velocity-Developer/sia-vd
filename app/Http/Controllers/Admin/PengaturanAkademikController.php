@@ -13,7 +13,6 @@ use App\ValidasiSkalaNilai;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,13 +28,12 @@ class PengaturanAkademikController extends Controller
             'maksSksTanpaIps' => $pengaturan->maks_sks_tanpa_ips,
             'kunciKrsAktif' => $pengaturan->kunci_krs_aktif,
             'verifikasiKrsAktif' => $pengaturan->verifikasi_krs_aktif,
-            'hurufMaksRemidi' => $pengaturan->huruf_maks_remidi,
             'susulan' => $pengaturan->only(['batas_pengajuan_susulan_hari', 'batas_bayar_susulan_hari']),
             'minSksPendadaran' => $pengaturan->min_sks_pendadaran,
             'minSksAmbilTa' => $pengaturan->min_sks_ambil_ta,
             'maksCuti' => $pengaturan->maks_cuti,
             'pindahKelasAktif' => PengaturanPindahKelas::current()->is_active,
-            'presensi' => $pengaturan->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']),
+            'presensi' => $pengaturan->only(['jumlah_pertemuan', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari']),
             'batasSks' => BatasSks::query()->orderByDesc('ips_minimal')->get(['ips_minimal', 'maks_sks']),
             'skalaNilai' => SkalaNilai::query()->orderByDesc('bobot')->orderBy('huruf')->get(['huruf', 'bobot', 'angka_minimal', 'lulus', 'boleh_diulang'])
                 ->map(fn (SkalaNilai $nilai): array => [...$nilai->toArray(), 'dipakai' => $dipakai[$nilai->huruf] ?? 0]),
@@ -88,18 +86,14 @@ class PengaturanAkademikController extends Controller
     {
         $data = $request->validate([
             'jumlah_pertemuan' => ['required', 'integer', 'min:1', 'max:32'],
-            'min_kehadiran_ujian' => ['required', 'integer', 'min:0', 'max:100'],
             'toleransi_terlambat_menit' => ['required', 'integer', 'min:0', 'max:180'],
             'durasi_presensi_mandiri_menit' => ['required', 'integer', 'min:1', 'max:180'],
             'batas_pengajuan_izin_hari' => ['required', 'integer', 'min:0', 'max:14'],
-            'syarat_ujian_aktif' => ['required', 'boolean'],
         ], attributes: [
             'jumlah_pertemuan' => 'Jumlah pertemuan',
-            'min_kehadiran_ujian' => 'Minimal kehadiran',
             'toleransi_terlambat_menit' => 'Toleransi terlambat',
             'durasi_presensi_mandiri_menit' => 'Durasi presensi mandiri',
             'batas_pengajuan_izin_hari' => 'Batas pengajuan izin',
-            'syarat_ujian_aktif' => 'Syarat kehadiran ujian',
         ]);
 
         PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
@@ -204,16 +198,5 @@ class PengaturanAkademikController extends Controller
         PengaturanAkademik::current()->update([...$data, 'updated_by' => $request->user()->id]);
 
         return back()->with('success', 'Pengaturan cuti disimpan.');
-    }
-
-    public function updateRemidi(Request $request): RedirectResponse
-    {
-        $data = $request->validate([
-            'huruf_maks_remidi' => ['nullable', Rule::in(SkalaNilai::huruf())],
-        ], attributes: ['huruf_maks_remidi' => 'Huruf maksimal setelah remidi']);
-
-        PengaturanAkademik::current()->update(['huruf_maks_remidi' => $data['huruf_maks_remidi'] ?? null, 'updated_by' => $request->user()->id]);
-
-        return back()->with('success', 'Pengaturan remidi disimpan.');
     }
 }

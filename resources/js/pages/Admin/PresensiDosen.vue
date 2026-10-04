@@ -7,6 +7,7 @@ import TabPresensiDosen from '@/components/TabPresensiDosen.vue';
 import TimePicker from '@/components/TimePicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal, infoVerifikasi, JENIS_PERTEMUAN, kelasStatusDosen, type JenisPertemuan, type VerifikasiPresensi } from '@/lib/presensi';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
@@ -65,6 +66,8 @@ const props = defineProps<{
     prodiOptions: Opsi[];
     dosenFilterOptions: Opsi[];
 }>();
+// Akun Prodi tidak mengisi presensi dosen (hanya Admin); rekap & BAP tetap terbuka.
+const { prodi } = usePermissions();
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 
@@ -265,7 +268,7 @@ const bisaKoreksi = (b: Baris) => b.verifikasi !== 'disetujui' && b.status !== '
                                     </td>
                                     <td class="kolom-aksi">
                                         <div class="aksi-tabel">
-                                            <Button v-if="bisaKoreksi(b)" size="sm" variant="outline" @click="bukaKoreksi(b)"
+                                            <Button v-if="!prodi && bisaKoreksi(b)" size="sm" variant="outline" @click="bukaKoreksi(b)"
                                                 ><Pencil /> Koreksi</Button
                                             >
                                             <Button v-if="b.status === 'selesai'" as-child size="sm" variant="outline">

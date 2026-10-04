@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Feature;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Tugas akhir/skripsi yang disahkan admin dari pengajuan TA: judul, bidang, dan pembimbing (maks. 2).
+ * Tugas akhir/skripsi yang disahkan admin dari pengajuan TA: judul, bidang, dan pembimbing (maks. 2). Sesudah disahkan,
+ * mahasiswa mengunggah naskah TA (`naskah`, PDF di disk privat) yang sekaligus menjadi naskah final syarat wisuda; terkunci
+ * selama pendaftaran wisuda diproses dan sesudah terdaftar sebagai peserta wisuda.
  */
 class TugasAkhir extends Model
 {
@@ -20,11 +23,11 @@ class TugasAkhir extends Model
 
     protected $table = 'tugas_akhir';
 
-    protected $fillable = ['mahasiswa_id', 'pengajuan_id', 'judul', 'bidang', 'pembimbing_1_id', 'pembimbing_2_id', 'status', 'disahkan_oleh', 'selesai_at'];
+    protected $fillable = ['mahasiswa_id', 'pengajuan_id', 'judul', 'bidang', 'pembimbing_1_id', 'pembimbing_2_id', 'status', 'disahkan_oleh', 'selesai_at', 'naskah', 'naskah_diunggah_at'];
 
     protected function casts(): array
     {
-        return ['selesai_at' => 'datetime'];
+        return ['selesai_at' => 'datetime', 'naskah_diunggah_at' => 'datetime'];
     }
 
     public function mahasiswa(): BelongsTo
@@ -74,5 +77,27 @@ class TugasAkhir extends Model
     public function namaPembimbing(): array
     {
         return array_values(array_filter([$this->pembimbing1?->user?->name, $this->pembimbing2?->user?->name]));
+    }
+
+    /**
+     * Tanpa pendadaran, TA dinyatakan selesai oleh nilai: selesai selama mahasiswa punya KRS mata kuliah TA/Skripsi
+     * dengan huruf lulus, kembali berjalan bila nilai itu dihapus. Dipanggil setiap nilai KRS TA berubah.
+     */
+    public static function sinkronDariNilai(int $mahasiswaId): void
+    {
+        if (Feature::aktif('pendadaran') || ($tugasAkhir = static::milik($mahasiswaId)) === null) {
+            return;
+        }
+
+        $lulus = Krs::query()->where('mahasiswa_id', $mahasiswaId)->whereNotNull('nilai')
+            ->whereHas('kelasKuliah.mataKuliah', fn (Builder $q) => $q->where('tugas_akhir', true))
+            ->with('kelasKuliah.mataKuliah:id,prodi_id')
+            ->get()
+            ->contains(fn (Krs $krs): bool => $krs->nilaiLulus());
+
+        $status = $lulus ? self::SELESAI : self::BERJALAN;
+        if ($tugasAkhir->status !== $status) {
+            $tugasAkhir->update(['status' => $status, 'selesai_at' => $lulus ? now() : null]);
+        }
     }
 }

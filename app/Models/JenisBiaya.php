@@ -32,7 +32,7 @@ class JenisBiaya extends Model
     /** Informasi biaya wisuda: tidak ditagihkan, bukti bayar diunggah di form pendaftaran. */
     public const WISUDA = 'wisuda';
 
-    /** Informasi biaya cuti: tidak ditagihkan, bukti bayar diunggah di form pengajuan cuti. */
+    /** Informasi biaya cuti: tidak ditagihkan, hanya ditampilkan di halaman pengajuan cuti. */
     public const CUTI = 'cuti';
 
     public const KATEGORI = [self::SEMESTER, self::REMIDI, self::SUSULAN, self::PENDADARAN, self::WISUDA, self::CUTI];

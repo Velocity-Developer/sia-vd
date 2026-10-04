@@ -33,7 +33,7 @@ class OpsiPmb
 
     public const JENJANG = ['A' => 'S3', 'B' => 'S2', 'C' => 'S1', 'D' => 'D4', 'E' => 'D3', 'F' => 'D2', 'G' => 'D1'];
 
-    public const STATUS_PENDAFTARAN = ['lulus' => 'Lulus', 'ditolak' => 'Ditolak'];
+    public const STATUS_PENDAFTARAN = ['diterima' => 'Diterima', 'ditolak' => 'Ditolak'];
 
     /** @return array<string, string> kode → nama negara */
     public static function negara(): array

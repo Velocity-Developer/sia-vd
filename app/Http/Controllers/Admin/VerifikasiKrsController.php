@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\FilterKrs;
 use App\Http\Controllers\Controller;
 use App\Models\Krs;
 use App\Models\KrsSemester;
@@ -22,6 +23,8 @@ use Inertia\Response;
  */
 class VerifikasiKrsController extends Controller
 {
+    use FilterKrs;
+
     public function index(Request $request): Response
     {
         $tahunAkademiks = TahunAkademik::query()->orderByDesc('tanggal_mulai')->get(['id', 'tahun', 'semester', 'status', 'tanggal_krs_awal', 'tanggal_krs_akhir', 'tanggal_revisi_krs_akhir']);
@@ -205,22 +208,5 @@ class VerifikasiKrsController extends Controller
             ->where('mahasiswa_id', $krsSemester->mahasiswa_id)
             ->whereHas('kelasKuliah', fn (Builder $q) => $q->where('tahun_akademik_id', $krsSemester->tahun_akademik_id))
             ->exists();
-    }
-
-    /**
-     * @param  list<int>  $mahasiswaIds
-     * @return array<int, int>
-     */
-    private function sksPerMahasiswa(array $mahasiswaIds, int $tahunAkademikId): array
-    {
-        return Krs::query()
-            ->whereIn('krs.mahasiswa_id', $mahasiswaIds)
-            ->join('kelas_kuliah', 'kelas_kuliah.id', '=', 'krs.kelas_id')
-            ->join('mata_kuliahs', 'mata_kuliahs.id', '=', 'kelas_kuliah.matkul_id')
-            ->where('kelas_kuliah.tahun_akademik_id', $tahunAkademikId)
-            ->groupBy('krs.mahasiswa_id')
-            ->selectRaw('krs.mahasiswa_id, sum(mata_kuliahs.sks) as sks')
-            ->pluck('sks', 'krs.mahasiswa_id')
-            ->all();
     }
 }

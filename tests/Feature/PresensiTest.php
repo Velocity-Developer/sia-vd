@@ -11,6 +11,7 @@ use App\Models\Pertemuan;
 use App\Models\PresensiMahasiswa;
 use App\Models\RiwayatJadwalPertemuan;
 use App\Models\Ruang;
+use App\Models\SyaratUjianProdi;
 use App\Models\User;
 use App\SyaratUjian;
 use Illuminate\Http\UploadedFile;
@@ -329,11 +330,11 @@ it('limits the materi meeting number to the class meeting count', function () {
 
 it('saves the presensi defaults in the academic settings', function () {
     $this->actingAs(User::factory()->admin()->create())
-        ->put(route('admin.pengaturan-akademik.presensi'), ['jumlah_pertemuan' => 14, 'min_kehadiran_ujian' => 80, 'toleransi_terlambat_menit' => 10, 'durasi_presensi_mandiri_menit' => 20, 'batas_pengajuan_izin_hari' => 2, 'syarat_ujian_aktif' => true])
+        ->put(route('admin.pengaturan-akademik.presensi'), ['jumlah_pertemuan' => 14, 'toleransi_terlambat_menit' => 10, 'durasi_presensi_mandiri_menit' => 20, 'batas_pengajuan_izin_hari' => 2])
         ->assertSessionHas('success');
 
-    expect(PengaturanAkademik::current()->only(['jumlah_pertemuan', 'min_kehadiran_ujian', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari', 'syarat_ujian_aktif']))
-        ->toBe(['jumlah_pertemuan' => 14, 'min_kehadiran_ujian' => 80, 'toleransi_terlambat_menit' => 10, 'durasi_presensi_mandiri_menit' => 20, 'batas_pengajuan_izin_hari' => 2, 'syarat_ujian_aktif' => true]);
+    expect(PengaturanAkademik::current()->only(['jumlah_pertemuan', 'toleransi_terlambat_menit', 'durasi_presensi_mandiri_menit', 'batas_pengajuan_izin_hari']))
+        ->toBe(['jumlah_pertemuan' => 14, 'toleransi_terlambat_menit' => 10, 'durasi_presensi_mandiri_menit' => 20, 'batas_pengajuan_izin_hari' => 2]);
 });
 
 /**
@@ -1162,4 +1163,27 @@ it('memberi tahu mahasiswa di beranda dan halaman presensi saat pertemuan dijadw
     $this->flushSession();
     $this->app['auth']->forgetGuards();
     $this->actingAs($lain)->get(route('mahasiswa.dashboard'))->assertInertia(fn ($page) => $page->where('pengingat.jadwal', null));
+});
+
+it('applies the program studi exam requirement and can count leave as present', function () {
+    [$kelas, $mahasiswa] = kelasPresensi(1);
+    Pertemuan::generateUntuk($kelas);
+    $b = $mahasiswa[0]->mahasiswaProfile->id;
+
+    // Hadir, izin, sakit, alpa sebelum UTS: 25% bila izin/sakit tidak dihitung, 75% bila dihitung.
+    foreach ([1 => 'hadir', 2 => 'izin', 3 => 'sakit', 4 => 'alpa'] as $ke => $status) {
+        selesaikanPertemuan($kelas, $ke, [$b => $status]);
+    }
+    PengaturanAkademik::current()->update(['syarat_ujian_aktif' => true, 'min_kehadiran_ujian' => 75]);
+    expect(SyaratUjian::untukKelas($kelas)['peserta'][$b]['uts'])->toMatchArray(['persen' => 25.0, 'memenuhi' => false]);
+
+    // Pengaturan milik prodi mata kuliah menimpa pengaturan umum.
+    SyaratUjianProdi::create(['prodi_id' => $kelas->mataKuliah->prodi_id, 'syarat_ujian_aktif' => true, 'min_kehadiran_ujian' => 70, 'izin_sakit_dihitung_hadir' => true]);
+    $syarat = SyaratUjian::untukKelas($kelas->fresh());
+    expect($syarat['min'])->toBe(70)
+        ->and($syarat['peserta'][$b]['uts'])->toMatchArray(['persen' => 75.0, 'memenuhi' => true])
+        ->and(PengaturanAkademik::current()->fresh()->min_kehadiran_ujian)->toBe(75);
+
+    SyaratUjianProdi::query()->update(['syarat_ujian_aktif' => false]);
+    expect(SyaratUjian::untukKelas($kelas->fresh())['peserta'][$b]['uts']['memenuhi'])->toBeNull();
 });

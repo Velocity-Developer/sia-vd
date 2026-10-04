@@ -3,6 +3,7 @@ import AlertModal from '@/components/AlertModal.vue';
 import Pagination from '@/components/Pagination.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
@@ -14,6 +15,7 @@ type Ruang = { id: number; kode_ruang: string; nama_ruang: string; kapasitas: nu
 type Pagination = { data: Ruang[]; links: { url: string | null; label: string; active: boolean }[]; total: number; from: number | null };
 
 const props = defineProps<{ ruangs: Pagination; search?: string }>();
+const { prodi } = usePermissions();
 
 const search = ref(props.search ?? '');
 watch(search, (value) => router.get(route('admin.ruang.index'), { search: value }, { preserveState: true, preserveScroll: true, replace: true }));
@@ -47,7 +49,7 @@ const confirmDelete = () => {
                         <h1 class="judul-halaman">Ruang</h1>
                         <p class="deskripsi-halaman">Kelola ruang kuliah, laboratorium, dan detail fasilitas.</p>
                     </div>
-                    <Button as-child><Link :href="route('admin.ruang.create')">Tambah Ruang</Link></Button>
+                    <Button v-if="!prodi" as-child><Link :href="route('admin.ruang.create')">Tambah Ruang</Link></Button>
                 </div>
 
                 <div class="bilah-filter">
@@ -98,13 +100,14 @@ const confirmDelete = () => {
                                             <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]"
                                                 ><Link :href="route('admin.ruang.show', item.id)" title="Detail" aria-label="Detail"><Eye /></Link
                                             ></Button>
-                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]"
+                                            <Button as-child variant="outline" size="icon-sm" class="text-[#2a9d99]" v-if="!prodi"
                                                 ><Link :href="route('admin.ruang.edit', item.id)" title="Edit" aria-label="Edit"><Pencil /></Link
                                             ></Button>
                                             <Button
                                                 variant="outline"
                                                 size="icon-sm"
                                                 class="text-[#dd5b00]"
+                                                v-if="!prodi"
                                                 title="Hapus"
                                                 aria-label="Hapus"
                                                 @click="remove(item)"

@@ -41,7 +41,7 @@ class DashboardController extends Controller
             'pengingatNilai' => $kelas ? BerandaDosen::pengingatNilai($dosen, $tahunAkademik) : null,
             'remidiDosen' => $bisa('dosen.kelas-kuliah') ? PengingatRemidi::untukDosen($dosen) : null,
             'susulanDosen' => $bisa('dosen.ujian') && Feature::aktif('ujian_susulan') ? PengingatSusulan::untukDosen($dosen) : null,
-            'pengingatTugasAkhir' => $bisa('dosen.bimbingan') ? PengingatTugasAkhir::untukDosen($dosen) : null,
+            'pengingatTugasAkhir' => $bisa('dosen.bimbingan') && Feature::aktif('pendadaran') ? PengingatTugasAkhir::untukDosen($dosen) : null,
             'kelas' => $kelas ? BerandaDosen::kelas($dosen, $tahunAkademik) : null,
         ]);
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Kelas;
 
 use App\Http\Controllers\Concerns\KontenKelas;
+use App\Http\Controllers\Concerns\SimpanNilaiKomponen;
 use App\Http\Controllers\Controller;
 use App\Models\DosenProfile;
 use App\Models\KelasKuliah;
@@ -13,6 +14,7 @@ use App\Models\Pertemuan;
 use App\Models\SkalaNilai;
 use App\Models\TahunAkademik;
 use App\Models\Ujian;
+use App\NilaiSemester;
 use App\UjianSusulan;
 use App\UsulanRemidi;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +29,7 @@ use Throwable;
 class KelasKuliahController extends Controller
 {
     use KontenKelas;
+    use SimpanNilaiKomponen;
 
     public function index(Request $request): Response
     {
@@ -46,6 +49,7 @@ class KelasKuliahController extends Controller
 
         return Inertia::render('Kelas/KelasKuliahIndex', [
             'peran' => $this->peran(),
+            'modeNilai' => $request->route('mode') === 'nilai',
             'kelasKuliahs' => $kelasKuliahs,
             'search' => $search,
             'tahunAkademiks' => $this->tahunAkademiks(),
@@ -73,7 +77,7 @@ class KelasKuliahController extends Controller
         $this->pastikanAksesKelas($kelasKuliah);
         $kelasKuliah->load(['tahunAkademik', 'dosen.user', 'mataKuliah.prodi.fakultas', 'jadwals.ruang', 'krs.mahasiswa:id,user_id,nim,prodi_id', 'krs.mahasiswa.user:id,name', 'krs.mahasiswa.prodi:id,nama_prodi'])->muatKontenAktif();
 
-        $pengaturan = PengaturanAkademik::current();
+        $pengaturan = PengaturanAkademik::untukProdi($kelasKuliah->mataKuliah?->prodi_id);
 
         return Inertia::render('Kelas/KelasKuliahShow', [
             'peran' => $this->peran(),
@@ -91,6 +95,11 @@ class KelasKuliahController extends Controller
             'nilaiTerkunci' => $this->nilaiTerkunci($kelasKuliah),
             'kelasTugasAkhir' => $kelasKuliah->tugasAkhir(),
             'statusNilai' => $this->statusNilai($kelasKuliah),
+            // Tabel nilai per komponen (Penilaian → Tambah Komponen Nilai); null = belum bisa dinilai (lihat nilaiBelumSiap).
+            'nilaiKomponen' => NilaiSemester::aktif($kelasKuliah) ? NilaiSemester::tabel($kelasKuliah) : null,
+            'nilaiBelumSiap' => $kelasKuliah->tugasAkhir() && ! NilaiSemester::langsung($kelasKuliah) ? null : NilaiSemester::alasanBelumSiap($kelasKuliah),
+            // Admin boleh memperbaiki huruf hasil remidi peserta yang daftarnya sudah dikunci.
+            'hurufRemidiAdmin' => $this->peran() === 'admin' ? NilaiSemester::terkunciRemidi($kelasKuliah) : [],
             // Peserta remidi yang huruf akhirnya boleh diubah dosen walau kelas final, dan huruf yang boleh dipilih.
             ...$this->aksesNilaiRemidi($kelasKuliah, $pengaturan),
             'remidi' => $kelasKuliah->nilaiFinal() && ! $kelasKuliah->tugasAkhir() ? [
@@ -103,7 +112,8 @@ class KelasKuliahController extends Controller
     }
 
     /**
-     * Kunci nilai kelas: setelah difinalisasi dosen tidak bisa lagi mengubah nilai apa pun di kelas ini.
+     * Dosen mengirim nilai kelas ke validasi (alur Yapika: dosen input → Admin/Prodi validasi). Setelah dikirim dosen tidak
+     * bisa lagi mengubah nilai apa pun di kelas ini, kecuali admin mengembalikannya untuk koreksi.
      */
     public function finalisasiNilai(KelasKuliah $kelasKuliah): RedirectResponse
     {
@@ -111,26 +121,26 @@ class KelasKuliahController extends Controller
         $kelasKuliah->pastikanBukanTugasAkhir('finalisasi nilai; nilainya dari hasil pendadaran');
 
         if (($pesan = $this->pesanNilaiTerkunci($kelasKuliah)) !== null || $kelasKuliah->nilai_final_at !== null) {
-            return back()->with('error', $pesan ?? 'Nilai kelas ini sudah difinalisasi.');
+            return back()->with('error', $pesan ?? 'Nilai kelas ini sudah dikirim ke validasi.');
         }
 
         $uas = $kelasKuliah->ujianTerbit(Pertemuan::UAS);
 
         if ($uas !== null && ! $uas->sudahSelesai()) {
-            return back()->with('error', 'Nilai baru bisa difinalisasi setelah UAS kelas ini selesai.');
+            return back()->with('error', 'Nilai baru bisa dikirim ke validasi setelah UAS kelas ini selesai.');
         }
 
         if (($tertunda = UjianSusulan::uasSusulanTertunda($kelasKuliah)->count()) > 0) {
-            return back()->with('error', "Masih ada {$tertunda} mahasiswa dengan UAS susulan yang belum selesai. Finalisasi setelah susulannya selesai atau gugur.");
+            return back()->with('error', "Masih ada {$tertunda} mahasiswa dengan UAS susulan yang belum selesai. Kirim ke validasi setelah susulannya selesai atau gugur.");
         }
 
         $kelasKuliah->finalisasiNilai(request()->user());
 
-        return back()->with('success', 'Nilai kelas difinalisasi dan kini terkunci. Langkah berikutnya: periksa lalu kunci Daftar Remidi di bawah.');
+        return back()->with('success', 'Nilai kelas dikirim ke validasi dan kini terkunci untuk dosen. Langkah berikutnya: periksa lalu kunci Daftar Remidi di bawah.');
     }
 
     /**
-     * Admin membuka kembali kunci nilai. Bila batas input nilai tahun akademik sudah lewat, dosen perlu batas baru.
+     * Admin mengembalikan nilai kelas ke dosen untuk koreksi. Bila batas input nilai tahun akademik sudah lewat, dosen perlu batas baru.
      */
     public function bukaKunciNilai(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
     {
@@ -145,7 +155,7 @@ class KelasKuliahController extends Controller
 
         $kelasKuliah->bukaKunciNilai($validated['sampai'] ?? null);
 
-        return back()->with('success', 'Kunci nilai kelas dibuka. Dosen bisa mengubah nilai kembali.');
+        return back()->with('success', 'Nilai kelas dikembalikan ke dosen untuk koreksi. Dosen bisa mengubah nilai lalu mengirimnya ulang ke validasi.');
     }
 
     public function updateGrade(Request $request, KelasKuliah $kelasKuliah, Krs $krs): RedirectResponse
@@ -162,6 +172,15 @@ class KelasKuliahController extends Controller
         // Huruf akhir peserta remidi yang lunas dibuka setelah ujian remidi selesai, walau nilai kelas sudah final.
         $jalurRemidi = $dosen && ! $this->tahunAkademikTerkunci($kelasKuliah)
             && in_array($krs->mahasiswa_id, $kelasKuliah->mahasiswaRemidiTerbuka(), true);
+        // Huruf akhir dihitung dari komponen nilai. Huruf langsung hanya untuk hasil remidi: dosen lewat jalur remidi,
+        // admin untuk peserta remidi yang daftarnya sudah dikunci.
+        $hurufRemidiAdmin = ! $dosen && in_array($krs->mahasiswa_id, NilaiSemester::terkunciRemidi($kelasKuliah), true);
+
+        // Nilai tervalidasi terkunci, kecuali perbaikan lewat remidi (alur Yapika: remidi membuka kunci, lalu validasi ulang).
+        if ($krs->nilaiTervalidasi() && ! $jalurRemidi && ! $hurufRemidiAdmin) {
+            return back()->with('error', 'Nilai mahasiswa ini sudah divalidasi. Batalkan validasinya dulu di Penilaian → Validasi Nilai.');
+        }
+
         // Setelah daftar remidi dikunci, huruf akhir peserta hanya berubah lewat remidi, termasuk bila admin membuka
         // kembali kunci nilai kelas; kalau tidak, nilai awal, tagihan, dan huruf akhir bisa tidak cocok.
         $pesertaTerkunci = $dosen && ! $jalurRemidi && $kelasKuliah->remidi_dikunci_at !== null
@@ -171,13 +190,35 @@ class KelasKuliahController extends Controller
             return back()->with('error', $pesan ?? 'Huruf akhir peserta remidi hanya bisa diubah setelah ujian remidinya selesai.');
         }
 
-        $maks = $jalurRemidi ? PengaturanAkademik::current()->huruf_maks_remidi : null;
-        $krs->update($request->validate(
-            ['nilai' => [$jalurRemidi ? 'required' : 'nullable', Rule::in(SkalaNilai::hurufSampai($maks, $kelasKuliah->mataKuliah?->prodi_id))]],
-            ['nilai.in' => $maks !== null ? "Huruf akhir setelah remidi paling tinggi {$maks}." : 'Huruf nilai tidak dikenal.', 'nilai.required' => 'Pilih huruf akhir setelah remidi.'],
-        ));
+        if (! $jalurRemidi && ! $hurufRemidiAdmin) {
+            return back()->with('error', 'Huruf akhir dihitung otomatis dari komponen nilai; isi angkanya di tabel Nilai Mahasiswa.');
+        }
 
-        return back()->with('success', 'Nilai berhasil diperbarui.');
+        $maks = $jalurRemidi ? PengaturanAkademik::untukProdi($kelasKuliah->mataKuliah?->prodi_id)->huruf_maks_remidi : null;
+        $data = $request->validate(
+            ['nilai' => ['required', Rule::in(SkalaNilai::hurufSampai($maks, $kelasKuliah->mataKuliah?->prodi_id))]],
+            ['nilai.in' => $maks !== null ? "Huruf akhir setelah remidi paling tinggi {$maks}." : 'Huruf nilai tidak dikenal.', 'nilai.required' => 'Pilih huruf akhir setelah remidi.'],
+        );
+        $validasiUlang = $krs->nilaiTervalidasi();
+        $krs->update($validasiUlang ? [...$data, 'nilai_divalidasi_at' => null, 'nilai_divalidasi_oleh' => null] : $data);
+
+        return back()->with('success', $validasiUlang
+            ? 'Nilai remidi disimpan. Validasinya dibuka dan nilai ini kembali menunggu validasi di Penilaian → Validasi Nilai.'
+            : 'Nilai berhasil diperbarui.');
+    }
+
+    /**
+     * Simpan tabel nilai per komponen kelas ini. Dosen mengikuti kunci nilai yang sama dengan huruf akhir.
+     */
+    public function updateNilaiKomponen(Request $request, KelasKuliah $kelasKuliah): RedirectResponse
+    {
+        $this->pastikanAksesKelas($kelasKuliah);
+
+        if (($pesan = $this->pesanNilaiTerkunci($kelasKuliah)) !== null) {
+            return back()->with('error', $pesan);
+        }
+
+        return $this->simpanNilaiKomponen($request, $kelasKuliah);
     }
 
     /**

@@ -6,6 +6,151 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Ditambahkan
+- **Penamaan & struktur menu konsep Yapika poin C (4 Okt).** Migrasi `2026_10_04_170000` (sinkron nama izin).
+  - Seksi admin **Pengguna & Akses** menjadi **Tools**: **Create User** (`admin.pengguna.buat`; pilih Prodi, Dosen,
+    atau Mahasiswa → form kelola user yang sudah ada; Prodi = form karyawan dengan role Prodi terpilih lewat
+    `?role=prodi`), **Data Pengguna** (`admin.pengguna.index`; semua akun dalam satu daftar dengan filter jenis &
+    pencarian nama/username/email/NIM/NIDN/nomor induk; akun developer disembunyikan), Kelola Role, Log Aktivitas.
+    Menu Karyawan dilepas dari sidebar (rutenya tetap). Kedua menu tampil bila punya salah satu izin
+    `admin.users.{karyawan,dosen,mahasiswa}`; pilihan/jenis dibatasi per izin.
+  - Admin **Presensi** → **Presensi Mahasiswa** (sidebar, judul, breadcrumb).
+  - Dosen: menu **Input Nilai** (`dosen.input-nilai.index`, izin `dosen.kelas-kuliah`) — daftar kelas yang diampu,
+    tombol "Isi Nilai" membuka halaman kelas dengan bagian Nilai Mahasiswa terbuka (`?bagian=nilai`).
+  - **Info Kuliah** → **Informasi & Pengumuman** (menu admin & mahasiswa, judul halaman, nama izin, pesan sukses).
+  - Jadwal tetap lewat Kelas Kuliah + Jadwal Kelas (keputusan user).
+- **Menu konsep Yapika poin B (4 Okt).** Migrasi `2026_10_04_120000` s.d. `2026_10_04_160000`; dependensi baru
+  `phpoffice/phpspreadsheet` ^5.0 (impor/ekspor Excel).
+  - **Syarat Ujian & Remedial** (Akademik → Konfigurasi, izin `admin.syarat-ujian`, juga role Prodi): syarat kehadiran
+    UTS/UAS, minimal %, izin & sakit dihitung hadir (baru), dan huruf maksimal remidi — umum atau **per prodi**
+    (`syarat_ujian_prodis`, `PengaturanAkademik::untukProdi()`). Isian ini dipindah dari Pengaturan Sistem → Akademik
+    (rute `admin.pengaturan-akademik.remidi` dihapus). Akun Prodi hanya mengatur prodinya.
+  - **Kurikulum** (Akademik → Konfigurasi, izin `admin.kurikulum`, juga Prodi): kurikulum per prodi + daftar MK dengan
+    semester dan sifat Wajib/Pilihan per kurikulum (`kurikulums`, `kurikulum_mata_kuliah`). Belum dipakai aturan KRS.
+  - **Ketua Kelas** (Akademik → Perkuliahan, izin `admin.ketua-kelas`, juga Prodi): satu peserta per kelas kuliah
+    (`kelas_kuliah.ketua_kelas_id`). Rombel tidak dibuat terpisah; memakai kode kelas kuliah.
+  - **Rekap Presensi Mahasiswa** (Akademik → Perkuliahan, izin `admin.rekap-presensi`, juga Prodi): H/T/I/S/A dan %
+    per mahasiswa per MK dalam satu TA, status syarat ujian prodi, unduh Excel.
+  - **Informasi PMB**: halaman publik `/pmb` (`pmb.informasi`; jadwal dari periode aktif + teks syarat/jadwal tes/biaya/
+    kontak dari admin di Mahasiswa Baru → Konfigurasi → Informasi PMB, izin `admin.informasi-pmb`). Tombol PMB di
+    halaman masuk kini menuju halaman ini. Halaman `/` tetap ke login.
+  - **Log Aktivitas** (Pengguna & Akses, izin `admin.log-aktivitas`): semua model Eloquent yang dibuat/diubah/dihapus
+    pengguna login + masuk/keluar (`App\CatatAktivitas`, tabel `log_aktivitas`); nilai rahasia/`$hidden` disamarkan.
+    Update massal lewat query builder dan proses tanpa pengguna tidak tercatat.
+  - **Impor Data Excel** (`admin/impor/{mahasiswa|dosen|mata-kuliah}`, izin sesuai menu datanya): template .xlsx dengan
+    lembar Petunjuk & referensi kode, semua baris divalidasi dulu (galat per baris, tidak ada yang tersimpan bila ada
+    galat), akun langsung terverifikasi, opsi kirim tautan atur kata sandi. Tombol "Impor Excel" di Data Mahasiswa,
+    Data Dosen, Mata Kuliah.
+  - **Menu mahasiswa Cetak KST dan Cetak Kartu UTS & UAS** (halaman status + unduh, rute `mahasiswa.cetak-kst`,
+    `mahasiswa.cetak-kartu-ujian`).
+- **Alur Yapika A1–A9 (4 Okt).** Migrasi `2026_10_04_080000` s.d. `2026_10_04_110000`.
+  - **Penilaian satu alur:** menu Penilaian diurutkan Nilai Semester → Detail Nilai → Pendataan Nilai Akhir → Nilai KKM →
+    Validasi Nilai → Tambah Komponen Nilai. **Pendataan Nilai Akhir kini rekap baca-saja** (angka → huruf Bobot Nilai,
+    bobot, asal huruf, status validasi; rute `admin.pendataan-nilai.show`, isian huruf manual dihapus). "Finalisasi Nilai"
+    dosen menjadi **Kirim ke Validasi**, "Buka Kunci Nilai" admin menjadi **Kembalikan ke Dosen**; Validasi Nilai menolak
+    nilai kelas berdosen yang belum dikirim (kolom "Belum dikirim dosen").
+  - **Remidi membuka validasi:** huruf hasil remidi boleh disimpan untuk nilai tervalidasi; validasinya dibuka otomatis dan
+    nilai kembali menunggu validasi ulang.
+  - **KHS, transkrip, dan SKL hanya dari nilai tervalidasi** (KHS menampilkan "Menunggu validasi"); syarat wisuda baru
+    "Semua nilai sudah divalidasi"; nilai semester lalu disahkan otomatis oleh migrasi.
+  - **UTS/UAS tatap muka dinilai lewat komponen nilai** (isian nilai di halaman ujian disembunyikan/ditolak,
+    `Ujian::nilaiLewatKomponen`); komponen **Kehadiran dihitung ulang otomatis** saat presensi/pertemuan berubah
+    (`App\SegarkanKehadiran`).
+  - **Satu kartu ujian:** Kartu UTS/UAS mahasiswa memakai PDF & syarat yang sama dengan cetakan admin (`App\KartuUjian`,
+    format contoh klien); kartu remidi/susulan tetap dari jadwalnya.
+  - **PMB:** status hasil seleksi **Diterima**/Ditolak (dulu Lulus); **Salin ke Master Mahasiswa wajib mengisi NIM**, yang
+    sekaligus menjadi username.
+  - **Dosen PA melihat pengajuan mahasiswa bimbingannya** (menu dosen Pengajuan & Pendaftaran → Pengajuan Mahasiswa PA,
+    izin `dosen.pengajuan-pa`, baca-saja, termasuk berkas lampiran).
+  - **Wisuda:** unggahan **Surat bebas pustaka** + **Surat keterangan lunas** (menggantikan bukti bayar wisuda); admin wajib
+    mencentang **Bebas pustaka** dan **Lunas** saat menyetujui (tercatat di `isian.dicentang`).
+  - **Pendaftaran Sidang** (jenis pengajuan `sidang`) saat fitur pendadaran mati: form + berkas + persetujuan admin, butuh
+    judul TA disahkan; jadwal/penguji di luar sistem. Middleware `fitur:!nama` dan kunci menu `tanpaFitur` untuk rute/menu
+    pengganti.
+  - **Gelombang Ujian Komprehensif** (tabel `gelombang_kompre`, menu admin Ujian Komprehensif → Gelombang Ujian
+    Komprehensif): pendaftaran buka–tutup, tanggal ujian, kuota; pengajuan kompre wajib memilih gelombang yang dibuka.
+  - **Pengajuan cuti tanpa bukti bayar** (isian dihapus; dokumen pendukung tetap opsional).
+- **Menu Pengajuan & Pendaftaran** (sidebar admin & mahasiswa; migrasi `2026_10_04_070000_add_naskah_to_tugas_akhir`:
+  kolom `tugas_akhir.naskah`, `naskah_diunggah_at`). Enam seksi: **Status Mahasiswa** (Pengajuan Cuti; admin juga
+  **Mahasiswa Cuti** — daftar mahasiswa berstatus Cuti dengan semester cuti, alasan, jumlah cuti, dan tanda pengajuan aktif
+  kembali, `Admin\MahasiswaCutiController`), **Tugas Akhir/Skripsi** (mahasiswa: Pengajuan Judul & Upload TA; admin:
+  Persetujuan Tugas Akhir), **Kuliah Kerja Mahasiswa** (Pengajuan Judul / Persetujuan KKM/PKL/KKN), **Praktek Pengalaman
+  Lapangan** (Pengajuan PPL / Daftar PPL), **Ujian Komprehensif** (Pengajuan / Daftar Ujian Komprehensif), **Wisuda** (Pengajuan Wisuda / Daftar Wisuda + Periode Wisuda). Halaman admin
+  lama bertab kini satu halaman per jenis (`PengajuanAkademikController::RUTE`, alamat lama dialihkan); halaman mahasiswa
+  Tugas Akhir & Wisuda dipecah menjadi Pengajuan Judul & Upload TA dan Pengajuan Wisuda (`mahasiswa.wisuda`); halaman
+  KKM, PPL & Kompre dipecah per jenis (`mahasiswa.pengajuan-kkm/ppl/kompre`). **KKM kini Kuliah Kerja Mahasiswa**: form
+  wajib memilih KKM/PKL/KKN (`PengajuanAkademik::JENIS_KKM`, isian `jenis_kkm`), ditampilkan di persetujuan dan Nilai KKM.
+  **Upload naskah TA** (PDF maks. 20 MB) sesudah judul disahkan; naskah ini sekaligus **naskah final wisuda** (unggahan
+  "Naskah final" di form wisuda dihapus, diganti syarat "Naskah TA sudah diunggah"), terkunci selama pendaftaran wisuda
+  diproses dan sesudah terdaftar; berkas `berkas.naskah-ta` untuk mahasiswa, admin (tautan di Persetujuan TA dan Daftar
+  Wisuda), dan pembimbing. Label submenu sidebar yang panjang kini membungkus.
+- **Role Prodi** (migrasi `2026_10_04_060000_add_prodi_to_admin_profiles`: kolom `admin_profiles.prodi_id`, role sistem
+  `prodi` berjenis Admin/Karyawan dengan izin bawaan `PermissionCatalog::IZIN_PRODI` sesuai matriks konsep). Akun Prodi
+  dibuat di menu Karyawan: pilih role Prodi lalu Program Studi (wajib; role lain mengosongkannya). Akun Prodi hanya
+  melihat dan mengubah data prodinya: global scope `Models\Concerns\DibatasiProdi` pada ProgramStudi, MataKuliah,
+  MahasiswaProfile, KelasKuliah, Krs, KrsSemester, Pertemuan, Jadwal, Ujian, BobotNilai, BatasSksProdi (daftar, pencarian,
+  dan akses lewat URL ke prodi lain → 404; menyimpan data prodi lain → 403). Tahun Akademik, Ruang, dan Predikat hanya
+  bisa dilihat, dan koreksi Presensi Dosen tetap milik Admin (`App\LingkupProdi::RUTE_TERLARANG`, middleware
+  `BatasiAksiProdi`); tombolnya disembunyikan lewat prop bersama `auth.prodi`. Program studi yang dipakai akun Prodi
+  tidak bisa dihapus.
+- **Menu Akademik → Hasil Studi** (migrasi `2026_10_04_050000_add_izin_hasil_studi`: izin `admin.khs` dan
+  `admin.transkrip-nilai`, bawaan Admin). **KHS**: daftar mahasiswa ber-KRS per tahun akademik/prodi dengan tombol
+  Download (PDF KHS) dan Detail (KHS sama seperti tampilan mahasiswa, pilih tahun akademik, tombol Download KHS).
+  **Transkrip Nilai**: daftar semua mahasiswa ber-KRS dengan tombol Download dan Detail (transkrip + Download Transkrip).
+  Data & PDF KHS/transkrip kini satu sumber di `App\HasilStudi` (dipakai juga halaman mahasiswa); tampilan bersama di
+  komponen `IsiKhs.vue` dan `IsiTranskrip.vue`.
+- **Penilaian TA/Skripsi, PPL, dan KKM sesuai alur Yapika** (migrasi `2026_10_04_040000_add_jenis_penilaian_to_mata_kuliahs`:
+  kolom `mata_kuliahs.jenis_penilaian` reguler/tugas_akhir/ppl/kkm, selalu selaras dengan `tugas_akhir`;
+  `tugas_akhir.pembimbing_1_id` boleh kosong; izin `admin.nilai-kkm` dan `mahasiswa.pengajuan-kegiatan`).
+  Form Mata Kuliah memakai pilihan **Jenis Penilaian** (pengganti centang TA/Skripsi).
+  - **PPL** (dan **TA/Skripsi** bila pendadaran mati) dinilai **langsung** di Nilai Semester / halaman kelas: satu kolom
+    Nilai Akhir 0–100 tanpa komponen, huruf dari Bobot Nilai prodi (`NilaiSemester::langsung/komponenKelas`).
+  - **KKM (seminar)**: kelas KKM ditolak di Nilai Semester; nilainya di menu baru **Penilaian → Nilai KKM** (admin,
+    `Admin\NilaiKkmController`): mahasiswa dengan pengajuan KKM disetujui, angka 0–100 → huruf ke KRS mata kuliah KKM;
+    nilai tervalidasi terkunci; tombol "Masukkan ke KRS" bila KRS KKM belum ada.
+  - **Pengajuan KKM, PPL & Kompre** (mahasiswa, `Mahasiswa\PengajuanKegiatanController`, halaman tab per jenis: judul/topik,
+    keterangan, berkas syarat + tambahan) diproses di **Pengajuan & Pendaftaran** (dulu "TA & Wisuda"). KKM yang disetujui
+    otomatis masuk KRS kelas mata kuliah KKM prodinya di tahun aktif (`App\KrsKkm`).
+  - **Flag fitur `pendadaran`** (`FEATURE_PENDADARAN`, bawaan nyala; Yapika mati): mati = tanpa pendaftaran pendadaran,
+    jadwal/penguji, bimbingan dosen, dan revisi naskah; pengajuan TA tanpa (usulan) pembimbing; TA selesai otomatis saat
+    nilai MK TA/Skripsi lulus (`TugasAkhir::sinkronDariNilai`, dipicu `Krs::saved`) sehingga wisuda terbuka.
+  - **Tanggal lulus (yudisium)** diisi admin saat menyetujui wisuda (wajib bila pendadaran mati) dan dipakai SKL;
+    **transkrip** (halaman & PDF) menampilkan judul TA dan tanggal lulus.
+- **Menu Akademik → Penilaian** (migrasi `2026_10_04_010000_create_komponen_nilai_tables`: tabel `komponen_nilais`,
+  `nilai_komponens`, kolom `krs.nilai_angka`; izin `admin.komponen-nilai` dan `admin.nilai-semester`, bawaan Admin).
+  **Tambah Komponen Nilai**: komponen global (mis. Kehadiran, Tugas, UTS, UAS) dengan persen yang harus berjumlah 100%;
+  komponen yang sudah berisi nilai tidak bisa dihapus. **Nilai Semester**: daftar kelas per tahun akademik/prodi, lalu isi
+  angka 0–100 per komponen per mahasiswa; nilai akhir = rata-rata berbobot (`App\NilaiSemester`), huruf otomatis dari angka
+  minimal skala nilai prodi mata kuliah (Bobot Nilai, atau Skala Nilai umum). Baris belum lengkap hanya menyimpan angkanya;
+  huruf yang diisi dosen tanpa komponen tidak disentuh. Kelas TA/Skripsi tetap dari pendadaran.
+  Komponen punya **sumber**: diisi dosen/admin, atau **Otomatis dari kehadiran** (paling banyak satu; persentase
+  hadir/terlambat di pertemuan kuliah yang selesai, dasar sama dengan syarat UAS — `SyaratUjian::pertemuanDihitung`).
+  **Halaman kelas dosen/admin**: bila komponen lengkap (100%) dan angka minimal skala prodi terisi, tabel Nilai Mahasiswa
+  berubah menjadi isian per komponen (komponen `TabelNilaiKomponen.vue`, rute `{admin,dosen}.kelas-kuliah.nilai-komponen`,
+  kunci nilai dosen tetap berlaku); memilih huruf langsung ditolak kecuali huruf hasil remidi. Peserta remidi yang daftarnya
+  sudah dikunci tidak dihitung ulang dari komponen.
+- **Penilaian → Detail Nilai** (migrasi `2026_10_04_020000_add_validasi_nilai_to_krs`: kolom `krs.nilai_divalidasi_at`,
+  `nilai_divalidasi_oleh`; izin `admin.detail-nilai` dan `admin.validasi-nilai`, bawaan Admin; `Admin\DetailNilaiController`).
+  Daftar mahasiswa ber-KRS per tahun akademik/prodi (NIM, nama, angkatan, Detail), lalu nilai per mata kuliah (kode MK,
+  mata kuliah, kelas, angka tiap komponen, nilai akhir, huruf, status validasi; baca saja).
+- **Penilaian → Pendataan Nilai Akhir** (migrasi `2026_10_04_030000_add_izin_pendataan_nilai`, izin `admin.pendataan-nilai`,
+  bawaan Admin; `Admin\PendataanNilaiController`): daftar mahasiswa ber-KRS (NIM, nama, angkatan, Edit) → semua mata
+  kuliah yang pernah diambil, dikelompokkan per tahun akademik (kode MK, mata kuliah, SKS, nilai huruf, Hapus/Simpan).
+  Huruf dipilih dari skala nilai prodi mata kuliah dan disimpan tanpa nilai angka; Hapus mengosongkan huruf & nilai akhir.
+  Nilai tervalidasi ditolak.
+- **Penilaian → Validasi Nilai** (menu sendiri, izin `admin.validasi-nilai`, `Admin\ValidasiNilaiController`; daftar
+  mahasiswa bersama Detail Nilai lewat trait `Concerns\NilaiMahasiswa` + komponen `DaftarMahasiswaNilai.vue`): pilih
+  mahasiswa → nilai akhir & huruf per mata kuliah dengan kolom **Validasi Nilai** (Validasi/Batalkan per mata kuliah, atau
+  **Validasi Semua**/**Batalkan Semua** untuk mata kuliah berhuruf di tahun itu). Nilai tervalidasi terkunci untuk dosen
+  dan admin (tabel komponen di halaman kelas, Nilai Semester, dan huruf remidi).
+- **Menu Akademik → KRS** (migrasi `2026_10_04_000000_add_izin_menu_krs`, izin baru `admin.input-krs`, `admin.status-krs`,
+  `admin.cetak-kst`, `admin.kartu-ujian`, `admin.rekap-krs` untuk role Admin): **Input KRS** (admin menambah/mengeluarkan kelas
+  atas nama mahasiswa di luar periode KRS dengan aturan tawaran/prasyarat/bentrok/kapasitas/batas SKS yang sama, lalu
+  "Simpan" atau "Simpan & Setujui"), **Verifikasi KRS** (dipindah dari Administrasi), **Status KRS** (Ya = disetujui &
+  terkunci, Tidak = dibuka untuk diubah), **Cetak KST** (Kartu Studi Tetap, PDF `pdf.kst`), **Cetak Kartu Ujian** (UTS/UAS
+  terpisah dari KRS disetujui, PDF `pdf.kartu-ujian-krs`, ditolak bila kehadiran kurang dari syarat), **Rekap KRS** (per
+  kelas & per mahasiswa, unduh CSV). Logika ambil kelas dipindah ke `App\AmbilKelasKrs` (dipakai mahasiswa & admin);
+  filter bersama di trait `Concerns\FilterKrs`. Mahasiswa juga bisa **Cetak KST** sendiri dari halaman KRS (rute
+  `mahasiswa.krs.kst`, hanya bila KRS disetujui); PDF KST dibuat `App\KartuStudiTetap` (dipakai admin & mahasiswa).
 - **Presensi Dosen, Verifikasi Presensi Dosen, dan BAP** (migrasi `2026_10_02_120000_add_presensi_dosen_to_pertemuans`:
   kolom `pertemuans.status_dosen`, `verifikasi`, `catatan_verifikasi`, `diverifikasi_oleh`, `diverifikasi_at` + tabel
   `riwayat_presensi_dosens`; izin `admin.presensi-dosen` dan `admin.verifikasi-presensi-dosen`, bawaan Admin). Presensi dosen
@@ -112,6 +257,10 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   pengguna itu); foto lama terhapus saat diganti atau akun dihapus.
 
 ### Diubah
+- **Huruf akhir tidak bisa lagi dipilih langsung** di tabel Nilai Mahasiswa (dosen maupun admin): nilai hanya lewat
+  komponen. Sebelum komponen 100% dan angka minimal skala prodi terisi, halaman kelas menampilkan alasan kelas belum bisa
+  dinilai (prop `nilaiBelumSiap`). `updateGrade` kini hanya untuk huruf hasil remidi (dosen lewat jalur remidi; admin untuk
+  peserta remidi yang daftarnya dikunci, prop `hurufRemidiAdmin`) dan hurufnya wajib diisi.
 - **Syarat SKS** ikut menghitung **SKS diakui** mahasiswa pindahan (syarat ambil TA/Skripsi di KRS, syarat SKS
   pendadaran, dan SKS lulus di beranda mahasiswa; transkrip & IPK tetap hanya dari mata kuliah di sistem). Syarat SKS
   pendadaran memakai **SKS Lulus program studi** bila diisi, selain itu Pengaturan Akademik (`min_sks_pendadaran`).

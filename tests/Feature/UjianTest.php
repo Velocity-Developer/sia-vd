@@ -129,7 +129,8 @@ it('publishes drafts and shows only published exams of the student classes', fun
 
     $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian.kartu', ['jenis' => 'uts', 'tahun_akademik_id' => $kelas->tahun_akademik_id]))
         ->assertOk()->assertHeader('content-type', 'application/pdf');
-    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian.kartu', ['jenis' => 'uas', 'tahun_akademik_id' => $kelas->tahun_akademik_id]))->assertNotFound();
+    // Kartu UAS dari KRS (format sama dengan cetakan admin), tanggalnya kosong selama UAS belum dijadwalkan.
+    $this->actingAs($mahasiswa[0])->get(route('mahasiswa.ujian.kartu', ['jenis' => 'uas', 'tahun_akademik_id' => $kelas->tahun_akademik_id]))->assertOk();
 });
 
 it('shows exam eligibility on the student schedule when the rule is on', function () {
@@ -169,7 +170,7 @@ it('blocks the exam card while a course is below the attendance rule, unless dis
         ->assertInertia(fn ($page) => $page->where('kartuTerkunci.uts', fn ($alasan) => str_contains($alasan, $kelas->mataKuliah->nama_matkul.' (0%)')));
     $this->actingAs($mahasiswa[0])->get($kartu)
         ->assertRedirect(route('mahasiswa.ujian', ['tahun_akademik_id' => $kelas->tahun_akademik_id]))
-        ->assertSessionHas('error', fn ($pesan) => str_contains($pesan, 'Kartu ujian belum bisa dicetak'));
+        ->assertSessionHas('error', fn ($pesan) => str_contains($pesan, 'Kartu UTS belum bisa dicetak'));
 
     // Dispensasi membuka kartu.
     DispensasiUjian::create(['kelas_id' => $kelas->id, 'mahasiswa_id' => $id, 'jenis' => 'uts', 'alasan' => 'Sakit', 'diberikan_oleh' => $admin->id]);
@@ -491,28 +492,18 @@ it('keeps draft exam question sheets closed to students', function () {
     $this->actingAs($mahasiswa[0])->post(route('mahasiswa.quiz.start', $quiz))->assertSessionHas('error', 'Ujian belum diterbitkan.');
 });
 
-it('lets the lecturer grade a face-to-face exam per student', function () {
+it('grades face-to-face UTS/UAS through the grade components, not the exam page', function () {
     [$kelas, $mahasiswa] = kelasUjian(2);
     $ujian = Ujian::create([...isianUjian(['status' => 'terbit']), 'kelas_id' => $kelas->id, 'jenis' => 'uts']);
     $dosen = $kelas->dosen->user;
     $mhs = $mahasiswa[0]->mahasiswaProfile;
 
-    $this->travelTo('2025-10-06 14:00:00');
-    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs]), ['nilai' => 75])->assertSessionHas('error', 'Nilai diisi setelah ujian selesai.');
-
     $this->travelTo('2025-10-06 15:30:00');
-    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs]), ['nilai' => 75, 'catatan_dosen' => 'Cukup'])->assertSessionHas('success');
-    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs]), ['nilai' => 78])->assertSessionHas('success');
-    expect($ujian->jawabans()->count())->toBe(1)
-        ->and($ujian->jawabans()->first()->only(['nilai', 'berkas', 'dikumpulkan_at']))->toBe(['nilai' => '78.00', 'berkas' => null, 'dikumpulkan_at' => null]);
+    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $mhs]), ['nilai' => 75])
+        ->assertSessionHas('error', 'Nilai UTS/UAS tatap muka diisi sebagai komponen nilai di tabel Nilai Mahasiswa halaman kelas.');
+    expect($ujian->jawabans()->count())->toBe(0);
 
-    // Bukan peserta kelas → 404; lembar soal tidak lewat jalur ini.
-    $luar = User::factory()->mahasiswa()->create()->mahasiswaProfile;
-    $this->actingAs($dosen)->put(route('dosen.ujian.nilai', [$ujian, $luar]), ['nilai' => 90])->assertNotFound();
-
-    $this->actingAs($dosen)->get(route('dosen.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('peserta', fn ($peserta) => collect($peserta)->firstWhere('mahasiswa_id', $mhs->id)['jawaban']['nilai'] === '78.00'));
-    $this->put(route('dosen.ujian.rilis-nilai', $ujian), ['nilai_dirilis' => true])->assertSessionHas('success');
-    gantiAkun($this, $mahasiswa[0])->get(route('mahasiswa.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('jawaban.nilai', '78.00'));
+    $this->actingAs($dosen)->get(route('dosen.ujian.show', $ujian))->assertInertia(fn ($page) => $page->where('nilaiLewatKomponen', true));
 });
 
 it('records attendance even when the exam meeting was opened without participant rows', function () {

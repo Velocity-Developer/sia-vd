@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AlertModal from '@/components/AlertModal.vue';
 import BagianLipat from '@/components/BagianLipat.vue';
+import TabelNilaiKomponen, { type BarisNilai, type KomponenNilai, type SkalaAngka } from '@/components/TabelNilaiKomponen.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useFitur } from '@/composables/useFitur';
@@ -11,7 +12,7 @@ import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { STATUS_TAGIHAN_REMIDI, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Copy, Download, Eye, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next';
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 
 const page = usePage<{
     flash: {
@@ -42,6 +43,12 @@ watch(
     },
     { immediate: true },
 );
+// Dari menu Input Nilai (?bagian=nilai): bagian Nilai Mahasiswa langsung dibuka dan digulir ke layar.
+onMounted(() => {
+    if (new URLSearchParams(window.location.search).get('bagian') !== 'nilai') return;
+    terbuka.nilai = true;
+    nextTick(() => document.getElementById('nilai-mahasiswa')?.scrollIntoView({ block: 'start' }));
+});
 
 type JadwalShow = {
     id: number;
@@ -172,6 +179,9 @@ const props = defineProps<{
     remidiTerbuka: number[];
     pesertaRemidi: number[];
     hurufRemidi: string[];
+    nilaiKomponen: { komponen: KomponenNilai[]; skala: SkalaAngka[]; mahasiswa: BarisNilai[]; langsung: boolean } | null;
+    nilaiBelumSiap: string | null;
+    hurufRemidiAdmin: number[];
 }>();
 const rute = rutePeran(props.peran);
 const { can } = usePermissions();
@@ -245,7 +255,7 @@ const pesanFinalisasi = computed(() => {
     const kosong = props.statusNilai.tanpa_nilai;
     const peringatan = kosong > 0 ? `Masih ada ${kosong} mahasiswa tanpa huruf akhir. ` : '';
 
-    return `${peringatan}Setelah difinalisasi, dosen tidak bisa lagi mengubah nilai akhir, nilai tugas, koreksi quiz, dan nilai ujian kelas ini. Hanya admin yang bisa membuka kembali.`;
+    return `${peringatan}Nilai dikirim ke Admin/Prodi untuk divalidasi. Setelah dikirim, dosen tidak bisa lagi mengubah nilai kelas ini kecuali admin mengembalikannya untuk koreksi.`;
 });
 const bukaOpen = ref(false);
 const bukaSampai = ref('');
@@ -296,6 +306,15 @@ const menungguRemidi = (krs: KrsShow) => props.pesertaRemidi.includes(krs.mahasi
 // Nilai TA/Skripsi hanya diisi otomatis dari hasil pendadaran.
 const bolehUbahNilai = (krs: KrsShow) => !props.kelasTugasAkhir && (jalurRemidi(krs) || (!props.nilaiTerkunci && !menungguRemidi(krs)));
 const opsiHuruf = (krs: KrsShow) => (jalurRemidi(krs) ? props.hurufRemidi : props.skalaNilai);
+// Huruf akhir dihitung dari komponen nilai. Huruf langsung hanya untuk hasil remidi: dosen lewat jalur remidi, admin
+// untuk peserta remidi yang daftarnya sudah dikunci.
+const krsDari = (krsId: number) => (props.kelasKuliah.krs ?? []).find((k) => k.id === krsId) ?? null;
+const hurufRemidi = (krs: KrsShow) => jalurRemidi(krs) || props.hurufRemidiAdmin.includes(krs.mahasiswa_id);
+const bolehHurufRemidi = (baris: BarisNilai) => {
+    const krs = krsDari(baris.krs_id);
+    // Nilai tervalidasi tetap bisa diperbaiki lewat remidi; setelah disimpan nilainya menunggu validasi ulang.
+    return !!krs && hurufRemidi(krs);
+};
 const ketIkutUas = (m: RemidiMahasiswa) => (m.ikut_uas === null ? '—' : m.ikut_uas ? 'Ya' : 'Tidak');
 
 const pendingCancelKrs = ref<KrsShow | null>(null);
@@ -489,9 +508,12 @@ const formatTenggat = (value: string | null | undefined): string => {
                         </div>
                     </dl>
                     <p v-if="props.kelasTugasAkhir" class="alert-info mt-4">
-                        Kelas TA/Skripsi: tanpa jadwal, pertemuan, materi, tugas, quiz, dan ujian. Pembimbing ditetapkan per mahasiswa saat pengajuan
-                        tugas akhir disetujui, dan nilai terisi otomatis dari hasil pendadaran. Mahasiswa yang belum selesai mengambil kelas TA lagi
-                        di semester berikutnya.
+                        Kelas TA/Skripsi: tanpa jadwal, pertemuan, materi, tugas, quiz, dan ujian.
+                        <template v-if="fitur.aktif('pendadaran')">
+                            Pembimbing ditetapkan per mahasiswa saat pengajuan tugas akhir disetujui, dan nilai terisi otomatis dari hasil pendadaran.
+                        </template>
+                        <template v-else>Nilainya satu angka akhir (0–100) di tabel nilai di bawah; hurufnya dihitung otomatis.</template>
+                        Mahasiswa yang belum selesai mengambil kelas TA lagi di semester berikutnya.
                     </p>
                 </section>
 
@@ -965,11 +987,11 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </BagianLipat>
                 </template>
 
-                <BagianLipat v-model:open="terbuka.nilai" judul="Nilai Mahasiswa" :jumlah="(props.kelasKuliah.krs ?? []).length">
+                <BagianLipat id="nilai-mahasiswa" v-model:open="terbuka.nilai" judul="Nilai Mahasiswa" :jumlah="(props.kelasKuliah.krs ?? []).length">
                     <template v-if="!props.kelasTugasAkhir" #keterangan>
                         <p v-if="props.statusNilai.final_at" class="text-sm text-[#31302e]">
-                            <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Final</span>
-                            Difinalisasi {{ formatTanggal(props.statusNilai.final_at) }}
+                            <span class="rounded-full bg-[#f2f9ff] px-2 py-0.5 text-xs font-semibold text-[#0075de]">Dikirim</span>
+                            Dikirim ke validasi {{ formatTanggal(props.statusNilai.final_at) }}
                             <template v-if="props.statusNilai.final_oleh">oleh {{ props.statusNilai.final_oleh }}</template>
                         </p>
                         <p v-else-if="props.statusNilai.final" class="text-sm text-[#31302e]">
@@ -991,18 +1013,18 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         : undefined
                                 "
                                 @click="finalisasiOpen = true"
-                                >Finalisasi Nilai</Button
+                                >Kirim ke Validasi</Button
                             >
                         </template>
                         <Button v-if="isAdmin && props.statusNilai.final" size="sm" variant="outline" @click="bukaOpen = true"
-                            >Buka Kunci Nilai</Button
+                            >Kembalikan ke Dosen</Button
                         >
                     </template>
                     <p v-if="props.statusNilai.uas_belum_selesai && !props.statusNilai.final" class="teks-bantu mt-2">
-                        Nilai bisa difinalisasi setelah UAS selesai.
+                        Nilai bisa dikirim ke validasi setelah UAS selesai.
                     </p>
                     <p v-else-if="props.statusNilai.susulan_tertunda && !props.statusNilai.final" class="teks-bantu mt-2">
-                        Nilai bisa difinalisasi setelah UAS susulan {{ props.statusNilai.susulan_tertunda }} mahasiswa selesai atau gugur.
+                        Nilai bisa dikirim ke validasi setelah UAS susulan {{ props.statusNilai.susulan_tertunda }} mahasiswa selesai atau gugur.
                     </p>
                     <div class="bilah-filter mt-4">
                         <div class="kolom-cari">
@@ -1015,7 +1037,62 @@ const formatTenggat = (value: string | null | undefined): string => {
                     </div>
                     <div v-if="page.props.flash?.success" class="alert-sukses mt-4" role="alert">{{ page.props.flash.success }}</div>
                     <div v-if="page.props.flash?.error" class="alert-gagal mt-4" role="alert">{{ page.props.flash.error }}</div>
-                    <div class="tabel-wadah mt-4">
+                    <template v-if="props.nilaiKomponen">
+                        <p v-if="props.nilaiKomponen.langsung" class="teks-bantu mt-4">
+                            Mata kuliah ini dinilai langsung tanpa komponen: isi Nilai Akhir 0–100 lalu Simpan Nilai; hurufnya dihitung otomatis.
+                        </p>
+                        <p v-else class="teks-bantu mt-4">
+                            Isi angka 0–100 tiap komponen lalu Simpan Nilai; nilai akhir dan huruf dihitung otomatis. Komponen bertanda “otomatis”
+                            diambil dari persentase kehadiran di presensi kelas ini.
+                        </p>
+                        <TabelNilaiKomponen
+                            class="mt-4"
+                            :komponen="props.nilaiKomponen.komponen"
+                            :skala="props.nilaiKomponen.skala"
+                            :mahasiswa="props.nilaiKomponen.mahasiswa"
+                            :url="rute('kelas-kuliah.nilai-komponen', props.kelasKuliah.id)"
+                            :bisa-ubah="!props.nilaiTerkunci"
+                            :cari="gradeSearch"
+                            tampil-prodi
+                        >
+                            <template #aksi="{ baris }">
+                                <div class="aksi-tabel">
+                                    <template v-if="editingKrs === baris.krs_id && krsDari(baris.krs_id)">
+                                        <select v-model="grade" aria-label="Huruf remidi" class="isian isian-pilih w-24">
+                                            <option v-for="option in opsiHuruf(krsDari(baris.krs_id)!)" :key="option" :value="option">
+                                                {{ option }}
+                                            </option>
+                                        </select>
+                                        <Button type="button" size="sm" variant="outline" @click="editingKrs = null">Batal</Button>
+                                        <Button type="button" size="sm" @click="saveGrade(krsDari(baris.krs_id)!)">Simpan</Button>
+                                    </template>
+                                    <template v-else>
+                                        <Button
+                                            v-if="bolehHurufRemidi(baris)"
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            @click="editGrade(krsDari(baris.krs_id)!)"
+                                            >Ubah Nilai Remidi</Button
+                                        >
+                                        <span v-else-if="baris.terkunci_remidi" class="teks-bantu">Diubah lewat remidi</span>
+                                        <Button
+                                            v-if="isAdmin && !baris.huruf && krsDari(baris.krs_id)"
+                                            type="button"
+                                            size="sm"
+                                            variant="destructive"
+                                            @click="cancelKrs(krsDari(baris.krs_id)!)"
+                                            >Batalkan KRS</Button
+                                        >
+                                    </template>
+                                </div>
+                            </template>
+                        </TabelNilaiKomponen>
+                    </template>
+                    <p v-if="!props.nilaiKomponen && props.nilaiBelumSiap" class="alert-info mt-4" role="status">
+                        Nilai belum bisa diisi. {{ props.nilaiBelumSiap }}
+                    </p>
+                    <div v-else class="tabel-wadah mt-4">
                         <div class="tabel-gulir">
                             <table class="tabel min-w-[720px]">
                                 <thead>
@@ -1039,7 +1116,6 @@ const formatTenggat = (value: string | null | undefined): string => {
                                         </td>
                                         <td>
                                             <select v-if="editingKrs === krs.id" v-model="grade" aria-label="Nilai" class="isian isian-pilih w-36">
-                                                <option v-if="!jalurRemidi(krs)" value="">— Kosong —</option>
                                                 <option v-for="option in opsiHuruf(krs)" :key="option" :value="option">
                                                     {{ option }}
                                                 </option>
@@ -1058,13 +1134,17 @@ const formatTenggat = (value: string | null | undefined): string => {
                                                         >Batalkan KRS</Button
                                                     >
                                                 </template>
-                                                <span v-else-if="!bolehUbahNilai(krs)" class="teks-bantu">{{
-                                                    menungguRemidi(krs) && !props.nilaiTerkunci ? 'Diubah lewat remidi' : 'Nilai terkunci'
-                                                }}</span>
                                                 <template v-else>
-                                                    <Button size="sm" variant="outline" @click="editGrade(krs)">{{
-                                                        jalurRemidi(krs) ? 'Ubah Nilai Remidi' : 'Ubah Nilai'
-                                                    }}</Button>
+                                                    <Button
+                                                        v-if="hurufRemidi(krs) && bolehUbahNilai(krs)"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        @click="editGrade(krs)"
+                                                        >Ubah Nilai Remidi</Button
+                                                    >
+                                                    <span v-else-if="menungguRemidi(krs) && !props.nilaiTerkunci" class="teks-bantu"
+                                                        >Diubah lewat remidi</span
+                                                    >
                                                     <Button v-if="isAdmin && !krs.nilai" size="sm" variant="destructive" @click="cancelKrs(krs)"
                                                         >Batalkan KRS</Button
                                                     >
@@ -1278,9 +1358,9 @@ const formatTenggat = (value: string | null | undefined): string => {
                 />
                 <AlertModal
                     :open="finalisasiOpen"
-                    title="Finalisasi nilai?"
+                    title="Kirim nilai ke validasi?"
                     :description="pesanFinalisasi"
-                    confirm-text="Finalisasi"
+                    confirm-text="Kirim"
                     cancel-text="Batal"
                     @update:open="finalisasiOpen = $event"
                     @confirm="finalisasi"
@@ -1288,9 +1368,10 @@ const formatTenggat = (value: string | null | undefined): string => {
                 />
                 <div v-if="bukaOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" @click.self="bukaOpen = false">
                     <div class="kartu w-full max-w-md p-6 shadow-xl">
-                        <h3 class="judul-bagian">Buka kunci nilai</h3>
+                        <h3 class="judul-bagian">Kembalikan nilai ke dosen</h3>
                         <p class="deskripsi-halaman">
-                            Dosen bisa mengubah nilai kelas ini lagi sampai difinalisasi ulang atau sampai batas di bawah lewat.
+                            Untuk koreksi: dosen bisa mengubah nilai kelas ini lagi sampai mengirimnya ulang ke validasi atau sampai batas di bawah
+                            lewat. Nilai yang sudah divalidasi tetap terkunci sampai validasinya dibatalkan di Penilaian → Validasi Nilai.
                             <template v-if="props.remidi?.dikunci_at">Huruf akhir peserta remidi tetap hanya berubah lewat remidi.</template>
                         </p>
                         <label class="mt-4 grid gap-2">
@@ -1307,7 +1388,7 @@ const formatTenggat = (value: string | null | undefined): string => {
                         </label>
                         <div class="mt-6 flex justify-end gap-2">
                             <Button variant="outline" @click="bukaOpen = false">Batal</Button>
-                            <Button @click="bukaKunci">Buka Kunci</Button>
+                            <Button @click="bukaKunci">Kembalikan</Button>
                         </div>
                     </div>
                 </div>

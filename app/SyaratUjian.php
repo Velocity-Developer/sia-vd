@@ -40,7 +40,7 @@ class SyaratUjian
             ->get()
             ->groupBy('mahasiswa_id');
 
-        return self::hitung($pertemuan, $presensi, $dispensasi, $pesertaIds, PengaturanAkademik::current());
+        return self::hitung($pertemuan, $presensi, $dispensasi, $pesertaIds, PengaturanAkademik::untukProdi(self::prodiKelas($kelas)));
     }
 
     /**
@@ -77,10 +77,37 @@ class SyaratUjian
     }
 
     /**
+     * Prodi pemilik mata kuliah kelas, penentu Syarat Ujian & Remedial yang berlaku.
+     */
+    public static function prodiKelas(KelasKuliah $kelas): ?int
+    {
+        $prodiId = $kelas->relationLoaded('mataKuliah')
+            ? $kelas->mataKuliah?->prodi_id
+            : $kelas->mataKuliah()->value('prodi_id');
+
+        return $prodiId === null ? null : (int) $prodiId;
+    }
+
+    /**
+     * Status presensi yang dihitung hadir untuk syarat ujian: hadir dan terlambat, ditambah izin dan sakit bila
+     * pengaturan prodi menghitungnya hadir.
+     *
+     * @return list<string>
+     */
+    public static function statusHadir(PengaturanAkademik $pengaturan): array
+    {
+        return $pengaturan->izin_sakit_dihitung_hadir
+            ? [...PresensiMahasiswa::DIHITUNG_HADIR, PresensiMahasiswa::IZIN, PresensiMahasiswa::SAKIT]
+            : PresensiMahasiswa::DIHITUNG_HADIR;
+    }
+
+    /**
+     * Pertemuan yang dihitung untuk persentase kehadiran: kuliah yang sudah selesai (dipakai juga komponen nilai Kehadiran).
+     *
      * @param  Collection<int, Pertemuan>  $pertemuan
      * @return Collection<int, Pertemuan>
      */
-    private static function pertemuanDihitung(Collection $pertemuan): Collection
+    public static function pertemuanDihitung(Collection $pertemuan): Collection
     {
         return $pertemuan->where('jenis', Pertemuan::KULIAH)->where('status', Pertemuan::SELESAI);
     }
@@ -109,7 +136,7 @@ class SyaratUjian
             $dasar = $jenis === Pertemuan::UTS
                 ? $presensiMahasiswa->filter(fn ($p): bool => $nomorPertemuan[$p->pertemuan_id] < $ujian->pertemuan_ke)
                 : $presensiMahasiswa;
-            $hadir = $dasar->whereIn('status', PresensiMahasiswa::DIHITUNG_HADIR)->count();
+            $hadir = $dasar->whereIn('status', self::statusHadir($pengaturan))->count();
             $dihitung = $dasar->count();
             $persen = $dihitung > 0 ? round($hadir / $dihitung * 100, 1) : null;
             $disp = $dispensasiMahasiswa->firstWhere('jenis', $jenis);

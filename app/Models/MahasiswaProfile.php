@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\DibatasiProdi;
 use App\Models\Concerns\SerializesDatesInAppTimezone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Support\Collection;
 
 class MahasiswaProfile extends Model
 {
-    use SerializesDatesInAppTimezone;
+    use DibatasiProdi, SerializesDatesInAppTimezone;
 
     public const STATUS = ['Aktif', 'Pindahan', 'Nonaktif', 'Lulus', 'Dropout', 'Cuti', 'Mengundurkan Diri', 'Meninggal'];
 
@@ -95,6 +96,11 @@ class MahasiswaProfile extends Model
     public function cmb(): BelongsTo
     {
         return $this->belongsTo(Cmb::class);
+    }
+
+    public function pengajuanAkademik(): HasMany
+    {
+        return $this->hasMany(PengajuanAkademik::class, 'mahasiswa_id');
     }
 
     public function krs(): HasMany
@@ -242,5 +248,18 @@ class MahasiswaProfile extends Model
         $mutu = $dihitung->sum(fn (Krs $item): float => $item->kelasKuliah->mataKuliah->sks * $item->bobotNilai());
 
         return ['tahun_akademik' => $semesterTerakhir->first()->kelasKuliah->tahunAkademik, 'ips' => round($mutu / $sks, 2)];
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     */
+    public static function saringProdi(Builder $query, int $prodiId): void
+    {
+        $query->where($query->qualifyColumn('prodi_id'), $prodiId);
+    }
+
+    public function milikProdi(int $prodiId): bool
+    {
+        return (int) $this->prodi_id === $prodiId;
     }
 }

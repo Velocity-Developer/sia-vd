@@ -37,7 +37,7 @@ class InfoKuliahController extends Controller
         $data['uploaded_by'] = $request->user()->id;
         InfoKuliah::create($data);
 
-        return to_route('admin.info-kuliah.index')->with('success', 'Informasi kuliah berhasil ditambahkan.');
+        return to_route('admin.info-kuliah.index')->with('success', 'Informasi & pengumuman berhasil ditambahkan.');
     }
 
     public function update(Request $request, InfoKuliah $infoKuliah): RedirectResponse
@@ -54,7 +54,7 @@ class InfoKuliahController extends Controller
         }
         $infoKuliah->update($data);
 
-        return to_route('admin.info-kuliah.index')->with('success', 'Informasi kuliah berhasil diperbarui.');
+        return to_route('admin.info-kuliah.index')->with('success', 'Informasi & pengumuman berhasil diperbarui.');
     }
 
     public function destroy(InfoKuliah $infoKuliah): RedirectResponse
@@ -62,7 +62,7 @@ class InfoKuliahController extends Controller
         Storage::disk(AllowedUpload::DISK)->delete($infoKuliah->file);
         $infoKuliah->delete();
 
-        return to_route('admin.info-kuliah.index')->with('success', 'Informasi kuliah berhasil dihapus.');
+        return to_route('admin.info-kuliah.index')->with('success', 'Informasi & pengumuman berhasil dihapus.');
     }
 
     private function storeFile(UploadedFile $file): string

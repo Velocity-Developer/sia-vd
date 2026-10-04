@@ -110,6 +110,7 @@ class UjianKelasController extends Controller
             'sudahMulai' => $ujian->sudahMulai(),
             'sudahSelesai' => $ujian->sudahSelesai(),
             'terkunci' => $this->nilaiTerkunci($kelas, $ujian),
+            'nilaiLewatKomponen' => $ujian->nilaiLewatKomponen(),
             'batasNilaiRemidi' => $ujian->remidi() ? $kelas->tahunAkademik?->batas_input_nilai_remidi?->toDateString() : null,
         ]);
     }
@@ -245,6 +246,9 @@ class UjianKelasController extends Controller
         $this->pastikanAksesKelas($kelas);
         abort_if($ujian->mode === Ujian::ONLINE_SOAL, 404);
         abort_unless($this->kueriPeserta($ujian)->where('mahasiswa_id', $mahasiswa->id)->exists(), 404);
+        if ($ujian->nilaiLewatKomponen()) {
+            return back()->with('error', 'Nilai UTS/UAS tatap muka diisi sebagai komponen nilai di tabel Nilai Mahasiswa halaman kelas.');
+        }
         $this->pastikanNilaiTidakTerkunci($kelas, $ujian);
 
         if (! $ujian->sudahSelesai()) {

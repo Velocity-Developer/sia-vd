@@ -126,7 +126,7 @@ const hapus = () => router.delete(route('admin.pendaftar-pmb.destroy', p.value.i
                         <Button v-if="p.mahasiswa_url" as-child variant="outline"
                             ><Link :href="p.mahasiswa_url"><GraduationCap /> Lihat di Data Mahasiswa</Link></Button
                         >
-                        <SalinCalonMaba v-else-if="props.bolehSalin && p.status_pendaftaran === 'lulus'" :id="p.id" :nama="p.nama" />
+                        <SalinCalonMaba v-else-if="props.bolehSalin && p.status_pendaftaran === 'diterima'" :id="p.id" :nama="p.nama" />
                         <Button as-child variant="outline"><Link :href="route('admin.pendaftar-pmb.index')">Kembali</Link></Button>
                     </div>
                 </div>
@@ -153,10 +153,10 @@ const hapus = () => router.delete(route('admin.pendaftar-pmb.destroy', p.value.i
                             <Label for="status_pendaftaran" class="label-isian">Status Pendaftaran</Label>
                             <select id="status_pendaftaran" v-model="form.status_pendaftaran" class="isian isian-pilih" :disabled="!!p.mahasiswa_url">
                                 <option value="">Menunggu</option>
-                                <option value="lulus">Lulus</option>
+                                <option value="diterima">Diterima</option>
                                 <option value="ditolak">Ditolak</option>
                             </select>
-                            <span v-if="p.mahasiswa_url" class="teks-bantu">Sudah disalin ke Data Mahasiswa, status terkunci Lulus.</span>
+                            <span v-if="p.mahasiswa_url" class="teks-bantu">Sudah disalin ke Data Mahasiswa, status terkunci Diterima.</span>
                             <InputError :message="form.errors.status_pendaftaran" />
                         </div>
                     </div>

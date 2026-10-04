@@ -130,7 +130,7 @@ class PresensiController extends Controller
                 'uts' => self::jadwalUjian($ujian['jadwal']['uts']),
                 'uas' => self::jadwalUjian($ujian['jadwal']['uas']),
             ],
-            'minKehadiran' => PengaturanAkademik::current()->min_kehadiran_ujian,
+            'minKehadiran' => PengaturanAkademik::untukProdi(SyaratUjian::prodiKelas($kelasKuliah))->min_kehadiran_ujian,
             'terkunci' => $this->tahunAkademikTerkunci($kelasKuliah),
             'ruangs' => Ruang::orderBy('kode_ruang')->get(['id', 'kode_ruang', 'nama_ruang'])
                 ->map(fn (Ruang $ruang): array => ['id' => $ruang->id, 'name' => $ruang->kode_ruang.' — '.$ruang->nama_ruang]),
@@ -178,7 +178,7 @@ class PresensiController extends Controller
             'pertemuan' => $pertemuan,
             'peserta' => $peserta,
             'singkat' => $singkat,
-            'minKehadiran' => PengaturanAkademik::current()->min_kehadiran_ujian,
+            'minKehadiran' => PengaturanAkademik::untukProdi(SyaratUjian::prodiKelas($kelasKuliah))->min_kehadiran_ujian,
         ])->setPaper('a4', 'landscape')->download($nama.'.pdf');
     }
 

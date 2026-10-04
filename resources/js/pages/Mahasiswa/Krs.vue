@@ -5,7 +5,7 @@ import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type RingkasanKrs } from '@/lib/krs';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { Download } from 'lucide-vue-next';
+import { Download, Printer } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 
 type KelasKuliah = {
@@ -206,12 +206,20 @@ const tampilRevisi = computed(
                             Kelas kuliah semester Anda di tahun akademik aktif, ditambah mata kuliah yang tertunda atau perlu diulang.
                         </p>
                     </div>
-                    <Button v-if="krsTahunIni.length" as-child>
-                        <a :href="route('mahasiswa.krs.download')">
-                            <Download class="h-4 w-4" />
-                            Download KRS
-                        </a>
-                    </Button>
+                    <div v-if="krsTahunIni.length" class="flex flex-wrap gap-2">
+                        <Button as-child :variant="status === 'disetujui' ? 'outline' : 'default'">
+                            <a :href="route('mahasiswa.krs.download')">
+                                <Download class="h-4 w-4" />
+                                Download KRS
+                            </a>
+                        </Button>
+                        <Button v-if="status === 'disetujui'" as-child>
+                            <a :href="route('mahasiswa.krs.kst')" target="_blank" rel="noopener">
+                                <Printer class="h-4 w-4" />
+                                Cetak KST
+                            </a>
+                        </Button>
+                    </div>
                 </div>
 
                 <div class="rounded-xl border border-[#0075de] bg-[#0075de] p-6 text-white shadow-sm">

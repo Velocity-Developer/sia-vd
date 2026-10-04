@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { ClipboardPen, Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
@@ -42,8 +42,12 @@ const props = defineProps<{
     dosenId?: number | null;
     dosenOptions?: { id: number; name: string }[];
     peran: Peran;
+    // Menu dosen Input Nilai: daftar yang sama, tombol detail langsung ke bagian Nilai Mahasiswa.
+    modeNilai?: boolean;
 }>();
 const rute = rutePeran(props.peran);
+const judul = computed(() => (props.modeNilai ? 'Input Nilai' : 'Kelas Kuliah'));
+const ruteDaftar = computed(() => (props.modeNilai ? route('dosen.input-nilai.index') : rute('kelas-kuliah.index')));
 // Filter dosen, tombol tambah/edit/hapus, dan kolom dosen hanya untuk admin.
 const isAdmin = computed(() => props.peran === 'admin');
 
@@ -54,7 +58,7 @@ const dosenId = ref<number | string>(props.dosenId ?? 'all');
 
 const applyFilters = () =>
     router.get(
-        rute('kelas-kuliah.index'),
+        ruteDaftar.value,
         { search: search.value, tahun_akademik_id: tahunAkademikId.value, mata_kuliah_id: mataKuliahId.value, dosen_id: dosenId.value },
         { preserveState: true, preserveScroll: true, replace: true },
     );
@@ -104,14 +108,17 @@ const ruangText = (item: KelasKuliah) => {
 </script>
 
 <template>
-    <Head title="Kelas Kuliah" />
-    <AppLayout :breadcrumbs="[{ title: 'Kelas Kuliah', href: rute('kelas-kuliah.index') }]">
+    <Head :title="judul" />
+    <AppLayout :breadcrumbs="[{ title: judul, href: ruteDaftar }]">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Kelas Kuliah</h1>
-                        <p class="deskripsi-halaman">Kelola kelas kuliah, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
+                        <h1 class="judul-halaman">{{ judul }}</h1>
+                        <p v-if="props.modeNilai" class="deskripsi-halaman">
+                            Pilih kelas yang Anda ampu untuk mengisi nilai komponen mahasiswa, lalu kirim ke validasi.
+                        </p>
+                        <p v-else class="deskripsi-halaman">Kelola kelas kuliah, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
                     </div>
                     <Button v-if="isAdmin" as-child>
                         <Link :href="rute('kelas-kuliah.create')">Tambah Kelas Kuliah</Link>
@@ -185,7 +192,12 @@ const ruangText = (item: KelasKuliah) => {
                                     </td>
                                     <td class="kolom-aksi">
                                         <div class="aksi-tabel">
-                                            <Button as-child variant="outline" size="icon-sm" class="text-[#0075de]">
+                                            <Button v-if="props.modeNilai" as-child size="sm">
+                                                <Link :href="rute('kelas-kuliah.show', { kelasKuliah: item.id, bagian: 'nilai' })"
+                                                    ><ClipboardPen /> Isi Nilai</Link
+                                                >
+                                            </Button>
+                                            <Button v-else as-child variant="outline" size="icon-sm" class="text-[#0075de]">
                                                 <Link :href="rute('kelas-kuliah.show', item.id)" title="Detail" aria-label="Detail"><Eye /></Link>
                                             </Button>
                                             <Button v-if="isAdmin" as-child variant="outline" size="icon-sm" class="text-[#2a9d99]">

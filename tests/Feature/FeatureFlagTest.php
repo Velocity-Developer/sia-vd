@@ -4,7 +4,7 @@ use App\Feature;
 use Illuminate\Support\Env;
 
 /** Fitur tambahan bawaannya mati; fitur yang sudah lama ada bawaannya nyala agar instalasi lama tidak berubah. */
-const FITUR_BAWAAN_NYALA = ['materi', 'tugas', 'quiz', 'ujian_online', 'presensi_qr', 'pindah_kelas', 'ujian_susulan'];
+const FITUR_BAWAAN_NYALA = ['materi', 'tugas', 'quiz', 'ujian_online', 'presensi_qr', 'pindah_kelas', 'ujian_susulan', 'pendadaran'];
 
 it('registers the client features and lists their env keys in .env.example', function () {
     expect(array_keys(config('client.fitur')))->toBe(['kelola_role', 'keuangan', ...FITUR_BAWAAN_NYALA]);

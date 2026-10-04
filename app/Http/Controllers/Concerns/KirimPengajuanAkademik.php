@@ -65,7 +65,7 @@ trait KirimPengajuanAkademik
                 $pengajuan = PengajuanAkademik::query()->create([
                     'mahasiswa_id' => $mahasiswa->id,
                     'jenis' => $jenis,
-                    'tugas_akhir_id' => in_array($jenis, [PengajuanAkademik::PENDADARAN, PengajuanAkademik::WISUDA], true) ? TugasAkhir::milik($mahasiswa->id)?->id : null,
+                    'tugas_akhir_id' => in_array($jenis, [PengajuanAkademik::PENDADARAN, PengajuanAkademik::WISUDA, PengajuanAkademik::SIDANG], true) ? TugasAkhir::milik($mahasiswa->id)?->id : null,
                     'isian' => $isian,
                     'lampiran' => $lampiran,
                 ]);

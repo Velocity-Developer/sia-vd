@@ -48,13 +48,13 @@ const submit = () => {
 </script>
 
 <template>
-    <Head :title="`${props.infoKuliah ? 'Edit' : 'Tambah'} Info Kuliah`" />
-    <AppLayout :breadcrumbs="[{ title: 'Info Kuliah', href: route('admin.info-kuliah.index') }]">
+    <Head :title="`${props.infoKuliah ? 'Edit' : 'Tambah'} Informasi & Pengumuman`" />
+    <AppLayout :breadcrumbs="[{ title: 'Informasi & Pengumuman', href: route('admin.info-kuliah.index') }]">
         <div class="halaman">
             <div class="konten-form">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">{{ props.infoKuliah ? 'Edit' : 'Tambah' }} Info Kuliah</h1>
+                        <h1 class="judul-halaman">{{ props.infoKuliah ? 'Edit' : 'Tambah' }} Informasi & Pengumuman</h1>
                         <p class="deskripsi-halaman">Lengkapi informasi dan berkas perkuliahan.</p>
                     </div>
                     <Button as-child variant="outline"><Link :href="route('admin.info-kuliah.index')">Kembali</Link></Button>
@@ -67,7 +67,7 @@ const submit = () => {
                 </div>
                 <form class="flex flex-col gap-6" enctype="multipart/form-data" @submit.prevent="submit">
                     <section class="kartu p-6">
-                        <h2 class="judul-bagian">Data Info Kuliah</h2>
+                        <h2 class="judul-bagian">Data Informasi</h2>
                         <div class="mt-4 grid gap-2">
                             <Label for="information" class="label-isian">Informasi</Label>
                             <textarea

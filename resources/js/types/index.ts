@@ -13,6 +13,8 @@ export interface Auth {
     permissions: string[];
     /** Akun ber-role developer dan panel /dev aktif (DEV_PANEL=true). */
     developer: boolean;
+    /** Akun Prodi: prodi yang membatasi datanya; null untuk pengguna lain. */
+    prodi: { id: number; nama: string } | null;
 }
 
 export interface BreadcrumbItem {
@@ -100,4 +102,14 @@ export interface User {
 
 export type BreadcrumbItemType = BreadcrumbItem;
 
-export type NamaFitur = 'kelola_role' | 'keuangan' | 'materi' | 'tugas' | 'quiz' | 'ujian_online' | 'presensi_qr' | 'pindah_kelas' | 'ujian_susulan';
+export type NamaFitur =
+    | 'kelola_role'
+    | 'keuangan'
+    | 'materi'
+    | 'tugas'
+    | 'quiz'
+    | 'ujian_online'
+    | 'presensi_qr'
+    | 'pindah_kelas'
+    | 'ujian_susulan'
+    | 'pendadaran';

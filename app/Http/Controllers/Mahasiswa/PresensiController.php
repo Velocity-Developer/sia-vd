@@ -56,7 +56,7 @@ class PresensiController extends Controller
 
         $rekap = PresensiMahasiswa::rekapMahasiswa($mahasiswa->id, $kelas->pluck('id')->all());
         // Pengaturan dibaca sekali lalu dipakai di semua kelas dan pertemuan.
-        $pengaturan = PengaturanAkademik::current();
+        $pengaturan = PengaturanAkademik::untukProdi($mahasiswa->prodi_id);
         $minKehadiran = $pengaturan->min_kehadiran_ujian;
 
         $pertemuan = Pertemuan::query()

@@ -29,18 +29,16 @@ it('locks every grade in the class for dosen after finalization, but not for adm
     expect($kelas->fresh()->nilai_final_at)->not->toBeNull()
         ->and($kelas->fresh()->nilai_final_oleh)->toBe($dosen->id);
 
-    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'A'])->assertSessionHas('error');
+    isiNilaiKomponen($this, $kelas, $krs, 90)->assertSessionHas('error');
     $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.tugas.pengumpulan.nilai', [$kelas, $tugas, $pengumpulan]), ['nilai' => 90])->assertForbidden();
     $this->actingAs($dosen)->post(route('dosen.kelas-kuliah.finalisasi-nilai', $kelas))->assertSessionHas('error');
     $this->actingAs($dosen)->get(route('dosen.kelas-kuliah.show', $kelas))
         ->assertInertia(fn ($page) => $page->where('nilaiTerkunci', true)->where('statusNilai.final', true)->where('statusNilai.final_oleh', $dosen->name));
     $this->actingAs($dosen)->get(route('dosen.kelas-kuliah.tugas.show', [$kelas, $tugas]))
-        ->assertInertia(fn ($page) => $page->where('nilaiTerkunci', 'Nilai kelas ini sudah difinalisasi. Hubungi admin bila perlu dibuka kembali.'));
+        ->assertInertia(fn ($page) => $page->where('nilaiTerkunci', 'Nilai kelas ini sudah dikirim ke validasi. Hubungi admin bila perlu dikembalikan untuk koreksi.'));
     expect($krs->fresh()->nilai)->toBe('C');
 
-    $this->actingAs(User::factory()->admin()->create())
-        ->put(route('admin.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'B'])
-        ->assertSessionHas('success');
+    isiNilaiKomponen($this, $kelas, $krs, 75, User::factory()->admin()->create())->assertSessionHas('success');
     expect($krs->fresh()->nilai)->toBe('B');
 });
 
@@ -64,11 +62,10 @@ it('locks grades after the tahun akademik grade deadline and lets admin reopen w
     $admin = User::factory()->admin()->create();
 
     // Hari batas masih boleh.
-    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'B'])->assertSessionHas('success');
+    isiNilaiKomponen($this, $kelas, $krs, 75)->assertSessionHas('success');
 
     $kelas->tahunAkademik->update(['batas_input_nilai' => now()->subDay()->toDateString()]);
-    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'A'])
-        ->assertSessionHas('error', 'Batas input nilai sudah lewat. Hubungi admin bila perlu dibuka kembali.');
+    isiNilaiKomponen($this, $kelas, $krs, 90)->assertSessionHas('error', 'Batas input nilai sudah lewat. Hubungi admin bila perlu dibuka kembali.');
 
     // Dosen tidak bisa membuka sendiri.
     $this->actingAs($dosen)->post(route('admin.kelas-kuliah.buka-kunci-nilai', $kelas), ['sampai' => now()->addDays(3)->toDateString()])->assertForbidden();
@@ -76,7 +73,7 @@ it('locks grades after the tahun akademik grade deadline and lets admin reopen w
     $this->actingAs($admin)->post(route('admin.kelas-kuliah.buka-kunci-nilai', $kelas))->assertSessionHasErrors('sampai');
     $this->actingAs($admin)->post(route('admin.kelas-kuliah.buka-kunci-nilai', $kelas), ['sampai' => now()->addDays(3)->toDateString()])->assertSessionHas('success');
 
-    $this->actingAs($dosen)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'A'])->assertSessionHas('success');
+    isiNilaiKomponen($this, $kelas, $krs, 90)->assertSessionHas('success');
     expect($krs->fresh()->nilai)->toBe('A');
 
     // Kelas lain di tahun yang sama tetap terkunci.
@@ -91,7 +88,7 @@ it('reopening a finalized class before the deadline needs no new date', function
     $this->actingAs(User::factory()->admin()->create())->post(route('admin.kelas-kuliah.buka-kunci-nilai', $kelas))->assertSessionHas('success');
 
     expect($kelas->fresh()->nilai_final_at)->toBeNull()->and($kelas->fresh()->nilaiFinal())->toBeFalse();
-    $this->actingAs($kelas->dosen->user)->put(route('dosen.kelas-kuliah.krs.nilai', [$kelas, $krs]), ['nilai' => 'A'])->assertSessionHas('success');
+    isiNilaiKomponen($this, $kelas, $krs, 90)->assertSessionHas('success');
 });
 
 it('keeps attendance editable after grades are finalized', function () {

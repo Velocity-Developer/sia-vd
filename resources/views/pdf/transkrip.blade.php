@@ -69,6 +69,12 @@
         <tr><td class="label">Jumlah SKS Ditempuh</td><td>: {{ $ringkasan['totalSks'] }}</td></tr>
         <tr><td class="label">Jumlah SKS Lulus</td><td>: {{ $ringkasan['totalSksLulus'] }}</td></tr>
         <tr><td class="label tebal">Indeks Prestasi Kumulatif</td><td class="tebal">: {{ $ringkasan['ipk'] !== null ? number_format($ringkasan['ipk'], 2, ',', '.') : '-' }}</td></tr>
+        @if ($kelulusan['judul_ta'] ?? null)
+            <tr><td class="label">Judul Tugas Akhir</td><td>: {{ $kelulusan['judul_ta'] }}</td></tr>
+        @endif
+        @if ($kelulusan['tanggal_lulus'] ?? null)
+            <tr><td class="label">Tanggal Lulus</td><td>: {{ \Illuminate\Support\Carbon::parse($kelulusan['tanggal_lulus'])->translatedFormat('d F Y') }}</td></tr>
+        @endif
     </table>
 
     <p class="catatan">Mata kuliah yang diambil lebih dari sekali dihitung satu kali dengan nilai terbaik. Mutu = SKS × Bobot; IPK = Jumlah Mutu ÷ Jumlah SKS.</p>

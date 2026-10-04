@@ -54,13 +54,14 @@ class Wisuda extends Model
     }
 
     /**
-     * Terbitkan SKL: bekukan IPK, total SKS, predikat, dan tanggal lulus (tanggal pendadaran),
+     * Terbitkan SKL: bekukan IPK, total SKS, predikat, dan tanggal lulus (yang diisi admin saat menyetujui wisuda, atau
+     * tanggal pendadaran),
      * lalu ubah status mahasiswa menjadi Lulus.
      */
     public function terbitkanSkl(int $oleh): void
     {
         DB::transaction(function () use ($oleh): void {
-            $terbaik = Transkrip::terbaik(Transkrip::krs($this->mahasiswa_id));
+            $terbaik = Transkrip::terbaik(Transkrip::krs($this->mahasiswa_id)->filter(fn (Krs $k): bool => $k->nilaiTervalidasi()));
             $sks = $terbaik->sum(fn (Krs $k): int => $k->kelasKuliah->mataKuliah->sks);
             $mutu = $terbaik->sum(fn (Krs $k): float => $k->kelasKuliah->mataKuliah->sks * $k->bobotNilai());
             $ipk = $sks > 0 ? round($mutu / $sks, 2) : 0.0;
@@ -69,7 +70,7 @@ class Wisuda extends Model
             $this->update([
                 'nomor_skl' => self::nomorSklBaru(now()),
                 'skl_terbit_at' => now(),
-                'tanggal_lulus' => $pendadaran?->tanggal ?? today(),
+                'tanggal_lulus' => $this->tanggal_lulus ?? $pendadaran?->tanggal ?? today(),
                 'ipk' => $ipk,
                 'total_sks' => $sks,
                 'predikat' => self::predikat($ipk),

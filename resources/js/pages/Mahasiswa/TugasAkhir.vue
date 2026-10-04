@@ -7,6 +7,7 @@ import KartuJadwal from '@/components/tugas-akhir/KartuJadwal.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useFitur } from '@/composables/useFitur';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import {
@@ -21,7 +22,7 @@ import {
     type StatusPengajuan,
     type Syarat,
 } from '@/lib/tugasAkhir';
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { FileText, Lock } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
@@ -44,7 +45,17 @@ type Riwayat = {
 };
 
 const props = defineProps<{
-    tugasAkhir: { judul: string; bidang: string; pembimbing: string[]; status: 'berjalan' | 'selesai'; disahkan_at: string | null } | null;
+    bagian: 'tugas_akhir' | 'wisuda';
+    tugasAkhir: {
+        id: number;
+        judul: string;
+        bidang: string;
+        pembimbing: string[];
+        status: 'berjalan' | 'selesai';
+        disahkan_at: string | null;
+        naskah_diunggah_at: string | null;
+        bisa_unggah_naskah: boolean;
+    } | null;
     pengajuanTa: Tahap;
     pendaftaranPendadaran: Tahap & { jadwal: JadwalPendadaran | null; hasil: (HasilPendadaran & { id: number; tanggal: string }) | null };
     pendaftaranWisuda: Tahap & {
@@ -126,16 +137,27 @@ const keterangan: Record<KeadaanForm, string> = {
     baru: 'Silakan ajukan',
     belum_memenuhi: 'Belum memenuhi syarat',
 };
+// Tanpa fitur pendadaran: tidak ada pembimbing maupun tahap pendadaran; TA selesai saat nilai MK TA/Skripsi lulus.
+const pendadaran = useFitur().aktif('pendadaran');
+const keteranganTa = () => {
+    if (!props.tugasAkhir) return keterangan[ta.value.keadaan];
+    if (pendadaran) return 'Disahkan';
+    return props.tugasAkhir.status === 'selesai' ? 'Nilai lulus' : 'Menunggu nilai';
+};
 const tahapan = computed(() => [
-    { no: 1, judul: 'Tugas Akhir', keterangan: props.tugasAkhir ? 'Disahkan' : keterangan[ta.value.keadaan], aktif: true },
+    { no: 1, judul: 'Tugas Akhir', keterangan: keteranganTa(), aktif: true },
+    ...(pendadaran
+        ? [
+              {
+                  no: 2,
+                  judul: 'Pendadaran',
+                  keterangan: pd.value.jadwal?.status === 'revisi' ? 'Revisi naskah' : keterangan[pd.value.keadaan],
+                  aktif: pd.value.keadaan !== 'terkunci',
+              },
+          ]
+        : []),
     {
-        no: 2,
-        judul: 'Pendadaran',
-        keterangan: pd.value.jadwal?.status === 'revisi' ? 'Revisi naskah' : keterangan[pd.value.keadaan],
-        aktif: pd.value.keadaan !== 'terkunci',
-    },
-    {
-        no: 3,
+        no: pendadaran ? 3 : 2,
         judul: 'Wisuda',
         keterangan: ws.value.wisuda?.nomor_skl ? 'SKL terbit' : keterangan[ws.value.keadaan],
         aktif: ws.value.keadaan !== 'terkunci',
@@ -163,25 +185,43 @@ const formWs = useForm({
     tanggal_lahir: lamaWs?.tanggal_lahir ?? props.pendaftaranWisuda.dataIjazah.tanggal_lahir ?? '',
     ukuran_toga: lamaWs?.ukuran_toga ?? '',
     pas_foto: null as File | null,
-    naskah_final: null as File | null,
     bebas_pinjam: null as File | null,
-    bukti_bayar: null as File | null,
+    surat_lunas: null as File | null,
 });
 const kirimWs = () =>
     formWs.post(route('mahasiswa.tugas-akhir.ajukan-wisuda'), {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
-            formWs.pas_foto = formWs.naskah_final = formWs.bebas_pinjam = formWs.bukti_bayar = null;
+            formWs.pas_foto = formWs.bebas_pinjam = formWs.surat_lunas = null;
             versiBerkas.value++;
         },
     });
 const berkasWisuda = [
     { kunci: 'pas_foto', label: 'Pas foto (JPG/PNG, maks. 2 MB)', accept: 'image/jpeg,image/png,.jpg,.jpeg,.png' },
-    { kunci: 'naskah_final', label: 'Naskah final (PDF, maks. 20 MB)', accept: 'application/pdf,.pdf' },
-    { kunci: 'bebas_pinjam', label: 'Bukti bebas pinjam perpustakaan', accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
-    { kunci: 'bukti_bayar', label: `Bukti bayar wisuda${infoBiaya('wisuda')}`, accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
+    { kunci: 'bebas_pinjam', label: 'Surat bebas pustaka', accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
+    { kunci: 'surat_lunas', label: 'Surat keterangan lunas', accept: 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png' },
 ] as const;
+
+// Halaman Pengajuan Judul & Upload TA atau Pengajuan Wisuda (data sama, bagian berbeda).
+const halamanTa = props.bagian === 'tugas_akhir';
+const judulHalaman = halamanTa ? 'Pengajuan Judul & Upload TA' : 'Pengajuan Wisuda';
+const deskripsiHalaman = halamanTa
+    ? pendadaran
+        ? 'Ajukan judul tugas akhir, unggah naskah TA, lalu daftar pendadaran.'
+        : 'Ajukan judul tugas akhir; setelah judul disahkan, unggah naskah TA Anda.'
+    : 'Daftar wisuda setelah tugas akhir Anda selesai.';
+
+const formNaskah = useForm({ naskah_ta: null as File | null });
+const kirimNaskah = () =>
+    formNaskah.post(route('mahasiswa.tugas-akhir.naskah'), {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            formNaskah.naskah_ta = null;
+            versiBerkas.value++;
+        },
+    });
 
 const menunggu = (t: Tahap) => (t.pengajuan?.status === 'menunggu_pembimbing' ? 'menunggu persetujuan pembimbing' : 'menunggu diproses admin');
 
@@ -189,21 +229,21 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
 </script>
 
 <template>
-    <Head title="Tugas Akhir & Wisuda" />
-    <AppLayout :breadcrumbs="[{ title: 'Tugas Akhir & Wisuda', href: route('mahasiswa.tugas-akhir') }]">
+    <Head :title="judulHalaman" />
+    <AppLayout :breadcrumbs="[{ title: judulHalaman, href: route(halamanTa ? 'mahasiswa.tugas-akhir' : 'mahasiswa.wisuda') }]">
         <div class="halaman">
             <div class="konten">
                 <div class="kepala-halaman">
                     <div>
-                        <h1 class="judul-halaman">Tugas Akhir & Wisuda</h1>
-                        <p class="deskripsi-halaman">Ajukan tugas akhir, daftar pendadaran, lalu daftar wisuda secara berurutan.</p>
+                        <h1 class="judul-halaman">{{ judulHalaman }}</h1>
+                        <p class="deskripsi-halaman">{{ deskripsiHalaman }}</p>
                     </div>
                 </div>
 
                 <div v-if="page.props.flash?.success" class="alert-sukses" role="alert">{{ page.props.flash.success }}</div>
                 <div v-if="page.props.flash?.error" class="alert-gagal" role="alert">{{ page.props.flash.error }}</div>
 
-                <ol class="grid gap-3 sm:grid-cols-3">
+                <ol class="grid gap-3" :class="pendadaran ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
                     <li
                         v-for="t in tahapan"
                         :key="t.no"
@@ -225,7 +265,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                 </ol>
 
                 <!-- Tahap 1: tugas akhir -->
-                <section v-if="props.tugasAkhir" class="kartu p-6">
+                <section v-if="halamanTa && props.tugasAkhir" class="kartu p-6">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <h2 class="judul-bagian">Tugas Akhir Anda</h2>
                         <span
@@ -240,7 +280,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                             <dt class="teks-bantu uppercase tracking-[0.04em]">Bidang</dt>
                             <dd class="mt-1 text-black dark:text-foreground">{{ props.tugasAkhir.bidang }}</dd>
                         </div>
-                        <div>
+                        <div v-if="props.tugasAkhir.pembimbing.length">
                             <dt class="teks-bantu uppercase tracking-[0.04em]">Pembimbing</dt>
                             <dd v-for="(nama, i) in props.tugasAkhir.pembimbing" :key="nama" class="mt-1 text-black dark:text-foreground">
                                 {{ i + 1 }}. {{ nama }}
@@ -251,10 +291,50 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                             <dd class="mt-1 text-black dark:text-foreground">{{ formatTanggal(props.tugasAkhir.disahkan_at, false) }}</dd>
                         </div>
                     </dl>
+                    <p v-if="!pendadaran && props.tugasAkhir.status !== 'selesai'" class="alert-info mt-4" role="status">
+                        Sidang dilaksanakan di luar sistem. Tugas akhir dinyatakan selesai setelah nilai mata kuliah TA/Skripsi Anda lulus; sesudah
+                        itu pendaftaran wisuda terbuka.
+                    </p>
+
+                    <form class="mt-5 grid gap-3 rounded-lg border border-[#e6e6e6] p-4 dark:border-border" @submit.prevent="kirimNaskah">
+                        <p class="text-sm font-medium text-black dark:text-foreground">Upload Naskah TA</p>
+                        <p v-if="props.tugasAkhir.naskah_diunggah_at" class="text-sm text-[#31302e] dark:text-foreground">
+                            Naskah diunggah {{ formatTanggal(props.tugasAkhir.naskah_diunggah_at, false) }}.
+                            <a
+                                :href="route('berkas.naskah-ta', props.tugasAkhir.id)"
+                                target="_blank"
+                                rel="noopener"
+                                class="font-medium text-[#0075de] hover:underline"
+                                >Lihat naskah</a
+                            >
+                        </p>
+                        <p v-else class="teks-bantu">
+                            Belum ada naskah. Unggah naskah TA/Skripsi Anda dalam satu berkas PDF; naskah ini juga menjadi naskah final syarat wisuda.
+                        </p>
+                        <template v-if="props.tugasAkhir.bisa_unggah_naskah">
+                            <InputBerkas
+                                id="naskah_ta"
+                                :key="`naskah_ta-${versiBerkas}`"
+                                :label="props.tugasAkhir.naskah_diunggah_at ? 'Ganti naskah (PDF, maks. 20 MB)' : 'Naskah TA (PDF, maks. 20 MB)'"
+                                accept="application/pdf,.pdf"
+                                :wajib="true"
+                                :error="formNaskah.errors.naskah_ta"
+                                @pilih="formNaskah.naskah_ta = $event"
+                            />
+                            <div class="flex justify-end">
+                                <Button type="submit" :disabled="!formNaskah.naskah_ta || formNaskah.processing">
+                                    {{ props.tugasAkhir.naskah_diunggah_at ? 'Ganti Naskah' : 'Upload Naskah' }}
+                                </Button>
+                            </div>
+                        </template>
+                        <p v-else class="teks-bantu">
+                            Naskah tidak bisa diganti selama pendaftaran wisuda diproses atau setelah Anda terdaftar sebagai peserta wisuda.
+                        </p>
+                    </form>
                 </section>
 
-                <section v-else class="kartu p-6">
-                    <h2 class="judul-bagian">Tahap 1 · Pengajuan Tugas Akhir/Skripsi</h2>
+                <section v-else-if="halamanTa" class="kartu p-6">
+                    <h2 class="judul-bagian">Pengajuan Judul Tugas Akhir/Skripsi</h2>
                     <DaftarSyarat class="mt-4" :syarat="ta.syarat" />
                     <div v-if="ta.keadaan === 'belum_memenuhi'" class="alert-gagal mt-4" role="status">
                         Anda belum memenuhi syarat pengajuan tugas akhir. Form terbuka setelah semua syarat di atas terpenuhi.
@@ -294,7 +374,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                 />
                                 <InputError :message="formTa.errors.ringkasan" />
                             </div>
-                            <div class="grid items-start gap-4 sm:grid-cols-2">
+                            <div v-if="pendadaran" class="grid items-start gap-4 sm:grid-cols-2">
                                 <div class="grid content-start gap-2">
                                     <Label for="usulan_pembimbing_1_id" class="label-isian">Usulan pembimbing 1</Label>
                                     <SearchSelect
@@ -351,7 +431,7 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                 </section>
 
                 <!-- Tahap 2: pendadaran -->
-                <section v-if="pd.keadaan !== 'terkunci'" class="kartu p-6">
+                <section v-if="halamanTa && pendadaran && pd.keadaan !== 'terkunci'" class="kartu p-6">
                     <h2 class="judul-bagian">Tahap 2 · Pendadaran</h2>
 
                     <div v-if="pd.hasil?.hasil" class="mt-4 rounded-lg border border-[#e6e6e6] px-4 py-3 text-sm dark:border-border">
@@ -492,8 +572,20 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                 </section>
 
                 <!-- Tahap 3: wisuda -->
-                <section v-if="ws.keadaan !== 'terkunci'" class="kartu p-6">
-                    <h2 class="judul-bagian">Tahap 3 · Wisuda</h2>
+                <section v-if="!halamanTa && ws.keadaan === 'terkunci'" class="kartu p-6">
+                    <h2 class="judul-bagian">Pendaftaran Wisuda</h2>
+                    <div class="alert-info mt-4" role="status">
+                        Pendaftaran wisuda terbuka setelah tugas akhir Anda selesai ({{
+                            pendadaran ? 'lulus pendadaran' : 'nilai mata kuliah TA/Skripsi lulus'
+                        }}). Pantau tugas akhir Anda di
+                        <Link :href="route('mahasiswa.tugas-akhir')" class="font-medium text-[#0075de] hover:underline"
+                            >Pengajuan Judul & Upload TA</Link
+                        >.
+                    </div>
+                </section>
+
+                <section v-if="!halamanTa && ws.keadaan !== 'terkunci'" class="kartu p-6">
+                    <h2 class="judul-bagian">Pendaftaran Wisuda</h2>
 
                     <template v-if="ws.wisuda">
                         <div class="alert-info mt-4" role="status">
@@ -586,6 +678,21 @@ const dokumen = 'application/pdf,.pdf,image/jpeg,image/png,.jpg,.jpeg,.png';
                                     </select>
                                     <InputError :message="formWs.errors.ukuran_toga" />
                                 </div>
+                                <p v-if="props.tugasAkhir?.naskah_diunggah_at" class="text-sm text-[#31302e] dark:text-foreground">
+                                    Naskah final memakai naskah TA yang Anda unggah
+                                    {{ formatTanggal(props.tugasAkhir.naskah_diunggah_at, false) }}
+                                    (<a
+                                        :href="route('berkas.naskah-ta', props.tugasAkhir.id)"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="font-medium text-[#0075de] hover:underline"
+                                        >lihat</a
+                                    >). Ganti di
+                                    <Link :href="route('mahasiswa.tugas-akhir')" class="font-medium text-[#0075de] hover:underline"
+                                        >Pengajuan Judul & Upload TA</Link
+                                    >
+                                    sebelum mendaftar bila perlu.
+                                </p>
                                 <div class="grid items-start gap-4 sm:grid-cols-2">
                                     <InputBerkas
                                         v-for="b in berkasWisuda"

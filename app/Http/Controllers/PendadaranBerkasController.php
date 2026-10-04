@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\AllowedUpload;
 use App\Models\Pendadaran;
 use App\Models\PengaturanInstitusi;
+use App\Models\TugasAkhir;
 use App\Models\Wisuda;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Surat pendadaran (PDF) dan naskah revisi untuk mahasiswa, admin, pembimbing, dan penguji; SKL untuk
- * mahasiswa pemiliknya dan admin.
+ * mahasiswa pemiliknya dan admin; naskah TA untuk mahasiswa pemiliknya, admin, dan pembimbingnya.
  */
 class PendadaranBerkasController extends Controller
 {
@@ -59,6 +60,23 @@ class PendadaranBerkasController extends Controller
         abort_if($pendadaran->naskah_revisi === null || ! $disk->exists($pendadaran->naskah_revisi), 404);
 
         return $disk->response($pendadaran->naskah_revisi, 'naskah-revisi-'.$pendadaran->mahasiswa?->nim.'.pdf', [
+            'Content-Type' => 'application/pdf',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "sandbox; default-src 'none'",
+        ], 'inline');
+    }
+
+    public function naskahTa(Request $request, TugasAkhir $tugasAkhir): StreamedResponse
+    {
+        $user = $request->user();
+        $dosenId = $user->dosenProfile?->id;
+        abort_unless($user->mahasiswaProfile?->id === $tugasAkhir->mahasiswa_id || $user->hasPermission('admin.pengajuan-akademik')
+            || ($dosenId !== null && $tugasAkhir->dibimbingOleh($dosenId)), 403);
+
+        $disk = Storage::disk(AllowedUpload::DISK);
+        abort_if($tugasAkhir->naskah === null || ! $disk->exists($tugasAkhir->naskah), 404);
+
+        return $disk->response($tugasAkhir->naskah, 'naskah-ta-'.$tugasAkhir->mahasiswa?->nim.'.pdf', [
             'Content-Type' => 'application/pdf',
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "sandbox; default-src 'none'",

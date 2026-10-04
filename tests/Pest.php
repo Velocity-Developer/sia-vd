@@ -2,6 +2,8 @@
 
 use App\Models\Fakultas;
 use App\Models\KelasKuliah;
+use App\Models\KomponenNilai;
+use App\Models\Krs;
 use App\Models\MataKuliah;
 use App\Models\ProgramStudi;
 use App\Models\TahunAkademik;
@@ -72,4 +74,24 @@ function angkatanUntuk(KelasKuliah $kelas, ?int $semester = null): int
     $semester ??= $kelas->mataKuliah->semester;
 
     return $tahun->tahunAwal() - intdiv($semester - ($tahun->semester === 'Genap' ? 2 : 1), 2);
+}
+
+/**
+ * Satu komponen nilai 100% agar kelas bisa dinilai; huruf dihitung dari angka (skala umum A ≥ 80, B ≥ 70, C ≥ 60,
+ * D ≥ 50, E ≥ 0).
+ */
+function aturKomponenNilai(): KomponenNilai
+{
+    return KomponenNilai::create(['nama' => 'Nilai Akhir', 'persen' => 100, 'sumber' => KomponenNilai::MANUAL, 'urutan' => 0]);
+}
+
+/**
+ * Isi angka satu KRS lewat tabel nilai per komponen di halaman kelas (dosen pengampu, atau admin bila $oleh diisi).
+ */
+function isiNilaiKomponen($test, KelasKuliah $kelas, Krs $krs, ?float $angka, ?User $oleh = null)
+{
+    $komponen = KomponenNilai::query()->first() ?? aturKomponenNilai();
+
+    return $test->actingAs($oleh ?? $kelas->dosen->user)
+        ->put(route(($oleh ? 'admin' : 'dosen').'.kelas-kuliah.nilai-komponen', $kelas), ['nilai' => [$krs->id => [$komponen->id => $angka]]]);
 }

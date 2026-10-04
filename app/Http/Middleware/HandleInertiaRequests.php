@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Feature;
+use App\LingkupProdi;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengaturanMaintenance;
 use App\Models\PengaturanTampilan;
@@ -51,6 +52,8 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user()?->withoutRelations(),
                 'role' => fn (): ?array => $request->user()?->role?->only(['id', 'name', 'slug', 'user_type']),
                 'permissions' => fn (): array => $request->user()?->permissionKeys() ?? [],
+                // Akun Prodi: prodi yang membatasi datanya (null untuk pengguna lain).
+                'prodi' => fn (): ?array => LingkupProdi::shared(),
                 // Menu panel developer (/dev) di sidebar.
                 'developer' => fn (): bool => config('app.dev_panel') && (bool) $request->user()?->isDeveloper(),
             ],
