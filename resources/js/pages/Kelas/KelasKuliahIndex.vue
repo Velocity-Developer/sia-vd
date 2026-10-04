@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { rutePeran, type Peran } from '@/lib/rutePeran';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { ClipboardPen, Eye, Pencil, Search, Trash2 } from 'lucide-vue-next';
+import { ClipboardPen, Eye, FileSpreadsheet, Pencil, Search, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
@@ -120,9 +120,14 @@ const ruangText = (item: KelasKuliah) => {
                         </p>
                         <p v-else class="deskripsi-halaman">Kelola kelas kuliah, tahun ajaran, dosen pengampu, dan mata kuliah.</p>
                     </div>
-                    <Button v-if="isAdmin" as-child>
-                        <Link :href="rute('kelas-kuliah.create')">Tambah Kelas Kuliah</Link>
-                    </Button>
+                    <div v-if="isAdmin" class="flex flex-wrap gap-2">
+                        <Button as-child variant="outline">
+                            <Link :href="route('admin.impor.index', 'kelas-kuliah')"><FileSpreadsheet /> Impor Excel</Link>
+                        </Button>
+                        <Button as-child>
+                            <Link :href="rute('kelas-kuliah.create')">Tambah Kelas Kuliah</Link>
+                        </Button>
+                    </div>
                 </div>
 
                 <!-- Susunan sama dengan FilterKonten pada menu Jadwal/Materi/Tugas/Quiz. -->

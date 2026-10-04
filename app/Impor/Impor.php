@@ -21,6 +21,7 @@ abstract class Impor
         'mahasiswa' => ImporMahasiswa::class,
         'dosen' => ImporDosen::class,
         'mata-kuliah' => ImporMataKuliah::class,
+        'kelas-kuliah' => ImporKelasKuliah::class,
     ];
 
     abstract public function judul(): string;
@@ -67,6 +68,16 @@ abstract class Impor
      * @return list<string>
      */
     protected function unikDalamBerkas(): array
+    {
+        return [];
+    }
+
+    /**
+     * Pesan galat tambahan per jenis data (mis. untuk kolom hasil normalisasi seperti *_id).
+     *
+     * @return array<string, string>
+     */
+    protected function pesan(): array
     {
         return [];
     }
@@ -118,6 +129,7 @@ abstract class Impor
                 'max' => ':attribute maksimal :max.',
                 'prodi_id.required' => 'Kode Prodi tidak ditemukan.',
                 'dosen_wali_id.required' => 'NIDN Dosen Wali tidak ditemukan atau dosennya tidak aktif.',
+                ...$this->pesan(),
             ], $judul);
 
             foreach ($this->unikDalamBerkas() as $k) {

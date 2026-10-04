@@ -6,6 +6,7 @@ use App\CatatAktivitas;
 use App\Excel;
 use App\Http\Controllers\Controller;
 use App\Impor\Impor;
+use App\Impor\ImporAkun;
 use App\Models\LogAktivitas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,7 @@ class ImporDataController extends Controller
         return Inertia::render('Admin/ImporData', [
             'jenis' => $jenis,
             'judul' => $impor->judul(),
-            'akun' => $jenis !== 'mata-kuliah',
+            'akun' => $impor instanceof ImporAkun,
             'kolom' => collect($impor->kolom())->map(fn (array $k): array => ['judul' => $k[0], 'wajib' => $k[1], 'catatan' => $k[3]])->values(),
             'pilihanJenis' => collect(Impor::JENIS)->keys()
                 ->filter(fn (string $j): bool => Gate::allows(Impor::untuk($j)->izin()))

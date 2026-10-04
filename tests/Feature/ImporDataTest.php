@@ -3,6 +3,7 @@
 use App\Excel;
 use App\Impor\Impor;
 use App\Models\DosenProfile;
+use App\Models\KelasKuliah;
 use App\Models\LogAktivitas;
 use App\Models\MahasiswaProfile;
 use App\Models\MataKuliah;
@@ -82,4 +83,43 @@ it('imports lecturers and courses', function () {
     expect(MataKuliah::query()->where('kode_matkul', 'KEP499')->value('jenis_penilaian'))->toBe(MataKuliah::TUGAS_AKHIR);
 
     $this->actingAs(User::factory()->dosen()->create())->get(route('admin.impor.index', 'mahasiswa'))->assertForbidden();
+});
+
+it('imports class sections into the given or active academic year', function () {
+    $kelas = createMateriKelasKuliah();
+    $ta = $kelas->tahunAkademik;
+    $ta->update(['status' => true]);
+    $dosen = $kelas->dosen;
+    $dosen->update(['nidn' => '0911000001', 'status' => 'Aktif']);
+    $mk = $kelas->mataKuliah;
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)->get(route('admin.impor.template', 'kelas-kuliah'))->assertOk();
+    $this->actingAs($admin)->get(route('admin.impor.index', 'kelas-kuliah'))
+        ->assertInertia(fn ($page) => $page->where('akun', false)->where('judul', 'Kelas Kuliah'));
+
+    // Kode Kelas, Tahun Akademik, Kode MK, NIDN Dosen, Kapasitas, Jumlah Pertemuan
+    $salah = [
+        [$kelas->kode_kelas, '', $mk->kode_matkul, '0911000001', '40', ''],
+        ['IMP-B', '1999/2000 Ganjil', 'TIDAK-ADA', '', '40', ''],
+        ['IMP-C', '', $mk->kode_matkul, '', '40', ''],
+        ['IMP-D', '', $mk->kode_matkul, '0911000001', '30', ''],
+        ['imp-d', '', $mk->kode_matkul, '0911000001', '30', ''],
+    ];
+    $this->actingAs($admin)->post(route('admin.impor.store', 'kelas-kuliah'), ['berkas' => berkasImpor('kelas-kuliah', $salah)])
+        ->assertSessionHas('error')
+        ->assertSessionHas('impor_hasil', fn (array $h): bool => collect($h['galat'])->contains('Baris 2: Kode Kelas sudah ada di tahun akademik tersebut.')
+            && collect($h['galat'])->contains(fn (string $g): bool => str_starts_with($g, 'Baris 3: Tahun Akademik tidak ditemukan'))
+            && collect($h['galat'])->contains('Baris 3: Kode MK tidak ditemukan.')
+            && collect($h['galat'])->contains('Baris 4: NIDN Dosen wajib diisi untuk mata kuliah selain Tugas Akhir/Skripsi.')
+            && collect($h['galat'])->contains('Baris 6: Kode Kelas sama dengan baris 5.'));
+    expect(KelasKuliah::query()->where('kode_kelas', 'IMP-D')->exists())->toBeFalse();
+
+    $baik = [['IMP-A', '', $mk->kode_matkul, '0911000001', '40', '14'], ['IMP-B', "{$ta->tahun} ".mb_strtolower($ta->semester), $mk->kode_matkul, '0911000001', '25', '']];
+    $this->actingAs($admin)->post(route('admin.impor.store', 'kelas-kuliah'), ['berkas' => berkasImpor('kelas-kuliah', $baik)])
+        ->assertSessionHas('success', '2 kelas kuliah berhasil diimpor.');
+    $a = KelasKuliah::query()->where('kode_kelas', 'IMP-A')->sole();
+    expect($a->only(['tahun_akademik_id', 'matkul_id', 'dosen_id', 'kapasitas', 'jumlah_pertemuan']))
+        ->toBe(['tahun_akademik_id' => $ta->id, 'matkul_id' => $mk->id, 'dosen_id' => $dosen->id, 'kapasitas' => 40, 'jumlah_pertemuan' => 14])
+        ->and(KelasKuliah::query()->where('kode_kelas', 'IMP-B')->value('tahun_akademik_id'))->toBe($ta->id);
 });

@@ -6,6 +6,11 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Ditambahkan
+- **Impor Kelas Kuliah dari Excel** (`admin/impor/kelas-kuliah`, izin `admin.kelas-kuliah`, juga role Prodi untuk MK
+  prodinya; tombol "Impor Excel" di Kelas Kuliah). Kolom: Kode Kelas, Tahun Akademik (mis. `2025/2026 Ganjil`, kosong =
+  TA aktif), Kode MK, NIDN Dosen (wajib kecuali MK TA/Skripsi), Kapasitas, Jumlah Pertemuan (kosong = bawaan). Kode kelas
+  unik per TA (di database dan di dalam berkas). Lembar referensi Tahun Akademik, Mata Kuliah, Dosen. Jadwal tetap diisi
+  di Jadwal Kelas. `Impor::pesan()` untuk pesan galat tambahan per jenis.
 - **Penamaan & struktur menu konsep Yapika poin C (4 Okt).** Migrasi `2026_10_04_170000` (sinkron nama izin).
   - Seksi admin **Pengguna & Akses** menjadi **Tools**: **Create User** (`admin.pengguna.buat`; pilih Prodi, Dosen,
     atau Mahasiswa → form kelola user yang sudah ada; Prodi = form karyawan dengan role Prodi terpilih lewat
