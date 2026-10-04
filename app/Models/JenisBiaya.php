@@ -72,6 +72,11 @@ class JenisBiaya extends Model
      */
     public static function infoUntuk(?MahasiswaProfile $mahasiswa, string $kategori): array
     {
+        // Menu Jenis Biaya ikut mati bersama fitur keuangan, jadi tidak ada info biaya yang ditampilkan.
+        if (! Feature::aktif('keuangan')) {
+            return [];
+        }
+
         return static::query()->where('aktif', true)->where('kategori', $kategori)->with('tarif')->orderBy('urutan')->get()
             ->map(fn (self $jenis): ?array => ($tarif = $jenis->tarifUntuk($mahasiswa?->prodi_id, $mahasiswa?->angkatan)) === null ? null
                 : ['nama' => $jenis->nama, 'nominal' => (int) $tarif->nominal, 'keterangan' => $jenis->keterangan])

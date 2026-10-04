@@ -22,6 +22,7 @@ class PermissionCatalog
      */
     public const FITUR = [
         'admin.tagihan' => 'keuangan',
+        'admin.jenis-biaya' => 'keuangan',
         'mahasiswa.info-biaya' => 'keuangan',
         'admin.materi' => 'materi',
         'dosen.materi' => 'materi',

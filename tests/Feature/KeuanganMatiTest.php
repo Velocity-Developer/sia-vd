@@ -57,10 +57,11 @@ it('hides every billing route, permission, and dashboard block', function () {
     $mhs = User::factory()->mahasiswa()->create();
     $tagihan = TagihanSemester::create(['mahasiswa_id' => $mhs->mahasiswaProfile->id, 'tahun_akademik_id' => createMateriKelasKuliah()->tahun_akademik_id, 'status' => TagihanSemester::BELUM_BAYAR, 'total' => 1_000]);
 
-    expect($admin->permissionKeys())->not->toContain('admin.tagihan')->toContain('admin.jenis-biaya')->toContain(Role::SUPER_PERMISSION)
+    expect($admin->permissionKeys())->not->toContain('admin.tagihan')->not->toContain('admin.jenis-biaya')->toContain(Role::SUPER_PERMISSION)
         ->and($mhs->permissionKeys())->not->toContain('mahasiswa.info-biaya');
 
     $this->actingAs($admin)->get(route('admin.tagihan.index'))->assertNotFound();
+    $this->actingAs($admin)->get(route('admin.jenis-biaya.index'))->assertNotFound();
     $this->actingAs($admin)->get(route('admin.tagihan-remidi.index'))->assertNotFound();
     $this->actingAs($admin)->get(route('admin.tagihan-susulan.index'))->assertNotFound();
     $this->actingAs($admin)->post(route('admin.tagihan.lunas', $tagihan))->assertNotFound();
@@ -100,22 +101,19 @@ it('keeps hidden billing permissions on a role saved from Kelola Role', function
     expect($admin->fresh()->permissionKeys())->toContain('admin.tagihan');
 });
 
-it('limits Jenis Biaya to the information categories', function () {
+it('hides Jenis Biaya entirely, including the information categories', function () {
     $admin = User::factory()->admin()->create();
-    $semester = JenisBiaya::create(['kode' => 'SPP', 'nama' => 'SPP', 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => JenisBiaya::SEMESTER, 'aktif' => true]);
-    JenisBiaya::create(['kode' => 'CUTI', 'nama' => 'Biaya Cuti', 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => JenisBiaya::CUTI, 'aktif' => true]);
+    $cuti = JenisBiaya::create(['kode' => 'CUTI', 'nama' => 'Biaya Cuti', 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => JenisBiaya::CUTI, 'aktif' => true]);
 
-    $this->actingAs($admin)->get(route('admin.jenis-biaya.index'))->assertInertia(fn ($page) => $page
-        ->has('jenisBiaya', 1)->where('jenisBiaya.0.kode', 'CUTI'));
-    $this->actingAs($admin)->get(route('admin.jenis-biaya.create'))->assertInertia(fn ($page) => $page
-        ->where('kategoriOptions', JenisBiaya::INFO));
-    $this->actingAs($admin)->get(route('admin.jenis-biaya.edit', $semester))->assertNotFound();
-    $this->actingAs($admin)->delete(route('admin.jenis-biaya.destroy', $semester))->assertNotFound();
+    $this->actingAs($admin)->get(route('admin.jenis-biaya.create'))->assertNotFound();
+    $this->actingAs($admin)->get(route('admin.jenis-biaya.edit', $cuti))->assertNotFound();
+    $this->actingAs($admin)->post(route('admin.jenis-biaya.store'), [
+        'kode' => 'WSD', 'nama' => 'Wisuda', 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => JenisBiaya::WISUDA, 'aktif' => true, 'tarif' => [['nominal' => 500_000]],
+    ])->assertNotFound();
+    expect(JenisBiaya::query()->count())->toBe(1);
 
-    $isian = ['kode' => 'WSD', 'nama' => 'Wisuda', 'cara_hitung' => JenisBiaya::TETAP, 'aktif' => true, 'tarif' => [['nominal' => 500_000]]];
-    $this->actingAs($admin)->post(route('admin.jenis-biaya.store'), $isian)->assertSessionHasErrors('kategori');
-    $this->actingAs($admin)->post(route('admin.jenis-biaya.store'), [...$isian, 'kategori' => JenisBiaya::SEMESTER])->assertSessionHasErrors('kategori');
-    $this->actingAs($admin)->post(route('admin.jenis-biaya.store'), [...$isian, 'kategori' => JenisBiaya::WISUDA])->assertSessionHasNoErrors();
+    config(['client.fitur.keuangan.default' => true]);
+    $this->actingAs($admin)->get(route('admin.jenis-biaya.index'))->assertOk();
 });
 
 it('opens KRS even when the lock switch was left on with an unpaid bill', function () {
@@ -253,13 +251,14 @@ it('saves the susulan settings without the payment deadline and keeps its old va
         ->and(PengaturanAkademik::current()->batas_bayar_susulan_hari)->toBe(7);
 });
 
-it('shows the leave fee as information only, without payment proof', function () {
+it('applies for leave without fee information or payment proof', function () {
     $tahun = tahunCutiKeuanganMati();
     $mhs = User::factory()->mahasiswa()->create();
     JenisBiaya::create(['kode' => 'CUTI', 'nama' => 'Biaya Cuti', 'cara_hitung' => JenisBiaya::TETAP, 'kategori' => JenisBiaya::CUTI, 'aktif' => true])
         ->tarif()->create(['nominal' => 250_000]);
 
-    $this->actingAs($mhs)->get(route('mahasiswa.pengajuan-cuti'))->assertInertia(fn ($page) => $page->where('biaya.0.nominal', 250_000));
+    // Biaya lama yang masih tersimpan tidak ditampilkan karena menu Jenis Biaya ikut mati.
+    $this->actingAs($mhs)->get(route('mahasiswa.pengajuan-cuti'))->assertInertia(fn ($page) => $page->where('biaya', []));
     $this->actingAs($mhs)->post(route('mahasiswa.pengajuan-cuti.ajukan'), ['tahun_akademik_id' => $tahun->id, 'alasan' => 'Bekerja di luar kota.'])
         ->assertSessionHasNoErrors();
 });
