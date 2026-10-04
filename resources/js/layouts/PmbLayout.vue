@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import HakCipta from '@/components/HakCipta.vue';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -7,7 +8,6 @@ import { computed } from 'vue';
 // Halaman publik PMB: lebar (formulirnya panjang), identitas institusi di atas, tanpa sidebar.
 const page = usePage<SharedData>();
 const institusi = computed(() => page.props.institusi);
-const tahun = new Date().getFullYear();
 </script>
 
 <template>
@@ -32,7 +32,7 @@ const tahun = new Date().getFullYear();
 
             <slot />
 
-            <p class="mt-8 text-center text-xs text-[#a39e98]">© {{ tahun }} {{ institusi?.nama_pt ?? page.props.name }}</p>
+            <HakCipta class="mt-8 text-center text-xs text-[#a39e98]" />
         </div>
     </div>
 </template>

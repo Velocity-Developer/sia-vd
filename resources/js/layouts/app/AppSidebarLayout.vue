@@ -3,6 +3,7 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import HakCipta from '@/components/HakCipta.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import type { BreadcrumbItemType, SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -47,6 +48,9 @@ const labelUntuk = computed(() => (maintenance.value?.untuk ?? []).map((jenis) =
                 </Link>
             </div>
             <slot />
+            <footer class="mt-auto border-t border-[#e6e6e6] px-4 py-4 text-center text-xs text-[#a39e98] dark:border-border md:px-6">
+                <HakCipta />
+            </footer>
         </AppContent>
     </AppShell>
 </template>

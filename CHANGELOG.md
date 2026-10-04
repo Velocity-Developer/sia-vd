@@ -6,6 +6,8 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Ditambahkan
+- **Teks hak cipta seragam** "©{tahun} {nama institusi}. All Rights Reserved." (komponen `HakCipta`): halaman masuk,
+  PMB, footer baru di semua halaman setelah login, dan email. Nama dari Pengaturan Sistem → Institusi.
 - **sitemap.xml & robots.txt dinamis** (`SeoController`, rute `sitemap`/`robots`): sitemap hanya halaman publik
   (Informasi PMB dengan lastmod dari `informasi_pmb`, Formulir PMB, Login); robots.txt menutup /admin, /dosen,
   /mahasiswa, /pengaturan-sistem, /dev, /berkas, /settings, /pmb/selesai, /pmb/kecamatan dan menunjuk ke sitemap.

@@ -38,7 +38,7 @@ Bila tombol "{{ $tombol }}" tidak bisa diklik, salin alamat berikut ke peramban:
 
 <x-slot:footer>
 <x-mail::footer>
-© {{ date('Y') }} {{ $institusi }}
+©{{ date('Y') }} {{ $institusi }}. All Rights Reserved.
 </x-mail::footer>
 </x-slot:footer>
 </x-mail::layout>
