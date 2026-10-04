@@ -134,6 +134,23 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 ],
             },
             {
+                title: 'Mahasiswa Baru',
+                icon: UserPlus,
+                tetap: true,
+                items: [
+                    { title: 'Calon Maba', routeName: 'admin.pendaftar-pmb.index', icon: ClipboardList, permission: 'admin.pendaftar-pmb' },
+                    {
+                        title: 'Konfigurasi',
+                        icon: Settings2,
+                        tetap: true,
+                        items: [
+                            { title: 'Atur Periode PMB', routeName: 'admin.periode-pmb.index', icon: CalendarRange, permission: 'admin.periode-pmb' },
+                            { title: 'Informasi PMB', routeName: 'admin.informasi-pmb.edit', icon: Megaphone, permission: 'admin.informasi-pmb' },
+                        ],
+                    },
+                ],
+            },
+            {
                 title: 'Akademik',
                 icon: CalendarRange,
                 tetap: true,
@@ -396,23 +413,6 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                         icon: ArrowLeftRight,
                         permission: 'admin.pindah-kelas',
                         fitur: 'pindah_kelas',
-                    },
-                ],
-            },
-            {
-                title: 'Mahasiswa Baru',
-                icon: UserPlus,
-                tetap: true,
-                items: [
-                    { title: 'Calon Maba', routeName: 'admin.pendaftar-pmb.index', icon: ClipboardList, permission: 'admin.pendaftar-pmb' },
-                    {
-                        title: 'Konfigurasi',
-                        icon: Settings2,
-                        tetap: true,
-                        items: [
-                            { title: 'Atur Periode PMB', routeName: 'admin.periode-pmb.index', icon: CalendarRange, permission: 'admin.periode-pmb' },
-                            { title: 'Informasi PMB', routeName: 'admin.informasi-pmb.edit', icon: Megaphone, permission: 'admin.informasi-pmb' },
-                        ],
                     },
                 ],
             },

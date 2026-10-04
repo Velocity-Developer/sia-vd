@@ -10,5 +10,8 @@ const tahun = new Date().getFullYear();
 </script>
 
 <template>
-    <p>©{{ tahun }} {{ nama }}. All Rights Reserved.</p>
+    <p>
+        ©{{ tahun }} {{ nama }}. All Rights Reserved. Design by
+        <a href="https://velocitydeveloper.com" target="_blank" rel="noopener" class="underline-offset-2 hover:underline">Velocity Developer</a>
+    </p>
 </template>

@@ -6,12 +6,14 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Diubah
+- Seksi sidebar admin **Mahasiswa Baru** dipindah tepat di bawah **Master**.
 - **Jenis Biaya dihapus dari admin selama fitur keuangan mati** (Yapika): izin `admin.jenis-biaya` masuk
   `PermissionCatalog::FITUR` (keuangan), rute diberi `fitur:keuangan` (404), menu & seksi Keuangan hilang, dan
   `JenisBiaya::infoUntuk()` mengembalikan kosong sehingga info biaya cuti/TA/wisuda tidak tampil ke mahasiswa.
 
 ### Ditambahkan
-- **Teks hak cipta seragam** "©{tahun} {nama institusi}. All Rights Reserved." (komponen `HakCipta`): halaman masuk,
+- **Teks hak cipta seragam** "©{tahun} {nama institusi}. All Rights Reserved. Design by Velocity Developer" (tautan
+  velocitydeveloper.com, tab baru; komponen `HakCipta`): halaman masuk,
   PMB, footer baru di semua halaman setelah login, dan email. Nama dari Pengaturan Sistem → Institusi.
 - **sitemap.xml & robots.txt dinamis** (`SeoController`, rute `sitemap`/`robots`): sitemap hanya halaman publik
   (Informasi PMB dengan lastmod dari `informasi_pmb`, Formulir PMB, Login); robots.txt menutup /admin, /dosen,
