@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DaftarPengumuman, { type Pengumuman } from '@/components/DaftarPengumuman.vue';
 import DeskripsiKampus from '@/components/DeskripsiKampus.vue';
 import InputError from '@/components/InputError.vue';
 import RecaptchaWidget from '@/components/RecaptchaWidget.vue';
@@ -9,13 +10,14 @@ import { Label } from '@/components/ui/label';
 import PortalLayout from '@/layouts/PortalLayout.vue';
 import { type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { Eye, EyeOff, LoaderCircle, Lock, User, UserPlus } from 'lucide-vue-next';
+import { ArrowRight, Eye, EyeOff, Info, LoaderCircle, Lock, User, UserPlus } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 defineProps<{
     status?: string;
     canResetPassword: boolean;
     recaptchaSiteKey?: string | null;
+    pengumuman: Pengumuman[];
 }>();
 
 const form = useForm({
@@ -46,7 +48,7 @@ const submit = () => {
 <template>
     <Head title="Masuk" />
     <PortalLayout>
-        <!-- Halaman depan sesuai contoh klien: deskripsi kampus di kiri, form masuk di kanan. -->
+        <!-- Halaman depan sesuai contoh klien: deskripsi kampus di kiri, form masuk di kanan, pengumuman di bawah. -->
         <section class="mx-auto grid w-full max-w-[1120px] gap-6 px-4 py-8 sm:py-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
             <div
                 class="relative overflow-hidden rounded-2xl bg-[#0075de] bg-cover bg-center p-6 text-white sm:p-10 lg:min-h-full"
@@ -160,6 +162,25 @@ const submit = () => {
                         }}
                     </p>
                 </form>
+            </div>
+        </section>
+
+        <section
+            class="relative bg-[#0b2a4a] bg-cover bg-center"
+            :style="tampilan?.login_gambar_url ? { backgroundImage: `url(${tampilan.login_gambar_url})` } : undefined"
+        >
+            <div v-if="tampilan?.login_gambar_url" class="pointer-events-none absolute inset-0 bg-[#0b2a4a]/90" aria-hidden="true" />
+            <div class="relative mx-auto w-full max-w-[1120px] px-4 py-10 sm:py-14">
+                <div class="mb-8 flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="flex items-center gap-2 text-xl font-semibold text-white"><Info class="size-5" /> Informasi & Pengumuman</h2>
+                    <Link
+                        :href="route('pengumuman')"
+                        class="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white hover:underline"
+                        >Lihat semua <ArrowRight class="size-4"
+                    /></Link>
+                </div>
+                <DaftarPengumuman v-if="pengumuman.length" :items="pengumuman" varian="gelap" ringkas />
+                <p v-else class="text-sm text-white/70">Belum ada informasi & pengumuman.</p>
             </div>
         </section>
     </PortalLayout>

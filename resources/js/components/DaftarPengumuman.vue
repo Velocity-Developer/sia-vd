@@ -3,8 +3,12 @@ import { Paperclip } from 'lucide-vue-next';
 
 export type Pengumuman = { id: number; kategori: string | null; information: string; created_at: string };
 
-// "gelap" untuk pita berlatar foto (halaman Pengumuman); "terang" untuk latar putih.
-const props = withDefaults(defineProps<{ items: Pengumuman[]; varian?: 'gelap' | 'terang' }>(), { varian: 'terang' });
+// "gelap" untuk pita berlatar foto (halaman masuk & Pengumuman); "terang" untuk latar putih.
+// ringkas: isi dipotong 3 baris (cuplikan di halaman masuk).
+const props = withDefaults(defineProps<{ items: Pengumuman[]; varian?: 'gelap' | 'terang'; ringkas?: boolean }>(), {
+    varian: 'terang',
+    ringkas: false,
+});
 
 const tanggal = (nilai: string) => new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(nilai));
 </script>
@@ -23,7 +27,7 @@ const tanggal = (nilai: string) => new Intl.DateTimeFormat('id-ID', { day: 'nume
             </div>
             <p
                 class="mt-2 whitespace-pre-line text-base leading-7 sm:text-lg"
-                :class="props.varian === 'gelap' ? 'text-white' : 'text-black dark:text-foreground'"
+                :class="[props.varian === 'gelap' ? 'text-white' : 'text-black dark:text-foreground', props.ringkas ? 'line-clamp-3' : '']"
             >
                 {{ item.information }}
             </p>

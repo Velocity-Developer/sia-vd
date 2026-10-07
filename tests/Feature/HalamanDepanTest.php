@@ -11,10 +11,18 @@ function buatPengumuman(User $admin, string $isi, ?string $kategori = null): Inf
     return InfoKuliah::create(['kategori' => $kategori, 'information' => $isi, 'file' => 'info-kuliahs/'.str()->random(8).'.pdf', 'uploaded_by' => $admin->id]);
 }
 
-it('no longer lists announcements on the login page', function () {
-    buatPengumuman(User::factory()->admin()->create(), 'Pengumuman');
+it('shows the five latest announcements on the login page without file paths', function () {
+    $admin = User::factory()->admin()->create();
+    foreach (range(1, 6) as $i) {
+        buatPengumuman($admin, "Pengumuman {$i}", 'Beasiswa')->forceFill(['created_at' => now()->subDays(10 - $i)])->save();
+    }
 
-    $this->get(route('login'))->assertOk()->assertInertia(fn ($page) => $page->component('auth/Login')->missing('pengumuman'));
+    $this->get(route('login'))->assertOk()->assertInertia(fn ($page) => $page
+        ->component('auth/Login')
+        ->has('pengumuman', 5)
+        ->where('pengumuman.0.information', 'Pengumuman 6')
+        ->where('pengumuman.0.kategori', 'Beasiswa')
+        ->missing('pengumuman.0.file'));
 });
 
 it('lists all announcements publicly on the pengumuman page', function () {

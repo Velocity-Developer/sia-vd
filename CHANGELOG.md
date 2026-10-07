@@ -12,8 +12,8 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   berkas lama dihapus). `User::urlFoto()` dipakai bersama UserController.
 - **Halaman depan baru** (sesuai contoh klien Yapika): `/login` kini memakai `PortalLayout` — menu atas
   SIAKAD · Pengumuman · Kalender Akademik, deskripsi kampus (Pengaturan Sistem → Tampilan, komponen
-  `DeskripsiKampus`) di kiri, form masuk di kanan. Halaman publik baru `/pengumuman` (pita gelap
-  Informasi & Pengumuman sesuai contoh, 10 per halaman) dan `/kalender-akademik` (tanggal-tanggal
+  `DeskripsiKampus`) di kiri, form masuk di kanan, dan pita 5 Informasi & Pengumuman terbaru di bawahnya
+  (tautan "Lihat semua"). Halaman publik baru `/pengumuman` (pita gelap yang sama, 10 per halaman) dan `/kalender-akademik` (tanggal-tanggal
   Tahun Akademik aktif). Lampiran Informasi & Pengumuman (`berkas.info-kuliah`) kini publik tanpa login.
   Kolom opsional `info_kuliahs.kategori` (label di daftar). Sitemap memuat kedua halaman baru.
 - Seksi sidebar admin **Mahasiswa Baru** dipindah tepat di bawah **Master**.

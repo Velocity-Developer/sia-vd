@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\InfoKuliah;
 use App\Models\PengaturanRecaptcha;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,8 @@ class AuthenticatedSessionController extends Controller
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
             'recaptchaSiteKey' => PengaturanRecaptcha::siteKeyLogin(),
+            // Halaman masuk sekaligus halaman depan: 5 Informasi & Pengumuman terbaru di bawah form.
+            'pengumuman' => InfoKuliah::publik()->limit(5)->get(),
         ]);
     }
 
