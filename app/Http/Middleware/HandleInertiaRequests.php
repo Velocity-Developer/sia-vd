@@ -49,7 +49,8 @@ class HandleInertiaRequests extends Middleware
             'maintenance' => fn (): array => PengaturanMaintenance::shared(),
             'fitur' => fn (): array => collect(config('client.fitur'))->keys()->mapWithKeys(fn (string $nama): array => [$nama => Feature::aktif($nama)])->all(),
             'auth' => [
-                'user' => $request->user()?->withoutRelations(),
+                // avatar = foto profil (sidebar, menu pengguna, kartu identitas dashboard).
+                'user' => $request->user() ? [...$request->user()->withoutRelations()->toArray(), 'avatar' => $request->user()->fotoUrl()] : null,
                 'role' => fn (): ?array => $request->user()?->role?->only(['id', 'name', 'slug', 'user_type']),
                 'permissions' => fn (): array => $request->user()?->permissionKeys() ?? [],
                 // Akun Prodi: prodi yang membatasi datanya (null untuk pengguna lain).

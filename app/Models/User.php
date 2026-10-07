@@ -72,6 +72,35 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Folder foto di disk privat per jenis pengguna, atau null bila profilnya tidak punya kolom foto
+     * (mis. akun Developer).
+     */
+    public function folderFoto(): ?string
+    {
+        return match ($this->type()) {
+            UserType::Admin => 'foto/karyawan',
+            UserType::Dosen => 'foto/dosen',
+            UserType::Mahasiswa => 'foto/mahasiswa',
+            default => null,
+        };
+    }
+
+    public function fotoUrl(): ?string
+    {
+        // Kueri langsung, bukan relasi `profile`: relasi itu bergantung pada role, jadi tidak aman ikut
+        // tersimpan di model (refresh()/eager load memuatnya ulang tanpa role → tabel user_profiles).
+        return $this->folderFoto() === null ? null : self::urlFoto($this->id, $this->profile()->value('foto'));
+    }
+
+    /**
+     * URL tampil foto (rute berkas.foto); `v` berubah saat foto diganti agar cache browser tidak menahan foto lama.
+     */
+    public static function urlFoto(int $userId, ?string $foto): ?string
+    {
+        return $foto ? route('berkas.foto', ['user' => $userId, 'v' => substr(md5($foto), 0, 8)]) : null;
+    }
+
+    /**
      * Jenis pengguna mengikuti role yang dimiliki.
      */
     public function type(): ?UserType

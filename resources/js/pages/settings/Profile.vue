@@ -4,6 +4,7 @@ import { computed } from 'vue';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import InputError from '@/components/InputError.vue';
+import UnggahFoto from '@/components/UnggahFoto.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ import { type BreadcrumbItem, type SharedData, type User } from '@/types';
 interface Props {
     mustVerifyEmail: boolean;
     namaTerkunci?: boolean;
+    bisaUbahFoto?: boolean;
     status?: string;
     className?: string;
 }
@@ -37,6 +39,13 @@ const form = useForm({
     name: user.name,
     email: user.email,
 });
+
+// Foto dikirim terpisah dari nama/email karena perlu multipart (PATCH tidak membawa berkas).
+const fotoTersimpan = computed(() => (page.props.auth.user as User).avatar ?? null);
+const formFoto = useForm<{ foto: File | null; hapus_foto: boolean }>({ foto: null, hapus_foto: false });
+const simpanFoto = () => {
+    formFoto.post(route('profile.foto'), { preserveScroll: true, forceFormData: true, onSuccess: () => formFoto.reset() });
+};
 
 const submit = () => {
     form.patch(route('profile.update'), {
@@ -94,6 +103,29 @@ const submit = () => {
                         <p v-if="form.recentlySuccessful" class="text-sm text-[#1aae39]">Tersimpan.</p>
                     </Transition>
                     <Button type="submit" :disabled="form.processing">Simpan</Button>
+                </div>
+            </form>
+
+            <form v-if="props.bisaUbahFoto" class="kartu mt-6 p-6" @submit.prevent="simpanFoto">
+                <HeadingSmall title="Foto Profil" description="Foto tampil di sidebar dan dashboard Anda" />
+                <div class="mt-4">
+                    <UnggahFoto
+                        v-model="formFoto.foto"
+                        v-model:hapus="formFoto.hapus_foto"
+                        :url-tersimpan="fotoTersimpan"
+                        :error="formFoto.errors.foto"
+                    />
+                </div>
+                <div class="mt-6 flex items-center justify-end gap-2">
+                    <Transition
+                        enter-active-class="transition ease-in-out"
+                        enter-from-class="opacity-0"
+                        leave-active-class="transition ease-in-out"
+                        leave-to-class="opacity-0"
+                    >
+                        <p v-if="formFoto.recentlySuccessful" class="text-sm text-[#1aae39]">Tersimpan.</p>
+                    </Transition>
+                    <Button type="submit" :disabled="formFoto.processing || (!formFoto.foto && !formFoto.hapus_foto)">Simpan Foto</Button>
                 </div>
             </form>
         </SettingsLayout>

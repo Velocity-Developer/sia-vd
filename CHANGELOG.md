@@ -6,6 +6,16 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Diubah
+- **Foto profil tampil sebagai avatar**: `auth.user.avatar` = `User::fotoUrl()` (sidebar, menu pengguna, kartu
+  identitas dashboard dosen & mahasiswa). Setiap pengguna (karyawan/dosen/mahasiswa) bisa mengganti/menghapus
+  fotonya sendiri di Pengaturan Profil (`POST settings/profile/foto`, `profile.foto`; jpg/png/webp maks 2 MB,
+  berkas lama dihapus). `User::urlFoto()` dipakai bersama UserController.
+- **Halaman depan baru** (sesuai contoh klien Yapika): `/login` kini memakai `PortalLayout` — menu atas
+  SIAKAD · Pengumuman · Kalender Akademik, deskripsi kampus (Pengaturan Sistem → Tampilan, komponen
+  `DeskripsiKampus`) di kiri, form masuk di kanan. Halaman publik baru `/pengumuman` (pita gelap
+  Informasi & Pengumuman sesuai contoh, 10 per halaman) dan `/kalender-akademik` (tanggal-tanggal
+  Tahun Akademik aktif). Lampiran Informasi & Pengumuman (`berkas.info-kuliah`) kini publik tanpa login.
+  Kolom opsional `info_kuliahs.kategori` (label di daftar). Sitemap memuat kedua halaman baru.
 - Seksi sidebar admin **Mahasiswa Baru** dipindah tepat di bawah **Master**.
 - **Jenis Biaya dihapus dari admin selama fitur keuangan mati** (Yapika): izin `admin.jenis-biaya` masuk
   `PermissionCatalog::FITUR` (keuangan), rute diberi `fitur:keuangan` (404), menu & seksi Keuangan hilang, dan

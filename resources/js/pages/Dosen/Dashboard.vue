@@ -3,8 +3,8 @@ import { useFitur } from '@/composables/useFitur';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { JENIS_PERTEMUAN, formatTanggal, jam, statusTampil, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { ChevronRight, CircleCheck, ClipboardList, GraduationCap, TriangleAlert, UserRound, Users, UsersRound } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -90,6 +90,8 @@ const adaSusulan = computed(() => !!(props.susulanDosen?.siapkan.length || props
 const jumlahPerluDinilai = computed(() => (props.perluDinilai ?? []).reduce((n, t) => n + t.jumlah, 0));
 
 const persen = (bagian: number, keseluruhan: number) => (keseluruhan > 0 ? Math.min(100, Math.round((bagian / keseluruhan) * 100)) : 0);
+// Foto profil pengguna yang masuk (diunggah sendiri di Pengaturan Profil atau oleh admin).
+const foto = computed(() => usePage<SharedData>().props.auth.user?.avatar ?? null);
 </script>
 
 <template>
@@ -112,8 +114,9 @@ const persen = (bagian: number, keseluruhan: number) => (keseluruhan > 0 ? Math.
 
                 <template v-else>
                     <section class="kartu flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                        <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#f2f9ff] text-[#0075de]">
-                            <UserRound class="size-6" />
+                        <div class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f2f9ff] text-[#0075de]">
+                            <img v-if="foto" :src="foto" :alt="props.ringkasan.nama" class="size-full object-cover" />
+                            <UserRound v-else class="size-6" />
                         </div>
                         <div class="min-w-0 flex-1">
                             <p class="text-base font-semibold text-black dark:text-foreground">{{ props.ringkasan.nama }}</p>

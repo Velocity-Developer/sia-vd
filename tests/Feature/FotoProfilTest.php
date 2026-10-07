@@ -87,3 +87,43 @@ it('membatasi siapa yang boleh melihat foto', function () {
     $this->actingAs($lain)->get(route('berkas.foto', $mahasiswa))->assertForbidden();
     $this->actingAs($dosen)->get(route('berkas.foto', $mahasiswa))->assertForbidden();
 });
+
+it('membagikan foto profil sebagai avatar pengguna yang masuk', function () {
+    $mahasiswa = User::factory()->mahasiswa()->create();
+    $this->actingAs($mahasiswa)->get(route('profile.edit'))->assertInertia(fn ($page) => $page->where('auth.user.avatar', null)->where('bisaUbahFoto', true));
+
+    Storage::disk(AllowedUpload::DISK)->put('foto/mahasiswa/andi.jpg', 'isi');
+    $mahasiswa->mahasiswaProfile->forceFill(['foto' => 'foto/mahasiswa/andi.jpg'])->save();
+
+    $this->actingAs($mahasiswa->fresh())->get(route('profile.edit'))
+        ->assertInertia(fn ($page) => $page->where('auth.user.avatar', User::urlFoto($mahasiswa->id, 'foto/mahasiswa/andi.jpg'))->missing('auth.user.foto'));
+});
+
+it('lets every user change and remove their own photo from profile settings', function (string $jenis) {
+    $user = User::factory()->{$jenis}()->create();
+    $folder = $user->folderFoto();
+
+    $this->actingAs($user)->post(route('profile.foto'), ['foto' => UploadedFile::fake()->image('a.jpg', 200, 200)])
+        ->assertRedirect(route('profile.edit'))->assertSessionHasNoErrors();
+    $pertama = $user->fresh()->profile->foto;
+    expect($pertama)->toStartWith($folder.'/');
+
+    $this->actingAs($user)->post(route('profile.foto'), ['foto' => UploadedFile::fake()->image('b.png', 200, 200)])->assertSessionHasNoErrors();
+    $kedua = $user->fresh()->profile->foto;
+    expect($kedua)->not->toBe($pertama);
+    Storage::disk(AllowedUpload::DISK)->assertMissing($pertama);
+    $this->actingAs($user)->get(route('berkas.foto', $user))->assertOk();
+
+    $this->actingAs($user)->post(route('profile.foto'), ['hapus_foto' => true])->assertSessionHasNoErrors();
+    expect($user->fresh()->profile->foto)->toBeNull();
+    Storage::disk(AllowedUpload::DISK)->assertMissing($kedua);
+})->with(['admin', 'dosen', 'mahasiswa']);
+
+it('rejects invalid or missing photos from profile settings', function () {
+    $user = User::factory()->dosen()->create();
+
+    $this->actingAs($user)->post(route('profile.foto'), [])->assertSessionHasErrors('foto');
+    $this->actingAs($user)->post(route('profile.foto'), ['foto' => UploadedFile::fake()->create('a.pdf', 10, 'application/pdf')])->assertSessionHasErrors('foto');
+    $this->actingAs($user)->post(route('profile.foto'), ['foto' => UploadedFile::fake()->image('a.jpg')->size(3000)])->assertSessionHasErrors('foto');
+    expect($user->fresh()->profile->foto)->toBeNull();
+});

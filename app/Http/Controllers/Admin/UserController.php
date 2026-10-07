@@ -433,7 +433,7 @@ class UserController extends Controller
         $foto = $profile['foto'] ?? null;
         unset($profile['foto']);
 
-        return ($profile ?? []) + ['foto_url' => $foto ? route('berkas.foto', ['user' => $user->id, 'v' => substr(md5($foto), 0, 8)]) : null];
+        return ($profile ?? []) + ['foto_url' => User::urlFoto($user->id, $foto)];
     }
 
     /**

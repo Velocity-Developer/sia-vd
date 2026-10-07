@@ -2,8 +2,8 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import { JENIS_PERTEMUAN, formatTanggal, infoStatusPresensi, jam, statusTampil, type JenisPertemuan, type StatusPertemuan } from '@/lib/presensi';
 import { STATUS_TAGIHAN_REMIDI, rupiah, type StatusTagihanRemidi } from '@/lib/tagihanRemidi';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
+import { type BreadcrumbItem, type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { BookOpenCheck, CalendarDays, CircleCheck, ClipboardList, GraduationCap, TriangleAlert, UserRound } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -88,6 +88,8 @@ const sisaWaktu = (iso: string) => {
     const hari = Math.floor(selisihJam / 24);
     return { teks: `${hari} hari lagi`, mendesak: hari <= 1 };
 };
+// Foto profil pengguna yang masuk (diunggah sendiri di Pengaturan Profil atau oleh admin).
+const foto = computed(() => usePage<SharedData>().props.auth.user?.avatar ?? null);
 </script>
 
 <template>
@@ -110,8 +112,9 @@ const sisaWaktu = (iso: string) => {
 
                 <template v-else>
                     <section class="kartu flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-                        <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#f2f9ff] text-[#0075de]">
-                            <UserRound class="size-6" />
+                        <div class="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f2f9ff] text-[#0075de]">
+                            <img v-if="foto" :src="foto" :alt="props.ringkasan.nama" class="size-full object-cover" />
+                            <UserRound v-else class="size-6" />
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
