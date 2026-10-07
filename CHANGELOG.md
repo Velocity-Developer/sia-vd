@@ -6,6 +6,8 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Diubah
+- Menu admin **Dosen** dan **Mahasiswa** pindah dari seksi Pengguna & Akses ke seksi **Master Akademik** (sesudah
+  Program Studi). Pengguna & Akses kini berisi Karyawan dan Kelola Role.
 - Profil pengguna (avatar, nama, role, menu Pengaturan Profil & Log out) pindah dari bawah sidebar ke pojok kanan
   header, sejajar breadcrumb; di layar sempit hanya avatar. Bagian bawah sidebar disembunyikan bila kosong.
 - Google reCAPTCHA v2 diganti **captcha gambar** yang selalu aktif di halaman masuk: pengguna mengetik 5 karakter pada

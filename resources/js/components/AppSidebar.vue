@@ -30,6 +30,7 @@ import {
     ShieldCheck,
     SlidersHorizontal,
     UserCheck,
+    UserRound,
     Users,
     Wallet,
 } from 'lucide-vue-next';
@@ -64,6 +65,8 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                     { title: 'Tahun Akademik', routeName: 'admin.tahun-akademik.index', icon: CalendarRange, permission: 'admin.tahun-akademik' },
                     { title: 'Fakultas', routeName: 'admin.fakultas.index', icon: GraduationCap, permission: 'admin.fakultas' },
                     { title: 'Program Studi', routeName: 'admin.program-studi.index', icon: BookOpen, permission: 'admin.program-studi' },
+                    { title: 'Dosen', href: '/admin/users/dosen', icon: UserRound, permission: 'admin.users.dosen' },
+                    { title: 'Mahasiswa', href: '/admin/users/mahasiswa', icon: Users, permission: 'admin.users.mahasiswa' },
                     { title: 'Mata Kuliah', routeName: 'admin.mata-kuliah.index', icon: Library, permission: 'admin.mata-kuliah' },
                     { title: 'Ruang', routeName: 'admin.ruang.index', icon: DoorOpen, permission: 'admin.ruang' },
                 ],
@@ -131,8 +134,6 @@ const navigationSections: { label: string; entries: MenuEntry[] }[] = [
                 title: 'Pengguna & Akses',
                 icon: Users,
                 items: [
-                    { title: 'Dosen', href: '/admin/users/dosen', icon: GraduationCap, permission: 'admin.users.dosen' },
-                    { title: 'Mahasiswa', href: '/admin/users/mahasiswa', icon: Users, permission: 'admin.users.mahasiswa' },
                     { title: 'Karyawan', href: '/admin/users/karyawan', icon: Briefcase, permission: 'admin.users.karyawan' },
                     { title: 'Kelola Role', routeName: 'admin.roles.index', icon: ShieldCheck, permission: 'admin.roles', fitur: 'kelola_role' },
                 ],

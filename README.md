@@ -247,7 +247,7 @@ flowchart TD
 |---|---|---|---|---|
 | A1 | Isi identitas institusi (nama, logo, **zona waktu**), SMTP, aturan akademik (skala nilai, batas SKS, jumlah pertemuan, syarat ujian, remidi, susulan, TA, cuti), tampilan halaman masuk. Zona waktu ditetapkan sekali di awal karena mengubahnya tidak menggeser data lama. | Admin | Pengaturan Sistem | 4 |
 | A2 | Data master berurutan: **dosen calon dekan/kaprodi** (menu Dosen, program studi dikosongkan dulu) → **Fakultas** (dekan) → **Program Studi** (kaprodi) → lengkapi program studi dosen tadi → **Ruang** → **Mata Kuliah** (SKS, semester, prasyarat, tanda **TA/Skripsi** untuk mata kuliah skripsi). | Admin | Master Akademik | 3.2 |
-| A3 | Akun **Dosen** (NIDN, program studi opsional), **Mahasiswa** (NIM, angkatan, prodi, dosen wali; semester dihitung otomatis dari angkatan), dan **Karyawan**. Role tambahan (mis. Staf Keuangan) disusun developer di `/dev/roles` atau admin bila `kelola_role` aktif. | Admin / developer | Pengguna & Akses | 3.3, 3.4 |
+| A3 | Akun **Dosen** (NIDN, program studi opsional), **Mahasiswa** (NIM, angkatan, prodi, dosen wali; semester dihitung otomatis dari angkatan), dan **Karyawan**. Role tambahan (mis. Staf Keuangan) disusun developer di `/dev/roles` atau admin bila `kelola_role` aktif. | Admin / developer | Master Akademik (Dosen, Mahasiswa), Pengguna & Akses (Karyawan) | 3.3, 3.4 |
 | A4 | *Keuangan aktif:* **Jenis Biaya** (semester, remidi, susulan, serta info pendadaran/wisuda/cuti) dan **tarif** per prodi/angkatan. | Admin | Keuangan | 6.1 |
 
 Dosen dan mahasiswa masuk memakai NIDN/NIM/username. Akun buatan admin belum terverifikasi emailnya, jadi saat
