@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import HakCipta from '@/components/HakCipta.vue';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, ClipboardList, GraduationCap } from 'lucide-vue-next';
@@ -14,7 +15,6 @@ const page = usePage<SharedData>();
 const institusi = computed(() => page.props.institusi);
 // Judul, teks, gambar, dan daftar fitur panel merek diatur di Pengaturan Sistem → Tampilan.
 const tampilan = computed(() => page.props.tampilan);
-const tahun = new Date().getFullYear();
 const tengah = computed(() => tampilan.value?.login_tata_letak === 'tengah');
 // Di tata letak tengah, teks di luar kartu menjadi putih bila ada gambar latar (diberi lapisan warna).
 const adaGambar = computed(() => Boolean(tampilan.value?.login_gambar_url));
@@ -70,7 +70,7 @@ const sorotan = [
             </div>
 
             <p class="mt-6 text-center text-xs" :class="adaGambar ? 'text-white/70' : 'text-[#a39e98]'">
-                © {{ tahun }} {{ institusi?.nama_pt ?? page.props.name }}
+                <HakCipta />
             </p>
         </div>
     </div>
@@ -121,7 +121,7 @@ const sorotan = [
                 </ul>
             </div>
 
-            <p class="relative text-xs text-white/60">© {{ tahun }} {{ institusi?.nama_pt ?? page.props.name }}</p>
+            <p class="relative text-xs text-white/60"><HakCipta /></p>
         </aside>
 
         <main class="flex min-h-svh flex-col justify-center px-4 py-10 sm:px-8 lg:min-h-0 lg:px-12">
@@ -150,7 +150,7 @@ const sorotan = [
                     <slot />
                 </div>
 
-                <p class="mt-6 text-center text-xs text-[#a39e98] lg:hidden">© {{ tahun }} {{ institusi?.nama_pt ?? page.props.name }}</p>
+                <p class="mt-6 text-center text-xs text-[#a39e98] lg:hidden"><HakCipta /></p>
             </div>
         </main>
     </div>

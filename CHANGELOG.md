@@ -5,6 +5,10 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 
 ## [Belum dirilis]
 
+### Ditambahkan
+- Footer hak cipta di bawah setiap halaman aplikasi dan halaman masuk: "© {tahun} {nama institusi}. Design by Velocity
+  Developer" (tautan velocitydeveloper.com dibuka di tab baru). Komponen `HakCipta.vue`.
+
 ### Diubah
 - Menu admin **Dosen** dan **Mahasiswa** pindah dari seksi Pengguna & Akses ke seksi **Master Akademik** (sesudah
   Program Studi). Pengguna & Akses kini berisi Karyawan dan Kelola Role.
