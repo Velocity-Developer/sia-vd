@@ -10,7 +10,7 @@ it('lists only public pages in sitemap.xml', function () {
     $xml = simplexml_load_string($response->getContent());
     $lokasi = array_map(fn ($url): string => (string) $url->loc, iterator_to_array($xml->url, false));
     $akar = rtrim(config('app.url'), '/');
-    expect($lokasi)->toBe([$akar.'/pmb', $akar.'/pmb/daftar', $akar.'/login'])
+    expect($lokasi)->toBe([$akar.'/pmb', $akar.'/pmb/daftar', $akar.'/login', $akar.'/pengumuman', $akar.'/kalender-akademik'])
         ->and((string) $xml->url[0]->lastmod)->toMatch('/^\d{4}-\d{2}-\d{2}$/');
 });
 

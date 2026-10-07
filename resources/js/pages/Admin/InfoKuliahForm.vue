@@ -10,6 +10,7 @@ import {
     AttachmentTitle,
 } from '@/components/ui/attachment';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
@@ -17,8 +18,15 @@ import { FileText, Upload, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 const page = usePage<{ flash: { success?: string; error?: string } }>();
-const props = defineProps<{ infoKuliah: { id: number; information: string; file: string } | null }>();
-const form = useForm<{ information: string; file: File | null }>({ information: props.infoKuliah?.information ?? '', file: null });
+const props = defineProps<{
+    infoKuliah: { id: number; kategori: string | null; information: string; file: string } | null;
+    daftarKategori: string[];
+}>();
+const form = useForm<{ kategori: string; information: string; file: File | null }>({
+    kategori: props.infoKuliah?.kategori ?? '',
+    information: props.infoKuliah?.information ?? '',
+    file: null,
+});
 const fileInput = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
 
@@ -55,7 +63,9 @@ const submit = () => {
                 <div class="kepala-halaman">
                     <div>
                         <h1 class="judul-halaman">{{ props.infoKuliah ? 'Edit' : 'Tambah' }} Informasi & Pengumuman</h1>
-                        <p class="deskripsi-halaman">Lengkapi informasi dan berkas perkuliahan.</p>
+                        <p class="deskripsi-halaman">
+                            Lengkapi informasi dan berkas. Semua informasi tampil di halaman depan dan menu Pengumuman (publik).
+                        </p>
                     </div>
                     <Button as-child variant="outline"><Link :href="route('admin.info-kuliah.index')">Kembali</Link></Button>
                 </div>
@@ -68,6 +78,21 @@ const submit = () => {
                 <form class="flex flex-col gap-6" enctype="multipart/form-data" @submit.prevent="submit">
                     <section class="kartu p-6">
                         <h2 class="judul-bagian">Data Informasi</h2>
+                        <div class="mt-4 grid gap-2">
+                            <Label for="kategori" class="label-isian">Kategori</Label>
+                            <Input
+                                id="kategori"
+                                v-model="form.kategori"
+                                list="daftar-kategori"
+                                maxlength="50"
+                                placeholder="Mis. Akademik, Beasiswa"
+                            />
+                            <datalist id="daftar-kategori">
+                                <option v-for="kategori in props.daftarKategori" :key="kategori" :value="kategori" />
+                            </datalist>
+                            <p class="teks-bantu">Opsional. Tampil sebagai label di daftar pengumuman halaman depan.</p>
+                            <InputError :message="form.errors.kategori" />
+                        </div>
                         <div class="mt-4 grid gap-2">
                             <Label for="information" class="label-isian">Informasi</Label>
                             <textarea

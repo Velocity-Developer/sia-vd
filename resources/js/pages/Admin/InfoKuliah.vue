@@ -7,7 +7,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Pencil, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 
-type Item = { id: number; information: string; file: string; uploader?: { name: string } };
+type Item = { id: number; kategori: string | null; information: string; file: string; uploader?: { name: string } };
 type Pagination = { data: Item[]; links?: { url: string | null; label: string; active: boolean }[]; total?: number; from?: number | null };
 const page = usePage<{ flash: { success?: string; error?: string } }>();
 const props = defineProps<{ infoKuliahs: Pagination }>();
@@ -36,7 +36,7 @@ const confirmDelete = () => {
                 <div class="kepala-halaman">
                     <div>
                         <h1 class="judul-halaman">Informasi & Pengumuman</h1>
-                        <p class="deskripsi-halaman">Kelola informasi & pengumuman perkuliahan untuk mahasiswa.</p>
+                        <p class="deskripsi-halaman">Kelola informasi & pengumuman yang tampil di halaman depan dan menu Pengumuman.</p>
                     </div>
                     <Button as-child><Link :href="route('admin.info-kuliah.create')">Tambah Informasi</Link></Button>
                 </div>
@@ -49,10 +49,11 @@ const confirmDelete = () => {
                 </div>
                 <div class="tabel-wadah">
                     <div class="tabel-gulir">
-                        <table class="tabel min-w-[720px]">
+                        <table class="tabel min-w-[820px]">
                             <thead>
                                 <tr>
                                     <th class="kolom-no">No</th>
+                                    <th>Kategori</th>
                                     <th>Informasi</th>
                                     <th>File</th>
                                     <th>Uploader</th>
@@ -62,6 +63,7 @@ const confirmDelete = () => {
                             <tbody>
                                 <tr v-for="(item, index) in props.infoKuliahs.data" :key="item.id">
                                     <td class="kolom-no">{{ (props.infoKuliahs.from ?? 1) + index }}</td>
+                                    <td>{{ item.kategori ?? '-' }}</td>
                                     <td class="whitespace-pre-line">
                                         {{ item.information }}
                                     </td>
@@ -94,7 +96,7 @@ const confirmDelete = () => {
                                     </td>
                                 </tr>
                                 <tr v-if="!props.infoKuliahs.data.length" class="baris-kosong">
-                                    <td colspan="5" class="tabel-kosong">Belum ada informasi & pengumuman. Tambahkan yang baru untuk memulai.</td>
+                                    <td colspan="6" class="tabel-kosong">Belum ada informasi & pengumuman. Tambahkan yang baru untuk memulai.</td>
                                 </tr>
                             </tbody>
                         </table>

@@ -187,10 +187,9 @@ class BerkasController extends Controller
         return $this->kirim(is_string($path) ? $path : null);
     }
 
-    public function infoKuliah(Request $request, InfoKuliah $infoKuliah): StreamedResponse
+    /** Lampiran Informasi & Pengumuman bersifat publik (tampil di halaman depan tanpa login). */
+    public function infoKuliah(InfoKuliah $infoKuliah): StreamedResponse
     {
-        abort_unless($request->user()->hasPermission('admin.info-kuliah') || $request->user()->hasPermission('mahasiswa.info-kuliah'), 403);
-
         return $this->kirim($infoKuliah->file);
     }
 

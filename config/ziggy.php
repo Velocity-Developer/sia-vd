@@ -16,18 +16,18 @@ return [
     'groups' => [
         'umum' => [
             'home', 'login', 'logout', 'dashboard',
-            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'pengaturan-recaptcha.*', 'pengaturan-maintenance.*', 'berkas.*', 'pmb.*',
+            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'pengaturan-recaptcha.*', 'pengaturan-maintenance.*', 'berkas.*', 'pmb.*', 'pengumuman', 'kalender-akademik',
         ],
 
         'staf' => [
             'home', 'login', 'logout', 'dashboard',
-            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'pengaturan-recaptcha.*', 'pengaturan-maintenance.*', 'berkas.*', 'pmb.*',
+            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'pengaturan-recaptcha.*', 'pengaturan-maintenance.*', 'berkas.*', 'pmb.*', 'pengumuman', 'kalender-akademik',
             'admin.*', 'dosen.*', 'mahasiswa.*', 'dev.*',
         ],
 
         'mahasiswa' => [
             'home', 'login', 'logout', 'dashboard',
-            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'pengaturan-recaptcha.*', 'pengaturan-maintenance.*', 'berkas.*', 'pmb.*',
+            'password.*', 'profile.*', 'verification.*', 'institusi.*', 'pengaturan-email.*', 'pengaturan-sistem.*', 'pengaturan-tampilan.*', 'pengaturan-recaptcha.*', 'pengaturan-maintenance.*', 'berkas.*', 'pmb.*', 'pengumuman', 'kalender-akademik',
             'mahasiswa.*',
         ],
     ],

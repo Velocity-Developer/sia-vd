@@ -22,12 +22,12 @@ class InfoKuliahController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Admin/InfoKuliahForm', ['infoKuliah' => null]);
+        return Inertia::render('Admin/InfoKuliahForm', ['infoKuliah' => null, 'daftarKategori' => InfoKuliah::daftarKategori()]);
     }
 
     public function edit(InfoKuliah $infoKuliah): Response
     {
-        return Inertia::render('Admin/InfoKuliahForm', ['infoKuliah' => $infoKuliah]);
+        return Inertia::render('Admin/InfoKuliahForm', ['infoKuliah' => $infoKuliah, 'daftarKategori' => InfoKuliah::daftarKategori()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -42,10 +42,7 @@ class InfoKuliahController extends Controller
 
     public function update(Request $request, InfoKuliah $infoKuliah): RedirectResponse
     {
-        $data = $request->validate([
-            'information' => ['required', 'string'],
-            'file' => ['nullable', 'file', 'max:10240', ...AllowedUpload::rules()],
-        ], ['extensions' => AllowedUpload::message(), 'mimes' => AllowedUpload::messageIsi()], ['information' => 'informasi', 'file' => 'file']);
+        $data = $this->validated($request, false);
         if ($request->hasFile('file')) {
             Storage::disk(AllowedUpload::DISK)->delete($infoKuliah->file);
             $data['file'] = $this->storeFile($request->file('file'));
@@ -73,6 +70,7 @@ class InfoKuliahController extends Controller
     private function validated(Request $request, bool $fileRequired = true): array
     {
         return $request->validate([
+            'kategori' => ['nullable', 'string', 'max:50'],
             'information' => ['required', 'string'],
             'file' => [$fileRequired ? 'required' : 'nullable', 'file', 'max:10240', ...AllowedUpload::rules()],
         ], ['extensions' => AllowedUpload::message(), 'mimes' => AllowedUpload::messageIsi()], ['information' => 'informasi', 'file' => 'file']);

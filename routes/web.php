@@ -63,6 +63,7 @@ use App\Http\Controllers\Dosen\MahasiswaKelasController;
 use App\Http\Controllers\Dosen\PendadaranController as DosenPendadaranController;
 use App\Http\Controllers\Dosen\PengajuanMahasiswaPaController as DosenPengajuanMahasiswaPaController;
 use App\Http\Controllers\Dosen\UjianController as DosenUjianController;
+use App\Http\Controllers\KalenderAkademikController;
 use App\Http\Controllers\Kelas\BapController;
 use App\Http\Controllers\Kelas\JadwalController;
 use App\Http\Controllers\Kelas\KelasKuliahController;
@@ -95,6 +96,7 @@ use App\Http\Controllers\Mahasiswa\TugasAkhirController as MahasiswaTugasAkhirCo
 use App\Http\Controllers\Mahasiswa\UjianController as MahasiswaUjianController;
 use App\Http\Controllers\Mahasiswa\UjianSusulanController as MahasiswaUjianSusulanController;
 use App\Http\Controllers\PendadaranBerkasController;
+use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\SeoController;
 use App\Models\KelasKuliah;
 use App\Models\Materi;
@@ -107,6 +109,11 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return redirect()->route('login');
 })->name('home');
+
+// Halaman publik di menu atas halaman depan (login): Pengumuman dan Kalender Akademik.
+Route::get('pengumuman', PengumumanController::class)->name('pengumuman');
+Route::get('kalender-akademik', KalenderAkademikController::class)->name('kalender-akademik');
+Route::get('berkas/info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
 
 // Untuk mesin pencari: hanya halaman publik (PMB, login). public/robots.txt statis dihapus agar Sitemap: ikut APP_URL.
 Route::get('sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
@@ -182,7 +189,6 @@ Route::prefix('berkas')->middleware(['auth', 'verified'])->group(function (): vo
         Route::get('tugas/{tugas}/{index}', [BerkasController::class, 'tugas'])->whereNumber('index')->name('berkas.tugas');
         Route::get('pengumpulan/{pengumpulan}/{index}', [BerkasController::class, 'pengumpulan'])->whereNumber('index')->name('berkas.pengumpulan');
     });
-    Route::get('info-kuliah/{infoKuliah}', [BerkasController::class, 'infoKuliah'])->name('berkas.info-kuliah');
     Route::get('foto/{user}', [BerkasController::class, 'foto'])->name('berkas.foto');
     Route::get('mahasiswa/{user}/{jenis}', [BerkasController::class, 'mahasiswa'])->where('jenis', '[a-z_]+')->name('berkas.mahasiswa');
     Route::get('pmb/{cmb}/{jenis}', [BerkasController::class, 'pmb'])->where('jenis', '[a-z_]+')->name('berkas.pmb');

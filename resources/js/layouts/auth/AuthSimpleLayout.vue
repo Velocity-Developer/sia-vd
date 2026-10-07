@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import DeskripsiKampus from '@/components/DeskripsiKampus.vue';
 import HakCipta from '@/components/HakCipta.vue';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, ClipboardList, GraduationCap } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 defineProps<{
@@ -18,17 +18,6 @@ const tampilan = computed(() => page.props.tampilan);
 const tengah = computed(() => tampilan.value?.login_tata_letak === 'tengah');
 // Di tata letak tengah, teks di luar kartu menjadi putih bila ada gambar latar (diberi lapisan warna).
 const adaGambar = computed(() => Boolean(tampilan.value?.login_gambar_url));
-
-// Ditulis di panel merek supaya pengguna tahu sistem ini untuk apa sebelum masuk.
-const sorotan = [
-    { icon: ClipboardList, judul: 'Rencana Studi', teks: 'Isi KRS dan pantau batas SKS tiap semester.' },
-    { icon: BookOpen, judul: 'Materi & Tugas', teks: 'Materi kuliah, tugas, dan quiz dalam satu tempat.' },
-    {
-        icon: GraduationCap,
-        judul: 'Hasil Studi',
-        teks: page.props.fitur?.keuangan ? 'KHS, transkrip nilai, dan informasi biaya kuliah.' : 'KHS dan transkrip nilai.',
-    },
-];
 </script>
 
 <template>
@@ -100,24 +89,7 @@ const sorotan = [
                 </div>
             </Link>
 
-            <div class="relative max-w-[420px]">
-                <h2 class="text-[32px] font-bold leading-[1.15] tracking-[-0.8px]">{{ tampilan?.login_judul ?? 'Sistem Informasi Akademik' }}</h2>
-                <p class="mt-3 whitespace-pre-line text-base leading-6 text-white/80">
-                    {{ tampilan?.login_teks ?? 'Satu akun untuk rencana studi, perkuliahan, nilai, dan administrasi Anda.' }}
-                </p>
-
-                <ul v-if="tampilan?.login_sorotan ?? true" class="mt-8 space-y-4">
-                    <li v-for="item in sorotan" :key="item.judul" class="flex gap-3">
-                        <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15">
-                            <component :is="item.icon" class="size-[18px]" />
-                        </div>
-                        <div>
-                            <p class="text-sm font-semibold">{{ item.judul }}</p>
-                            <p class="text-sm leading-5 text-white/70">{{ item.teks }}</p>
-                        </div>
-                    </li>
-                </ul>
-            </div>
+            <DeskripsiKampus class="relative max-w-[420px]" />
 
             <HakCipta class="relative text-xs text-white/60" />
         </aside>

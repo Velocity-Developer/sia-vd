@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InfoKuliah;
 use App\Models\InformasiPmb;
 use Illuminate\Http\Response;
 
@@ -17,11 +18,14 @@ class SeoController extends Controller
     public function sitemap(): Response
     {
         $diubahPmb = InformasiPmb::query()->max('updated_at');
+        $diubahPengumuman = InfoKuliah::query()->max('updated_at');
 
         $halaman = [
             ['loc' => $this->alamat('pmb.informasi'), 'lastmod' => $diubahPmb, 'changefreq' => 'weekly', 'priority' => '1.0'],
             ['loc' => $this->alamat('pmb.daftar'), 'lastmod' => null, 'changefreq' => 'monthly', 'priority' => '0.8'],
-            ['loc' => $this->alamat('login'), 'lastmod' => null, 'changefreq' => 'yearly', 'priority' => '0.5'],
+            ['loc' => $this->alamat('login'), 'lastmod' => $diubahPengumuman, 'changefreq' => 'weekly', 'priority' => '0.9'],
+            ['loc' => $this->alamat('pengumuman'), 'lastmod' => $diubahPengumuman, 'changefreq' => 'weekly', 'priority' => '0.8'],
+            ['loc' => $this->alamat('kalender-akademik'), 'lastmod' => null, 'changefreq' => 'monthly', 'priority' => '0.6'],
         ];
 
         return response()

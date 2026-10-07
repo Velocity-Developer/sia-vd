@@ -46,15 +46,14 @@ it('keeps a submission visible only to its owner, the class dosen, and admin', f
     $this->actingAs($teman)->get($url)->assertForbidden();
 });
 
-it('serves info kuliah attachments to logged-in students and admins only', function () {
+it('serves info kuliah attachments publicly because they are listed on the front page', function () {
     Storage::fake('local');
     Storage::disk('local')->put('info-kuliahs/pengumuman.pdf', 'isi');
     $admin = User::factory()->admin()->create();
     $info = InfoKuliah::create(['information' => 'Pengumuman', 'file' => 'info-kuliahs/pengumuman.pdf', 'uploaded_by' => $admin->id]);
 
-    $this->get(route('berkas.info-kuliah', $info))->assertRedirect(route('login'));
-    $this->actingAs(User::factory()->mahasiswa()->create())->get(route('berkas.info-kuliah', $info))->assertOk();
-    $this->actingAs(User::factory()->dosen()->create())->get(route('berkas.info-kuliah', $info))->assertForbidden();
+    $this->get(route('berkas.info-kuliah', $info))->assertOk();
+    $this->actingAs(User::factory()->dosen()->create())->get(route('berkas.info-kuliah', $info))->assertOk();
 });
 
 it('does not send parents\' data or addresses to the dosen class page', function () {
