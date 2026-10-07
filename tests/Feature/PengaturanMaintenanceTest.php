@@ -110,15 +110,15 @@ it('menolak dosen dan mahasiswa masuk, tetapi admin tetap bisa', function () {
     $mahasiswa = User::factory()->mahasiswa()->create();
     $admin = User::factory()->admin()->create();
 
-    $this->post('/login', ['username' => $mahasiswa->username, 'password' => 'password'])
+    $this->post('/login', [...isianCaptcha(), 'username' => $mahasiswa->username, 'password' => 'password'])
         ->assertSessionHasErrors(['username' => 'Perbaikan server.']);
     $this->assertGuest();
 
     // Kata sandi salah tetap mendapat pesan biasa, jadi status maintenance tidak menggantikan pesan kredensial.
-    $this->post('/login', ['username' => $mahasiswa->username, 'password' => 'salah'])
+    $this->post('/login', [...isianCaptcha(), 'username' => $mahasiswa->username, 'password' => 'salah'])
         ->assertSessionHasErrors(['username' => 'NIM/NIDN/username atau kata sandi tidak cocok.']);
 
-    $this->post('/login', ['username' => $admin->username, 'password' => 'password']);
+    $this->post('/login', [...isianCaptcha(), 'username' => $admin->username, 'password' => 'password']);
     $this->assertAuthenticatedAs($admin);
 });
 

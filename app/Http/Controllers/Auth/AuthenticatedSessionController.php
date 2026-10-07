@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\CaptchaGambar;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\PengaturanRecaptcha;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -22,7 +22,18 @@ class AuthenticatedSessionController extends Controller
         return Inertia::render('auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
-            'recaptchaSiteKey' => PengaturanRecaptcha::siteKeyLogin(),
+            'captchaUrl' => route('captcha', absolute: false),
+        ]);
+    }
+
+    /**
+     * Gambar captcha halaman masuk; setiap permintaan membuat kode baru di sesi.
+     */
+    public function captcha(CaptchaGambar $captcha): SymfonyResponse
+    {
+        return response($captcha->baru(), 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
     }
 

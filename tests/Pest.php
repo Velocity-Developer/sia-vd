@@ -1,5 +1,6 @@
 <?php
 
+use App\CaptchaGambar;
 use App\Models\Fakultas;
 use App\Models\KelasKuliah;
 use App\Models\MataKuliah;
@@ -72,4 +73,16 @@ function angkatanUntuk(KelasKuliah $kelas, ?int $semester = null): int
     $semester ??= $kelas->mataKuliah->semester;
 
     return $tahun->tahunAwal() - intdiv($semester - ($tahun->semester === 'Genap' ? 2 : 1), 2);
+}
+
+/**
+ * Isian captcha yang lolos untuk satu kali POST /login (kode ditanam langsung di sesi).
+ *
+ * @return array{captcha: string}
+ */
+function isianCaptcha(): array
+{
+    test()->withSession([CaptchaGambar::KUNCI_SESI => ['kode' => 'TES34', 'kedaluwarsa' => now()->addMinute()->getTimestamp()]]);
+
+    return ['captcha' => 'TES34'];
 }

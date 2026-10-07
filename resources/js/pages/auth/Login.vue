@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import RecaptchaWidget from '@/components/RecaptchaWidget.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -8,34 +7,41 @@ import { Label } from '@/components/ui/label';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { Eye, EyeOff, LoaderCircle, Lock, User } from 'lucide-vue-next';
+import { Eye, EyeOff, LoaderCircle, Lock, RefreshCw, User } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     status?: string;
     canResetPassword: boolean;
-    recaptchaSiteKey?: string | null;
+    captchaUrl: string;
 }>();
 
 const form = useForm({
     username: '',
     password: '',
     remember: false,
-    'g-recaptcha-response': '',
+    captcha: '',
 });
 
 const lihatSandi = ref(false);
 
 const maintenance = computed(() => usePage<SharedData>().props.maintenance);
 const labelMaintenance = computed(() => (maintenance.value?.untuk ?? []).map((jenis) => (jenis === 'dosen' ? 'dosen' : 'mahasiswa')).join(' dan '));
-const captcha = ref<InstanceType<typeof RecaptchaWidget> | null>(null);
+
+// Setiap gambar membuat kode baru di sesi; penanda waktu mencegah browser memakai gambar lama dari cache.
+const versiCaptcha = ref(Date.now());
+const gambarCaptcha = computed(() => `${props.captchaUrl}?v=${versiCaptcha.value}`);
+const muatUlangCaptcha = () => {
+    versiCaptcha.value = Date.now();
+    form.captcha = '';
+};
 
 const submit = () => {
     form.post(route('login'), {
         onFinish: () => {
             form.reset('password');
-            // Token captcha sekali pakai; sesudah gagal masuk pengguna harus mencentang ulang.
-            captcha.value?.reset();
+            // Kode captcha sekali pakai; setiap percobaan masuk membutuhkan gambar baru.
+            muatUlangCaptcha();
         },
     });
 };
@@ -84,7 +90,7 @@ const submit = () => {
                     <Link
                         v-if="canResetPassword"
                         :href="route('password.request')"
-                        :tabindex="5"
+                        :tabindex="6"
                         class="text-sm font-medium text-[#0075de] hover:underline"
                     >
                         Lupa kata sandi?
@@ -115,17 +121,42 @@ const submit = () => {
                 <InputError :message="form.errors.password" />
             </div>
 
+            <div class="grid gap-2">
+                <Label for="captcha" class="label-isian">Kode Captcha</Label>
+                <div class="flex items-center gap-2">
+                    <img
+                        :src="gambarCaptcha"
+                        alt="Gambar kode captcha"
+                        width="180"
+                        height="56"
+                        class="h-14 w-[180px] shrink-0 rounded-lg border border-[#e6e3df] dark:border-border"
+                    />
+                    <Button type="button" variant="outline" size="icon" tabindex="-1" aria-label="Ganti gambar captcha" @click="muatUlangCaptcha">
+                        <RefreshCw class="size-4" />
+                    </Button>
+                </div>
+                <Input
+                    id="captcha"
+                    v-model="form.captcha"
+                    type="text"
+                    required
+                    tabindex="3"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    maxlength="5"
+                    placeholder="Ketik kode pada gambar"
+                    class="uppercase placeholder:normal-case"
+                />
+                <InputError :message="form.errors.captcha" />
+            </div>
+
             <Label for="remember" class="label-isian flex w-fit items-center gap-2.5 font-normal">
-                <Checkbox id="remember" v-model="form.remember" tabindex="3" />
+                <Checkbox id="remember" v-model="form.remember" tabindex="4" />
                 <span>Ingat saya di perangkat ini</span>
             </Label>
 
-            <div v-if="recaptchaSiteKey" class="grid gap-2">
-                <RecaptchaWidget ref="captcha" v-model="form['g-recaptcha-response']" :site-key="recaptchaSiteKey" />
-                <InputError :message="(form.errors as Record<string, string>).captcha" />
-            </div>
-
-            <Button type="submit" tabindex="4" :disabled="form.processing" class="w-full">
+            <Button type="submit" tabindex="5" :disabled="form.processing" class="w-full">
                 <LoaderCircle v-if="form.processing" class="animate-spin" />
                 {{ form.processing ? 'Memproses…' : 'Masuk' }}
             </Button>

@@ -9,6 +9,7 @@ it('redirects users to role dashboard after login', function (UserType $type, st
     $user = User::factory()->ofType($type)->create();
 
     $response = $this->post('/login', [
+        ...isianCaptcha(),
         'username' => $user->username,
         'password' => 'password',
     ]);
@@ -24,7 +25,7 @@ it('redirects users without any dashboard permission to the generic dashboard', 
     $role = Role::factory()->withPermissions(['admin.ruang'])->create();
     $user = User::factory()->withRole($role)->create();
 
-    $this->post('/login', ['username' => $user->username, 'password' => 'password'])
+    $this->post('/login', [...isianCaptcha(), 'username' => $user->username, 'password' => 'password'])
         ->assertRedirect(route('dashboard', absolute: false));
 });
 

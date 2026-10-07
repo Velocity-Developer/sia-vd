@@ -7,7 +7,6 @@ use App\Http\Controllers\Settings\MaintenanceController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\PengaturanSistemController;
 use App\Http\Controllers\Settings\ProfileController;
-use App\Http\Controllers\Settings\RecaptchaController;
 use App\Http\Controllers\Settings\TampilanController;
 use App\Http\Controllers\Settings\TemplateEmailController;
 use Illuminate\Support\Facades\Route;
@@ -59,11 +58,6 @@ Route::middleware('auth')->group(function () {
             Route::get('tampilan', [TampilanController::class, 'edit'])->name('pengaturan-sistem.tampilan');
             // POST karena membawa unggahan berkas.
             Route::post('tampilan', [TampilanController::class, 'update'])->name('pengaturan-tampilan.update');
-        });
-
-        Route::middleware('can:admin.pengaturan-recaptcha')->group(function (): void {
-            Route::get('recaptcha', [RecaptchaController::class, 'edit'])->name('pengaturan-sistem.recaptcha');
-            Route::put('recaptcha', [RecaptchaController::class, 'update'])->name('pengaturan-recaptcha.update');
         });
 
         Route::middleware('can:admin.pengaturan-maintenance')->group(function (): void {

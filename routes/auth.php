@@ -13,6 +13,10 @@ Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
+    Route::get('login/captcha', [AuthenticatedSessionController::class, 'captcha'])
+        ->middleware('throttle:60,1')
+        ->name('captcha');
+
     // Selain batas 5 percobaan per username (LoginRequest), dibatasi juga per IP agar percobaan
     // ke banyak username sekaligus ikut tertahan.
     Route::post('login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:20,1');

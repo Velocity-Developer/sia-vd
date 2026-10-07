@@ -4,7 +4,6 @@ use App\Models\PengaturanAkademik;
 use App\Models\PengaturanInstitusi;
 use App\Models\PengaturanMaintenance;
 use App\Models\PengaturanPindahKelas;
-use App\Models\PengaturanRecaptcha;
 use App\Models\PengaturanTampilan;
 use App\Models\Role;
 use App\Models\User;
@@ -37,7 +36,6 @@ it('renders every settings tab for admin', function (string $tab, string $kompon
     ['email', 'PengaturanSistem/Email'],
     ['akademik', 'PengaturanSistem/Akademik'],
     ['tampilan', 'PengaturanSistem/Tampilan'],
-    ['recaptcha', 'PengaturanSistem/Recaptcha'],
     ['maintenance', 'PengaturanSistem/Maintenance'],
 ]);
 
@@ -140,6 +138,5 @@ it('marks singleton settings models with a manual id as non-incrementing', funct
     PengaturanTampilan::class,
     PengaturanAkademik::class,
     PengaturanPindahKelas::class,
-    PengaturanRecaptcha::class,
     PengaturanMaintenance::class,
 ]);

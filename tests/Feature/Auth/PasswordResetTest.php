@@ -64,7 +64,7 @@ test('kata sandi bisa diatur ulang dan dipakai masuk', function () {
 
         $response->assertSessionHasNoErrors()->assertRedirect(route('login', absolute: false));
 
-        $this->post('/login', ['username' => $user->username, 'password' => 'sandi-baru-123']);
+        $this->post('/login', [...isianCaptcha(), 'username' => $user->username, 'password' => 'sandi-baru-123']);
         $this->assertAuthenticatedAs($user->fresh());
 
         return true;

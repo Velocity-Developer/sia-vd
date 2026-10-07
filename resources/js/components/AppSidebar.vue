@@ -250,7 +250,6 @@ const bisaPengaturanSistem = computed(() =>
         'admin.pengaturan-email',
         'admin.pengaturan-akademik',
         'admin.pengaturan-tampilan',
-        'admin.pengaturan-recaptcha',
         'admin.pengaturan-maintenance',
     ].some((izin) => can(izin)),
 );

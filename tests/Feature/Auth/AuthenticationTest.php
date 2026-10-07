@@ -12,6 +12,7 @@ test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 
     $response = $this->post('/login', [
+        ...isianCaptcha(),
         'username' => $user->username,
         'password' => 'password',
     ]);
@@ -25,6 +26,7 @@ test('users can not authenticate with invalid password', function () {
 
     // Pesannya harus berbahasa Indonesia, bukan kunci mentah "auth.failed".
     $this->post('/login', [
+        ...isianCaptcha(),
         'username' => $user->username,
         'password' => 'wrong-password',
     ])->assertSessionHasErrors(['username' => 'NIM/NIDN/username atau kata sandi tidak cocok.']);
@@ -47,6 +49,7 @@ test('permintaan inertia saat masuk memicu muat ulang penuh', function () {
     // Daftar route Ziggy ditanam di Blade sesuai izin pengguna, jadi masuk lewat Inertia
     // harus dijawab dengan muat ulang penuh; tanpa itu menu peran gagal dibentuk di browser.
     $response = $this->withHeader('X-Inertia', 'true')->post('/login', [
+        ...isianCaptcha(),
         'username' => $user->username,
         'password' => 'password',
     ]);
@@ -70,6 +73,7 @@ test('mahasiswa dapat masuk memakai NIM', function () {
     $user = User::factory()->mahasiswa()->create();
 
     $this->post('/login', [
+        ...isianCaptcha(),
         'username' => $user->mahasiswaProfile->nim,
         'password' => 'password',
     ]);
@@ -81,6 +85,7 @@ test('dosen dapat masuk memakai NIDN', function () {
     $user = User::factory()->dosen()->create();
 
     $this->post('/login', [
+        ...isianCaptcha(),
         'username' => ' '.$user->dosenProfile->nidn.' ',
         'password' => 'password',
     ]);
@@ -93,6 +98,7 @@ test('username didahulukan bila sama dengan NIM akun lain', function () {
     $pemilikUsername = User::factory()->create(['username' => $mahasiswa->mahasiswaProfile->nim]);
 
     $this->post('/login', [
+        ...isianCaptcha(),
         'username' => $mahasiswa->mahasiswaProfile->nim,
         'password' => 'password',
     ]);
@@ -102,6 +108,7 @@ test('username didahulukan bila sama dengan NIM akun lain', function () {
 
 test('NIM tak dikenal ditolak dengan pesan biasa', function () {
     $this->post('/login', [
+        ...isianCaptcha(),
         'username' => '999999999',
         'password' => 'password',
     ])->assertSessionHasErrors(['username' => 'NIM/NIDN/username atau kata sandi tidak cocok.']);
@@ -113,7 +120,7 @@ test('dosen nonaktif ditolak masuk dengan pesan', function () {
     $dosen = User::factory()->dosen()->create();
     $dosen->dosenProfile->update(['status' => 'Nonaktif']);
 
-    $this->post('/login', ['username' => $dosen->username, 'password' => 'password'])
+    $this->post('/login', [...isianCaptcha(), 'username' => $dosen->username, 'password' => 'password'])
         ->assertSessionHasErrors(['username' => 'Akun dosen Anda berstatus nonaktif. Hubungi admin akademik untuk mengaktifkan kembali.']);
 
     $this->assertGuest();
@@ -123,7 +130,7 @@ test('mahasiswa berstatus selain aktif ditolak masuk dengan pesan', function (st
     $mahasiswa = User::factory()->create();
     $mahasiswa->mahasiswaProfile->update(['status' => $status]);
 
-    $this->post('/login', ['username' => $mahasiswa->username, 'password' => 'password'])
+    $this->post('/login', [...isianCaptcha(), 'username' => $mahasiswa->username, 'password' => 'password'])
         ->assertSessionHasErrors(['username' => "Akun tidak dapat digunakan karena status mahasiswa Anda: {$status}. Hubungi admin akademik."]);
 
     $this->assertGuest();
@@ -133,7 +140,7 @@ test('mahasiswa lulus dan cuti tetap bisa masuk', function (string $status) {
     $mahasiswa = User::factory()->create();
     $mahasiswa->mahasiswaProfile->update(['status' => $status]);
 
-    $this->post('/login', ['username' => $mahasiswa->username, 'password' => 'password'])->assertSessionHasNoErrors();
+    $this->post('/login', [...isianCaptcha(), 'username' => $mahasiswa->username, 'password' => 'password'])->assertSessionHasNoErrors();
 
     $this->assertAuthenticatedAs($mahasiswa);
 })->with(['Lulus', 'Cuti']);
@@ -142,7 +149,7 @@ test('status akun tidak dibocorkan bila kata sandi salah', function () {
     $dosen = User::factory()->dosen()->create();
     $dosen->dosenProfile->update(['status' => 'Nonaktif']);
 
-    $this->post('/login', ['username' => $dosen->username, 'password' => 'salah'])
+    $this->post('/login', [...isianCaptcha(), 'username' => $dosen->username, 'password' => 'salah'])
         ->assertSessionHasErrors(['username' => 'NIM/NIDN/username atau kata sandi tidak cocok.']);
 });
 
