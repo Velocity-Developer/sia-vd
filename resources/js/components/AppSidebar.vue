@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
-import NavUser from '@/components/NavUser.vue';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { useFitur } from '@/composables/useFitur';
 import { usePermissions } from '@/composables/usePermissions';
@@ -245,13 +244,9 @@ const footerNavItems: NavItem[] = [];
 // pengguna boleh membuka minimal satu tab-nya.
 const page = usePage();
 const bisaPengaturanSistem = computed(() =>
-    [
-        'admin.institusi',
-        'admin.pengaturan-email',
-        'admin.pengaturan-akademik',
-        'admin.pengaturan-tampilan',
-        'admin.pengaturan-maintenance',
-    ].some((izin) => can(izin)),
+    ['admin.institusi', 'admin.pengaturan-email', 'admin.pengaturan-akademik', 'admin.pengaturan-tampilan', 'admin.pengaturan-maintenance'].some(
+        (izin) => can(izin),
+    ),
 );
 const pengaturanSistemAktif = computed(() => page.url.startsWith('/pengaturan-sistem'));
 
@@ -286,7 +281,7 @@ const menuDeveloper = [
             />
         </SidebarContent>
 
-        <SidebarFooter class="border-t border-[#e6e6e6] bg-white">
+        <SidebarFooter v-if="developer || bisaPengaturanSistem || footerNavItems.length" class="border-t border-[#e6e6e6] bg-white">
             <SidebarMenu v-if="developer">
                 <SidebarMenuItem v-for="menu in menuDeveloper" :key="menu.awalan">
                     <SidebarMenuButton as-child :is-active="page.url.startsWith(menu.awalan)" :tooltip="menu.title">
@@ -311,7 +306,6 @@ const menuDeveloper = [
                 </SidebarMenuItem>
             </SidebarMenu>
             <NavFooter :items="footerNavItems" />
-            <NavUser />
         </SidebarFooter>
     </Sidebar>
     <slot />

@@ -6,6 +6,8 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Diubah
+- Profil pengguna (avatar, nama, role, menu Pengaturan Profil & Log out) pindah dari bawah sidebar ke pojok kanan
+  header, sejajar breadcrumb; di layar sempit hanya avatar. Bagian bawah sidebar disembunyikan bila kosong.
 - Google reCAPTCHA v2 diganti **captcha gambar** yang selalu aktif di halaman masuk: pengguna mengetik 5 karakter pada
   gambar (tombol ganti gambar tersedia). Kode berlaku 10 menit dan sekali pakai; tidak butuh kunci Google maupun
   koneksi ke luar. Server wajib punya ekstensi PHP GD.
@@ -17,6 +19,7 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   tertutup.
 - Buka/tutup seksi menu (dan bagian lipat lain berbasis Collapsible) kini beranimasi halus; sebelumnya keyframes
   `collapsible-down/up` belum didefinisikan sehingga langsung meloncat.
+- Scrollbar menu sidebar kini tipis tanpa jalur dan baru terlihat saat kursor di atas menu (atau navigasi keyboard).
 
 ### Dihapus
 - Tab **reCAPTCHA** di Pengaturan Sistem beserta izin `admin.pengaturan-recaptcha` dan tabel `pengaturan_recaptcha`
