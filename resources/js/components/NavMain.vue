@@ -50,8 +50,8 @@ const isItemActive = (item: NavItem) => {
 };
 const seksiAktif = (seksi: NavGroup) => seksi.items.some((item) => isItemActive(item));
 
-// Seksi yang dibuka/ditutup pengguna diingat per peramban; seksi yang memuat halaman aktif
-// tetap terbuka sendiri agar posisi pengguna selalu terlihat.
+// Seksi yang dibuka/ditutup pengguna diingat per peramban. Seksi yang memuat halaman aktif terbuka
+// sendiri setiap kali halamannya dibuka agar posisi pengguna terlihat, tetapi tetap bisa ditutup.
 const KUNCI_SIMPANAN = 'sia-vd.seksi-menu';
 const bacaSimpanan = (): Record<string, boolean> => {
     try {
@@ -65,9 +65,16 @@ const bacaSimpanan = (): Record<string, boolean> => {
 
 const pilihanSeksi = ref<Record<string, boolean>>(bacaSimpanan());
 
-const seksiTerbuka = (seksi: NavGroup) => seksiAktif(seksi) || (pilihanSeksi.value[seksi.title] ?? false);
+// Seksi aktif yang ditutup pengguna, beserta halaman tempat ia menutupnya; pindah halaman membukanya lagi.
+const ditutupDiHalaman = ref<Record<string, string>>({});
+
+const seksiTerbuka = (seksi: NavGroup) =>
+    seksiAktif(seksi) ? ditutupDiHalaman.value[seksi.title] !== currentPath() : (pilihanSeksi.value[seksi.title] ?? false);
 
 const aturSeksi = (seksi: NavGroup, terbuka: boolean) => {
+    const lainnya = { ...ditutupDiHalaman.value };
+    delete lainnya[seksi.title];
+    ditutupDiHalaman.value = terbuka || !seksiAktif(seksi) ? lainnya : { ...lainnya, [seksi.title]: currentPath() };
     pilihanSeksi.value = { ...pilihanSeksi.value, [seksi.title]: terbuka };
 
     try {

@@ -10,6 +10,10 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
   gambar (tombol ganti gambar tersedia). Kode berlaku 10 menit dan sekali pakai; tidak butuh kunci Google maupun
   koneksi ke luar. Server wajib punya ekstensi PHP GD.
 
+### Diperbaiki
+- Seksi menu sidebar yang memuat halaman aktif kini bisa ditutup dengan mengeklik menu induknya (sebelumnya selalu
+  terbuka). Seksi itu tetap terbuka otomatis setiap kali halamannya dibuka.
+
 ### Dihapus
 - Tab **reCAPTCHA** di Pengaturan Sistem beserta izin `admin.pengaturan-recaptcha` dan tabel `pengaturan_recaptcha`
   (migrasi `2026_10_07_000000`).
