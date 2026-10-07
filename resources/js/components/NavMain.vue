@@ -136,7 +136,7 @@ const aturSeksi = (seksi: NavGroup, terbuka: boolean) => {
                 >
                     <SidebarMenuItem>
                         <CollapsibleTrigger as-child>
-                            <SidebarMenuButton :is-active="seksiAktif(entry) && !seksiTerbuka(entry)">
+                            <SidebarMenuButton :is-active="seksiAktif(entry)">
                                 <component
                                     :is="entry.icon"
                                     v-if="entry.icon"

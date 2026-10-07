@@ -14,6 +14,21 @@ export default {
             fontFamily: {
                 sans: ['Instrument Sans', ...defaultTheme.fontFamily.sans],
             },
+            // Tinggi isi diukur reka-ui ke variabel CSS, sehingga buka/tutup Collapsible bisa dianimasikan.
+            keyframes: {
+                'collapsible-down': {
+                    from: { height: '0', opacity: '0' },
+                    to: { height: 'var(--reka-collapsible-content-height)', opacity: '1' },
+                },
+                'collapsible-up': {
+                    from: { height: 'var(--reka-collapsible-content-height)', opacity: '1' },
+                    to: { height: '0', opacity: '0' },
+                },
+            },
+            animation: {
+                'collapsible-down': 'collapsible-down 200ms ease-out',
+                'collapsible-up': 'collapsible-up 180ms ease-in',
+            },
             borderRadius: {
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',

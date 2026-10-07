@@ -13,6 +13,10 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ### Diperbaiki
 - Seksi menu sidebar yang memuat halaman aktif kini bisa ditutup dengan mengeklik menu induknya (sebelumnya selalu
   terbuka). Seksi itu tetap terbuka otomatis setiap kali halamannya dibuka.
+- Menu induk sidebar kini tetap tersorot aktif selama salah satu submenunya aktif, baik seksinya terbuka maupun
+  tertutup.
+- Buka/tutup seksi menu (dan bagian lipat lain berbasis Collapsible) kini beranimasi halus; sebelumnya keyframes
+  `collapsible-down/up` belum didefinisikan sehingga langsung meloncat.
 
 ### Dihapus
 - Tab **reCAPTCHA** di Pengaturan Sistem beserta izin `admin.pengaturan-recaptcha` dan tabel `pengaturan_recaptcha`
