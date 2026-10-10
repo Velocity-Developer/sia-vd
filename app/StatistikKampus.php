@@ -47,4 +47,29 @@ class StatistikKampus
             'program_studi' => ProgramStudi::query()->count(),
         }])->all();
     }
+
+    /**
+     * Data grafik dashboard: komposisi status mahasiswa (donat) dan sebaran mahasiswa aktif (batang). Akun Prodi
+     * ($prodiId terisi) mendapat sebaran per angkatan karena prodinya hanya satu; selain itu per program studi.
+     *
+     * @return array{status: list<array{nama: string, jumlah: int}>, sebaran: array{judul: string, data: list<array{nama: string, jumlah: int}>}}
+     */
+    public static function grafik(?int $prodiId = null): array
+    {
+        $perStatus = MahasiswaProfile::query()->whereHas('user')->selectRaw('status, count(*) as jumlah')->groupBy('status')->pluck('jumlah', 'status');
+        $status = collect(MahasiswaProfile::STATUS)
+            ->map(fn (string $s): array => ['nama' => $s, 'jumlah' => (int) ($perStatus[$s] ?? 0)])
+            ->filter(fn (array $b): bool => $b['jumlah'] > 0)->values()->all();
+
+        $sebaran = $prodiId !== null
+            ? ['judul' => 'Mahasiswa aktif per angkatan', 'data' => MahasiswaProfile::query()->aktif()->whereHas('user')->whereNotNull('angkatan')
+                ->selectRaw('angkatan, count(*) as jumlah')->groupBy('angkatan')->orderByDesc('angkatan')->limit(8)->get()
+                ->map(fn ($b): array => ['nama' => 'Angkatan '.$b->angkatan, 'jumlah' => (int) $b->jumlah])->all()]
+            : ['judul' => 'Mahasiswa aktif per program studi', 'data' => ProgramStudi::query()
+                ->withCount(['mahasiswa' => fn ($q) => $q->whereIn('status', MahasiswaProfile::STATUS_AKTIF)->whereHas('user')])
+                ->orderByDesc('mahasiswa_count')->orderBy('nama_prodi')->get(['id', 'jenjang', 'nama_prodi'])
+                ->map(fn (ProgramStudi $p): array => ['nama' => trim($p->jenjang.' '.$p->nama_prodi), 'jumlah' => (int) $p->mahasiswa_count])->all()];
+
+        return ['status' => $status, 'sebaran' => $sebaran];
+    }
 }

@@ -72,6 +72,7 @@ class DashboardController extends Controller
                 'tanggal_krs_akhir' => $bolehKrs && $tahunAkademik->tanggal_krs_akhir ? Carbon::parse($tahunAkademik->tanggal_krs_akhir)->toDateString() : null,
             ],
             'statistik' => $this->statistik($user, $tahunAkademik),
+            'grafik' => LingkupProdi::id($user) !== null || $user->hasPermission('admin.users.mahasiswa') ? StatistikKampus::grafik(LingkupProdi::id($user)) : null,
             'tindakan' => $this->bolehSalahSatu($user, self::IZIN_TINDAKAN) ? $this->tindakan($user, $tahunAkademik) : null,
             'tagihan' => $user->hasPermission('admin.tagihan') && $tahunAkademik
                 ? [...TagihanSemester::ringkasan($tahunAkademik->id), 'tautan' => route('admin.tagihan.index', ['tahun_akademik_id' => $tahunAkademik->id])]

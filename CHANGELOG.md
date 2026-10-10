@@ -6,6 +6,11 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Diubah
+- **Dashboard berwarna + grafik** (revisi 2 Yapika): kartu angka kampus kini berwarna per jenis (garis kiri, ikon,
+  angka). Komponen baru `GrafikKampus.vue`: donat **komposisi status mahasiswa** dan batang berwarna **mahasiswa aktif
+  per program studi** (akun Prodi: **per angkatan**), data dari `StatistikKampus::grafik()`. Tampil di dashboard Admin
+  (prop `grafik`, bila akun Prodi atau memegang `admin.users.mahasiswa`; menggantikan seksi sebaran prodi lama) dan
+  beranda dosen (prop `grafikKampus`).
 - **Kartu angka kampus di dashboard Admin, Prodi, dan Dosen** (revisi 1 Yapika): hitungan dipindah ke
   `App\StatistikKampus`, komponen bersama `KartuStatistikKampus.vue` (grid 4 kolom). Kartu baru **Jumlah Mahasiswa**
   (semua status) dan **Mata Kuliah**. Akun Prodi kini selalu melihat kartu prodinya (mahasiswa per status, dosen aktif

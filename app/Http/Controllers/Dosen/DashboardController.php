@@ -38,6 +38,7 @@ class DashboardController extends Controller
             'ringkasan' => BerandaDosen::ringkasan($dosen, $tahunAkademik),
             'tahunAkademik' => $tahunAkademik?->label(),
             'statistikKampus' => StatistikKampus::hitung(StatistikKampus::KUNCI_DOSEN, $tahunAkademik),
+            'grafikKampus' => StatistikKampus::grafik(),
             'presensiDosen' => $bisa('dosen.presensi') ? PeringatanPresensi::untukDosen($dosen) : null,
             'perluDinilai' => $kelas && (Feature::aktif('tugas') || Feature::aktif('quiz')) ? BerandaDosen::perluDinilai($dosen, $tahunAkademik) : null,
             'pengingatNilai' => $kelas ? BerandaDosen::pengingatNilai($dosen, $tahunAkademik) : null,

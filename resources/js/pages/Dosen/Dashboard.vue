@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GrafikKampus, { type GrafikKampusData } from '@/components/GrafikKampus.vue';
 import KartuStatistikKampus, { type KunciStatistikKampus } from '@/components/KartuStatistikKampus.vue';
 import { useFitur } from '@/composables/useFitur';
 import { usePermissions } from '@/composables/usePermissions';
@@ -39,6 +40,7 @@ const props = defineProps<{
     tahunAkademik: string | null;
     /** Angka kampus (jumlah mahasiswa, mahasiswa aktif, dosen aktif, program studi). */
     statistikKampus?: Partial<Record<KunciStatistikKampus, number>>;
+    grafikKampus?: GrafikKampusData;
     presensiDosen?: { hariIni: PertemuanHariIni[]; izinMenunggu: number; mahasiswaBerisiko: number; minKehadiran: number } | null;
     /** Pengumpulan tugas & jawaban esai quiz yang belum dinilai, per tugas/quiz. */
     perluDinilai?: { jenis: string; judul: string; kelas: string; jumlah: number; tautan: string }[] | null;
@@ -153,6 +155,7 @@ const foto = computed(() => usePage<SharedData>().props.auth.user?.avatar ?? nul
                     <section v-if="props.statistikKampus && Object.keys(props.statistikKampus).length" class="flex flex-col gap-3">
                         <h2 class="judul-bagian">Statistik kampus</h2>
                         <KartuStatistikKampus :statistik="props.statistikKampus" />
+                        <GrafikKampus v-if="props.grafikKampus" :grafik="props.grafikKampus" />
                     </section>
 
                     <section v-if="props.presensiDosen" class="kartu p-6">

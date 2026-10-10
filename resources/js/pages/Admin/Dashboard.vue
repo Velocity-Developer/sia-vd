@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import GrafikKampus, { type GrafikKampusData } from '@/components/GrafikKampus.vue';
 import KartuStatistikKampus, { type KunciStatistikKampus } from '@/components/KartuStatistikKampus.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -30,6 +31,8 @@ const props = defineProps<{
     } | null;
     /** Hanya kartu yang diizinkan untuk role pengguna yang dikirim server. */
     statistik: Partial<Record<KunciStatistikKampus, number>>;
+    /** Grafik status & sebaran mahasiswa; null bila role tidak boleh melihat data mahasiswa. */
+    grafik: GrafikKampusData | null;
     /** Null bila role tidak memegang satu pun izin sumber tindak lanjut. */
     tindakan: Tindakan[] | null;
     /** Rekap tagihan semester tahun akademik aktif; null bila tanpa izin admin.tagihan atau belum ada TA aktif. */
@@ -97,9 +100,11 @@ const masaKrs = computed(() => {
 });
 
 // Tata letak mengikuti bagian yang benar-benar tampil untuk role ini: kolom kiri (daftar) dan kolom kanan (ringkasan).
-const adaKiri = computed(() => props.tindakan !== null || !!props.buktiTerbaru || !!props.pengingatTugasAkhir || !!props.mahasiswaPerProdi);
+const adaKiri = computed(
+    () => props.tindakan !== null || !!props.buktiTerbaru || !!props.pengingatTugasAkhir || (!!props.mahasiswaPerProdi && !props.grafik),
+);
 const adaKanan = computed(() => !!props.tagihan || !!props.perkuliahanHariIni || !!masaKrs.value);
-const kosong = computed(() => !adaKiri.value && !adaKanan.value && Object.keys(props.statistik).length === 0);
+const kosong = computed(() => !adaKiri.value && !adaKanan.value && Object.keys(props.statistik).length === 0 && !props.grafik);
 </script>
 
 <template>
@@ -133,6 +138,8 @@ const kosong = computed(() => !adaKiri.value && !adaKanan.value && Object.keys(p
                 </div>
 
                 <KartuStatistikKampus :statistik="props.statistik" :tautan="tautanStatistik" />
+
+                <GrafikKampus v-if="props.grafik" :grafik="props.grafik" />
 
                 <section v-if="kosong" class="kartu flex flex-col items-center gap-2 px-6 py-12 text-center">
                     <LayoutGrid class="size-8 text-[#a39e98]" />
@@ -235,7 +242,7 @@ const kosong = computed(() => !adaKiri.value && !adaKanan.value && Object.keys(p
                             >
                         </section>
 
-                        <section v-if="props.mahasiswaPerProdi" class="kartu p-6">
+                        <section v-if="props.mahasiswaPerProdi && !props.grafik" class="kartu p-6">
                             <h2 class="judul-bagian">Mahasiswa aktif per program studi</h2>
                             <ul v-if="props.mahasiswaPerProdi.length" class="mt-4 flex flex-col gap-3">
                                 <li

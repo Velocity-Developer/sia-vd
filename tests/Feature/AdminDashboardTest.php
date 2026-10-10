@@ -65,6 +65,7 @@ it('hides sections the staff role has no permission for', function () {
         ->where('perkuliahanHariIni', null)
         ->where('tindakan', null)
         ->where('mahasiswaPerProdi', null)
+        ->where('grafik', null)
         ->where('tahunAkademik.tanggal_krs_awal', null)
         ->where('pengingatTugasAkhir', null));
 });
@@ -111,7 +112,10 @@ it('shows the total student and course cards to a full admin', function () {
         ->where('statistik.mahasiswa_aktif', 1)
         ->where('statistik.mahasiswa_lulus', 1)
         ->has('statistik.mata_kuliah')
-        ->has('statistik.program_studi'));
+        ->has('statistik.program_studi')
+        ->where('grafik.status', [['nama' => 'Aktif', 'jumlah' => 1], ['nama' => 'Lulus', 'jumlah' => 1]])
+        ->where('grafik.sebaran.judul', 'Mahasiswa aktif per program studi')
+        ->has('grafik.sebaran.data'));
 });
 
 it('shows a Prodi account the number cards of its own study program only', function () {
@@ -124,7 +128,10 @@ it('shows a Prodi account the number cards of its own study program only', funct
         ->where('statistik.mahasiswa_aktif', 1)
         ->where('statistik.mata_kuliah', 1)
         ->where('statistik.dosen_aktif', DosenProfile::query()->where('prodi_id', $prodiId)->where('status', 'Aktif')->count())
-        ->missing('statistik.program_studi'));
+        ->missing('statistik.program_studi')
+        ->where('grafik.status', [['nama' => 'Aktif', 'jumlah' => 1]])
+        ->where('grafik.sebaran.judul', 'Mahasiswa aktif per angkatan')
+        ->where('grafik.sebaran.data.0.jumlah', 1));
 });
 
 it('shows campus number cards on the lecturer home page', function () {
@@ -138,5 +145,7 @@ it('shows campus number cards on the lecturer home page', function () {
         ->where('statistikKampus.mahasiswa_aktif', 1)
         ->has('statistikKampus.dosen_aktif')
         ->has('statistikKampus.program_studi')
-        ->missing('statistikKampus.kelas_kuliah'));
+        ->missing('statistikKampus.kelas_kuliah')
+        ->where('grafikKampus.status', [['nama' => 'Aktif', 'jumlah' => 1]])
+        ->has('grafikKampus.sebaran.data'));
 });
