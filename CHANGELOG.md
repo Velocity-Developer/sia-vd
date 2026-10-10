@@ -6,6 +6,11 @@ Mulai 1.0.0 repo memakai [Semantic Versioning](https://semver.org/lang/id/); riw
 ## [Belum dirilis]
 
 ### Diubah
+- **Kartu angka kampus di dashboard Admin, Prodi, dan Dosen** (revisi 1 Yapika): hitungan dipindah ke
+  `App\StatistikKampus`, komponen bersama `KartuStatistikKampus.vue` (grid 4 kolom). Kartu baru **Jumlah Mahasiswa**
+  (semua status) dan **Mata Kuliah**. Akun Prodi kini selalu melihat kartu prodinya (mahasiswa per status, dosen aktif
+  prodi, kelas TA aktif, mata kuliah) walau tak memegang izin halaman sumbernya. Beranda dosen punya seksi
+  **Statistik kampus** (jumlah mahasiswa, mahasiswa aktif, dosen aktif, program studi).
 - **Foto profil tampil sebagai avatar**: `auth.user.avatar` = `User::fotoUrl()` (sidebar, menu pengguna, kartu
   identitas dashboard dosen & mahasiswa). Setiap pengguna (karyawan/dosen/mahasiswa) bisa mengganti/menghapus
   fotonya sendiri di Pengaturan Profil (`POST settings/profile/foto`, `profile.foto`; jpg/png/webp maks 2 MB,

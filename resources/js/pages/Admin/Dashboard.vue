@@ -1,26 +1,15 @@
 <script setup lang="ts">
+import KartuStatistikKampus, { type KunciStatistikKampus } from '@/components/KartuStatistikKampus.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatTanggal } from '@/lib/presensi';
 import { rupiah } from '@/lib/tagihanRemidi';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import {
-    BookOpen,
-    CalendarRange,
-    ChevronRight,
-    CircleCheck,
-    GraduationCap,
-    LayoutGrid,
-    PauseCircle,
-    School,
-    TriangleAlert,
-    Users,
-} from 'lucide-vue-next';
+import { CalendarRange, ChevronRight, CircleCheck, LayoutGrid, TriangleAlert } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 type Tindakan = { judul: string; keterangan: string | null; jumlah: number; tautan: string; penting: boolean };
-type KunciStatistik = 'mahasiswa_aktif' | 'mahasiswa_cuti' | 'mahasiswa_lulus' | 'dosen_aktif' | 'kelas_kuliah' | 'program_studi';
 type BuktiBayar = {
     jenis: string;
     mahasiswa: string | null;
@@ -40,7 +29,7 @@ const props = defineProps<{
         tanggal_krs_akhir: string | null;
     } | null;
     /** Hanya kartu yang diizinkan untuk role pengguna yang dikirim server. */
-    statistik: Partial<Record<KunciStatistik, number>>;
+    statistik: Partial<Record<KunciStatistikKampus, number>>;
     /** Null bila role tidak memegang satu pun izin sumber tindak lanjut. */
     tindakan: Tindakan[] | null;
     /** Rekap tagihan semester tahun akademik aktif; null bila tanpa izin admin.tagihan atau belum ada TA aktif. */
@@ -71,40 +60,15 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [{ title: judul.value, href
 
 const angka = new Intl.NumberFormat('id-ID');
 
-const kartuStatistik = computed(() =>
-    [
-        {
-            kunci: 'mahasiswa_aktif',
-            label: 'Mahasiswa Aktif',
-            ikon: Users,
-            href: can('admin.users.mahasiswa') ? '/admin/users/mahasiswa' : null,
-        },
-        { kunci: 'dosen_aktif', label: 'Dosen Aktif', ikon: GraduationCap, href: can('admin.users.dosen') ? '/admin/users/dosen' : null },
-        {
-            kunci: 'kelas_kuliah',
-            label: 'Kelas Kuliah',
-            ikon: School,
-            href: can('admin.kelas-kuliah') ? route('admin.kelas-kuliah.index') : null,
-            catatan: 'tahun akademik aktif',
-        },
-        {
-            kunci: 'program_studi',
-            label: 'Program Studi',
-            ikon: BookOpen,
-            href: can('admin.program-studi') ? route('admin.program-studi.index') : null,
-        },
-        {
-            kunci: 'mahasiswa_cuti',
-            label: 'Mahasiswa Cuti',
-            ikon: PauseCircle,
-            href: can('admin.pengajuan-cuti') ? route('admin.pengajuan-cuti.index') : null,
-        },
-        { kunci: 'mahasiswa_lulus', label: 'Mahasiswa Lulus', ikon: CircleCheck, href: null },
-    ].flatMap((k) => {
-        const nilai = props.statistik[k.kunci as KunciStatistik];
-        return nilai === undefined ? [] : [{ ...k, nilai }];
-    }),
-);
+const tautanStatistik = computed(() => ({
+    mahasiswa: can('admin.users.mahasiswa') ? '/admin/users/mahasiswa' : null,
+    mahasiswa_aktif: can('admin.users.mahasiswa') ? '/admin/users/mahasiswa' : null,
+    dosen_aktif: can('admin.users.dosen') ? '/admin/users/dosen' : null,
+    kelas_kuliah: can('admin.kelas-kuliah') ? route('admin.kelas-kuliah.index') : null,
+    mata_kuliah: can('admin.mata-kuliah') ? route('admin.mata-kuliah.index') : null,
+    program_studi: can('admin.program-studi') ? route('admin.program-studi.index') : null,
+    mahasiswa_cuti: can('admin.pengajuan-cuti') ? route('admin.pengajuan-cuti.index') : null,
+}));
 
 const totalTindakan = computed(() => (props.tindakan ?? []).reduce((jumlah, t) => jumlah + t.jumlah, 0));
 
@@ -135,7 +99,7 @@ const masaKrs = computed(() => {
 // Tata letak mengikuti bagian yang benar-benar tampil untuk role ini: kolom kiri (daftar) dan kolom kanan (ringkasan).
 const adaKiri = computed(() => props.tindakan !== null || !!props.buktiTerbaru || !!props.pengingatTugasAkhir || !!props.mahasiswaPerProdi);
 const adaKanan = computed(() => !!props.tagihan || !!props.perkuliahanHariIni || !!masaKrs.value);
-const kosong = computed(() => !adaKiri.value && !adaKanan.value && kartuStatistik.value.length === 0);
+const kosong = computed(() => !adaKiri.value && !adaKanan.value && Object.keys(props.statistik).length === 0);
 </script>
 
 <template>
@@ -168,23 +132,7 @@ const kosong = computed(() => !adaKiri.value && !adaKanan.value && kartuStatisti
                     >
                 </div>
 
-                <div v-if="kartuStatistik.length" class="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]">
-                    <component
-                        :is="k.href ? Link : 'div'"
-                        v-for="k in kartuStatistik"
-                        :key="k.label"
-                        :href="k.href ?? undefined"
-                        class="kartu flex flex-col gap-1 px-4 py-3"
-                        :class="k.href ? 'transition-colors hover:border-[#0075de]' : ''"
-                    >
-                        <div class="flex items-center justify-between gap-2">
-                            <p class="teks-bantu font-medium uppercase tracking-[0.06em]">{{ k.label }}</p>
-                            <component :is="k.ikon" class="size-4 shrink-0 text-[#a39e98]" />
-                        </div>
-                        <p class="text-2xl font-bold tabular-nums text-black dark:text-foreground">{{ angka.format(k.nilai) }}</p>
-                        <p v-if="k.catatan" class="teks-bantu -mt-1">{{ k.catatan }}</p>
-                    </component>
-                </div>
+                <KartuStatistikKampus :statistik="props.statistik" :tautan="tautanStatistik" />
 
                 <section v-if="kosong" class="kartu flex flex-col items-center gap-2 px-6 py-12 text-center">
                     <LayoutGrid class="size-8 text-[#a39e98]" />

@@ -10,12 +10,13 @@ use App\PengingatRemidi;
 use App\PengingatSusulan;
 use App\PengingatTugasAkhir;
 use App\PeringatanPresensi;
+use App\StatistikKampus;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Beranda dosen: profil & angka, presensi hari ini, pekerjaan yang perlu dinilai, pengingat (batas nilai, remidi,
+ * Beranda dosen: profil & angka, angka kampus, presensi hari ini, pekerjaan yang perlu dinilai, pengingat (batas nilai, remidi,
  * ujian susulan, tugas akhir), dan kelas yang diampu. Setiap bagian hanya dikirim bila role pengguna punya izinnya.
  */
 class DashboardController extends Controller
@@ -36,6 +37,7 @@ class DashboardController extends Controller
         return Inertia::render('Dosen/Dashboard', [
             'ringkasan' => BerandaDosen::ringkasan($dosen, $tahunAkademik),
             'tahunAkademik' => $tahunAkademik?->label(),
+            'statistikKampus' => StatistikKampus::hitung(StatistikKampus::KUNCI_DOSEN, $tahunAkademik),
             'presensiDosen' => $bisa('dosen.presensi') ? PeringatanPresensi::untukDosen($dosen) : null,
             'perluDinilai' => $kelas && (Feature::aktif('tugas') || Feature::aktif('quiz')) ? BerandaDosen::perluDinilai($dosen, $tahunAkademik) : null,
             'pengingatNilai' => $kelas ? BerandaDosen::pengingatNilai($dosen, $tahunAkademik) : null,

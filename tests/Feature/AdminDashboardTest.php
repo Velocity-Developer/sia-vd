@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\DosenProfile;
 use App\Models\Role;
 use App\Models\TagihanSemester;
 use App\Models\TahunAkademik;
@@ -98,4 +99,44 @@ it('sends only the statistic cards the role may open', function () {
         ->where('statistik', ['mahasiswa_cuti' => 0])
         ->where('tindakan', [])
         ->where('mahasiswaPerProdi', null));
+});
+
+it('shows the total student and course cards to a full admin', function () {
+    taAktifDashboard();
+    User::factory()->mahasiswa()->create();
+    User::factory()->mahasiswa()->create()->mahasiswaProfile->update(['status' => 'Lulus']);
+
+    $this->actingAs(User::factory()->admin()->create())->get(route('admin.dashboard'))->assertInertia(fn ($page) => $page
+        ->where('statistik.mahasiswa', 2)
+        ->where('statistik.mahasiswa_aktif', 1)
+        ->where('statistik.mahasiswa_lulus', 1)
+        ->has('statistik.mata_kuliah')
+        ->has('statistik.program_studi'));
+});
+
+it('shows a Prodi account the number cards of its own study program only', function () {
+    [$prodi, $kelasA] = roleProdiSetup();
+    $prodiId = $kelasA->mataKuliah->prodi_id;
+    User::factory()->dosen()->create()->dosenProfile->update(['prodi_id' => $prodiId, 'status' => 'Aktif']);
+
+    $this->actingAs($prodi)->get(route('admin.dashboard'))->assertOk()->assertInertia(fn ($page) => $page
+        ->where('statistik.mahasiswa', 1)
+        ->where('statistik.mahasiswa_aktif', 1)
+        ->where('statistik.mata_kuliah', 1)
+        ->where('statistik.dosen_aktif', DosenProfile::query()->where('prodi_id', $prodiId)->where('status', 'Aktif')->count())
+        ->missing('statistik.program_studi'));
+});
+
+it('shows campus number cards on the lecturer home page', function () {
+    taAktifDashboard();
+    User::factory()->mahasiswa()->create();
+    $dosen = User::factory()->dosen()->create();
+
+    $this->actingAs($dosen)->get(route('dosen.dashboard'))->assertOk()->assertInertia(fn ($page) => $page
+        ->component('Dosen/Dashboard')
+        ->where('statistikKampus.mahasiswa', 1)
+        ->where('statistikKampus.mahasiswa_aktif', 1)
+        ->has('statistikKampus.dosen_aktif')
+        ->has('statistikKampus.program_studi')
+        ->missing('statistikKampus.kelas_kuliah'));
 });

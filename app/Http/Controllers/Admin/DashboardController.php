@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Feature;
 use App\Http\Controllers\Controller;
-use App\Models\DosenProfile;
-use App\Models\KelasKuliah;
+use App\LingkupProdi;
 use App\Models\KrsSemester;
 use App\Models\MahasiswaProfile;
 use App\Models\PengajuanAkademik;
@@ -20,6 +19,7 @@ use App\Models\TahunAkademik;
 use App\Models\User;
 use App\PengingatCuti;
 use App\PengingatTugasAkhir;
+use App\StatistikKampus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -47,9 +47,11 @@ class DashboardController extends Controller
      * @var array<string, list<string>>
      */
     private const IZIN_STATISTIK = [
+        'mahasiswa' => ['admin.users.mahasiswa'],
         'mahasiswa_aktif' => ['admin.users.mahasiswa'],
         'dosen_aktif' => ['admin.users.dosen'],
         'kelas_kuliah' => ['admin.kelas-kuliah'],
+        'mata_kuliah' => ['admin.mata-kuliah'],
         'program_studi' => ['admin.program-studi'],
         'mahasiswa_cuti' => ['admin.users.mahasiswa', 'admin.pengajuan-cuti'],
         'mahasiswa_lulus' => ['admin.users.mahasiswa', 'admin.pengajuan-akademik'],
@@ -90,24 +92,18 @@ class DashboardController extends Controller
     }
 
     /**
-     * Hanya kartu yang diizinkan untuk role pengguna yang dikirim (dan dihitung), urut sesuai IZIN_STATISTIK.
+     * Hanya kartu yang diizinkan untuk role pengguna yang dikirim (dan dihitung). Akun Prodi selalu mendapat kartu
+     * angka prodinya (mahasiswa, dosen, kelas, mata kuliah) walau tidak memegang izin halaman sumbernya.
      *
      * @return array<string, int>
      */
     private function statistik(User $user, ?TahunAkademik $tahunAkademik): array
     {
-        $kunci = array_keys(array_filter(self::IZIN_STATISTIK, fn (array $izin): bool => $this->bolehSalahSatu($user, $izin)));
-        $mahasiswa = array_intersect($kunci, ['mahasiswa_aktif', 'mahasiswa_cuti', 'mahasiswa_lulus']) === [] ? collect()
-            : MahasiswaProfile::query()->whereHas('user')->selectRaw('status, count(*) as jumlah')->groupBy('status')->pluck('jumlah', 'status');
+        $prodiId = LingkupProdi::id($user);
+        $kunci = $prodiId !== null ? StatistikKampus::KUNCI_PRODI
+            : array_keys(array_filter(self::IZIN_STATISTIK, fn (array $izin): bool => $this->bolehSalahSatu($user, $izin)));
 
-        return collect($kunci)->mapWithKeys(fn (string $k): array => [$k => match ($k) {
-            'mahasiswa_aktif' => (int) collect(MahasiswaProfile::STATUS_AKTIF)->sum(fn (string $status): int => (int) ($mahasiswa[$status] ?? 0)),
-            'mahasiswa_cuti' => (int) ($mahasiswa['Cuti'] ?? 0),
-            'mahasiswa_lulus' => (int) ($mahasiswa['Lulus'] ?? 0),
-            'dosen_aktif' => DosenProfile::query()->whereHas('user')->where('status', 'Aktif')->count(),
-            'kelas_kuliah' => $tahunAkademik === null ? 0 : KelasKuliah::query()->where('tahun_akademik_id', $tahunAkademik->id)->count(),
-            'program_studi' => ProgramStudi::query()->count(),
-        }])->all();
+        return StatistikKampus::hitung($kunci, $tahunAkademik, $prodiId);
     }
 
     /**
